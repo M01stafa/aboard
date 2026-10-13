@@ -1,8 +1,15 @@
--- ── Profiles ────────────────────────────────────────────────────────────────
+-- ============================================================================
+-- SPIKE S4 THROWAWAY MIGRATION
+-- Minimum tables and functions required for Phase 0 Spike S4 Drive functions.
+-- The full production schema (including projects, full RLS suite, and pgTAP tests)
+-- belongs to Task 13 (Phase 2).
+-- ============================================================================
+
+-- ── Profiles (used by saveLink in drive-callback / drive-link-token) ────────
 create table if not exists public.profiles (
   user_id               uuid primary key references auth.users(id) on delete cascade,
   default_storage       text not null default 'local' check (default_storage in ('local','drive')),
-  drive_root_folder_id  text,                       -- My Drive/Aboard folder id (cache)
+  drive_root_folder_id  text,
   created_at            timestamptz not null default now()
 );
 
@@ -17,31 +24,7 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- ── Project index (no content) ──────────────────────────────────────────────
-create table if not exists public.projects (
-  id               uuid primary key,                -- generated on the client
-  user_id          uuid not null default auth.uid() references auth.users(id) on delete cascade,
-  title            text not null check (char_length(title) between 1 and 200),
-  subject          text check (char_length(subject) <= 100),
-  storage          text not null check (storage in ('local','drive')),
-  drive_folder_id  text,
-  local_device_id  text,                            -- which browser holds a local project
-  item_count       integer not null default 0 check (item_count >= 0),
-  created_at       timestamptz not null default now(),
-  updated_at       timestamptz not null default now(),
-  deleted_at       timestamptz,
-  constraint drive_needs_folder check (storage <> 'drive' or drive_folder_id is not null)
-);
-create index if not exists projects_user_updated on public.projects (user_id, updated_at desc);
-
-create or replace function public.touch_updated_at() returns trigger
-language plpgsql as $$ begin new.updated_at := now(); return new; end $$;
-
-drop trigger if exists projects_touch on public.projects;
-create trigger projects_touch before update on public.projects
-  for each row execute function public.touch_updated_at();
-
--- ── Google tokens (server-only) ─────────────────────────────────────────────
+-- ── Google tokens (server-only: used by drive-link-token, drive-token, drive-callback)
 create table if not exists public.google_drive_links (
   user_id         uuid primary key references auth.users(id) on delete cascade,
   refresh_ct      text not null,                    -- AES-256-GCM ciphertext (base64)
@@ -53,6 +36,7 @@ create table if not exists public.google_drive_links (
   revoked_at      timestamptz
 );
 
+-- ── OAuth states (server-only: used by drive-connect and drive-callback) ─────
 create table if not exists public.oauth_states (
   state           text primary key,
   user_id         uuid not null references auth.users(id) on delete cascade,
@@ -61,9 +45,9 @@ create table if not exists public.oauth_states (
   expires_at      timestamptz not null
 );
 
--- ── Rate limits (used by Edge Functions) ────────────────────────────────────
+-- ── Rate limits (used by Edge Functions via check_rate_limit) ───────────────
 create table if not exists public.rate_limits (
-  key           text not null,                      -- e.g. '<user_id>:drive-token' or 'ip:<addr>:drive-callback'
+  key           text not null,
   window_start  timestamptz not null,
   hits          integer not null default 1,
   primary key (key, window_start)
@@ -80,32 +64,26 @@ begin
   on conflict (key, window_start) do update set hits = r.hits + 1
   returning r.hits into n;
   if random() < 0.01 then
-    delete from public.rate_limits where window_start < now() - interval '1 day';   -- cheap housekeeping
+    delete from public.rate_limits where window_start < now() - interval '1 day';
   end if;
   return n <= p_max;
 end $$;
 revoke all on function public.check_rate_limit(text, integer, integer) from public, anon, authenticated;
 grant execute on function public.check_rate_limit(text, integer, integer) to service_role;
 
--- ── RLS: enabled on EVERY table in the public schema ────────────────────────
+-- ── RLS: enabled on every table ─────────────────────────────────────────────
 alter table public.profiles           enable row level security;
-alter table public.projects           enable row level security;
-alter table public.google_drive_links enable row level security;   -- no policies: clients get nothing
-alter table public.oauth_states       enable row level security;   -- no policies: clients get nothing
-alter table public.rate_limits        enable row level security;   -- no policies: clients get nothing
+alter table public.google_drive_links enable row level security;
+alter table public.oauth_states       enable row level security;
+alter table public.rate_limits        enable row level security;
 
--- ── Least privilege: start from zero, grant only what the app needs ─────────
-revoke all on public.profiles, public.projects, public.google_drive_links,
+-- ── Least privilege: server-only tables have no policies and revoked access ─
+revoke all on public.profiles, public.google_drive_links,
               public.oauth_states, public.rate_limits from anon, authenticated;
 
 grant select on public.profiles to authenticated;
-grant update (default_storage, drive_root_folder_id) on public.profiles to authenticated;   -- user_id/created_at immutable
+grant update (default_storage, drive_root_folder_id) on public.profiles to authenticated;
 
-grant select, insert, delete on public.projects to authenticated;
-grant update (title, subject, storage, drive_folder_id, local_device_id, item_count, deleted_at)
-  on public.projects to authenticated;                                                       -- id/user_id/created_at immutable
-
--- ── Policies: one per command, each tied to the signed-in user ──────────────
 drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles for select to authenticated
   using (user_id = (select auth.uid()));
@@ -114,23 +92,7 @@ drop policy if exists profiles_update on public.profiles;
 create policy profiles_update on public.profiles for update to authenticated
   using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 
-drop policy if exists projects_select on public.projects;
-create policy projects_select on public.projects for select to authenticated
-  using (user_id = (select auth.uid()));
-
-drop policy if exists projects_insert on public.projects;
-create policy projects_insert on public.projects for insert to authenticated
-  with check (user_id = (select auth.uid()));
-
-drop policy if exists projects_update on public.projects;
-create policy projects_update on public.projects for update to authenticated
-  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
-
-drop policy if exists projects_delete on public.projects;
-create policy projects_delete on public.projects for delete to authenticated
-  using (user_id = (select auth.uid()));
-
--- ── Drive status for the client (never returns the token) ───────────────────
+-- ── Drive status for the client ─────────────────────────────────────────────
 create or replace function public.get_drive_status()
 returns table (connected boolean, google_email text, linked_at timestamptz)
 language sql stable security definer set search_path = '' as $$
