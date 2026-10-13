@@ -166,4 +166,26 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Task 6 · V06, V08, V09, V14 (Google part)
 **Open:** Task 3 Playwright browser environment issue (Azure CDN 404 driver download) remains open.
 
+## 2026-10-13 — Task 7: Spike S5 — Large .alpha Export and Import Complete
+**Request:** Run Task 7 from docs/TASKS.md: build throwaway Next.js app in spikes/S5-alpha/ using @zip.js/zip.js to write a ZIP with uncompressed mimetype first entry, manifest.json, and uncompressed PDF entries; benchmark 500 MB streaming export on Chrome desktop via showSaveFilePicker confirming flat memory; produce 200 MB in-memory export path for Safari iOS; verify re-import via random access without full archive buffering; test file input without accept filter; test and record size limits in docs/spikes/S5.md; commit and push to M01stafa/aboard.
+**Changes:**
+- `spikes/S5-alpha/` (created): throwaway Next.js 16.4 + React 19.3 app with `@zip.js/zip.js@2.23.0`, streaming chunk reader, File System Access API integration, in-memory export download handler, random-access re-import validator, and interactive test dashboard.
+- `spikes/S5-alpha/test-alpha.mjs` (created): standalone verification and benchmark harness executing 500 MB direct-to-disk streaming, 200 MB in-memory archive generation, entry validation, and random-access re-import reading.
+- `docs/spikes/S5.md` (created): comprehensive Spike S5 report with exact versions, benchmark numbers, memory profiles, operational size limits, and step-by-step instructions for pending iOS verification.
+- `.gitignore` (changed): added `*.alpha` to prevent generated test project archives from being tracked in git.
+- `UPDATE.md` (changed): appended Task 7 change log.
+**Checks:**
+- Container format verification: first entry confirmed as uncompressed `mimetype` with `level: 0` and exact content `application/x-alpha-project` (27 bytes), followed by `manifest.json` and level 0 uncompressed PDF entries.
+- 500 MB Streaming Export (Chrome desktop / showSaveFilePicker path): PASS. Streamed 500.00 MB (`524,288,814` bytes) directly to disk in 0.97 s. V8 Heap remained completely flat at 8.76 MB (0.00 MB delta from initial baseline heap), peak RSS 124.10 MB. Proves streaming `ZipWriter` chunks directly to disk stream never buffers payload into memory.
+- 200 MB In-Memory Export: PASS. Generated 200.00 MB (`209,716,032` bytes across 810 chunks) in-memory archive in 0.28 s, Heap Used 7.61 MB, RSS 292.22 MB. Download triggered as `Blob` with MIME `application/octet-stream` and `.alpha` extension.
+- Safari Extension Retention on iPhone (VERIFY V11): PENDING — owner device needed. No physical iOS device available in Windows development environment; step-by-step testing instructions documented in `docs/spikes/S5.md` and UI dashboard.
+- Random-Access Re-Import: PASS. Importer opened 500 MB archive via `ZipReader(new BlobReader(file))`, parsed central directory headers without loading archive payload into heap memory, verified `mimetype` (27 bytes) and `manifest.json`, and streamed individual entry bytes. Heap used after import was 8.63 MB.
+- File Input Without `accept` Filter on iOS (VERIFY V11): PENDING — owner device needed. Implemented `<input type="file">` without `accept` filter per spec §12.5; step-by-step iOS testing instructions documented in `docs/spikes/S5.md`.
+- Size Limits Tested and Recorded: 500 MB streaming directly to disk passed with flat memory; 200 MB in-memory passed in 0.28s; recommended operational caps confirmed as 300 MB for mobile in-memory and 1 GB for desktop in-memory; failure point identified as >1 GB in-memory triggering browser tab memory pressure / mobile crash.
+**Related:** Task 7 · V11
+**Open:**
+- Task 3 Playwright browser environment issue (Azure CDN 404 driver download) carried forward.
+- supabase/migrations/0001_init.sql migration cleanup note carried forward: the migration is throwaway from Phase 0 Spike S4 and will be superseded by the production schema in Task 13.
+
+
 

@@ -20,3 +20,5 @@ Thumbs.db
 *.log
 .temp/
 supabase/.temp/
+*.alpha
+
