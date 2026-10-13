@@ -1,0 +1,33 @@
+{
+  "name": "s3-embedpdf",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@cantoo/pdf-lib": "2.11.1",
+    "@embedpdf/core": "2.15.1",
+    "@embedpdf/plugin-annotation": "2.15.1",
+    "@embedpdf/plugin-export": "2.15.1",
+    "@embedpdf/plugin-history": "2.15.1",
+    "@embedpdf/plugin-render": "2.15.1",
+    "@embedpdf/plugin-scroll": "2.15.1",
+    "@embedpdf/plugin-search": "2.15.1",
+    "@embedpdf/plugin-selection": "2.15.1",
+    "@embedpdf/plugin-thumbnail": "2.15.1",
+    "@embedpdf/plugin-viewport": "2.15.1",
+    "@embedpdf/plugin-zoom": "2.15.1",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0"
+  }
+}

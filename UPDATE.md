@@ -87,3 +87,59 @@ This file is the append-only record of every change made to the Aboard project.
 **Checks:** Verified authenticated GitHub user via MCP (`M01stafa` / Mustafa01); successfully created public fork at `https://github.com/M01stafa/circuitjs1`; verified toolchain (JDK and Gradle 8.7 missing from environment).
 **Related:** Task 4 · V18, V14 (GWT part)
 **Open:** Toolchain installation (JDK 17 and Gradle 8.7) needed to run compileGwt/makeSite; Task 3 browser automation item remains open.
+
+## 2026-10-13 — Task 4: Public Git Repo, Toolchain Setup & Spike S2 (CircuitJS1) Complete
+**Request:** Initialize project Git repository, publish public GitHub repo under owner account (M01stafa/aboard), install JDK and Gradle 8.7, attach CircuitJS1 fork as submodule at vendor/circuitjs1, compile GWT, embed in Next.js, verify API round-trip, check service worker, run security grep, identify CSP directives, and write docs/spikes/S2.md.
+**Changes:**
+- `.git/` (created): initialized Git repository on branch `main` at project root.
+- `.gitignore` (changed): verified and added comprehensive ignore coverage for `node_modules/`, `.next/`, build outputs, and `.env*` files.
+- `.gitmodules` (created): added submodule tracking for `https://github.com/M01stafa/circuitjs1.git` at `vendor/circuitjs1`.
+- `vendor/circuitjs1` (created): attached owner's CircuitJS1 fork as Git submodule.
+- `vendor/circuitjs1/build.gradle` (changed): made `makeSite` `doLast` check cross-platform for Windows.
+- `spikes/S2-circuit/` (created): throwaway Next.js 16.4 + React 19.3 app embedding CircuitJS1 build output in a same-origin iframe with test harness.
+- `docs/spikes/S2.md` (created): complete Spike S2 report with exact tool versions, build outputs, API round-trip findings, service worker notes, and CSP directives.
+- `UPDATE.md` (changed): appended Task 4 completion log.
+**Checks:**
+- Reversal of earlier Git-deferral decision applied: `git init -b main` run; initial commit created; public repository created via GitHub MCP and pushed to `https://github.com/M01stafa/aboard`.
+- Toolchain installed & verified: OpenJDK Temurin `11.0.32.1` (`EclipseAdoptium.Temurin.11.JDK` via winget) and Gradle `8.7` (official binary distribution); both verified on PATH with `java -version` and `gradle -version`.
+- Submodule attached: `https://github.com/M01stafa/circuitjs1.git` at `vendor/circuitjs1`.
+- GWT build: `gradle compileGwt` compiled 5 permutations cleanly in 1m 10s under JDK 11; `gradle makeSite` assembled 466 assets into `site/`.
+- Next.js embed: assets copied to `spikes/S2-circuit/public/circuit/` (`WEB-INF/` strictly excluded); `npm run build` passed in 1.4s under Turbopack.
+- Strict Mode & API round-trip: verified attachment to `window.CircuitJS1` (immediate and `oncircuitjsloaded`), double-mount resilience in Strict Mode, `exportCircuit()` string export, `importCircuit()` exact restoration, and `getCircuitAsSVG()` delivering SVG via `onsvgrendered`.
+- Service worker finding: confirmed stock `circuitjs.html` registers `service-worker.js` and links `manifest.json`; recorded that real fork must remove them in Patch 1.
+- Security script-execution grep: `grep -rn "eval(\|new Function\|\$wnd.eval" vendor/circuitjs1/src` confirmed zero occurrences of JavaScript `eval`, `new Function`, or `$wnd.eval` (all `eval` matches are mathematical `Expr.eval`).
+- Extra CSP directives identified for `/circuit/:path*`: `script-src 'self' 'unsafe-inline' 'unsafe-eval'`, `style-src 'self' 'unsafe-inline'`, `img-src 'self' data: blob:`, `font-src 'self' data:`, `connect-src 'self'`, `frame-src 'self' javascript:`. Parent app requires `frame-src 'self'`.
+**Related:** Task 4 · V18, V14 (GWT part)
+**Open:** Task 3 Playwright browser environment issue (Azure CDN 404 driver download) remains open.
+
+## 2026-10-13 — Process Cleanup: Clear Hung Task 4 Copy Command
+**Request:** Diagnose and clear any hung PowerShell copy command from Task 4, verify process activity, terminate cleanly if stuck, and confirm spikes/S2-circuit/public state is clean before Task 5.
+**Changes:**
+- `UPDATE.md` (changed): appended entry logging diagnosis, termination of hung background copy processes, and verification of spikes/S2-circuit/public.
+**Checks:**
+- Process inspection: identified running background task `task-531` and associated orphaned `powershell.exe` processes (PID 9920 and child PID 21636) executing the `$src = 'vendor\circuitjs1\site'` copy command.
+- State evaluation: observed syntax parser error (`= : The term '=' is not recognized`) with 0% CPU consumption and zero progression for >14 minutes; determined genuinely hung.
+- Termination: killed task-531 via `manage_task` action `kill` and verified both PIDs 9920 and 21636 terminated.
+- Filesystem verification: inspected `spikes/S2-circuit/public/circuit/` against `vendor/circuitjs1/site/`; verified all 456 valid files present, 0 zero-byte files, and `WEB-INF/` strictly absent (`Has WEB-INF: False`). No re-copying required as files were already fully intact from the subsequent direct copy step.
+**Related:** Task 4 · Process Cleanup
+**Open:** Task 3 Playwright browser environment issue (Azure CDN 404 driver download) remains open.
+
+## 2026-10-13 — Task 5: Spike S3 — EmbedPDF Viewing and Annotation Round-Trip
+**Request:** Run Task 5 from docs/TASKS.md: build throwaway Next.js app in spikes/S3-embedpdf/ with EmbedPDF core and 10 plugins, measure time to first page on 50 MB PDF, test annotation round-trip with stamp binary preservation, identify annotation change event name and payload, verify PDFium WASM loading in dev/build, write docs/spikes/S3.md, and commit to repo.
+**Changes:**
+- `spikes/S3-embedpdf/` (created): throwaway Next.js 16.4 + React 19.3 app with EmbedPDF 2.15.1, PDFium engine, 10 plugins, and verification test harness.
+- `spikes/S3-embedpdf/public/wasm/pdfium.wasm` (created): self-hosted PDFium WebAssembly binary (4.65 MB) avoiding external CDN.
+- `spikes/S3-embedpdf/public/test-50mb.pdf` (created): 50.09 MB 50-page test PDF generated via `@cantoo/pdf-lib` resisting compression.
+- `docs/spikes/S3.md` (created): complete Spike S3 report with exact package versions, 50 MB load benchmark, event hook details, round-trip findings, and CSP rules.
+- `UPDATE.md` (changed): appended Task 5 change log.
+**Checks:**
+- EmbedPDF Core + 10 Plugins: verified `@embedpdf/core@2.15.1`, `@embedpdf/engines@2.15.1`, `@embedpdf/pdfium@2.15.1`, and plugins (render, scroll, viewport, zoom, thumbnail, selection, search, annotation, history, export) register cleanly in `PluginRegistry`.
+- 50 MB First-Page Benchmark: measured time to first page on `test-50mb.pdf` (52,518,881 bytes) at ~420 ms (0.42 s), passing the 5-second criterion.
+- Annotation Creation: created highlight, freehand ink, freetext, and stamp annotations under `PdfAnnotationSubtype`.
+- Annotation Change Event Identified: exact hook is `onAnnotationEvent` on `AnnotationScope` (`type: "create" | "update" | "delete" | "loaded"` with payload `{ type, documentId, annotation, pageIndex, committed, ctx }`). Secondary hook is `onStateChange` (`AnnotationDocumentState`).
+- Stamp Binary Preservation: verified `exportAnnotations()` preserves raw image bytes in `ctx.data: ArrayBuffer` (verified in `plugin-annotation` export method).
+- Reload and Import Round-Trip: verified clearing document annotations and re-importing via `scope.importAnnotations(exportedItems)` restores all 4 annotations losslessly.
+- Build & Dev Verification: verified `npm run build` succeeds under Turbopack in 582 ms; verified `next dev` serves self-hosted `/wasm/pdfium.wasm` and `/test-50mb.pdf` with HTTP 200 and correct MIME headers.
+**Related:** Task 5 · V02, V05
+**Open:** Task 3 Playwright browser environment issue (Azure CDN 404 driver download) remains open.
+
