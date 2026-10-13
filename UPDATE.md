@@ -223,6 +223,34 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Task 4 Follow-up
 **Open:** none
 
+## 2026-10-13 — Task 9: Create the Monorepo and the Next.js Application
+**Request:** Proceed with Task 9 using approved dev-tooling table, update libraries table in docs/specs/setup-and-deploy.md, scaffold monorepo with pnpm workspaces and Next.js 16.4 in apps/web, set up TypeScript strict mode, ESLint flat config with react/no-danger and no-unsanitized, directory structure, and verify pnpm dev, pnpm build, pnpm lint, pnpm typecheck.
+**Changes:**
+- `docs/specs/setup-and-deploy.md` (changed): added approved dev tooling table (vitest@5.0.4, @playwright/test@1.64.0, eslint@9.39.5, eslint-config-next@16.4.0, eslint-plugin-react@7.37.5, eslint-plugin-no-unsanitized@4.1.5, typescript@5.9.3, @types/{react,react-dom}@19.3.0, @types/node@22.13.0, gitleaks@8.30.1).
+- `pnpm-workspace.yaml` (created): defined packages: ["apps/*"], allowBuilds for unrs-resolver, and minimumReleaseAgeExclude for vitest.
+- `package.json` (created): root monorepo manifest with stable packageManager (pnpm@12.11.2) and scripts: dev, build, lint, typecheck, test, test:e2e, ci:security.
+- `pnpm-lock.yaml` (created): committed frozen pnpm lockfile.
+- `.gitignore` (changed): added `*.tsbuildinfo` to temporary files.
+- `apps/web/package.json` (created): pinned production stack (next@16.4.0, react@19.3.0, react-dom@19.3.0, tool engines without carets) and approved dev tooling.
+- `apps/web/tsconfig.json` (created): strict mode TypeScript configuration with `@/*` mapping to `./src/*` and React JSX automatic runtime.
+- `apps/web/next.config.ts` (created): Next.js configuration with reactStrictMode, transpilePackages for Excalidraw, and agentRules disabled.
+- `apps/web/eslint.config.mjs` (created): ESLint 9 flat configuration with next rules, `react/no-danger: "error"`, and `no-unsanitized/*: "error"`.
+- `apps/web/app/layout.tsx` (created): root layout with self-hosted Alexandria and Geist font variables, `window.EXCALIDRAW_ASSET_PATH = "/"` script, and lang/dir.
+- `apps/web/app/page.tsx` (created): root page launcher placeholder.
+- `apps/web/src/theme/tokens.css` (created): theme tokens copied verbatim from DESIGN.md section 9.
+- Directory skeleton (created): `.gitkeep` placeholders for `apps/web/src/workspace/`, `apps/web/src/modules/{board,pdf,circuit}/`, `apps/web/src/integration/`, `apps/web/src/core/{storage,drive,alpha}/`, `apps/web/src/i18n/`, `services/`, and `scripts/`.
+- `docs/PROGRESS.md` (changed): transitioned active phase to Phase 1: Foundation (In progress), marked Phase 0 as Done, and updated decisions log.
+**Checks:**
+- `pnpm typecheck`: passes with 0 errors (`tsc --noEmit`).
+- `pnpm lint`: passes with 0 errors (`eslint .`), verified against deliberately forbidden `dangerouslySetInnerHTML` and `innerHTML` assignments.
+- `pnpm build`: passes with 0 errors (`next build`), compiling static pages and verifying typegen.
+- `pnpm dev`: booted successfully on `http://localhost:3000`, returned HTTP 200 with local font preloads and clean exit.
+- `gitleaks`: installed native binary v8.30.1 via winget (`Gitleaks.Gitleaks`).
+**Related:** Task 9 · SEC-5, SEC-7, LAUNCH-1
+**Open:**
+- Phase 1 in progress (proceed to Task 10).
+- Open items carried from Phase 0: Task 3 Playwright CDN 404 driver download, Task 6 throwaway migration supabase/migrations/0001_init.sql to be replaced by Task 13, and Task 7 iPhone Safari checks deferred to Task 31/32.
+
 
 
 

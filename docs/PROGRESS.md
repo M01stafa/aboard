@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 0 — Spikes (awaiting owner approval) |
-| Current task | Task 8 — Consolidate the Spike Results and Close Phase 0 |
+| Active phase | 1 — Foundation |
+| Current task | Task 9 — Create the Monorepo and the Next.js Application (completed) |
 | Last updated | 2026-10-13 |
-| Next step | Phase 1: Foundation (Task 9, upon owner approval of Phase 0 summary) |
+| Next step | Task 10 — Set Up Environment Variables and Secret Handling |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -24,8 +24,8 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 
 | Phase | Status | Tasks | Acceptance criterion |
 |---|---|---|---|
-| **0. Spikes** | awaiting owner approval | **S1** Excalidraw in Next.js (`dynamic` + `ssr:false`, CSS import, React Strict Mode double mount, self-hosted fonts, `refresh()`). **S2** Build the CircuitJS fork with Gradle 8.7, `/circuit/`, API attach, export/import, SVG, served from `public/circuit/` inside the Next.js app and attached correctly after a Strict Mode double mount. **S3** EmbedPDF: 50 MB PDF, highlights, `exportAnnotations`/`importAnnotations` round-trip including a stamp. **S4** Google: test-mode OAuth client, `drive-connect`/`callback`/`token` deployed, create folder + multipart + **resumable 100 MB upload from the browser** (Location/Range headers readable), Picker opens; no Google token left in browser storage after sign-in (§10.1). **S5** `.alpha`: export/import 500 MB on Chrome (stream) and 200 MB on iPhone; check file name keeps `.alpha`. | Written spike report (`docs/spikes/S<n>.md`) with versions and open issues |
-| **1. Foundation** | Not started | Next.js app, routes, theme, RTL/i18n, Supabase Auth (email + Google), migration 0001, workspace host with placeholder panes, **hardened migration + pgTAP RLS suite + CI guards (gitleaks, bundle grep) (§9, §14.3, §14.9)** | Mount counter stays 1 during tab/split changes; RLS test: user A cannot read B's `projects`; client cannot read `google_drive_links` |
+| **0. Spikes** | Done (2026-10-13) | **S1** Excalidraw in Next.js (`dynamic` + `ssr:false`, CSS import, React Strict Mode double mount, self-hosted fonts, `refresh()`). **S2** Build the CircuitJS fork with Gradle 8.7, `/circuit/`, API attach, export/import, SVG, served from `public/circuit/` inside the Next.js app and attached correctly after a Strict Mode double mount. **S3** EmbedPDF: 50 MB PDF, highlights, `exportAnnotations`/`importAnnotations` round-trip including a stamp. **S4** Google: test-mode OAuth client, `drive-connect`/`callback`/`token` deployed, create folder + multipart + **resumable 100 MB upload from the browser** (Location/Range headers readable), Picker opens; no Google token left in browser storage after sign-in (§10.1). **S5** `.alpha`: export/import 500 MB on Chrome (stream) and 200 MB on iPhone; check file name keeps `.alpha`. | Written spike report (`docs/spikes/S<n>.md`) with versions and open issues |
+| **1. Foundation** | In progress | Next.js app, routes, theme, RTL/i18n, Supabase Auth (email + Google), migration 0001, workspace host with placeholder panes, **hardened migration + pgTAP RLS suite + CI guards (gitleaks, bundle grep) (§9, §14.3, §14.9)** | Mount counter stays 1 during tab/split changes; RLS test: user A cannot read B's `projects`; client cannot read `google_drive_links` |
 | **2. Storage core + local mode** | Not started | Dexie schema, `LocalProvider`, `ProjectService`, SaveQueue, save status, silent persistence, project index sync | Create project → reload → data intact; no prompt appears in Chrome/Safari/Firefox |
 | **3. Circuit module** | Not started | Fork patches 1–4, build script, adapter, saving via ProjectService | Circuit survives reload; no extra service worker registered |
 | **4. Board module** | Not started | Excalidraw pane, files via `putFile`, templates panel | Board with images survives reload |
@@ -97,6 +97,8 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-13 | Deferral: Task 7 physical iPhone Safari checks (.alpha extension on download & `<input>` without accept filter) deferred by owner until Task 31/32 |
 | 2026-10-13 | Open item carried: Task 3 Playwright browser download issue (Azure CDN 404); interactive browser verification pending |
 | 2026-10-13 | Open item carried: `supabase/migrations/0001_init.sql` is a throwaway Phase 0 migration to be replaced by the production schema in Task 13 |
+| 2026-10-13 | Task 9 development tooling pinned: vitest@5.0.4, @playwright/test@1.64.0, eslint@9.39.5, eslint-config-next@16.4.0, eslint-plugin-react@7.37.5, eslint-plugin-no-unsanitized@4.1.5, typescript@5.9.3, @types/{react,react-dom}@19.3.0, @types/node@22.13.0, gitleaks@8.30.1 via winget |
+| 2026-10-13 | Next.js 16 CLI deprecates `next lint` in favor of `eslint .`; ESLint 9 configured with react/no-danger and no-unsanitized/* for SEC-7 |
 
 ## Lessons and corrections
 

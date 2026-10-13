@@ -74,10 +74,24 @@ Never put `GOOGLE_CLIENT_SECRET`, `TOKEN_ENC_KEY` or the service role key in the
 | `dexie` | 4.4.x | Apache-2.0 | IndexedDB |
 | `@zip.js/zip.js` | 2.23.x | BSD-3-Clause | `.alpha` ZIP write (streams to disk) and read (random access from a `File`, no full load), ZIP64 for large projects |
 | `hash-wasm` | 4.12.x | MIT | Streaming SHA-256 for large files |
-| `zod` | 3.x or 4.x (VERIFY current) | MIT | `.alpha` manifest validation |
+| `zod` | 3.24.x | MIT | `.alpha` manifest validation |
 | `zustand` | 5.x | MIT | App state |
 | `mitt` | 3.x | MIT | Event bus |
 | `react-resizable-panels` (optional) | 4.x | MIT | Divider logic only; panes stay CSS-grid placed (§6) |
+
+#### Development tooling (approved in Task 9)
+| Tool / Package | Exact Version | License / Source | Use |
+|---|---|---|---|
+| `typescript` | 5.9.3 | Apache-2.0 | Type checking (`pnpm typecheck`) |
+| `@types/react`, `@types/react-dom` | 19.3.0 | MIT | React 19 type definitions |
+| `@types/node` | 22.13.0 | MIT | Node.js 22 LTS type definitions |
+| `eslint` | 9.39.5 | MIT | Linter core (highest 9.x compatible with plugins) |
+| `eslint-config-next` | 16.4.0 | MIT | Next.js lint configuration |
+| `eslint-plugin-react` | 7.37.5 | MIT | React security rules (`react/no-danger` for SEC-7) |
+| `eslint-plugin-no-unsanitized` | 4.1.5 | MIT | DOM-XSS prevention (`no-unsanitized/*` for SEC-7) |
+| `vitest` | 5.0.4 | MIT | Unit test runner (`pnpm test`) |
+| `@playwright/test` | 1.64.0 | Apache-2.0 | E2E browser testing (`pnpm test:e2e`) |
+| `gitleaks` | 8.30.1 | MIT / winget (`Gitleaks.Gitleaks`) | Native secret scanning binary (`pnpm ci:security`) |
 
 ---
 

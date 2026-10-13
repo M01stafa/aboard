@@ -1,0 +1,101 @@
+/* apps/web/src/theme/tokens.css — generated from DESIGN.md v2.1.0. Edit DESIGN.md first. */
+:root {
+  /* ---------- scales ---------- */
+  --blue-950:#00133E; --blue-925:#001F66; --blue-900:#002C8C; --blue-800:#0F3BA0; --blue-700:#1A47B8;
+  --blue-600:#2558D0; --blue-500:#3B72F2; --blue-300:#8FB2FF; --blue-100:#E6EDFF;
+
+  --tech-950:#0B253A; --tech-900:#143E5E; --tech-800:#17598F; --tech-750:#1A63A0; --tech-700:#29709F;
+  --tech-500:#4F9ED5; --tech-300:#8BC4EC; --tech-100:#EAF4FB;
+
+  --gold-900:#745B11; --gold-700:#A88622; --gold-600:#B89528; --gold-500:#D4AF37; --gold-300:#E7CF7E; --gold-100:#FAF5E3;
+
+  --bronze-700:#6B4226; --bronze-500:#8C5835; --bronze-300:#B88564; --bronze-200:#D9A98A;
+
+  --slate-900:#0F172A; --slate-700:#334155; --slate-500:#64748B; --slate-300:#CBD5E1; --slate-100:#F1F5F9;
+
+  /* ---------- brand ---------- */
+  --brand-primary:var(--blue-900); --brand-gold:var(--gold-500); --brand-canvas:#EDEAE1;
+  --brand-tech:var(--tech-500); --brand-bronze:var(--bronze-500); --brand-night:#050B17;
+
+  /* ---------- typography ---------- */
+  --font-sans:var(--font-geist-sans), var(--font-alexandria), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --weight-regular:400; --weight-medium:500; --weight-semibold:600; --weight-bold:700;
+  --tracking-display:-0.02em; --tracking-h1:-0.01em; --tracking-label:0.01em; --tracking-micro:0.03em;
+
+  /* ---------- spacing, size, radius, motion ---------- */
+  --space-1:0.5rem; --space-2:1rem; --space-3:1.5rem; --space-4:2rem; --space-5:2.5rem; --space-6:3rem;
+  --space-7:3.5rem; --space-8:4rem; --space-10:5rem; --space-12:6rem; --space-16:8rem;
+  --control-sm:2rem; --control-md:2.5rem; --control-lg:3rem;
+  --radius-sm:0.5rem; --radius-md:1rem; --radius-lg:1.5rem; --radius-full:9999px;
+  --motion-fast:150ms; --motion-base:200ms; --ease-standard:cubic-bezier(.2,0,0,1);
+
+  /* ---------- light theme (default) ---------- */
+  color-scheme:light;
+  --bg-body:var(--brand-canvas); --bg-surface:#FFFFFF; --bg-subtle:#F5F3EC; --input-bg:#FFFFFF;
+  --text-main:#0B132B; --text-muted:#5C677D;
+  --border-card:#D5CEBE; --border-input:#857E6D;
+
+  --accent-text:var(--tech-750); --accent-text-strong:var(--tech-800); --focus-ring:var(--tech-750);
+
+  --btn-primary-bg:var(--blue-900); --btn-primary-hover:var(--blue-925); --btn-primary-active:var(--blue-950); --btn-primary-text:#FFFFFF;
+  --btn-gold-bg:var(--gold-500); --btn-gold-hover:var(--gold-600); --btn-gold-active:var(--gold-700); --btn-gold-text:var(--blue-950);
+  --btn-bronze-bg:var(--bronze-500); --btn-bronze-hover:var(--bronze-700); --btn-bronze-text:#FFFFFF;
+  --btn-outline-hover-bg:rgba(79,158,213,.12); --btn-outline-active-bg:rgba(79,158,213,.20);
+
+  --success-text:#065F46; --success-bg:#DEF7EC; --success-fill:#0E9F6E;
+  --warning-text:#92400E; --warning-bg:#FEF3C7; --warning-fill:#D97706;
+  --danger-text:#B91C1C;  --danger-bg:#FDE8E8;  --danger-fill:#E02424;
+  --info-text:var(--tech-800); --info-bg:var(--tech-100); --info-fill:var(--tech-500);
+
+  --badge-primary-bg:rgba(0,44,140,.12);  --badge-primary-fg:var(--blue-900);  --badge-primary-bd:rgba(0,44,140,.20);
+  --badge-gold-bg:rgba(212,175,55,.15);   --badge-gold-fg:var(--gold-900);     --badge-gold-bd:var(--gold-500);
+  --badge-tech-bg:rgba(79,158,213,.15);   --badge-tech-fg:var(--tech-800);     --badge-tech-bd:var(--tech-500);
+  --badge-bronze-bg:rgba(140,88,53,.15);  --badge-bronze-fg:var(--bronze-700); --badge-bronze-bd:var(--bronze-500);
+
+  --shadow-1:0 1px 3px rgba(0,44,140,.08);
+  --shadow-2:0 4px 12px rgba(0,44,140,.14);
+  --shadow-3:0 12px 28px rgba(5,11,23,.22);
+  --glow-tech:0 0 16px rgba(79,158,213,.40);
+  --glow-gold:0 0 18px rgba(212,175,55,.35);
+  --overlay-backdrop:rgba(5,11,23,.60);
+  --gradient-accent:linear-gradient(90deg, var(--gold-500), var(--tech-500), var(--blue-900));
+}
+[dir="rtl"] { --gradient-accent:linear-gradient(270deg, var(--gold-500), var(--tech-500), var(--blue-900)); }
+
+:root[data-theme="dark"] {
+  color-scheme:dark;
+  --bg-body:var(--brand-night); --bg-surface:#0C162C; --bg-subtle:#142343; --input-bg:#081021;
+  --text-main:#EDEAE1; --text-muted:#8FA2C4;
+  --border-card:#1B2F58; --border-input:#5E7BAE;
+
+  --accent-text:var(--tech-500); --accent-text-strong:var(--tech-300); --focus-ring:var(--tech-500);
+
+  --btn-primary-bg:var(--blue-600); --btn-primary-hover:var(--blue-700); --btn-primary-active:var(--blue-800); --btn-primary-text:#FFFFFF;
+  --btn-outline-hover-bg:rgba(79,158,213,.12); --btn-outline-active-bg:rgba(79,158,213,.20);
+
+  --success-text:#34D399; --success-bg:rgba(52,211,153,.14);  --success-fill:#0E9F6E;
+  --warning-text:#FBBF24; --warning-bg:rgba(251,191,36,.14);  --warning-fill:#D97706;
+  --danger-text:#F87171;  --danger-bg:rgba(248,113,113,.14);  --danger-fill:#E02424;
+  --info-text:var(--tech-300); --info-bg:rgba(79,158,213,.14); --info-fill:var(--tech-500);
+
+  --badge-primary-bg:rgba(143,178,255,.16); --badge-primary-fg:var(--blue-300);   --badge-primary-bd:rgba(143,178,255,.40);
+  --badge-gold-bg:rgba(212,175,55,.16);     --badge-gold-fg:var(--gold-300);      --badge-gold-bd:rgba(212,175,55,.50);
+  --badge-tech-bg:rgba(79,158,213,.16);     --badge-tech-fg:var(--tech-300);      --badge-tech-bd:rgba(79,158,213,.50);
+  --badge-bronze-bg:rgba(184,133,100,.16);  --badge-bronze-fg:var(--bronze-200);  --badge-bronze-bd:rgba(184,133,100,.50);
+
+  --shadow-1:0 1px 3px rgba(0,0,0,.40);
+  --shadow-2:0 4px 12px rgba(0,0,0,.45);
+  --shadow-3:0 12px 28px rgba(0,0,0,.60);
+  --glow-tech:0 0 16px rgba(79,158,213,.40);
+  --glow-gold:0 0 18px rgba(212,175,55,.35);
+  --overlay-backdrop:rgba(0,0,0,.65);
+}
+
+/* ---------- base ---------- */
+html { background:var(--bg-body); color:var(--text-main); font-family:var(--font-sans); }
+:lang(ar) { letter-spacing:0 !important; }                  /* R6 */
+:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }   /* R5 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-property:color, background-color, border-color !important; animation:none !important; }
+}

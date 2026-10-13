@@ -21,4 +21,5 @@ Thumbs.db
 .temp/
 supabase/.temp/
 *.alpha
+*.tsbuildinfo
 
