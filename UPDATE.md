@@ -211,6 +211,19 @@ This file is the append-only record of every change made to the Aboard project.
 - Task 6 throwaway migration supabase/migrations/0001_init.sql to be superseded by production schema in Task 13.
 - Task 7 iPhone Safari checks deferred by owner to Task 31/32.
 
+## 2026-10-13 — Task 4 Follow-up: Commit Untracked CircuitJS Submodule & Spike Files
+**Request:** Fix untracked files reported in Task 8 closure (.gitmodules, vendor/circuitjs1, docs/spikes/S2.md, spikes/S2-circuit/); verify submodule URL and status, commit and push to M01stafa/aboard, and ensure clean working tree.
+**Changes:**
+- `.gitmodules` (created): tracked submodule configuration for `vendor/circuitjs1` pointing to `https://github.com/M01stafa/circuitjs1.git`.
+- `vendor/circuitjs1` (created): added Git submodule pointer at commit `5a707168778216bb6ed01bfdd62e8bbf7ae0a032` (satisfies GPL fork tracking requirement).
+- `docs/spikes/S2.md` (created): tracked Spike S2 report for the CircuitJS fork build and embedding.
+- `spikes/S2-circuit/` (created): tracked Spike S2 Next.js testbed embedding the CircuitJS build.
+- `UPDATE.md` (changed): appended this follow-up entry.
+**Checks:** Verified `.gitmodules` URL; confirmed `git submodule status` resolves to `5a707168778216bb6ed01bfdd62e8bbf7ae0a032 vendor/circuitjs1 (heads/master)`; working tree clean after push.
+**Related:** Task 4 Follow-up
+**Open:** none
+
+
 
 
 
