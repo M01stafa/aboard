@@ -1,0 +1,93 @@
+# Aboard — Progress, decisions and VERIFY log
+
+This file is the project's memory between agent sessions.
+- **Read it at the start of every task.** It says which phase is active and what is already decided or verified.
+- **Update it before you finish any task** (skill `phase-workflow`): current task, phase status, VERIFY results, decisions, lessons.
+- The **history of changes** lives in `UPDATE.md` (project root, created by Task 1), not here.
+- Keep entries short: one line each, newest at the bottom of each table, dates as `YYYY-MM-DD`.
+
+## Current state
+
+| Field | Value |
+|---|---|
+| Active phase | 0 — Spikes (not started) |
+| Current task | — (next: Task 1) |
+| Last updated | 2026-10-08 (kit created) |
+| Next step | Task 1 in `docs/TASKS.md` (create `UPDATE.md`) |
+| Blockers | None |
+
+## Phases
+
+One phase at a time. A phase is `Done` only when every acceptance criterion passes on Chrome, Firefox, Safari (desktop), an Android phone and an iPhone, and the CI security suite is green (`.agents/rules/security.md`).
+
+Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (YYYY-MM-DD)`
+
+| Phase | Status | Tasks | Acceptance criterion |
+|---|---|---|---|
+| **0. Spikes** | Not started | **S1** Excalidraw in Next.js (`dynamic` + `ssr:false`, CSS import, React Strict Mode double mount, self-hosted fonts, `refresh()`). **S2** Build the CircuitJS fork with Gradle 8.7, `/circuit/`, API attach, export/import, SVG, served from `public/circuit/` inside the Next.js app and attached correctly after a Strict Mode double mount. **S3** EmbedPDF: 50 MB PDF, highlights, `exportAnnotations`/`importAnnotations` round-trip including a stamp. **S4** Google: test-mode OAuth client, `drive-connect`/`callback`/`token` deployed, create folder + multipart + **resumable 100 MB upload from the browser** (Location/Range headers readable), Picker opens; no Google token left in browser storage after sign-in (§10.1). **S5** `.alpha`: export/import 500 MB on Chrome (stream) and 200 MB on iPhone; check file name keeps `.alpha`. | Written spike report (`docs/spikes/S<n>.md`) with versions and open issues |
+| **1. Foundation** | Not started | Next.js app, routes, theme, RTL/i18n, Supabase Auth (email + Google), migration 0001, workspace host with placeholder panes, **hardened migration + pgTAP RLS suite + CI guards (gitleaks, bundle grep) (§9, §14.3, §14.9)** | Mount counter stays 1 during tab/split changes; RLS test: user A cannot read B's `projects`; client cannot read `google_drive_links` |
+| **2. Storage core + local mode** | Not started | Dexie schema, `LocalProvider`, `ProjectService`, SaveQueue, save status, silent persistence, project index sync | Create project → reload → data intact; no prompt appears in Chrome/Safari/Firefox |
+| **3. Circuit module** | Not started | Fork patches 1–4, build script, adapter, saving via ProjectService | Circuit survives reload; no extra service worker registered |
+| **4. Board module** | Not started | Excalidraw pane, files via `putFile`, templates panel | Board with images survives reload |
+| **5. PDF module** | Not started | Viewer, annotations JSON, page operations, annotated download | Annotations survive reload; annotated download opens with highlights in another viewer |
+| **6. `.alpha` export/import** | Not started | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
+| **7. Google Drive** | Not started | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
+| **8. Integration** | Not started | §8 actions | All four actions work across modes |
+| **9. Stirling** | Not started | Compose stack, gateway, UI with progress/cancel, results saved into project | OCR and Office→PDF work; Stirling unreachable from the internet |
+| **10. UI redesign** | Not started | Circuit toolbar via `runCommand`, advanced menu toggle, PDF toolbars, unified styling | Every circuit action reachable |
+| **11. Launch prep** | Not started | **§14.12 security checklist signed off**, security headers/CSP, privacy policy, terms, third-party notices, fork source published, Google app published + brand verification, monitoring | Google verification approved; refresh tokens no longer expire after 7 days |
+
+Release mapping (`docs/PRD.md` A5): R1 = phases 0–8 and 11 · R2 = phase 9 · R3 = phase 10.
+
+## VERIFY log
+
+Every **VERIFY** in `docs/specs/` must be confirmed against the installed package types, the fork's source, or the official docs before code depends on it. Record the result here, then update the spec text.
+
+Status values: `Open` · `Confirmed` · `Changed (spec updated)`
+
+| ID | Item | Where | Phase | Status | Result / date |
+|---|---|---|---|---|---|
+| V00 | Antigravity loads all five `.agents/rules/*.md` (Customizations → Rules), glob rules activate on matching files, and the `DESIGN.md` include in `design.md` resolves | `.agents/rules/` | 0 | Confirmed | Verified all 5 rules and updated include to `docs/DESIGN.md` / 2026-10-13 |
+| V01 | Next.js 16.4 release notes: breaking changes vs the rules in §3.1 | architecture.md §3.1 | 0 | Confirmed | Verified official 16.4 notes: no breaking changes vs §3.1 / 2026-10-13 |
+| V02 | PDFium `.wasm` and EmbedPDF workers load in `next dev` and `next build` | architecture.md §3.1 | 0 (S3) | Open | |
+| V03 | Excalidraw CSS variable names for brand accents | architecture.md §15 | 4 | Confirmed | `--color-primary`, `--color-brand-hover`, `--color-selection`, `--focus-highlight-color` in `index.css` / 2026-10-13 |
+| V04 | Excalidraw persisted `appState` key names | modules.md §7.1 | 4 | Confirmed | `viewBackgroundColor`, `scrollX`, `scrollY`, `zoom`, `gridSize`, `gridModeEnabled` in `types.d.ts` / 2026-10-13 |
+| V05 | EmbedPDF annotation change event name | modules.md §7.3 | 5 | Open | |
+| V06 | No `provider_token`/`provider_refresh_token` in browser storage after Google sign-in + `refreshSession()`; else switch to Path B only | google-drive.md §10.1 | 0 (S4) | Open | |
+| V07 | Supabase `verify_jwt` guidance with asymmetric JWT keys | google-drive.md §10.2 | 7 | Open | |
+| V08 | Resumable upload `Location`/`Range` headers readable from the browser (CORS) | google-drive.md §10.8 | 0 (S4) | Open | |
+| V09 | Google Picker loader and class names | google-drive.md §10.11 | 0 (S4) | Open | |
+| V10 | Drive "Open with" integration requirements | google-drive.md §10.11 | Later | Open | |
+| V11 | `.alpha` download keeps its extension on iOS Safari | alpha-format.md §12.1 | 0 (S5) | Open | |
+| V12 | pgTAP: inserting minimal rows into `auth.users` works in the local stack | security.md §14.3 | 1 | Open | |
+| V13 | Gateway JWT verification: JWKS vs legacy JWT secret | security.md §14.4, setup-and-deploy.md §13 | 9 | Open | |
+| V14 | CSP needs of Picker, Supabase and GWT; `headers()` precedence; COOP with Google popups | security.md §14.5 | 0 (S1/S4) | Open | |
+| V15 | Supabase Auth: refresh-token rotation/reuse detection default; leaked-password protection availability | security.md §14.7 | 1 | Open | |
+| V16 | Stirling setting name to disable unneeded endpoints | security.md §14.8 | 9 | Open | |
+| V17 | Supabase API key rotation procedure | security.md §14.10 | 11 | Open | |
+| V18 | JDK version for the CircuitJS fork build (GWT 2.8.2) | setup-and-deploy.md §5.2 | 0 (S2) | Open | |
+| V19 | Current `zod` major version | setup-and-deploy.md §5.6 | 1 | Open | |
+
+## Decisions log
+
+Owner decisions already made. Do not re-open them without the owner.
+
+| Date | Decision |
+|---|---|
+| 2026-10-06 | Shell + independent tool modules; no code merging between Excalidraw, CircuitJS1 and Stirling-PDF |
+| 2026-10-07 | Online-only for this version (no service worker / offline mode) |
+| 2026-10-07 | User content lives in the user's Google Drive (scope `drive.file`) or only in the browser (IndexedDB); Supabase holds accounts, a small project index and encrypted Google tokens only |
+| 2026-10-07 | Project export format is `.alpha` (ZIP container); it must work in both storage modes |
+| 2026-10-07 | Stack: Next.js 16.4 (App Router) + React 19.3 + TypeScript + Supabase; app deployed on Vercel |
+| 2026-10-07 | Product name: **Aboard** (short for “Alpha board”); the `.alpha` extension stays |
+| 2026-10-07 | Security is a P0 requirement set (`SEC-1…12`); RLS on every table with automated tests |
+| 2026-10-08 | Agent instructions: root `AGENTS.md` + `.agents/rules/` + `.agents/skills/`; design system in root `DESIGN.md` |
+| 2026-10-09 | Interface spacing follows an 8-point grid (`.agents/rules/spacing.md`); every change is logged in root `UPDATE.md` |
+
+## Lessons and corrections
+
+When the owner corrects the same thing twice, or a review finds something the agent should have known, add one line here **and** turn it into a rule in `AGENTS.md` or `.agents/rules/` (keep `AGENTS.md` under 200 lines).
+
+| Date | Lesson | Promoted to |
+|---|---|---|
+| | | |

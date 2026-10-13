@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Next.js & build outputs
+.next/
+**/.next/
+out/
+dist/
+build/
+.turbo/
+
+# Environment variables
+.env*
+!.env.example
+
+# OS & temporary files
+.DS_Store
+Thumbs.db
+*.log
