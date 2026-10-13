@@ -10,7 +10,7 @@
 
 ### 12.1 Container
 - ZIP archive (ZIP64 when needed), written and read with `@zip.js/zip.js`.
-- Extension **`.alpha`**. Download `Blob` type `application/octet-stream` (avoids Safari renaming to `.zip` — **VERIFY** on iOS in Spike S5).
+- Extension **`.alpha`**. Download `Blob` type `application/octet-stream` (avoids Safari renaming to `.zip`; in-memory export path built in Spike S5; physical iPhone device verification deferred by owner to Task 31/32).
 - First entry **`mimetype`**, stored uncompressed, content exactly `application/x-alpha-project` (lets the app identify the file from its first bytes, like EPUB/ODF).
 
 ### 12.2 Layout

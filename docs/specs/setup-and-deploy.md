@@ -21,7 +21,7 @@
 | Privacy policy and terms pages on your domain | Required by Google OAuth verification | — |
 
 ### 5.2 Developer tools
-Node.js 22 LTS, pnpm 9+, Supabase CLI, Docker + Docker Compose, Git; for the circuit build: Gradle **8.7** and a JDK compatible with GWT 2.8.2 (the fork's `./dev.sh setup` installs a working toolchain; **VERIFY** JDK version on first build).
+Node.js 22 LTS, pnpm 9+, Supabase CLI, Docker + Docker Compose, Git; for the circuit build: Gradle **8.7** and OpenJDK 11 (confirmed in Spike S2 / V18; builds GWT 2.8.2 cleanly in 1m 10s without requiring JDK 17).
 
 ### 5.3 Google Cloud setup (step by step)
 1. Create a project, e.g. `aboard-app`.

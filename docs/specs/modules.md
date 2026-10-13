@@ -16,7 +16,7 @@ All modules read and write through `ProjectService` (§11). None of them calls D
 - Fonts: online-only means the default CDN works, but **self-host anyway** (reliability and a strict CSP): copy `node_modules/@excalidraw/excalidraw/dist/prod/fonts` → `public/fonts` at build time and set `window.EXCALIDRAW_ASSET_PATH = "/"` before the bundle loads, in `app/layout.tsx`: `<Script id="excalidraw-asset-path" strategy="beforeInteractive">{`window.EXCALIDRAW_ASSET_PATH = "/";`}</Script>` (`next/script`).
 - API via `excalidrawAPI={(api) => adapter.attach(api)}`. `initialData` is used once; never feed `onChange` back into component state.
 - Props: `langCode="ar-SA" | "en"`, `theme`, `UIOptions` (hide "save to disk"/"load" because the app manages files), `renderTopRightUI`.
-- **Saving:** `onChange` → `ProjectService.saveBoard(itemId, { elements, appState: pick(appState, PERSISTED_KEYS) })` (debounced inside the SaveQueue). `PERSISTED_KEYS`: `viewBackgroundColor`, `gridSize`, `gridModeEnabled`, `zoom`, `scrollX`, `scrollY` (VERIFY key names in the installed types).
+- **Saving:** `onChange` → `ProjectService.saveBoard(itemId, { elements, appState: pick(appState, PERSISTED_KEYS) })` (debounced inside the SaveQueue). `PERSISTED_KEYS`: `viewBackgroundColor`, `gridSize`, `gridModeEnabled`, `zoom`, `scrollX`, `scrollY` (confirmed in `@excalidraw/excalidraw` `types.d.ts` via Spike S1 / V04).
 - **Images:** element JSON stores only `fileId`. Bytes go to `ProjectService.putFile(projectId, fileKey=fileId, blob)`. On load, the module asks for missing files and calls `api.addFiles([...])`.
 - **4 MB limit per image** (`MAX_ALLOWED_FILE_BYTES`): compress and cap dimensions before `addFiles`. Allowed types include png, jpeg, webp, svg, gif, avif.
 - Element field for corners is `roundness` (not `strokeSharpness`).
@@ -76,7 +76,7 @@ export interface CircuitJS1Api {
 - The original PDF bytes are immutable, stored once under `fileKey = sha256(pdf)`.
 - `AnnotationPlugin.exportAnnotations()` returns portable `AnnotationTransferItem[]`; `importAnnotations(items)` restores them (both verified in the package types). Save the array as JSON via `ProjectService.saveAnnotations(itemId, json)`.
 - Stamp annotations carry binary data (`ctx.data: ArrayBuffer`). Before saving, move each stamp's bytes to `putFile(projectId, sha256(bytes), blob)` and replace them in the JSON with `{ fileKey }`; reverse on load.
-- Save trigger: annotation change events (**VERIFY** event name in the plugin) → debounced save.
+- Save trigger: annotation change events via `AnnotationScope.onAnnotationEvent` (`type: "create" | "update" | "delete"`, confirmed in Spike S3 / V05; stamp binary data preserved in `ctx.data: ArrayBuffer`) → debounced save.
 - "Download annotated PDF": import annotations into the document and use the export plugin to produce a new file (or save it into the project as a new PDF item).
 - Page operations (rotate, reorder…) produce a **new PDF file** (new hash) and a new item version; annotations of the old version stay attached to it. Warn the user that annotations do not carry over to a restructured PDF in this version.
 - Precompute nothing: the PDFium `.wasm` is loaded on first PDF open.

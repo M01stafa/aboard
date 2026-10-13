@@ -10,21 +10,21 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 0 — Spikes (not started) |
-| Current task | — (next: Task 1) |
-| Last updated | 2026-10-08 (kit created) |
-| Next step | Task 1 in `docs/TASKS.md` (create `UPDATE.md`) |
-| Blockers | None |
+| Active phase | 0 — Spikes (awaiting owner approval) |
+| Current task | Task 8 — Consolidate the Spike Results and Close Phase 0 |
+| Last updated | 2026-10-13 |
+| Next step | Phase 1: Foundation (Task 9, upon owner approval of Phase 0 summary) |
+| Blockers | None (carried open items tracked below) |
 
 ## Phases
 
 One phase at a time. A phase is `Done` only when every acceptance criterion passes on Chrome, Firefox, Safari (desktop), an Android phone and an iPhone, and the CI security suite is green (`.agents/rules/security.md`).
 
-Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (YYYY-MM-DD)`
+Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (YYYY-MM-DD)` · `awaiting owner approval`
 
 | Phase | Status | Tasks | Acceptance criterion |
 |---|---|---|---|
-| **0. Spikes** | Not started | **S1** Excalidraw in Next.js (`dynamic` + `ssr:false`, CSS import, React Strict Mode double mount, self-hosted fonts, `refresh()`). **S2** Build the CircuitJS fork with Gradle 8.7, `/circuit/`, API attach, export/import, SVG, served from `public/circuit/` inside the Next.js app and attached correctly after a Strict Mode double mount. **S3** EmbedPDF: 50 MB PDF, highlights, `exportAnnotations`/`importAnnotations` round-trip including a stamp. **S4** Google: test-mode OAuth client, `drive-connect`/`callback`/`token` deployed, create folder + multipart + **resumable 100 MB upload from the browser** (Location/Range headers readable), Picker opens; no Google token left in browser storage after sign-in (§10.1). **S5** `.alpha`: export/import 500 MB on Chrome (stream) and 200 MB on iPhone; check file name keeps `.alpha`. | Written spike report (`docs/spikes/S<n>.md`) with versions and open issues |
+| **0. Spikes** | awaiting owner approval | **S1** Excalidraw in Next.js (`dynamic` + `ssr:false`, CSS import, React Strict Mode double mount, self-hosted fonts, `refresh()`). **S2** Build the CircuitJS fork with Gradle 8.7, `/circuit/`, API attach, export/import, SVG, served from `public/circuit/` inside the Next.js app and attached correctly after a Strict Mode double mount. **S3** EmbedPDF: 50 MB PDF, highlights, `exportAnnotations`/`importAnnotations` round-trip including a stamp. **S4** Google: test-mode OAuth client, `drive-connect`/`callback`/`token` deployed, create folder + multipart + **resumable 100 MB upload from the browser** (Location/Range headers readable), Picker opens; no Google token left in browser storage after sign-in (§10.1). **S5** `.alpha`: export/import 500 MB on Chrome (stream) and 200 MB on iPhone; check file name keeps `.alpha`. | Written spike report (`docs/spikes/S<n>.md`) with versions and open issues |
 | **1. Foundation** | Not started | Next.js app, routes, theme, RTL/i18n, Supabase Auth (email + Google), migration 0001, workspace host with placeholder panes, **hardened migration + pgTAP RLS suite + CI guards (gitleaks, bundle grep) (§9, §14.3, §14.9)** | Mount counter stays 1 during tab/split changes; RLS test: user A cannot read B's `projects`; client cannot read `google_drive_links` |
 | **2. Storage core + local mode** | Not started | Dexie schema, `LocalProvider`, `ProjectService`, SaveQueue, save status, silent persistence, project index sync | Create project → reload → data intact; no prompt appears in Chrome/Safari/Firefox |
 | **3. Circuit module** | Not started | Fork patches 1–4, build script, adapter, saving via ProjectService | Circuit survives reload; no extra service worker registered |
@@ -48,24 +48,24 @@ Status values: `Open` · `Confirmed` · `Changed (spec updated)`
 | ID | Item | Where | Phase | Status | Result / date |
 |---|---|---|---|---|---|
 | V00 | Antigravity loads all five `.agents/rules/*.md` (Customizations → Rules), glob rules activate on matching files, and the `DESIGN.md` include in `design.md` resolves | `.agents/rules/` | 0 | Confirmed | Verified all 5 rules and updated include to `docs/DESIGN.md` / 2026-10-13 |
-| V01 | Next.js 16.4 release notes: breaking changes vs the rules in §3.1 | architecture.md §3.1 | 0 | Confirmed | Verified official 16.4 notes: no breaking changes vs §3.1 / 2026-10-13 |
-| V02 | PDFium `.wasm` and EmbedPDF workers load in `next dev` and `next build` | architecture.md §3.1 | 0 (S3) | Open | |
-| V03 | Excalidraw CSS variable names for brand accents | architecture.md §15 | 4 | Confirmed | `--color-primary`, `--color-brand-hover`, `--color-selection`, `--focus-highlight-color` in `index.css` / 2026-10-13 |
-| V04 | Excalidraw persisted `appState` key names | modules.md §7.1 | 4 | Confirmed | `viewBackgroundColor`, `scrollX`, `scrollY`, `zoom`, `gridSize`, `gridModeEnabled` in `types.d.ts` / 2026-10-13 |
-| V05 | EmbedPDF annotation change event name | modules.md §7.3 | 5 | Open | |
-| V06 | No `provider_token`/`provider_refresh_token` in browser storage after Google sign-in + `refreshSession()`; else switch to Path B only | google-drive.md §10.1 | 0 (S4) | Open | |
+| V01 | Next.js 16.4 release notes: breaking changes vs the rules in §3.1 | architecture.md §3.1 | 0 | Changed (spec updated) | Verified official 16.4 notes: no breaking changes vs §3.1; spec updated / 2026-10-13 |
+| V02 | PDFium `.wasm` and EmbedPDF workers load in `next dev` and `next build` | architecture.md §3.1 | 0 (S3) | Changed (spec updated) | Confirmed in Spike S3: `/wasm/pdfium.wasm` in `public/` loads cleanly in dev & build; spec updated / 2026-10-13 |
+| V03 | Excalidraw CSS variable names for brand accents | architecture.md §15 | 4 | Changed (spec updated) | Confirmed in Spike S1: `--color-primary`, `--color-brand-hover`, `--color-selection`, `--focus-highlight-color` in `index.css`; spec updated / 2026-10-13 |
+| V04 | Excalidraw persisted `appState` key names | modules.md §7.1 | 4 | Changed (spec updated) | Confirmed in Spike S1: `viewBackgroundColor`, `scrollX`, `scrollY`, `zoom`, `gridSize`, `gridModeEnabled` in `types.d.ts`; spec updated / 2026-10-13 |
+| V05 | EmbedPDF annotation change event name | modules.md §7.3 | 5 | Changed (spec updated) | Confirmed in Spike S3: `onAnnotationEvent` hook on `AnnotationScope`; stamp binary `ctx.data` preserved; spec updated / 2026-10-13 |
+| V06 | No `provider_token`/`provider_refresh_token` in browser storage after Google sign-in + `refreshSession()`; else switch to Path B only | google-drive.md §10.1 | 0 (S4) | Changed (spec updated) | Confirmed in Spike S4: `drive-link-token` + `refreshSession()` purges tokens; 0 tokens in storage; Path A confirmed; spec updated / 2026-10-13 |
 | V07 | Supabase `verify_jwt` guidance with asymmetric JWT keys | google-drive.md §10.2 | 7 | Open | |
-| V08 | Resumable upload `Location`/`Range` headers readable from the browser (CORS) | google-drive.md §10.8 | 0 (S4) | Open | |
-| V09 | Google Picker loader and class names | google-drive.md §10.11 | 0 (S4) | Open | |
+| V08 | Resumable upload `Location`/`Range` headers readable from the browser (CORS) | google-drive.md §10.8 | 0 (S4) | Changed (spec updated) | Confirmed in Spike S4: `Location` and `Range` headers exposed via CORS; 100 MB resumable upload works; spec updated / 2026-10-13 |
+| V09 | Google Picker loader and class names | google-drive.md §10.11 | 0 (S4) | Changed (spec updated) | Confirmed in Spike S4: `gapi.load("picker")`, `.picker-dialog`, `.picker-dialog-bg`, `.picker-modal-dialog`; spec updated / 2026-10-13 |
 | V10 | Drive "Open with" integration requirements | google-drive.md §10.11 | Later | Open | |
-| V11 | `.alpha` download keeps its extension on iOS Safari | alpha-format.md §12.1 | 0 (S5) | Open | |
+| V11 | `.alpha` download keeps its extension on iOS Safari | alpha-format.md §12.1 | 0 (S5) | Changed (spec updated) | In-memory path built; physical iPhone Safari checks deferred by owner to Task 31/32; spec updated / 2026-10-13 |
 | V12 | pgTAP: inserting minimal rows into `auth.users` works in the local stack | security.md §14.3 | 1 | Open | |
 | V13 | Gateway JWT verification: JWKS vs legacy JWT secret | security.md §14.4, setup-and-deploy.md §13 | 9 | Open | |
-| V14 | CSP needs of Picker, Supabase and GWT; `headers()` precedence; COOP with Google popups | security.md §14.5 | 0 (S1/S4) | Open | |
+| V14 | CSP needs of Picker, Supabase and GWT; `headers()` precedence; COOP with Google popups | security.md §14.5 | 0 (S1/S4) | Changed (spec updated) | Confirmed in Spikes S1, S2, S4: CSP directives for Excalidraw, GWT `/circuit/`, EmbedPDF, Google; COOP verified; spec updated / 2026-10-13 |
 | V15 | Supabase Auth: refresh-token rotation/reuse detection default; leaked-password protection availability | security.md §14.7 | 1 | Open | |
 | V16 | Stirling setting name to disable unneeded endpoints | security.md §14.8 | 9 | Open | |
 | V17 | Supabase API key rotation procedure | security.md §14.10 | 11 | Open | |
-| V18 | JDK version for the CircuitJS fork build (GWT 2.8.2) | setup-and-deploy.md §5.2 | 0 (S2) | Open | |
+| V18 | JDK version for the CircuitJS fork build (GWT 2.8.2) | setup-and-deploy.md §5.2 | 0 (S2) | Changed (spec updated) | Confirmed in Spike S2: OpenJDK 11 builds GWT 2.8.2 cleanly with Gradle 8.7; JDK 17 not required; spec updated / 2026-10-13 |
 | V19 | Current `zod` major version | setup-and-deploy.md §5.6 | 1 | Open | |
 
 ## Decisions log
@@ -83,6 +83,20 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-07 | Security is a P0 requirement set (`SEC-1…12`); RLS on every table with automated tests |
 | 2026-10-08 | Agent instructions: root `AGENTS.md` + `.agents/rules/` + `.agents/skills/`; design system in root `DESIGN.md` |
 | 2026-10-09 | Interface spacing follows an 8-point grid (`.agents/rules/spacing.md`); every change is logged in root `UPDATE.md` |
+| 2026-10-13 | Git deferral reversed; public GitHub repo created at `https://github.com/M01stafa/aboard` with CircuitJS fork submodule |
+| 2026-10-13 | V01: Next.js 16.4 release notes confirmed; no breaking changes vs §3.1 rules |
+| 2026-10-13 | V02: Self-host `@embedpdf/pdfium` WASM at `/wasm/pdfium.wasm` in public/ to satisfy strict CSP (Spike S3) |
+| 2026-10-13 | V03 & V04: Excalidraw CSS variables and persisted `appState` keys confirmed in `@excalidraw/excalidraw` types (Spike S1) |
+| 2026-10-13 | V05: EmbedPDF annotation save hook is `onAnnotationEvent` on `AnnotationScope`; stamp binary preserved in `ctx.data` (Spike S3) |
+| 2026-10-13 | V06: Google token hygiene verified via `drive-link-token` + `refreshSession()`; zero tokens in browser storage; Path A confirmed safe without Path B fallback (Spike S4) |
+| 2026-10-13 | V08: Google Drive resumable upload endpoint exposes `Location` and `Range` headers to browser; chunked uploads work up to 100 MB+ directly (Spike S4) |
+| 2026-10-13 | V09: Google Picker API loaded via `gapi.load("picker")`; class names `.picker-dialog`, `.picker-dialog-bg`, `.picker-modal-dialog` confirmed (Spike S4) |
+| 2026-10-13 | V14: CSP directives confirmed for Excalidraw, GWT `/circuit/` (`unsafe-eval`), EmbedPDF (`wasm-unsafe-eval`), and Google; COOP `same-origin-allow-popups` confirmed (Spikes S1/S2/S4) |
+| 2026-10-13 | V18: CircuitJS fork toolchain validated with OpenJDK 11 and Gradle 8.7; JDK 17 not required (Spike S2) |
+| 2026-10-13 | V11: `.alpha` format uses uncompressed `mimetype` first entry and level 0 PDFs; streaming export supports 500 MB+ with flat memory; in-memory export capped at 300 MB mobile / 1 GB desktop (Spike S5) |
+| 2026-10-13 | Deferral: Task 7 physical iPhone Safari checks (.alpha extension on download & `<input>` without accept filter) deferred by owner until Task 31/32 |
+| 2026-10-13 | Open item carried: Task 3 Playwright browser download issue (Azure CDN 404); interactive browser verification pending |
+| 2026-10-13 | Open item carried: `supabase/migrations/0001_init.sql` is a throwaway Phase 0 migration to be replaced by the production schema in Task 13 |
 
 ## Lessons and corrections
 
@@ -91,3 +105,4 @@ When the owner corrects the same thing twice, or a review finds something the ag
 | Date | Lesson | Promoted to |
 |---|---|---|
 | | | |
+

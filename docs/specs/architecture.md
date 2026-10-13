@@ -79,7 +79,7 @@ Offline use, real-time multi-user editing, embedding Stirling's own UI, sharing 
 | ADR-15 | **Per-user local databases** (`aboard:<userId>`) | IndexedDB is per browser profile, not per account; shared computers must not leak projects |
 
 ### 3.1 Next.js usage rules (mandatory)
-0. **Versions:** pin `next@16.4.0` and `react`/`react-dom@19.3.0` (latest on npm on 2026-10-07; 16.4.0 was published 2026-10-06). **VERIFY** the 16.4 release notes for breaking changes before starting (these Next.js rules were checked against the 16.x docs, not 16.4-specific notes).
+0. **Versions:** pin `next@16.4.0` and `react`/`react-dom@19.3.0` (latest on npm on 2026-10-07; 16.4.0 was published 2026-10-06). 16.4 release notes verified: no breaking changes vs these rules (V01 confirmed in Task 2).
 1. **Client Components for everything interactive.** Pages that touch tool modules, Dexie, Drive or `window` start with `"use client"`. Server Components only for static pages (privacy, terms, licenses).
 2. **Tool modules load with `next/dynamic(..., { ssr: false })`** from a Client Component (Excalidraw, EmbedPDF, the circuit iframe wrapper).
 3. **User content never passes through the Next.js server:** no Server Actions or Route Handlers for boards, circuits, PDFs or Drive files.
@@ -87,7 +87,7 @@ Offline use, real-time multi-user editing, embedding Stirling's own UI, sharing 
 5. **Workspace route uses a query parameter** (`/workspace?p=<projectId>`), read with `useSearchParams` inside a `<Suspense>` boundary. Keeps the app compatible with static export if ever needed.
 6. **`/circuit/**` is plain static files in `public/`** produced by `scripts/build-circuit.sh`; never import them as modules.
 7. **React Strict Mode double-mounts components in development.** Adapters (`CircuitAdapter`, board adapter, PDF engine) must be idempotent: attach/detach cleanly, never register callbacks twice, and treat the first iframe load as disposable.
-8. **Turbopack/webpack:** confirm the PDFium `.wasm` and EmbedPDF workers load in both `next dev` and `next build` (**VERIFY** in Spike S3).
+8. **Turbopack/webpack:** self-hosted PDFium `.wasm` (`/wasm/pdfium.wasm`) and EmbedPDF workers load cleanly in both `next dev` and `next build` (V02 confirmed in Spike S3).
 9. **Drive functions stay Supabase Edge Functions** (host-independent, already specified in §10). Alternative for a single codebase: the same five functions as Next.js Route Handlers in `app/api/drive/*` (Node runtime); then the Google redirect URI becomes `https://aboard.example/api/drive/callback` and the secrets move to Vercel environment variables.
 10. **Keep the engine layers framework-free** (rule in §21): moving off Next.js later must not touch modules or core.
 
@@ -166,7 +166,7 @@ CI test: a mount counter per module must stay at 1 while switching tabs, splitti
 
 ## 15. Theme, RTL, i18n
 - `theme/tokens.css` with CSS variables and `[data-theme="dark"]` overrides for shell and PDF UI.
-- Excalidraw: `theme` prop; `langCode="ar-SA"` (RTL); brand accents via its CSS variables scoped to the board container (**VERIFY** names in the installed `index.css`).
+- Excalidraw: `theme` prop; `langCode="ar-SA"` (RTL); brand accents via its CSS variables scoped to the board container (`--color-primary`, `--color-primary-hover`, `--color-brand-hover`, `--color-selection`, `--focus-highlight-color`, confirmed in `index.css` via Spike S1 / V03).
 - CircuitJS1: canvas colors through URL params; chrome via the fork's CSS; theme change = `exportCircuit()` → reload iframe → `importCircuit()`. Arabic needs `locale_ar.txt` (fork patch 4); canvas labels stay left-to-right.
 - Shell: `<html dir>` follows language; logical CSS properties; Picker `setLocale`.
 

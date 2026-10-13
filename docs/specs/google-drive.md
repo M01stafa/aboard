@@ -42,7 +42,7 @@ supabase.auth.onAuthStateChange((event, session) => {
 });
 ```
 Notes:
-- `provider_refresh_token` exists only in the session created right after the OAuth redirect, **but supabase-js saves that session to browser storage as-is** (verified in `GoTrueClient._saveSession`), so the Google refresh token would sit in `localStorage` until the next session refresh. Therefore: send it to the server immediately, then call `supabase.auth.refreshSession()` (the refreshed session comes from the Supabase server and carries no provider tokens). **VERIFY in Spike S4** with an automated check that `localStorage`/IndexedDB contain no `provider_token`/`provider_refresh_token` afterwards. If that check cannot be made to pass, use **Path B only** (code exchanged server-side; the token never reaches the browser) at the cost of a second consent screen.
+- `provider_refresh_token` exists only in the session created right after the OAuth redirect, **but supabase-js saves that session to browser storage as-is** (verified in `GoTrueClient._saveSession`), so the Google refresh token would sit in `localStorage` until the next session refresh. Therefore: send it to the server immediately, then call `supabase.auth.refreshSession()` (the refreshed session comes from the Supabase server and carries no provider tokens). Confirmed in Spike S4 (V06): automated storage scans of `localStorage`, `sessionStorage`, and `IndexedDB` verified 0 Google tokens remaining after `refreshSession()`. Path A is confirmed safe; fallback to Path B only is not required.
 - Google returns a refresh token **only on first consent** for this client. If the user consented before and the server has no token (e.g. deleted), `get_drive_status` returns `connected=false` → show the Path B button.
 - Google's consent screen lets users untick individual scopes. The server checks the granted `scope` string and refuses to link without `drive.file`.
 
@@ -518,7 +518,7 @@ async function resumableCreate(metadata: DriveMeta, blob: Blob, onProgress?: (p:
     },
     body: JSON.stringify(metadata),
   });
-  const session = start.headers.get("Location");          // VERIFY in Spike S4: header readable via CORS
+  const session = start.headers.get("Location");          // Confirmed in Spike S4 (V08): Location header exposed via CORS
   if (!session) throw new Error("resumable_session_missing");
   const CHUNK = 8 * 1024 * 1024;
   let offset = 0;
@@ -530,7 +530,7 @@ async function resumableCreate(metadata: DriveMeta, blob: Blob, onProgress?: (p:
       body: blob.slice(offset, end),
     });
     if (res.status === 308) {                               // chunk accepted, continue
-      const range = res.headers.get("Range");               // "bytes=0-N"
+      const range = res.headers.get("Range");               // "bytes=0-N" (confirmed readable in Spike S4)
       offset = range ? Number(range.split("-")[1]) + 1 : end;
       onProgress?.(offset / blob.size);
       continue;
@@ -574,6 +574,6 @@ new google.picker.PickerBuilder()
   .setCallback(onPicked)
   .build().setVisible(true);
 ```
-**VERIFY** the current Picker loader and class names in Google's docs during Spike S4. Picking a PDF copies nothing: the project's `pdfs/<itemId>.json` stores a reference, and the file is downloaded (and cached) on open; on save of a derived file the app writes a new file into the project folder.
+Confirmed in Spike S4 (V09): loader is `window.gapi.load("picker")`; DOM class names are `.picker-dialog` (dialog container), `.picker-dialog-bg` (backdrop), and `.picker-modal-dialog` (modal frame). Picking a PDF copies nothing: the project's `pdfs/<itemId>.json` stores a reference, and the file is downloaded (and cached) on open; on save of a derived file the app writes a new file into the project folder.
 
 Optional later: Drive "Open with" integration for `.alpha` files (Drive UI integration in the Google Cloud console). **VERIFY** current requirements (it may need the Google Workspace Marketplace SDK).

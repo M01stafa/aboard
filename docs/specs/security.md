@@ -181,8 +181,12 @@ export default {
   },
 };
 ```
-- The App Router emits inline bootstrap scripts, so `script-src 'self'` alone breaks the app. **R1:** `'unsafe-inline'` as above (still blocks foreign script origins). **Later:** nonce-based CSP through `proxy.ts` (Next.js 16's name for middleware; per Next.js docs, nonces force dynamic rendering).
-- **VERIFY** in Spike S1/S4: what the Picker, Supabase and GWT need; header precedence when two `headers()` rules match (the negative-lookahead source avoids overlap); the COOP value with Google sign-in and Picker popups.
+- Confirmed in Spikes S1, S2, S4 (V14):
+  - Excalidraw requires `style-src 'self' 'unsafe-inline'`, `font-src 'self'`, `img-src 'self' blob: data:`, `worker-src 'self' blob:`.
+  - CircuitJS iframe (`/circuit/:path*`) requires `script-src 'self' 'unsafe-inline' 'unsafe-eval'`, `style-src 'self' 'unsafe-inline'`, `img-src 'self' data: blob:`, `connect-src 'self'`, `frame-src 'self' javascript:`.
+  - EmbedPDF requires `script-src 'self' 'wasm-unsafe-eval'`.
+  - Google Sign-In & Picker require `script-src https://apis.google.com https://accounts.google.com`, `frame-src https://docs.google.com https://accounts.google.com`, `connect-src https://*.supabase.co https://www.googleapis.com https://accounts.google.com`, `img-src https://*.googleusercontent.com https://ssl.gstatic.com`.
+  - COOP `same-origin-allow-popups` allows Google OAuth and Picker popups to communicate back to the window; header precedence is enforced cleanly by the negative-lookahead pattern.
 - Edge Functions and the gateway also send `X-Content-Type-Options: nosniff` and `Cache-Control: no-store` on token responses.
 
 ### 14.6 Browser-side protections

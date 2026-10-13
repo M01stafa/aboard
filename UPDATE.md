@@ -187,5 +187,30 @@ This file is the append-only record of every change made to the Aboard project.
 - Task 3 Playwright browser environment issue (Azure CDN 404 driver download) carried forward.
 - supabase/migrations/0001_init.sql migration cleanup note carried forward: the migration is throwaway from Phase 0 Spike S4 and will be superseded by the production schema in Task 13.
 
+## 2026-10-13 — Task 8: Consolidate Spike Results and Close Phase 0 (Awaiting Owner Approval)
+**Request:** Run Task 8 from docs/TASKS.md: consolidate results of all five Phase 0 spikes (S1–S5), compare observed spike results with docs/specs/* and align spec files with reality, update VERIFY log and Decisions log in docs/PROGRESS.md, track carried open items and owner deferral of iPhone checks, verify apps/ does not import spikes/, set Phase 0 status to "awaiting owner approval", and push to M01stafa/aboard.
+**Changes:**
+- `docs/specs/architecture.md` (changed): updated §3.1 (V01 confirmed 16.4 notes; V02 self-hosted PDFium WASM confirmed in dev and build) and §15 (V03 confirmed Excalidraw brand CSS variables in index.css).
+- `docs/specs/modules.md` (changed): updated §7.1 (V04 confirmed persisted Excalidraw appState keys) and §7.3 (V05 confirmed AnnotationScope.onAnnotationEvent hook and stamp binary preservation in ctx.data).
+- `docs/specs/google-drive.md` (changed): updated §10.1 (V06 confirmed Google token hygiene via drive-link-token + refreshSession(), Path A safe without Path B fallback), §10.8 (V08 confirmed Location and Range headers readable via CORS in 100 MB resumable upload), and §10.11 (V09 confirmed gapi.load("picker") and .picker-dialog class names).
+- `docs/specs/security.md` (changed): updated §14.5 (V14 confirmed CSP rules for Excalidraw, GWT CircuitJS /circuit/, EmbedPDF wasm-unsafe-eval, and Google; COOP same-origin-allow-popups confirmed).
+- `docs/specs/setup-and-deploy.md` (changed): updated §5.2 (V18 confirmed OpenJDK 11 builds CircuitJS GWT 2.8.2 cleanly with Gradle 8.7; JDK 17 not required).
+- `docs/specs/alpha-format.md` (changed): updated §12.1 (V11 in-memory export path built with application/octet-stream; physical iPhone verification deferred to Task 31/32).
+- `docs/PROGRESS.md` (changed): updated Current State, set Phase 0 status to "awaiting owner approval", updated VERIFY log for V01, V02, V03, V04, V05, V06, V08, V09, V11, V14, V18, recorded all spec updates in Decisions log, and tracked carried open items and deferrals.
+- `UPDATE.md` (changed): appended Task 8 consolidation change log.
+**Checks:**
+- Spikes import isolation: verified via grep that `apps/` has zero imports from `spikes/` (clean framework-free structure preserved).
+- Spec alignment: cross-referenced every resolved VERIFY item against spike reports S1–S5; updated 6 spec files with verified findings.
+- Deferral decision recorded: owner decision deferring the two physical iPhone Safari checks (V11: .alpha extension retention and file input selection without accept filter) until Task 31/32 logged as binding decision.
+- Open items carried: Task 3 Playwright CDN 404 driver download; Task 6 throwaway migration supabase/migrations/0001_init.sql to be superseded by Task 13.
+- Phase 0 status: set to "awaiting owner approval" pending owner review of Phase 0 consolidation summary.
+**Related:** Task 8 · V01, V02, V03, V04, V05, V06, V08, V09, V11, V14, V18
+**Open:**
+- Phase 0 awaiting owner approval before proceeding to Phase 1 (Task 9).
+- Task 3 Playwright browser environment issue (Azure CDN 404 driver download) carried forward.
+- Task 6 throwaway migration supabase/migrations/0001_init.sql to be superseded by production schema in Task 13.
+- Task 7 iPhone Safari checks deferred by owner to Task 31/32.
+
+
 
 
