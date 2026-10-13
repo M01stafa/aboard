@@ -1,0 +1,4 @@
+project_id = "fmlpkcbpoziwkjuxuyaf"
+
+[functions.drive-callback]
+verify_jwt = false

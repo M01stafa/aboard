@@ -143,3 +143,27 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Task 5 · V02, V05
 **Open:** Task 3 Playwright browser environment issue (Azure CDN 404 driver download) remains open.
 
+## 2026-10-13 — Task 6: Spike S4 — Google Sign-In, Token Exchange, Uploads & Picker Complete
+**Request:** Verify owner setup (Stage A), deploy throwaway Edge Functions (drive-connect, drive-callback, drive-token, drive-link-token), run Google sign-in and token exchange, verify browser storage isolation (no Google tokens in localStorage/sessionStorage/IndexedDB), verify folder creation, multipart upload, and 100 MB resumable upload with Location/Range headers, verify Google Picker with restricted API key, record CSP directives, write docs/spikes/S4.md, and commit to repo.
+**Changes:**
+- `supabase/config.toml` (created): configured `verify_jwt = false` for `drive-callback`.
+- `supabase/migrations/0001_init.sql` (created): full database migration (profiles, projects, google_drive_links, oauth_states, rate_limits, check_rate_limit, get_drive_status) applied to remote Supabase project via `supabase db push`.
+- `supabase/functions/_shared/` (created): shared modules for env, HTTP with exact-origin CORS, admin Supabase client with requireUser, AES-256-GCM encryption/decryption, Google OAuth client, and rate limiting.
+- `supabase/functions/drive-connect/index.ts` (created & deployed): PKCE and state generator, returns Google OAuth URL.
+- `supabase/functions/drive-callback/index.ts` (created & deployed): handles OAuth redirect, validates one-time state, exchanges code, encrypts refresh token into database.
+- `supabase/functions/drive-token/index.ts` (created & deployed): decrypts refresh token and returns short-lived Google access token.
+- `supabase/functions/drive-link-token/index.ts` (created & deployed): stores Google refresh token from client after OAuth sign-in.
+- `spikes/S4-drive/` (created): throwaway Next.js 16.4 + React 19.3 app with verification dashboard, OAuth callback handler, and upload test harness.
+- `docs/spikes/S4.md` (created): comprehensive Spike S4 report with exact versions, storage audit findings, upload benchmarks, Picker DOM inspection, and CSP directives.
+- `UPDATE.md` (changed): appended Task 6 completion entry.
+**Checks:**
+- Setup Verification (Stage A): verified Supabase linked project `fmlpkcbpoziwkjuxuyaf` and secrets; verified Google provider enabled; owner confirmed Google Cloud Console Authorized redirect URIs.
+- Edge Functions Deployment: deployed and verified active all 4 functions (`drive-connect`, `drive-callback` with `--no-verify-jwt`, `drive-token`, `drive-link-token`).
+- Browser Storage Inspection (VERIFY V06): PASS. Initial OAuth session carries `provider_refresh_token` in memory, forwarded to `drive-link-token`, followed immediately by `supabase.auth.refreshSession()`. Verified that refreshed session from GoTrue contains 0 provider tokens, completely overwriting `localStorage`. Scans of `localStorage`, `sessionStorage`, and `IndexedDB` confirmed zero Google tokens (`ya29.`, `1//`). Fallback to server-only Path B not required.
+- Drive Folder Creation & Multipart Upload (VERIFY V08): PASS. Short-lived token from `drive-token` created folder via `POST /drive/v3/files` and uploaded small file via multipart `POST /upload/drive/v3/files?uploadType=multipart`.
+- 100 MB Resumable Upload (VERIFY V08): PASS. Initiated session via `POST /upload/drive/v3/files?uploadType=resumable`; confirmed browser reads `Location` response header; chunk upload verified `Range` response header readability with `308 Resume Incomplete`.
+- Google Picker & CSP Directives (VERIFY V09, V14): PASS. Loaded via `https://apis.google.com/js/api.js`; inspected modal class names (`.picker-dialog`, `.picker-dialog-bg`, `.picker-modal-dialog`). Required CSP directives recorded.
+**Related:** Task 6 · V06, V08, V09, V14 (Google part)
+**Open:** Task 3 Playwright browser environment issue (Azure CDN 404 driver download) remains open.
+
+
