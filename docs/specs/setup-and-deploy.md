@@ -92,6 +92,7 @@ Never put `GOOGLE_CLIENT_SECRET`, `TOKEN_ENC_KEY` or the service role key in the
 | `vitest` | 5.0.4 | MIT | Unit test runner (`pnpm test`) |
 | `@playwright/test` | 1.64.0 | Apache-2.0 | E2E browser testing (`pnpm test:e2e`) |
 | `gitleaks` | 8.30.1 | MIT / winget (`Gitleaks.Gitleaks`) | Native secret scanning binary (`pnpm ci:security`) |
+| `happy-dom` | 21.0.1 | MIT | Vitest DOM environment for React lifecycle tests |
 
 ---
 

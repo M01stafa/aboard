@@ -26,7 +26,7 @@ function loadLocalEnv() {
 
 export default defineConfig({
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}"],
     exclude: ["e2e/**", "node_modules/**"],
     env: loadLocalEnv(),
   },

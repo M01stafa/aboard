@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 1 — Foundation |
-| Current task | Task 17 — Build the Launcher and the Route Skeleton (completed) |
+| Active phase | 2 — Storage Core and Local Mode |
+| Current task | Task 18 — Build the Workspace Host With Tabs and Split View (completed) |
 | Last updated | 2026-10-14 |
-| Next step | Task 18 — Build the Workspace Host With Tabs and Split View |
+| Next step | Task 19 — Create the Per-User Browser Database |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -25,8 +25,8 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | Phase | Status | Tasks | Acceptance criterion |
 |---|---|---|---|
 | **0. Spikes** | Done (2026-10-13) | **S1** Excalidraw in Next.js (`dynamic` + `ssr:false`, CSS import, React Strict Mode double mount, self-hosted fonts, `refresh()`). **S2** Build the CircuitJS fork with Gradle 8.7, `/circuit/`, API attach, export/import, SVG, served from `public/circuit/` inside the Next.js app and attached correctly after a Strict Mode double mount. **S3** EmbedPDF: 50 MB PDF, highlights, `exportAnnotations`/`importAnnotations` round-trip including a stamp. **S4** Google: test-mode OAuth client, `drive-connect`/`callback`/`token` deployed, create folder + multipart + **resumable 100 MB upload from the browser** (Location/Range headers readable), Picker opens; no Google token left in browser storage after sign-in (§10.1). **S5** `.alpha`: export/import 500 MB on Chrome (stream) and 200 MB on iPhone; check file name keeps `.alpha`. | Written spike report (`docs/spikes/S<n>.md`) with versions and open issues |
-| **1. Foundation** | In progress | Next.js app, routes, theme, RTL/i18n, Supabase Auth (email + Google), migration 0001, workspace host with placeholder panes, **hardened migration + pgTAP RLS suite + CI guards (gitleaks, bundle grep) (§9, §14.3, §14.9)** | Mount counter stays 1 during tab/split changes; RLS test: user A cannot read B's `projects`; client cannot read `google_drive_links` |
-| **2. Storage core + local mode** | Not started | Dexie schema, `LocalProvider`, `ProjectService`, SaveQueue, save status, silent persistence, project index sync | Create project → reload → data intact; no prompt appears in Chrome/Safari/Firefox |
+| **1. Foundation** | Done (2026-10-14) | Next.js app, routes, theme, RTL/i18n, Supabase Auth (email + Google), migration 0001, workspace host with placeholder panes, **hardened migration + pgTAP RLS suite + CI guards (gitleaks, bundle grep) (§9, §14.3, §14.9)** | Mount counter stays 1 during tab/split changes; RLS test: user A cannot read B's `projects`; client cannot read `google_drive_links` |
+| **2. Storage core + local mode** | In progress | Dexie schema, `LocalProvider`, `ProjectService`, SaveQueue, save status, silent persistence, project index sync | Create project → reload → data intact; no prompt appears in Chrome/Safari/Firefox |
 | **3. Circuit module** | Not started | Fork patches 1–4, build script, adapter, saving via ProjectService | Circuit survives reload; no extra service worker registered |
 | **4. Board module** | Not started | Excalidraw pane, files via `putFile`, templates panel | Board with images survives reload |
 | **5. PDF module** | Not started | Viewer, annotations JSON, page operations, annotated download | Annotations survive reload; annotated download opens with highlights in another viewer |
@@ -106,6 +106,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-14 | Added Content-Security-Policy with isolated /circuit/:path* rule and complete security headers (Task 15 / SEC-6) |
 | 2026-10-14 | CI pipeline (.github/workflows/ci.yml), pnpm ci:security, gitleaks pre-commit hook, and branch protection / security scanning enabled (Task 16 / SEC-5, SEC-10) |
 | 2026-10-14 | Built launcher (3 cards, recent projects empty state, open alpha stub), Client Component AuthGuard wrapper, /workspace?p=... placeholder, and static Server Component legal pages (/privacy, /terms, /licenses) (Task 17 / LAUNCH-1) |
+| 2026-10-14 | Built WorkspaceHost with stable DOM panes, CSS grid data-slot layout, draggable divider with transparent drag shield, RTL mirroring, below-768px auto-collapse, Vitest happy-dom mount-counter test (0 remounts across 5 tab switches, 3 split toggles, 2 pane swaps, 1 close), and Playwright keep-alive test with active iframe (Task 18 / WS-1, WS-2) |
 
 ## Lessons and corrections
 

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Iframe Keep-Alive Test</title>
+  <style>
+    body {
+      font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+      padding: 16px;
+      background: #050B17;
+      color: #4F9ED5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    .badge {
+      padding: 4px 8px;
+      border: 1px solid #17598F;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-bottom: 8px;
+      color: #8BC4EC;
+    }
+    #counter {
+      font-size: 40px;
+      font-weight: 700;
+      color: #D4AF37;
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="badge">Aboard Keep-Alive Verification</div>
+  <div>Counter:</div>
+  <div id="counter" data-testid="iframe-counter">0</div>
+  <script>
+    let count = 0;
+    const el = document.getElementById('counter');
+    setInterval(() => {
+      count++;
+      if (el) {
+        el.textContent = String(count);
+        el.setAttribute('data-count', String(count));
+      }
+    }, 1000);
+  </script>
+</body>
+</html>

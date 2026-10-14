@@ -521,4 +521,34 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** LAUNCH-1 · DESIGN.md §1, §4, §5.1, §5.4, §6, §10
 **Open:** none
 
+## 2026-10-14 — Task 18: Build the Workspace Host With Tabs and Split View
+**Request:** Run Task 18 from docs/TASKS.md: build the workspace host with tabs and split view (WS-1, WS-2), decouple DOM order from tab bar display order, maintain stable DOM nodes with CSS grid data-slot layout (never unmounting or re-keying), build draggable divider with transparent drag-shield and RTL mirroring, auto-collapse below 768px, add happy-dom@21.0.1, write Vitest mount-counter test proving 0 remounts across 5 tab switches, 3 split toggles, 2 pane swaps, and 1 tab close, write Playwright keep-alive test with ticking iframe, and verify all checks.
+**Changes:**
+- `docs/specs/setup-and-deploy.md` (changed): added `happy-dom@21.0.1` to dev-dependencies table per owner approval.
+- `apps/web/package.json` (changed): added `happy-dom@21.0.1` pinned devDependency.
+- `apps/web/public/iframe-test/index.html` (created): test iframe with active 1-second interval counter for keep-alive verification.
+- `apps/web/src/workspace/types.ts` (created): data types and helpers for Tab, Slot, SplitMode, LayoutState, and slotOf conforming to architecture spec §6.1.
+- `apps/web/src/workspace/placeholders.tsx` (created): StaticPlaceholder and IframePlaceholder components with persistent identity tokens and onMount lifecycle hooks.
+- `apps/web/src/workspace/workspace-host.tsx` (created): workspace host component with 48px toolbar, 48px tab bar, stable DOM pane rendering, CSS grid layout (`.ws-grid`), draggable 8px divider with 2px line, transparent full-screen drag shield, RTL mirroring, keyboard map, and below-768px single-pane collapse.
+- `apps/web/app/workspace/page.tsx` (changed): connected WorkspaceHost under AuthGuard and Suspense with query params `p` and `kind`.
+- `apps/web/src/i18n/en.ts` (changed): added bilingual workspace dictionary keys for toolbar, split modes, tab titles, tooltips, and placeholders.
+- `apps/web/src/i18n/ar.ts` (changed): added Arabic translations for all workspace keys with 100% key parity.
+- `apps/web/vitest.config.mjs` (changed): updated include pattern to `src/**/*.test.{ts,tsx}`.
+- `apps/web/src/workspace/mount-counter.test.tsx` (created): Vitest lifecycle mount-counter test with happy-dom environment proving 0 remounts across 5 tab switches, 3 split toggles, 2 pane swaps, and 1 tab close.
+- `apps/web/e2e/workspace-no-reload.spec.ts` (created): Playwright end-to-end test verifying iframe counter continuously increments without reload across split toggles, swaps, tab switches, and divider drag.
+- `docs/PROGRESS.md` (changed): marked Task 18 as completed, Phase 1 as Done, and transitioned active phase to Phase 2.
+- `UPDATE.md` (changed): appended Task 18 entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- `pnpm test`: PASS (21/21 tests passed across 5 test files, including mount-counter test in happy-dom).
+- `pnpm test:e2e`: PASS (both Playwright tests passed in Chrome, including workspace-no-reload test in 7.1s).
+- `pnpm ci:security`: PASS (Gitleaks scan clean, audit clean, .next bundle scan 0 secrets).
+- `pnpm build`: PASS (clean production build with Turbopack, 12 routes prerendered).
+- `supabase test db supabase/tests/rls.test.sql`: PASS (17/17 pgTAP assertions passed).
+**Related:** Task 18 · WS-1, WS-2
+**Open:** none (Phase 1 complete; proceed to Phase 2 / Task 19 upon owner prompt).
+
+
 
