@@ -21,7 +21,7 @@ const appCsp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://apis.google.com https://accounts.google.com https://challenges.cloudflare.com${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  `connect-src 'self' ${supabaseSources} https://www.googleapis.com https://accounts.google.com https://api.aboard.example blob: data:`,
+  `connect-src 'self' ${supabaseSources} https://www.googleapis.com https://accounts.google.com blob: data:`,
   "img-src 'self' data: blob: https://*.googleusercontent.com https://ssl.gstatic.com",
   "font-src 'self'",
   "frame-src 'self' https://challenges.cloudflare.com https://docs.google.com https://accounts.google.com",

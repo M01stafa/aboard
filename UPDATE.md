@@ -406,7 +406,7 @@ This file is the append-only record of every change made to the Aboard project.
 **Exact Headers Block Configured:**
 ```ts
 // General app pages (/((?!circuit/).*)):
-Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://apis.google.com https://accounts.google.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://fmlpkcbpoziwkjuxuyaf.supabase.co wss://fmlpkcbpoziwkjuxuyaf.supabase.co https://www.googleapis.com https://accounts.google.com https://api.aboard.example blob: data:; img-src 'self' data: blob: https://*.googleusercontent.com https://ssl.gstatic.com; font-src 'self'; frame-src 'self' https://challenges.cloudflare.com https://docs.google.com https://accounts.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://apis.google.com https://accounts.google.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://fmlpkcbpoziwkjuxuyaf.supabase.co wss://fmlpkcbpoziwkjuxuyaf.supabase.co https://www.googleapis.com https://accounts.google.com blob: data:; img-src 'self' data: blob: https://*.googleusercontent.com https://ssl.gstatic.com; font-src 'self'; frame-src 'self' https://challenges.cloudflare.com https://docs.google.com https://accounts.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
 Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 X-Content-Type-Options: nosniff
 Referrer-Policy: strict-origin-when-cross-origin
@@ -423,14 +423,18 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 ```
 **Checks:**
 - `pnpm build`: PASS (clean production build).
-- `curl.exe -I http://localhost:3000/`: PASS (all 6 headers present).
-- `curl.exe -I http://localhost:3000/circuit/anything`: PASS (`unsafe-eval` present, general script-src absent).
+- `curl.exe -I http://localhost:3000/`: PASS (all 6 headers present; removed `https://api.aboard.example` placeholder from connect-src).
+- `curl.exe -I http://localhost:3000/circuit/anything`: PASS (`unsafe-eval` present, general script-src absent, clean 404).
 - `curl.exe -I http://localhost:3000/login`: PASS (HTTP 200 with headers).
 - Chrome headless verification:
   - `/`: 0 CSP violations.
   - `/login`: 0 CSP violations, Turnstile widget rendered.
   - `/settings`: 0 CSP violations.
 - `pnpm lint` and `pnpm typecheck`: PASS (0 errors).
+**Clarifications Resolved:**
+1. `https://api.aboard.example` originated from `docs/specs/security.md` §14.5 line 155; removed from `connect-src` since PDF API belongs to Phase 9.
+2. `frame-src 'self' javascript:` in `/circuit/` is required for GWT history support (`<iframe src="javascript:''" id="__gwt_historyFrame">`), per `docs/specs/security.md` §14.5 line 186 and `docs/spikes/S2.md` line 108.
+3. Requests to `/circuit/` and `/circuit/anything` return clean HTTP 404 with isolated circuit CSP and do not leak general app CSP.
 **Related:** Task 15 · SEC-6 · VERIFY V14
 **Open:** none
 
