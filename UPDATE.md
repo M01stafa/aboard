@@ -467,3 +467,31 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
   - Code security & analysis: Dependabot alerts, Dependabot security updates, Secret scanning, and Push protection all enabled.
 **Related:** Task 16 · SEC-5, SEC-10
 **Open:** none (ready for Task 17).
+
+## 2026-10-14 — Task 17: Build the Launcher and the Route Skeleton
+**Request:** Run Task 17 from docs/TASKS.md: build the launcher screen with three creation cards (New Whiteboard, New PDF, New Circuit), "Recent projects" empty state, "Open .alpha file" stub button, implement Client Component AuthGuard redirecting unauthenticated users to /login and signed-in users on /login to /, add thin routes for /workspace?p=..., /settings, /privacy, /terms, /licenses, ensure strict token and 8-point grid compliance with exactly 1 gold CTA (R7), add bilingual i18n dictionaries, write automated Vitest tests, and update documentation.
+**Changes:**
+- `apps/web/app/auth-guard.tsx` (created): Client Component wrapper protecting authenticated routes using browser Supabase client, redirecting unauthenticated users to `/login` without private content flash, and keeping `src/` free of Next.js imports per Rule 5.
+- `apps/web/app/page.tsx` (changed): launcher screen under `AuthGuard` with three creation cards (New Whiteboard with single Gold CTA, New PDF with Primary button, New Circuit with Tech Outline button), "Recent projects" empty state, "Open .alpha file" button with stub status notice, user session bar with sign-out, and legal footer links.
+- `apps/web/app/login/page.tsx` (changed): added redirect check for already-signed-in users redirecting to `/` unless sign-out is in progress.
+- `apps/web/app/settings/page.tsx` (changed): wrapped with `AuthGuard` without breaking existing settings UI.
+- `apps/web/app/workspace/page.tsx` (created): workspace host placeholder route wrapped in `AuthGuard` with `<Suspense>`, reading query parameter `p`, and displaying translated Task 18 notice.
+- `apps/web/app/privacy/page.tsx` (created): static Server Component placeholder for privacy policy with translated strings and launcher return link.
+- `apps/web/app/terms/page.tsx` (created): static Server Component placeholder for terms of service with translated strings and launcher return link.
+- `apps/web/app/licenses/page.tsx` (created): static Server Component placeholder for open source licenses with translated strings and launcher return link.
+- `apps/web/src/i18n/en.ts` (changed): added translation dictionaries for `launcher`, `workspace`, and `legal`.
+- `apps/web/src/i18n/ar.ts` (changed): added RTL Arabic translation dictionaries matching `en.ts` with 100% key parity.
+- `apps/web/src/workspace/launcher.test.ts` (created): automated Vitest tests verifying unauthenticated redirect to `/login`, authenticated rendering of the 3 cards, and exactly 1 gold CTA on the screen.
+- `docs/PROGRESS.md` (changed): updated task state to Task 17 completed and added Task 17 decision row.
+- `UPDATE.md` (changed): appended Task 17 entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (20 unit tests passed across 4 test files).
+- `pnpm build`: PASS (clean production build; all routes statically prerendered).
+- `pnpm ci:security`: PASS (Gitleaks clean, audit clean, .next bundle scan clean).
+- `supabase test db supabase/tests/rls.test.sql`: PASS (17/17 pgTAP assertions passed).
+**Related:** Task 17 · LAUNCH-1, AUTH-1
+**Open:** none (ready for Task 18).
+

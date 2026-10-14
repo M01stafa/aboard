@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AuthGuard } from "../auth-guard";
 import { useI18n } from "@/i18n/provider";
 import type { Language, Theme } from "@/i18n/types";
 
@@ -19,7 +20,8 @@ export default function SettingsPage() {
   ];
 
   return (
-    <main
+    <AuthGuard>
+      <main
       style={{
         padding: "var(--space-6)",
         maxWidth: "65ch",
@@ -227,5 +229,6 @@ export default function SettingsPage() {
         <p style={{ margin: "0" }}>{t("settings.storageNotice")}</p>
       </footer>
     </main>
+  </AuthGuard>
   );
 }

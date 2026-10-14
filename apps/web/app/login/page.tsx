@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  supabase,
   signInWithGoogle,
   signInWithEmailOtp,
   verifyEmailOtp,
@@ -44,6 +45,19 @@ export default function LoginPage() {
   const turnstileContainerRef = useRef<HTMLDivElement>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const widgetIdRef = useRef<string | null>(null);
+
+  // Redirect signed-in users visiting /login to launcher /
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (mounted && data.user) {
+        router.replace("/");
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
 
   useEffect(() => {
     if (typeof window === "undefined" || step !== "email") return;

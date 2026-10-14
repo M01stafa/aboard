@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 1 — Foundation |
-| Current task | Task 16 — Build the CI Pipeline and Security Checks (completed) |
+| Current task | Task 17 — Build the Launcher and the Route Skeleton (completed) |
 | Last updated | 2026-10-14 |
-| Next step | Task 17 — Build the Launcher and the Route Skeleton |
+| Next step | Task 18 — Build the Workspace Host With Tabs and Split View |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -105,6 +105,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-14 | Email sign-in method chosen as Email One-Time Code (OTP) per PRD Q2; CAPTCHA chosen as Cloudflare Turnstile; Google OAuth configured without Drive scopes; automated browser storage test verified 0 provider tokens (Task 14) |
 | 2026-10-14 | Added Content-Security-Policy with isolated /circuit/:path* rule and complete security headers (Task 15 / SEC-6) |
 | 2026-10-14 | CI pipeline (.github/workflows/ci.yml), pnpm ci:security, gitleaks pre-commit hook, and branch protection / security scanning enabled (Task 16 / SEC-5, SEC-10) |
+| 2026-10-14 | Built launcher (3 cards, recent projects empty state, open alpha stub), Client Component AuthGuard wrapper, /workspace?p=... placeholder, and static Server Component legal pages (/privacy, /terms, /licenses) (Task 17 / LAUNCH-1) |
 
 ## Lessons and corrections
 
