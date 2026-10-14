@@ -289,6 +289,31 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Task 11 · DESIGN rules · Spacing rules
 **Open:** none
 
+## 2026-10-14 — Task 12: Internationalization, RTL, and the Settings Page
+**Request:** Run Task 12 from docs/TASKS.md: build a zero-dependency typed i18n layer under apps/web/src/i18n/, update layout.tsx with dynamic lang/dir and pre-hydration head script, create the settings page at apps/web/app/settings/page.tsx with language and theme switchers persisting in localStorage, convert user-facing strings to translation keys, enforce logical CSS properties, and verify RTL mirroring.
+**Changes:**
+- `apps/web/src/i18n/en.ts` (created): English translation dictionary covering common, home, settings, and themeTest strings.
+- `apps/web/src/i18n/ar.ts` (created): Arabic translation dictionary with 100% key parity with English dictionary.
+- `apps/web/src/i18n/types.ts` (created): types for Language, Direction, Theme, ResolvedTheme, and type-safe dot-notation I18nKey.
+- `apps/web/src/i18n/i18n.ts` (created): pure lookup engine for translation key resolution, direction mapping, and browser language detection.
+- `apps/web/src/i18n/provider.tsx` (created): client React context provider (I18nProvider) and useI18n hook with localStorage persistence and DOM synchronization.
+- `apps/web/src/i18n/i18n.test.ts` (created): Vitest unit tests verifying dictionary parity, direction mapping, interpolation, and nested key resolution.
+- `apps/web/app/layout.tsx` (changed): wrapped root in I18nProvider, added beforeInteractive head script syncing lang/dir/data-theme pre-hydration, removed hardcoded text literals.
+- `apps/web/app/settings/page.tsx` (created): settings page with Arabic/English language switcher and Light/Dark/System theme switcher using logical CSS properties.
+- `apps/web/app/page.tsx` (changed): converted all user-facing strings to translation keys, converted styling to logical CSS properties, added settings link.
+- `apps/web/app/theme-test/page.tsx` (changed): converted all user-facing strings to translation keys and styles to logical CSS properties.
+- `docs/PROGRESS.md` (changed): updated current state to completed Task 12 (next step: Task 13) and added decision log entry.
+- `UPDATE.md` (changed): appended Task 12 change log entry.
+**Checks:**
+- `pnpm lint`: passed (`eslint .` and `check-spacing.mjs`, 0 errors, 0 warnings).
+- `pnpm typecheck`: passed (`tsc --noEmit`, 0 errors).
+- `pnpm test`: passed (11/11 tests passed in `env.test.ts` and `i18n.test.ts`).
+- `pnpm build`: passed (`next build` prerendered `/`, `/_not-found`, `/settings`, `/theme-test`).
+- RTL verification: tested programmatically via unit tests (`getDirection("ar") === "rtl"`), verified logical CSS properties across all modified UI components, confirmed zero letter-spacing on Arabic text (DESIGN.md R6).
+**Related:** Task 12 · SEC-7, SEC-14.6 · DESIGN rules · Spacing rules
+**Open:** none
+
+
 
 
 

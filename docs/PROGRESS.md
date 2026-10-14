@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 1 — Foundation |
-| Current task | Task 11 — Translate DESIGN.md Into Theme Tokens and Fonts (completed) |
+| Current task | Task 12 — Internationalization, RTL, and the Settings Page (completed) |
 | Last updated | 2026-10-14 |
-| Next step | Task 12 — Implement Internationalization, RTL and the Settings Page |
+| Next step | Task 13 — Database Migration 0001, RLS and Isolation Tests |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -100,6 +100,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-13 | Task 9 development tooling pinned: vitest@5.0.4, @playwright/test@1.64.0, eslint@9.39.5, eslint-config-next@16.4.0, eslint-plugin-react@7.37.5, eslint-plugin-no-unsanitized@4.1.5, typescript@5.9.3, @types/{react,react-dom}@19.3.0, @types/node@22.13.0, gitleaks@8.30.1 via winget |
 | 2026-10-13 | Next.js 16 CLI deprecates `next lint` in favor of `eslint .`; ESLint 9 configured with react/no-danger and no-unsanitized/* for SEC-7 |
 | 2026-10-14 | Environment separation plan (Task 10 / SEC-5): Dev uses testing Supabase project (fmlpkcbpoziwkjuxuyaf) and Google test OAuth client (localhost URIs) with dev Picker key; Preview uses staging Supabase project and preview Google OAuth client (*.vercel.app URIs); Prod uses dedicated production Supabase project and verified Google OAuth client (aboard.example) with domain-restricted Picker key |
+| 2026-10-14 | Built custom zero-dependency typed i18n layer under apps/web/src/i18n/ with ar/en support, RTL mirroring, theme/language persistence in localStorage, and pre-hydration head script (Task 12) |
 
 ## Lessons and corrections
 
