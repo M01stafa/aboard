@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 1 — Foundation |
-| Current task | Task 9 — Create the Monorepo and the Next.js Application (completed) |
-| Last updated | 2026-10-13 |
-| Next step | Task 10 — Set Up Environment Variables and Secret Handling |
+| Current task | Task 10 — Set Up Environment Variables and Secret Handling (completed) |
+| Last updated | 2026-10-14 |
+| Next step | Task 11 — Translate DESIGN.md Into Theme Tokens and Fonts |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -99,6 +99,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-13 | Open item carried: `supabase/migrations/0001_init.sql` is a throwaway Phase 0 migration to be replaced by the production schema in Task 13 |
 | 2026-10-13 | Task 9 development tooling pinned: vitest@5.0.4, @playwright/test@1.64.0, eslint@9.39.5, eslint-config-next@16.4.0, eslint-plugin-react@7.37.5, eslint-plugin-no-unsanitized@4.1.5, typescript@5.9.3, @types/{react,react-dom}@19.3.0, @types/node@22.13.0, gitleaks@8.30.1 via winget |
 | 2026-10-13 | Next.js 16 CLI deprecates `next lint` in favor of `eslint .`; ESLint 9 configured with react/no-danger and no-unsanitized/* for SEC-7 |
+| 2026-10-14 | Environment separation plan (Task 10 / SEC-5): Dev uses testing Supabase project (fmlpkcbpoziwkjuxuyaf) and Google test OAuth client (localhost URIs) with dev Picker key; Preview uses staging Supabase project and preview Google OAuth client (*.vercel.app URIs); Prod uses dedicated production Supabase project and verified Google OAuth client (aboard.example) with domain-restricted Picker key |
 
 ## Lessons and corrections
 

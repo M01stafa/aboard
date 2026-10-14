@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import "@/core/env";
 import "@/theme/tokens.css";
 import { fontClassNames } from "@/theme/fonts";
 

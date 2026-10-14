@@ -251,6 +251,26 @@ This file is the append-only record of every change made to the Aboard project.
 - Phase 1 in progress (proceed to Task 10).
 - Open items carried from Phase 0: Task 3 Playwright CDN 404 driver download, Task 6 throwaway migration supabase/migrations/0001_init.sql to be replaced by Task 13, and Task 7 iPhone Safari checks deferred to Task 31/32.
 
+## 2026-10-14 — Task 10: Set Up Environment Variables and Secret Handling
+**Request:** Run Task 10 from docs/TASKS.md: create .env.example with public variables only, create apps/web/.env.local with confirmed development values, verify git check-ignore, create typed validation module at apps/web/src/core/env.ts using zod, import in layout.tsx, plan environment separation in docs/PROGRESS.md, and commit/push.
+**Changes:**
+- `.env.example` (changed): defined public variables with one-line comments; strictly excluded backend secrets.
+- `apps/web/.env.local` (created): added development configuration with confirmed public keys and PDF API placeholder (git-ignored).
+- `apps/web/src/core/env.ts` (created): created framework-free Zod validation module for public variables, throwing clear errors on misconfiguration with server-only notice.
+- `apps/web/src/core/env.test.ts` (created): unit test suite verifying schema validation and error messaging under Vitest.
+- `apps/web/app/layout.tsx` (changed): imported `@/core/env` to ensure early startup validation.
+- `docs/PROGRESS.md` (changed): updated current state to completed Task 10 and logged dev/preview/production split plan in decisions log.
+- `UPDATE.md` (changed): appended Task 10 change log.
+**Checks:**
+- `git check-ignore apps/web/.env.local`: confirmed git-ignored (`apps/web/.env.local`).
+- `pnpm lint`: passed (`eslint .`, 0 errors).
+- `pnpm typecheck`: passed (`tsc --noEmit`, 0 errors).
+- `pnpm test`: passed (6/6 tests passed in `env.test.ts`).
+- `pnpm build`: passed (`next build`, compiled with `.env.local`).
+**Related:** Task 10 · SEC-5
+**Open:** none
+
+
 
 
 
