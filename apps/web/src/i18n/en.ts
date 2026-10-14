@@ -121,6 +121,9 @@ export const en = {
     genericError: "An authentication error occurred. Please try again.",
     backToSignIn: "Back to sign in",
     turnstileNotice: "Protected by Cloudflare Turnstile",
+    captchaFailed: "Security verification failed. Please try again.",
+    captchaExpired: "Security verification expired. Please complete the verification again.",
+    captchaRequired: "Please complete the security check before continuing.",
   },
 } as const;
 

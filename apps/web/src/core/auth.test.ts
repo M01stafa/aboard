@@ -26,6 +26,26 @@ describe("Auth Core Helpers", () => {
     spy.mockRestore();
   });
 
+  it("passes captchaToken to signInWithOtp options", async () => {
+    const spy = vi.spyOn(supabase.auth, "signInWithOtp").mockResolvedValue({
+      data: { user: null, session: null },
+      error: null,
+    });
+
+    const res = await signInWithEmailOtp("student@example.com", {
+      captchaToken: "turnstile-test-token-123",
+    });
+    expect(spy).toHaveBeenCalledWith({
+      email: "student@example.com",
+      options: expect.objectContaining({
+        shouldCreateUser: true,
+        captchaToken: "turnstile-test-token-123",
+      }),
+    });
+    expect(res.error).toBeNull();
+    spy.mockRestore();
+  });
+
   it("calls verifyEmailOtp with email, token, and type email", async () => {
     const spy = vi.spyOn(supabase.auth, "verifyOtp").mockResolvedValue({
       data: { user: null, session: null },

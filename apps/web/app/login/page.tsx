@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -8,7 +8,27 @@ import {
   signInWithEmailOtp,
   verifyEmailOtp,
 } from "@/core/supabase";
+import { env } from "@/core/env";
 import { useI18n } from "@/i18n/provider";
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        container: HTMLElement | string,
+        options: {
+          sitekey: string;
+          callback?: (token: string) => void;
+          "error-callback"?: (error?: unknown) => void;
+          "expired-callback"?: () => void;
+          theme?: "light" | "dark" | "auto";
+        }
+      ) => string;
+      reset: (widgetId?: string) => void;
+      remove: (widgetId?: string) => void;
+    };
+  }
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,6 +40,81 @@ export default function LoginPage() {
   const [isSharedComputer, setIsSharedComputer] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const widgetIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || step !== "email") return;
+
+    let mounted = true;
+    let timer: NodeJS.Timeout;
+
+    function renderWidget() {
+      if (!mounted) return;
+      if (
+        turnstileContainerRef.current &&
+        window.turnstile &&
+        env.NEXT_PUBLIC_TURNSTILE_SITE_KEY &&
+        !widgetIdRef.current
+      ) {
+        try {
+          widgetIdRef.current = window.turnstile.render(
+            turnstileContainerRef.current,
+            {
+              sitekey: env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+              callback: (token: string) => {
+                if (mounted) {
+                  setCaptchaToken(token);
+                  setErrorMessage(null);
+                }
+              },
+              "expired-callback": () => {
+                if (mounted) {
+                  setCaptchaToken(null);
+                  setErrorMessage(t("auth.captchaExpired"));
+                }
+              },
+              "error-callback": () => {
+                if (mounted) {
+                  setCaptchaToken(null);
+                  setErrorMessage(t("auth.captchaFailed"));
+                }
+              },
+              theme: "auto",
+            }
+          );
+        } catch (e) {
+          // ignore duplicate render in strict mode
+        }
+      }
+    }
+
+    if (window.turnstile) {
+      renderWidget();
+    } else {
+      timer = setInterval(() => {
+        if (window.turnstile) {
+          clearInterval(timer);
+          renderWidget();
+        }
+      }, 100);
+    }
+
+    return () => {
+      mounted = false;
+      if (timer) clearInterval(timer);
+      if (widgetIdRef.current && window.turnstile) {
+        try {
+          window.turnstile.remove(widgetIdRef.current);
+        } catch (e) {
+          // ignore
+        }
+        widgetIdRef.current = null;
+      }
+    };
+  }, [step, t]);
 
   async function handleGoogleSignIn() {
     setLoading(true);
@@ -42,14 +137,33 @@ export default function LoginPage() {
     e.preventDefault();
     if (!email.trim()) return;
 
+    if (!captchaToken) {
+      setErrorMessage(t("auth.captchaRequired"));
+      return;
+    }
+
     setLoading(true);
     setErrorMessage(null);
     try {
       if (typeof window !== "undefined" && isSharedComputer) {
         sessionStorage.setItem("aboard:shared_computer", "true");
       }
-      const { error } = await signInWithEmailOtp(email.trim());
-      if (error) throw error;
+      const { error } = await signInWithEmailOtp(email.trim(), {
+        captchaToken,
+      });
+      if (error) {
+        if (
+          error.message?.includes("captcha") ||
+          (error as { code?: string }).code === "captcha_failed"
+        ) {
+          if (widgetIdRef.current && window.turnstile) {
+            window.turnstile.reset(widgetIdRef.current);
+          }
+          setCaptchaToken(null);
+          throw new Error(t("auth.captchaFailed"));
+        }
+        throw error;
+      }
       setStep("otp");
     } catch (err: unknown) {
       setErrorMessage(
@@ -91,6 +205,11 @@ export default function LoginPage() {
         fontFamily: "var(--font-sans)",
       }}
     >
+      <script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        async
+        defer
+      />
       <div
         style={{
           width: "100%",
@@ -298,9 +417,20 @@ export default function LoginPage() {
               </label>
             </div>
 
+            <div
+              ref={turnstileContainerRef}
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                minHeight: "64px",
+                marginBlockEnd: "var(--space-4)",
+              }}
+            />
+
             <button
               type="submit"
-              disabled={loading || !email.trim()}
+              disabled={loading || !email.trim() || !captchaToken}
               style={{
                 width: "100%",
                 height: "var(--control-lg)",
@@ -310,8 +440,11 @@ export default function LoginPage() {
                 borderRadius: "var(--radius-sm)",
                 fontWeight: "var(--weight-semibold)",
                 fontSize: "0.9375rem",
-                cursor: loading || !email.trim() ? "not-allowed" : "pointer",
-                opacity: loading || !email.trim() ? 0.7 : 1,
+                cursor:
+                  loading || !email.trim() || !captchaToken
+                    ? "not-allowed"
+                    : "pointer",
+                opacity: loading || !email.trim() || !captchaToken ? 0.7 : 1,
               }}
             >
               {loading ? t("auth.sendingCode") : t("auth.sendCode")}

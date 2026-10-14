@@ -372,6 +372,30 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Task 14 · SEC-1, SEC-2, SEC-6, SEC-7, SEC-14.7 · V06
 **Open:** Task 15 (next task in Phase 1).
 
+## 2026-10-14 — Task 14 Follow-up: Integrate Cloudflare Turnstile into Login Flow
+**Request:** Add NEXT_PUBLIC_TURNSTILE_SITE_KEY to environment variables, integrate Cloudflare Turnstile widget via official script tag into login page, capture and forward captchaToken to Supabase Auth OTP, handle failure states with translated errors, and verify enforcement via curl test.
+**Changes:**
+- `.env.example` (changed): added `NEXT_PUBLIC_TURNSTILE_SITE_KEY` with descriptive comment.
+- `apps/web/.env.local` (changed): added `NEXT_PUBLIC_TURNSTILE_SITE_KEY` placeholder.
+- `apps/web/src/core/env.ts` (changed): added required validation for `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
+- `apps/web/src/core/env.test.ts` (changed): updated environment test suite to cover Turnstile site key.
+- `apps/web/src/core/supabase.ts` (changed): updated `signInWithEmailOtp` to accept options with `captchaToken`.
+- `apps/web/src/core/auth.test.ts` (changed): added test verifying `captchaToken` is forwarded to GoTrue options.
+- `apps/web/app/login/page.tsx` (changed): added Cloudflare Turnstile official script tag (`https://challenges.cloudflare.com/turnstile/v0/api.js` async defer), inline widget container, token capture, error/expiration handling, and disabled submit button when unverified.
+- `apps/web/src/i18n/en.ts` (changed): added `captchaFailed`, `captchaExpired`, and `captchaRequired` keys.
+- `apps/web/src/i18n/ar.ts` (changed): added Arabic translations for captcha keys with 100% key parity.
+- `UPDATE.md` (changed): appended this follow-up entry.
+**Checks:**
+- `curl.exe` without token against remote OTP endpoint: PASS (`HTTP 400 Bad Request` with `error_code: "captcha_failed"`).
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs`, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- `pnpm test`: PASS (17/17 tests passing in Vitest).
+- `pnpm test:e2e`: PASS (Playwright storage test passed in 3.5s).
+- `pnpm build`: PASS (Turbopack prerendered all routes).
+- CSP check in `apps/web/next.config.ts`: No CSP exists yet; recorded for Task 15.
+**Related:** Task 14 Follow-up · SEC-9 · Turnstile integration
+**Open:** Owner to paste real Turnstile site key into `apps/web/.env.local`.
+
 
 
 

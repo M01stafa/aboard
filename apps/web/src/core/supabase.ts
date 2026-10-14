@@ -17,16 +17,25 @@ export const supabase = createClient(
  * Initiates email sign-in using a one-time 6-digit code (OTP).
  * Creates a new account if the user does not exist yet.
  */
-export async function signInWithEmailOtp(email: string, redirectTo?: string) {
+export async function signInWithEmailOtp(
+  email: string,
+  optionsOrRedirect?: { redirectTo?: string; captchaToken?: string } | string
+) {
+  const opts =
+    typeof optionsOrRedirect === "string"
+      ? { redirectTo: optionsOrRedirect }
+      : optionsOrRedirect;
+
   return supabase.auth.signInWithOtp({
     email,
     options: {
       shouldCreateUser: true,
       emailRedirectTo:
-        redirectTo ??
+        opts?.redirectTo ??
         (typeof window !== "undefined"
           ? `${window.location.origin}/auth/callback`
           : undefined),
+      captchaToken: opts?.captchaToken,
     },
   });
 }

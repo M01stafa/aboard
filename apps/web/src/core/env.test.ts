@@ -9,6 +9,7 @@ describe("env configuration validation", () => {
     NEXT_PUBLIC_GOOGLE_API_KEY: "AIzaSyAZg12mJFXpdbRTj-RPlnw1o-vkRdE1T8U",
     NEXT_PUBLIC_GOOGLE_APP_ID: "791651476865",
     NEXT_PUBLIC_PDF_API_URL: "http://localhost:8080",
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAAABk9xxxxxxxx",
   };
 
   it("successfully parses valid configuration", () => {
@@ -19,6 +20,7 @@ describe("env configuration validation", () => {
     expect(validated.NEXT_PUBLIC_GOOGLE_API_KEY).toBe(validConfig.NEXT_PUBLIC_GOOGLE_API_KEY);
     expect(validated.NEXT_PUBLIC_GOOGLE_APP_ID).toBe("791651476865");
     expect(validated.NEXT_PUBLIC_PDF_API_URL).toBe("http://localhost:8080");
+    expect(validated.NEXT_PUBLIC_TURNSTILE_SITE_KEY).toBe("0x4AAAAAAABk9xxxxxxxx");
   });
 
   it("throws clear error when a required variable is missing", () => {

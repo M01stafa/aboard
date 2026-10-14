@@ -123,5 +123,8 @@ export const ar: TranslationDictionary = {
     genericError: "حدث خطأ أثناء المصادقة. يرجى المحاولة مرة أخرى.",
     backToSignIn: "العودة لتسجيل الدخول",
     turnstileNotice: "محمي بواسطة Cloudflare Turnstile",
+    captchaFailed: "فشل التحقق الأمني. يرجى المحاولة مرة أخرى.",
+    captchaExpired: "انتهت صلاحية التحقق الأمني. يرجى إعادة التحقق.",
+    captchaRequired: "يرجى إكمال التحقق الأمني قبل المتابعة.",
   },
 };
