@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 1 — Foundation |
-| Current task | Task 14 — Implement Sign-In With Email and Google (completed) |
+| Current task | Task 16 — Build the CI Pipeline and Security Checks (completed) |
 | Last updated | 2026-10-14 |
-| Next step | Task 15 — Add Security Headers and the Content Security Policy |
+| Next step | Task 17 — Build the Launcher and the Route Skeleton |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -103,6 +103,8 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-14 | Built custom zero-dependency typed i18n layer under apps/web/src/i18n/ with ar/en support, RTL mirroring, theme/language persistence in localStorage, and pre-hydration head script (Task 12) |
 | 2026-10-14 | Replaced Phase 0 throwaway migration 0001_init.sql with authoritative production schema (§9.1) with full RLS, least-privilege column grants, and pgTAP isolation test suite (Task 13) |
 | 2026-10-14 | Email sign-in method chosen as Email One-Time Code (OTP) per PRD Q2; CAPTCHA chosen as Cloudflare Turnstile; Google OAuth configured without Drive scopes; automated browser storage test verified 0 provider tokens (Task 14) |
+| 2026-10-14 | Added Content-Security-Policy with isolated /circuit/:path* rule and complete security headers (Task 15 / SEC-6) |
+| 2026-10-14 | CI pipeline (.github/workflows/ci.yml), pnpm ci:security, gitleaks pre-commit hook, and branch protection / security scanning enabled (Task 16 / SEC-5, SEC-10) |
 
 ## Lessons and corrections
 

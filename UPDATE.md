@@ -455,5 +455,15 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`: PASS (0 errors, 17 tests passed).
 - `supabase test db supabase/tests/rls.test.sql`: PASS (17/17 pgTAP assertions passed).
 - RLS guard test: PASS (`rows: []`, 0 unshielded public tables).
+**Open:** none
+
+## 2026-10-14 — Task 16: Confirm GitHub Settings Applied and Close Task 16
+**Request:** Confirm owner applied GitHub repository branch protection on main and code security/Dependabot settings, mark Task 16 as done, append UPDATE.md, and commit + push. Do not start Task 17.
+**Changes:**
+- `docs/PROGRESS.md` (changed): updated active task to Task 16 completed (next step: Task 17) and logged Task 15 and Task 16 decisions.
+- `UPDATE.md` (changed): appended this closure entry.
+**Checks:** Owner confirmed manual configuration in GitHub Settings:
+  - Branch protection ruleset on `main`: deletions restricted, 1 approval required, dismiss stale reviews, required status check `CI Pipeline & Security Checks`, require branches up to date, force pushes blocked.
+  - Code security & analysis: Dependabot alerts, Dependabot security updates, Secret scanning, and Push protection all enabled.
 **Related:** Task 16 · SEC-5, SEC-10
-**Open:** Owner manual confirmation of GitHub repository settings (branch protection & code security/analysis).
+**Open:** none (ready for Task 17).
