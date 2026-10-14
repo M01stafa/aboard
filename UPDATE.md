@@ -270,6 +270,26 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Task 10 · SEC-5
 **Open:** none
 
+## 2026-10-14 — Task 11: Translate DESIGN.md Into Theme Tokens and Fonts
+**Request:** Run Task 11 from docs/TASKS.md: verify tokens.css against DESIGN.md §9, wire fonts and hydration/dir attributes into layout.tsx, create copy-excalidraw-fonts.mjs prebuild script, create check-spacing.mjs 8-point grid linter with deliberate failure test, create /theme-test visual verification page, verify no external font CDN requests in build, and commit/push.
+**Changes:**
+- `apps/web/app/layout.tsx` (changed): added `DEFAULT_LANG`, `DEFAULT_DIR`, `suppressHydrationWarning` on `<html>`, with `fontClassNames` and global `tokens.css`.
+- `scripts/copy-excalidraw-fonts.mjs` (created): copies Excalidraw self-hosted fonts from node_modules to `apps/web/public/fonts/`.
+- `apps/web/package.json` (changed): added `prebuild` script executing `copy-excalidraw-fonts.mjs`, and wired `check-spacing.mjs` into `lint`.
+- `scripts/check-spacing.mjs` (created): dependency-free AST/regex linter enforcing the 8-point spacing grid and allowed component sizing tokens.
+- `apps/web/app/theme-test/page.tsx` (created): temporary test page rendering every token group across light and dark themes.
+- `docs/PROGRESS.md` (changed): updated current state to completed Task 11 (next step: Task 12).
+- `UPDATE.md` (changed): appended Task 11 change log.
+**Checks:**
+- `tokens.css` verification: confirmed verbatim match against DESIGN.md §9 (no edits needed).
+- `check-spacing.mjs` deliberate failure test: verified that adding a temporary file with `padding: 13px;` fails `pnpm lint` with exit code 1; removed temp file and confirmed `pnpm lint` passes cleanly.
+- `copy-excalidraw-fonts.mjs`: confirmed runs on `pnpm build` prebuild and copies all 9 font families to `apps/web/public/fonts/`.
+- External font grep: checked `apps/web/.next` build output for `fonts.googleapis.com` and font CDNs; 0 occurrences found.
+- Verification suite: `pnpm lint`, `pnpm typecheck`, `pnpm test` (6 tests), `pnpm build` all passed with exit code 0.
+**Related:** Task 11 · DESIGN rules · Spacing rules
+**Open:** none
+
+
 
 
 

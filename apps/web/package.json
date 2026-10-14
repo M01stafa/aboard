@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node ../../scripts/copy-excalidraw-fonts.mjs",
     "build": "next build",
-    "lint": "eslint .",
+    "lint": "eslint . && node ../../scripts/check-spacing.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test",

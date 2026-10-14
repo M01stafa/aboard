@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 1 — Foundation |
-| Current task | Task 10 — Set Up Environment Variables and Secret Handling (completed) |
+| Current task | Task 11 — Translate DESIGN.md Into Theme Tokens and Fonts (completed) |
 | Last updated | 2026-10-14 |
-| Next step | Task 11 — Translate DESIGN.md Into Theme Tokens and Fonts |
+| Next step | Task 12 — Implement Internationalization, RTL and the Settings Page |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
