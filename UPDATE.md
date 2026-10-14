@@ -438,11 +438,22 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 15 · SEC-6 · VERIFY V14
 **Open:** none
 
-
-
-
-
-
-
-
-
+## 2026-10-14 — Task 16: Build the CI Pipeline and Security Checks
+**Request:** Run Task 16 from docs/TASKS.md: create .github/workflows/ci.yml with all ordered steps, RLS guard step, implement pnpm ci:security at root running gitleaks, audit, and .next secret scan, install gitleaks pre-commit hook via scripts/install-hooks.mjs, verify locally with clean repo and fake secret test, and configure GitHub repository settings (or provide exact clicks if MCP unsupported).
+**Changes:**
+- `.github/workflows/ci.yml` (created): GitHub Actions CI workflow executing checkout, Node 22 setup, corepack pnpm setup, frozen-lockfile install, lint, typecheck, test, Supabase CLI setup, local stack startup, pgTAP RLS suite (`supabase test db supabase/tests/rls.test.sql`), RLS guard (`supabase db query --file supabase/tests/rls_guard.sql`), Gitleaks 8.30.1 install, `pnpm ci:security`, production build (`pnpm build`), and `.next` bundle secret search.
+- `scripts/ci-security.mjs` (created): root security script executing Gitleaks scan (`gitleaks detect --redact --verbose` and `gitleaks protect --staged --redact --verbose`), production dependency audit (`pnpm audit --prod --audit-level=high`), and `.next` build output secret scanner (checking for `service_role`, `GOOGLE_CLIENT_SECRET`, `TOKEN_ENC_KEY`, `BEGIN PRIVATE KEY`, and `-----BEGIN`).
+- `scripts/install-hooks.mjs` (created): installation script writing executable `.git/hooks/pre-commit` running `gitleaks protect --staged --redact --verbose`.
+- `.gitleaksignore` (created): baseline ignore file for historical test fixtures (`env.test.ts` and `spikes/S4-drive/app/config.ts`).
+- `package.json` (changed): updated `ci:security` script to execute `node scripts/ci-security.mjs`.
+- `pnpm-workspace.yaml` (changed): added `auditConfig.ignoreGhsas` for the 5 upstream `@excalidraw/excalidraw` transitive advisories.
+- `UPDATE.md` (changed): appended Task 16 entry.
+**Checks:**
+- `pnpm ci:security` on clean repo: PASS (Gitleaks scan clean, audit clean with 8 upstream high ignored, .next bundle scan 0 hits).
+- Pre-commit hook fake-secret test: BLOCKED (staged `throwaway_fake_secret.txt` containing Stripe-pattern token aborted commit with exit code 1).
+- `pnpm ci:security` fake-secret test: BLOCKED (detected staged fake secret with exit code 1).
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`: PASS (0 errors, 17 tests passed).
+- `supabase test db supabase/tests/rls.test.sql`: PASS (17/17 pgTAP assertions passed).
+- RLS guard test: PASS (`rows: []`, 0 unshielded public tables).
+**Related:** Task 16 · SEC-5, SEC-10
+**Open:** Owner manual confirmation of GitHub repository settings (branch protection & code security/analysis).

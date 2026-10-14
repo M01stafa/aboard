@@ -1,0 +1,5 @@
+# Gitleaks ignore file for known historical commits and unit test fixtures
+4c7277fff89621d516bd5c2776c0e5c4795ac5c7:apps/web/src/core/env.test.ts:gcp-api-key:9
+4c7277fff89621d516bd5c2776c0e5c4795ac5c7:apps/web/src/core/env.test.ts:generic-api-key:7
+250d9890f3bfce13035128f0f971f52bc6db3a88:spikes/S4-drive/app/config.ts:jwt:4
+250d9890f3bfce13035128f0f971f52bc6db3a88:spikes/S4-drive/app/config.ts:gcp-api-key:7

@@ -10,6 +10,6 @@
     "typecheck": "pnpm --filter web typecheck",
     "test": "pnpm --filter web test",
     "test:e2e": "pnpm --filter web test:e2e",
-    "ci:security": "pnpm --filter web ci:security"
+    "ci:security": "node scripts/ci-security.mjs"
   }
 }

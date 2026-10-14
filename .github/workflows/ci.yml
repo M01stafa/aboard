@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: CI Pipeline & Security Checks
+    runs-on: ubuntu-latest
+
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "dummy-supabase-anon-key"
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: "dummy-google-client-id"
+      NEXT_PUBLIC_GOOGLE_API_KEY: "dummy-google-api-key"
+      NEXT_PUBLIC_GOOGLE_APP_ID: "dummy-google-app-id"
+      NEXT_PUBLIC_PDF_API_URL: "https://pdf.example.com"
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm via corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.11.2 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+          cache: true
+
+      - name: Start Supabase local stack
+        run: supabase start
+
+      - name: Run pgTAP RLS suite
+        run: supabase test db supabase/tests/rls.test.sql
+
+      - name: RLS guard
+        run: |
+          OUTPUT=$(supabase db query --file supabase/tests/rls_guard.sql)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q '"rows": \[\]'; then
+            echo "RLS guard passed: all public tables have Row Level Security enabled."
+          else
+            echo "RLS guard FAILED: unshielded public tables detected!"
+            exit 1
+          fi
+
+      - name: Install Gitleaks 8.30.1
+        run: |
+          curl -sSL -o gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+          rm gitleaks.tar.gz
+          gitleaks version
+
+      - name: Run security checks (pnpm ci:security)
+        run: pnpm ci:security
+
+      - name: Build the app (pnpm build)
+        run: pnpm build
+
+      - name: Search bundle for secrets
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            const dir = path.resolve('apps/web/.next');
+            const forbidden = [
+              'service_role',
+              'GOOGLE_CLIENT_SECRET',
+              'TOKEN_ENC_KEY',
+              'BEGIN PRIVATE KEY',
+              '-----BEGIN'
+            ];
+            function scan(d) {
+              let hits = [];
+              for (const f of fs.readdirSync(d, { withFileTypes: true })) {
+                const full = path.join(d, f.name);
+                if (f.isDirectory()) {
+                  if (f.name !== 'cache' && f.name !== 'dev') hits.push(...scan(full));
+                } else if (f.isFile() && !f.name.endsWith('.map')) {
+                  const c = fs.readFileSync(full, 'utf8');
+                  for (const p of forbidden) {
+                    if (c.includes(p)) hits.push({ file: path.relative(dir, full), pattern: p });
+                  }
+                }
+              }
+              return hits;
+            }
+            const res = scan(dir);
+            if (res.length > 0) {
+              console.error('LEAK FOUND IN BUNDLE:', JSON.stringify(res, null, 2));
+              process.exit(1);
+            } else {
+              console.log('Bundle secret search passed: no secrets in .next build output.');
+            }
+          "

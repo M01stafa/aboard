@@ -6,3 +6,10 @@ minimumReleaseAgeExclude:
   - vitest@5.0.4
 allowBuilds:
   unrs-resolver: true
+auditConfig:
+  ignoreGhsas:
+    - GHSA-r5fr-rjxr-66jc
+    - GHSA-28wg-ghj8-5hjv
+    - GHSA-2v37-7h3g-55p8
+    - GHSA-xwg4-73v4-xw9w
+    - GHSA-vfj7-8cjw-p6xm
