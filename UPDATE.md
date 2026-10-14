@@ -396,6 +396,44 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Task 14 Follow-up · SEC-9 · Turnstile integration
 **Open:** Owner to paste real Turnstile site key into `apps/web/.env.local`.
 
+## 2026-10-14 — Task 15: Add Security Headers and the Content Security Policy
+**Request:** Configure apps/web/next.config.ts with complete security headers and Content Security Policy (CSP) per docs/specs/security.md §14.5 and verified spikes (S1, S2, S4, Turnstile), with separate isolated rule for /circuit/:path*, and verify on a production build.
+**Changes:**
+- `apps/web/next.config.ts` (changed): added `headers()` with two mutually exclusive rules:
+  1. `/((?!circuit/).*)`: general app CSP with strict directives, `Strict-Transport-Security` (`max-age=63072000; includeSubDomains; preload`), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`, and `Cross-Origin-Opener-Policy: same-origin-allow-popups`. Script-src includes `'self'`, `'unsafe-inline'` (required by Next.js App Router bootstrap scripts; nonce-based CSP planned as future improvement), `'wasm-unsafe-eval'` (required by EmbedPDF/PDFium), and allowed external origins (`https://apis.google.com`, `https://accounts.google.com`, `https://challenges.cloudflare.com`). Font-src is strictly `'self'` (self-hosted).
+  2. `/circuit/:path*`: isolated rule for GWT CircuitJS fork adding `'unsafe-eval'` to script-src, `font-src 'self' data:`, and `frame-src 'self' javascript:`, without weakening the main application.
+- `UPDATE.md` (changed): appended this entry.
+**Exact Headers Block Configured:**
+```ts
+// General app pages (/((?!circuit/).*)):
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://apis.google.com https://accounts.google.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://fmlpkcbpoziwkjuxuyaf.supabase.co wss://fmlpkcbpoziwkjuxuyaf.supabase.co https://www.googleapis.com https://accounts.google.com https://api.aboard.example blob: data:; img-src 'self' data: blob: https://*.googleusercontent.com https://ssl.gstatic.com; font-src 'self'; frame-src 'self' https://challenges.cloudflare.com https://docs.google.com https://accounts.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+// CircuitJS iframe pages (/circuit/:path*):
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-src 'self' javascript:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+Cross-Origin-Opener-Policy: same-origin-allow-popups
+```
+**Checks:**
+- `pnpm build`: PASS (clean production build).
+- `curl.exe -I http://localhost:3000/`: PASS (all 6 headers present).
+- `curl.exe -I http://localhost:3000/circuit/anything`: PASS (`unsafe-eval` present, general script-src absent).
+- `curl.exe -I http://localhost:3000/login`: PASS (HTTP 200 with headers).
+- Chrome headless verification:
+  - `/`: 0 CSP violations.
+  - `/login`: 0 CSP violations, Turnstile widget rendered.
+  - `/settings`: 0 CSP violations.
+- `pnpm lint` and `pnpm typecheck`: PASS (0 errors).
+**Related:** Task 15 · SEC-6 · VERIFY V14
+**Open:** none
+
 
 
 
