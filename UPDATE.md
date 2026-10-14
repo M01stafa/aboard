@@ -313,6 +313,23 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Task 12 · SEC-7, SEC-14.6 · DESIGN rules · Spacing rules
 **Open:** none
 
+## 2026-10-14 — Build Font Preview Page (Temporary Preview Aid)
+**Request:** Add temporary page at apps/web/app/font-preview/page.tsx to visually preview Geist and Alexandria across weights, scales (DESIGN.md §3.3), Arabic rules, and numerals before continuing to Task 13.
+**Changes:**
+- `apps/web/src/i18n/en.ts` (changed): added `fontPreviewLink` under `settings` and `fontPreview` namespace covering all section labels.
+- `apps/web/src/i18n/ar.ts` (changed): added Arabic translations for `fontPreviewLink` and `fontPreview` namespace with 100% key parity.
+- `apps/web/app/settings/page.tsx` (changed): added navigation link to `/font-preview`.
+- `apps/web/app/font-preview/page.tsx` (created): temporary client preview page showcasing weights 400-700, 8-level scale, Arabic RTL/micro/tracking rules, tabular vs proportional numerals, and LTR monospace code (to be removed in a later cleanup task).
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: passed (`eslint .` and `check-spacing.mjs`, 0 errors, 0 warnings).
+- `pnpm typecheck`: passed (`tsc --noEmit`, 0 errors).
+- `pnpm test`: passed (11/11 tests in Vitest with exact key parity).
+- `pnpm build`: passed (`next build` prerendered `/`, `/_not-found`, `/font-preview`, `/settings`, `/theme-test`).
+**Related:** Font preview aid · DESIGN rules · Spacing rules
+**Open:** Temporary page to be removed in a later cleanup task.
+
+
 
 
 

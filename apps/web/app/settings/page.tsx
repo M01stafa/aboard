@@ -60,24 +60,44 @@ export default function SettingsPage() {
             {t("settings.description")}
           </p>
         </div>
-        <Link
-          href="/"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            height: "var(--control-sm)",
-            paddingInline: "var(--space-2)",
-            backgroundColor: "var(--bg-subtle)",
-            color: "var(--text-main)",
-            border: "1px solid var(--border-card)",
-            borderRadius: "var(--radius-sm)",
-            textDecoration: "none",
-            fontSize: "0.875rem",
-            fontWeight: "var(--weight-medium)",
-          }}
-        >
-          {t("settings.backToHome")}
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <Link
+            href="/font-preview"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              height: "var(--control-sm)",
+              paddingInline: "var(--space-2)",
+              backgroundColor: "var(--bg-subtle)",
+              color: "var(--text-main)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "var(--radius-sm)",
+              textDecoration: "none",
+              fontSize: "0.875rem",
+              fontWeight: "var(--weight-medium)",
+            }}
+          >
+            {t("settings.fontPreviewLink")}
+          </Link>
+          <Link
+            href="/"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              height: "var(--control-sm)",
+              paddingInline: "var(--space-2)",
+              backgroundColor: "var(--bg-subtle)",
+              color: "var(--text-main)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "var(--radius-sm)",
+              textDecoration: "none",
+              fontSize: "0.875rem",
+              fontWeight: "var(--weight-medium)",
+            }}
+          >
+            {t("settings.backToHome")}
+          </Link>
+        </div>
       </header>
 
       {/* Language Section */}
