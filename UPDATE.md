@@ -345,6 +345,33 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Task 13 · SEC-1, SEC-2 · V12
 **Open:** none
 
+## 2026-10-14 — Task 14: Implement Sign-In With Email OTP and Google
+**Request:** Run Task 14 from docs/TASKS.md: install browser Supabase client (@supabase/supabase-js), implement Email OTP and Google OAuth sign-in with token purge on callback, create login and callback routes, add shared computer toggle, add user session management on root page, build automated browser-storage test verifying zero provider_tokens, and verify against design rules and security standards.
+**Changes:**
+- `apps/web/src/core/supabase.ts` (created): initialized browser-only Supabase client (using @supabase/supabase-js@2.117.3, no server client, no @supabase/ssr) with helpers for Email OTP sign-in, OTP verification, Google OAuth sign-in (strictly without drive scope and without offline access), sign-out (with shared-computer IndexedDB cleanup hook), and session refresh token purge.
+- `apps/web/app/auth/callback/page.tsx` (created): client-side OAuth callback route exchanging auth code, invoking refreshSession() to purge Google provider tokens from browser storage (SEC-2), and redirecting cleanly to root.
+- `apps/web/app/login/page.tsx` (created): bilingual, accessible login page implementing Google OAuth button, 2-step Email OTP flow, shared computer toggle, and Turnstile notice using DESIGN.md tokens and 8-point grid rules.
+- `apps/web/app/page.tsx` (changed): added live auth session display with user email, login link, and sign-out button using i18n keys and logical CSS properties.
+- `apps/web/src/i18n/en.ts` (changed): added English dictionary keys for auth namespace (Google sign-in, email OTP steps, shared computer notice, sign-out, status).
+- `apps/web/src/i18n/ar.ts` (changed): added Arabic dictionary keys for auth namespace with 100% key parity.
+- `apps/web/src/core/auth.test.ts` (created): unit test suite for auth helper functions and state validation under Vitest.
+- `apps/web/vitest.config.mjs` (created): Vitest configuration scoping unit tests to `src/**/*.test.ts` with local environment loading.
+- `apps/web/playwright.config.ts` (created): Playwright configuration configured with local Google Chrome binary path (`C:\Program Files\Google\Chrome\Application\chrome.exe`) bypassing CDN download issue.
+- `apps/web/e2e/auth-storage.spec.ts` (created): automated E2E browser storage test asserting 0 `provider_token` or `provider_refresh_token` entries in localStorage, sessionStorage, and IndexedDB.
+- `.gitignore` (changed): added `test-results/` pattern.
+- `docs/PROGRESS.md` (changed): updated active task to Task 14 completed (next step: Task 15) and recorded decisions.
+- `UPDATE.md` (changed): appended Task 14 entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` passed with 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` passed with 0 errors).
+- `pnpm test`: PASS (16/16 unit tests passed in Vitest across env, i18n, and auth).
+- `pnpm test:e2e`: PASS (Playwright test executed in headless Chrome, asserting 0 provider_token entries across all browser storage).
+- `supabase test db`: PASS (17/17 pgTAP isolation tests passed on local Supabase stack).
+- `pnpm ci:security`: PASS (Gitleaks and security checks passed).
+- `pnpm build`: PASS (Turbopack prerendered all routes cleanly).
+**Related:** Task 14 · SEC-1, SEC-2, SEC-6, SEC-7, SEC-14.7 · V06
+**Open:** Task 15 (next task in Phase 1).
+
 
 
 

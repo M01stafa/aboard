@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 1 — Foundation |
-| Current task | Task 13 — Create the Database Schema With RLS and pgTAP Tests (completed) |
+| Current task | Task 14 — Implement Sign-In With Email and Google (completed) |
 | Last updated | 2026-10-14 |
-| Next step | Task 14 — Implement Sign-In With Email and Google |
+| Next step | Task 15 — Add Security Headers and the Content Security Policy |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -102,6 +102,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-14 | Environment separation plan (Task 10 / SEC-5): Dev uses testing Supabase project (fmlpkcbpoziwkjuxuyaf) and Google test OAuth client (localhost URIs) with dev Picker key; Preview uses staging Supabase project and preview Google OAuth client (*.vercel.app URIs); Prod uses dedicated production Supabase project and verified Google OAuth client (aboard.example) with domain-restricted Picker key |
 | 2026-10-14 | Built custom zero-dependency typed i18n layer under apps/web/src/i18n/ with ar/en support, RTL mirroring, theme/language persistence in localStorage, and pre-hydration head script (Task 12) |
 | 2026-10-14 | Replaced Phase 0 throwaway migration 0001_init.sql with authoritative production schema (§9.1) with full RLS, least-privilege column grants, and pgTAP isolation test suite (Task 13) |
+| 2026-10-14 | Email sign-in method chosen as Email One-Time Code (OTP) per PRD Q2; CAPTCHA chosen as Cloudflare Turnstile; Google OAuth configured without Drive scopes; automated browser storage test verified 0 provider tokens (Task 14) |
 
 ## Lessons and corrections
 

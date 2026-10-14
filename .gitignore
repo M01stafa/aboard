@@ -23,4 +23,5 @@ supabase/.temp/
 supabase/.branches/
 *.alpha
 *.tsbuildinfo
+test-results/
 
