@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 1 — Foundation |
-| Current task | Task 12 — Internationalization, RTL, and the Settings Page (completed) |
+| Current task | Task 13 — Create the Database Schema With RLS and pgTAP Tests (completed) |
 | Last updated | 2026-10-14 |
-| Next step | Task 13 — Database Migration 0001, RLS and Isolation Tests |
+| Next step | Task 14 — Implement Sign-In With Email and Google |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -59,7 +59,7 @@ Status values: `Open` · `Confirmed` · `Changed (spec updated)`
 | V09 | Google Picker loader and class names | google-drive.md §10.11 | 0 (S4) | Changed (spec updated) | Confirmed in Spike S4: `gapi.load("picker")`, `.picker-dialog`, `.picker-dialog-bg`, `.picker-modal-dialog`; spec updated / 2026-10-13 |
 | V10 | Drive "Open with" integration requirements | google-drive.md §10.11 | Later | Open | |
 | V11 | `.alpha` download keeps its extension on iOS Safari | alpha-format.md §12.1 | 0 (S5) | Changed (spec updated) | In-memory path built; physical iPhone Safari checks deferred by owner to Task 31/32; spec updated / 2026-10-13 |
-| V12 | pgTAP: inserting minimal rows into `auth.users` works in the local stack | security.md §14.3 | 1 | Open | |
+| V12 | pgTAP: inserting minimal rows into `auth.users` works in the local stack | security.md §14.3 | 1 | Confirmed | Confirmed in Task 13: minimal rows into auth.users (id, email) trigger profile creation; all 17 pgTAP assertions pass / 2026-10-14 |
 | V13 | Gateway JWT verification: JWKS vs legacy JWT secret | security.md §14.4, setup-and-deploy.md §13 | 9 | Open | |
 | V14 | CSP needs of Picker, Supabase and GWT; `headers()` precedence; COOP with Google popups | security.md §14.5 | 0 (S1/S4) | Changed (spec updated) | Confirmed in Spikes S1, S2, S4: CSP directives for Excalidraw, GWT `/circuit/`, EmbedPDF, Google; COOP verified; spec updated / 2026-10-13 |
 | V15 | Supabase Auth: refresh-token rotation/reuse detection default; leaked-password protection availability | security.md §14.7 | 1 | Open | |
@@ -101,6 +101,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-13 | Next.js 16 CLI deprecates `next lint` in favor of `eslint .`; ESLint 9 configured with react/no-danger and no-unsanitized/* for SEC-7 |
 | 2026-10-14 | Environment separation plan (Task 10 / SEC-5): Dev uses testing Supabase project (fmlpkcbpoziwkjuxuyaf) and Google test OAuth client (localhost URIs) with dev Picker key; Preview uses staging Supabase project and preview Google OAuth client (*.vercel.app URIs); Prod uses dedicated production Supabase project and verified Google OAuth client (aboard.example) with domain-restricted Picker key |
 | 2026-10-14 | Built custom zero-dependency typed i18n layer under apps/web/src/i18n/ with ar/en support, RTL mirroring, theme/language persistence in localStorage, and pre-hydration head script (Task 12) |
+| 2026-10-14 | Replaced Phase 0 throwaway migration 0001_init.sql with authoritative production schema (§9.1) with full RLS, least-privilege column grants, and pgTAP isolation test suite (Task 13) |
 
 ## Lessons and corrections
 

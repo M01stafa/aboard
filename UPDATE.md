@@ -329,6 +329,22 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Font preview aid · DESIGN rules · Spacing rules
 **Open:** Temporary page to be removed in a later cleanup task.
 
+## 2026-10-14 — Task 13: Database Schema Migration 0001, RLS and pgTAP Tests
+**Request:** Run Task 13 from docs/TASKS.md: replace supabase/migrations/0001_init.sql with authoritative production schema (§9.1) with full RLS and least privilege grants, write supabase/tests/rls.test.sql covering cross-user isolation and denials on server-only tables, run supabase db reset and supabase test db on local stack, write CI RLS guard query at supabase/tests/rls_guard.sql, and commit to M01stafa/aboard.
+**Changes:**
+- `supabase/migrations/0001_init.sql` (changed): replaced Phase 0 throwaway with production schema including profiles, projects (with UUID primary key, length checks, item_count, and storage constraints), google_drive_links, oauth_states, rate_limits, touch_updated_at trigger, handle_new_user, check_rate_limit, get_drive_status, RLS enabled on all 5 tables, revoked privileges, least-privilege column grants, and 6 RLS policies.
+- `supabase/tests/rls.test.sql` (created): comprehensive 17-assertion pgTAP test suite verifying profile and project owner access, cross-user isolation, immutable user_id, authenticated access rejection on server-only tables, and total denial of anon role.
+- `supabase/tests/rls_guard.sql` (created): CI RLS guard query returning zero rows if all tables in public schema have RLS enabled.
+- `docs/PROGRESS.md` (changed): updated current task to Task 13 completed (next step: Task 14), confirmed VERIFY V12, and logged decision.
+- `UPDATE.md` (changed): appended Task 13 entry.
+**Checks:**
+- `supabase db reset`: PASS. Local database recreated, schema initialized, globals seeded, and migration `0001_init.sql` cleanly applied.
+- `supabase test db`: PASS. Executed `supabase/tests/rls.test.sql` against local stack: 17/17 tests successful (0 failures).
+- CI RLS guard query: PASS (`rows: []`, 0 offending tables).
+- VERIFY V12: Confirmed minimal rows inserted into `auth.users` (`id`, `email`) trigger automatic profile creation.
+**Related:** Task 13 · SEC-1, SEC-2 · V12
+**Open:** none
+
 
 
 

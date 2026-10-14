@@ -20,6 +20,7 @@ Thumbs.db
 *.log
 .temp/
 supabase/.temp/
+supabase/.branches/
 *.alpha
 *.tsbuildinfo
 
