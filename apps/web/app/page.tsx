@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AuthGuard } from "./auth-guard";
 import { signOut } from "@/core/supabase";
 import { useI18n } from "@/i18n/provider";
+import { Card } from "@/components/card";
 import type { User } from "@supabase/supabase-js";
 
 export function LauncherContent({ user }: { user: User }) {
@@ -33,13 +34,15 @@ export function LauncherContent({ user }: { user: User }) {
       style={{
         paddingInline: "var(--space-4)",
         paddingBlock: "var(--space-6)",
-        maxInlineSize: "72ch",
+        maxInlineSize: "120ch",
         marginInline: "auto",
         fontFamily: "var(--font-sans)",
         color: "var(--text-main)",
         display: "flex",
         flexDirection: "column",
         gap: "var(--space-6)",
+        boxSizing: "border-box",
+        inlineSize: "100%",
       }}
     >
       <style>{`
@@ -48,13 +51,14 @@ export function LauncherContent({ user }: { user: User }) {
           background-color: var(--bg-surface);
           border: 1px solid var(--border-card);
           border-radius: var(--radius-md);
-          padding: var(--space-4);
+          padding: var(--space-3);
           box-shadow: var(--shadow-1);
           overflow: hidden;
           display: flex;
           flex-direction: column;
-          justifyContent: space-between;
-          gap: var(--space-4);
+          justify-content: space-between;
+          inline-size: 100%;
+          box-sizing: border-box;
           transition: transform var(--motion-base) var(--ease-standard),
                       box-shadow var(--motion-base) var(--ease-standard),
                       border-color var(--motion-fast) var(--ease-standard);
@@ -68,20 +72,51 @@ export function LauncherContent({ user }: { user: User }) {
           block-size: 2px;
           background: var(--gradient-accent);
         }
+        .cards-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: var(--space-3);
+          inline-size: 100%;
+        }
+        @media (min-width: 640px) {
+          .cards-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          .cards-grid > article:nth-child(3) {
+            grid-column: span 2;
+            max-inline-size: 56ch;
+            margin-inline: auto;
+            inline-size: 100%;
+          }
+        }
+        @media (min-width: 960px) {
+          .cards-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+          .cards-grid > article:nth-child(3) {
+            grid-column: auto;
+            max-inline-size: 100%;
+            margin-inline: 0;
+          }
+        }
         .btn-gold {
           background-color: var(--btn-gold-bg);
           color: var(--btn-gold-text);
           border: 0;
           border-radius: var(--radius-sm);
-          blockSize: var(--control-md);
+          block-size: var(--control-md);
+          padding-block: 0;
           padding-inline: var(--space-3);
           font-weight: var(--weight-semibold);
           font-size: 0.875rem;
+          font-family: var(--font-sans);
           cursor: pointer;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: var(--space-1);
+          box-sizing: border-box;
+          inline-size: 100%;
           transition: background-color var(--motion-fast) var(--ease-standard),
                       box-shadow var(--motion-base) var(--ease-standard);
         }
@@ -90,15 +125,19 @@ export function LauncherContent({ user }: { user: User }) {
           color: var(--btn-primary-text);
           border: 0;
           border-radius: var(--radius-sm);
-          blockSize: var(--control-md);
+          block-size: var(--control-md);
+          padding-block: 0;
           padding-inline: var(--space-3);
           font-weight: var(--weight-semibold);
           font-size: 0.875rem;
+          font-family: var(--font-sans);
           cursor: pointer;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: var(--space-1);
+          box-sizing: border-box;
+          inline-size: 100%;
           transition: background-color var(--motion-fast) var(--ease-standard),
                       box-shadow var(--motion-base) var(--ease-standard);
         }
@@ -107,15 +146,19 @@ export function LauncherContent({ user }: { user: User }) {
           color: var(--accent-text);
           border: 2px solid var(--accent-text);
           border-radius: var(--radius-sm);
-          blockSize: var(--control-md);
+          block-size: var(--control-md);
+          padding-block: 0;
           padding-inline: var(--space-3);
           font-weight: var(--weight-semibold);
           font-size: 0.875rem;
+          font-family: var(--font-sans);
           cursor: pointer;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: var(--space-1);
+          box-sizing: border-box;
+          inline-size: 100%;
           transition: background-color var(--motion-fast) var(--ease-standard),
                       color var(--motion-fast) var(--ease-standard),
                       box-shadow var(--motion-base) var(--ease-standard);
@@ -125,31 +168,38 @@ export function LauncherContent({ user }: { user: User }) {
           color: var(--text-main);
           border: 1px solid var(--border-card);
           border-radius: var(--radius-sm);
-          blockSize: var(--control-md);
+          block-size: var(--control-md);
+          padding-block: 0;
           padding-inline: var(--space-3);
           font-weight: var(--weight-medium);
           font-size: 0.875rem;
+          font-family: var(--font-sans);
           cursor: pointer;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: var(--space-1);
+          box-sizing: border-box;
           text-decoration: none;
-          transition: background-color var(--motion-fast) var(--ease-standard);
+          transition: background-color var(--motion-fast) var(--ease-standard),
+                      border-color var(--motion-fast) var(--ease-standard);
         }
         .btn-danger-outline {
           background-color: transparent;
           color: var(--color-danger-text);
           border: 1px solid var(--color-danger-border);
           border-radius: var(--radius-sm);
-          blockSize: var(--control-sm);
+          block-size: var(--control-sm);
+          padding-block: 0;
           padding-inline: var(--space-2);
           font-weight: var(--weight-medium);
           font-size: 0.8125rem;
+          font-family: var(--font-sans);
           cursor: pointer;
           display: inline-flex;
           align-items: center;
           justify-content: center;
+          box-sizing: border-box;
           transition: background-color var(--motion-fast) var(--ease-standard);
         }
         .btn-gold:focus-visible,
@@ -181,6 +231,7 @@ export function LauncherContent({ user }: { user: User }) {
           }
           .btn-subtle:hover {
             background-color: var(--bg-surface);
+            border-color: var(--border-input);
           }
           .btn-danger-outline:hover {
             background-color: var(--color-danger-bg);
@@ -190,11 +241,6 @@ export function LauncherContent({ user }: { user: User }) {
           .launcher-card:hover {
             transform: none;
           }
-        }
-        .cards-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: var(--space-4);
         }
       `}</style>
 
@@ -208,6 +254,7 @@ export function LauncherContent({ user }: { user: User }) {
           gap: "var(--space-3)",
           paddingBlockEnd: "var(--space-4)",
           borderBlockEnd: "1px solid var(--border-card)",
+          boxSizing: "border-box",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
@@ -223,6 +270,7 @@ export function LauncherContent({ user }: { user: User }) {
               color: "var(--btn-gold-text)",
               fontWeight: "var(--weight-bold)",
               fontSize: "1rem",
+              boxSizing: "border-box",
             }}
           >
             α
@@ -253,7 +301,7 @@ export function LauncherContent({ user }: { user: User }) {
               fontFamily: "var(--font-mono)",
             }}
           >
-            {user.email}
+            <bdi dir="ltr">{user.email}</bdi>
           </span>
 
           <Link href="/settings" className="btn-subtle" style={{ blockSize: "var(--control-sm)" }}>
@@ -285,342 +333,337 @@ export function LauncherContent({ user }: { user: User }) {
         </div>
       </header>
 
-      {/* Hero Welcome */}
-      <section style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-        <h1
+      {/* Hero / Title Area with Integrated Secondary Action */}
+      <section
+        aria-label={t("launcher.pageTitle")}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-3)",
+        }}
+      >
+        <div
           style={{
-            margin: "0",
-            fontSize: "2rem",
-            fontWeight: "var(--weight-bold)",
-            color: "var(--text-main)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-1)",
+            maxInlineSize: "65ch",
           }}
         >
-          {t("launcher.pageTitle")}
-        </h1>
-        <p
-          style={{
-            margin: "0",
-            fontSize: "1rem",
-            color: "var(--text-muted)",
-          }}
-        >
-          {t("launcher.tagline")}
-        </p>
-      </section>
-
-      {/* Action Bar (Open .alpha file stub) */}
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-        <button
-          type="button"
-          onClick={() => setAlphaNotice(true)}
-          className="btn-subtle"
-          data-testid="open-alpha-btn"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" x2="12" y1="15" y2="3" />
-          </svg>
-          {t("launcher.openAlpha")}
-        </button>
-
-        {alphaNotice && (
-          <span
-            role="status"
+          <h1
             style={{
-              fontSize: "0.875rem",
-              color: "var(--color-info-text)",
-              backgroundColor: "var(--color-info-bg)",
-              paddingBlock: "var(--space-1)",
-              paddingInline: "var(--space-2)",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--color-info-border)",
+              margin: 0,
+              fontSize: "2rem",
+              lineHeight: "2.5rem",
+              fontWeight: "var(--weight-bold)",
+              color: "var(--text-main)",
             }}
           >
-            {t("launcher.openAlphaComingSoon")}
-          </span>
-        )}
-      </div>
+            {t("launcher.pageTitle")}
+          </h1>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "1rem",
+              lineHeight: "1.5rem",
+              color: "var(--text-muted)",
+            }}
+          >
+            {t("launcher.tagline")}
+          </p>
+        </div>
 
-      {/* Three Cards Grid */}
+        {/* Secondary Action: Open .alpha file */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "var(--space-2)",
+            marginBlockStart: "var(--space-1)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setAlphaNotice((prev) => !prev)}
+            className="btn-subtle"
+            data-testid="open-alpha-btn"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" x2="12" y1="15" y2="3" />
+            </svg>
+            <span>{t("launcher.openAlpha")}</span>
+          </button>
+
+          {alphaNotice && (
+            <div
+              role="status"
+              style={{
+                fontSize: "0.8125rem",
+                color: "var(--accent-text-strong)",
+                backgroundColor: "var(--badge-tech-bg)",
+                border: "1px solid var(--badge-tech-bd)",
+                paddingBlock: "var(--space-1)",
+                paddingInline: "var(--space-2)",
+                borderRadius: "var(--radius-sm)",
+                lineHeight: "1.25rem",
+                boxSizing: "border-box",
+              }}
+            >
+              {t("launcher.openAlphaComingSoon")}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Balanced 3-Card Tool Grid */}
       <section
         aria-label={t("launcher.pageTitle")}
         className="cards-grid"
       >
         {/* Card 1: New Whiteboard (R7: Gold CTA button) */}
-        <article className="launcher-card" data-testid="card-whiteboard">
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-            <div
-              style={{
-                inlineSize: "var(--control-md)",
-                blockSize: "var(--control-md)",
-                borderRadius: "var(--radius-sm)",
-                backgroundColor: "var(--badge-gold-bg)",
-                color: "var(--badge-gold-text)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+        <Card
+          testId="card-whiteboard"
+          iconBg="var(--badge-gold-bg)"
+          iconColor="var(--badge-gold-text)"
+          iconBorder="var(--badge-gold-bd)"
+          icon={
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
             >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="m18 5-3-3H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2" />
-                <path d="M8 18h1" />
-                <path d="M18.4 9.6a2 2 0 1 1 3 3L14 20l-4 1 1-4Z" />
-              </svg>
-            </div>
-
-            <h2
-              style={{
-                margin: "0",
-                fontSize: "1.25rem",
-                fontWeight: "var(--weight-semibold)",
-                color: "var(--text-main)",
-              }}
+              <path d="m18 5-3-3H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2" />
+              <path d="M8 18h1" />
+              <path d="M18.4 9.6a2 2 0 1 1 3 3L14 20l-4 1 1-4Z" />
+            </svg>
+          }
+          title={t("launcher.newWhiteboard")}
+          description={t("launcher.newWhiteboardDesc")}
+          action={
+            <button
+              type="button"
+              onClick={() => createPlaceholderProject("board")}
+              className="btn-gold"
+              data-testid="create-whiteboard-btn"
             >
-              {t("launcher.newWhiteboard")}
-            </h2>
-            <p
-              style={{
-                margin: "0",
-                fontSize: "0.875rem",
-                color: "var(--text-muted)",
-                lineHeight: "1.5rem",
-              }}
-            >
-              {t("launcher.newWhiteboardDesc")}
-            </p>
-          </div>
-
-          {/* R7 Gold CTA: The ONLY gold button on the screen */}
-          <button
-            type="button"
-            onClick={() => createPlaceholderProject("board")}
-            className="btn-gold"
-            data-testid="create-whiteboard-btn"
-          >
-            {t("launcher.newWhiteboardCta")}
-          </button>
-        </article>
+              {t("launcher.newWhiteboardCta")}
+            </button>
+          }
+        />
 
         {/* Card 2: New PDF (Primary button) */}
-        <article className="launcher-card" data-testid="card-pdf">
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-            <div
-              style={{
-                inlineSize: "var(--control-md)",
-                blockSize: "var(--control-md)",
-                borderRadius: "var(--radius-sm)",
-                backgroundColor: "var(--badge-primary-bg)",
-                color: "var(--badge-primary-text)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+        <Card
+          testId="card-pdf"
+          iconBg="var(--badge-primary-bg)"
+          iconColor="var(--badge-primary-text)"
+          iconBorder="var(--badge-primary-bd)"
+          icon={
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
             >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" x2="8" y1="13" y2="13" />
-                <line x1="16" x2="8" y1="17" y2="17" />
-                <line x1="10" x2="8" y1="9" y2="9" />
-              </svg>
-            </div>
-
-            <h2
-              style={{
-                margin: "0",
-                fontSize: "1.25rem",
-                fontWeight: "var(--weight-semibold)",
-                color: "var(--text-main)",
-              }}
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" x2="8" y1="13" y2="13" />
+              <line x1="16" x2="8" y1="17" y2="17" />
+              <line x1="10" x2="8" y1="9" y2="9" />
+            </svg>
+          }
+          title={t("launcher.newPdf")}
+          description={t("launcher.newPdfDesc")}
+          action={
+            <button
+              type="button"
+              onClick={() => createPlaceholderProject("pdf")}
+              className="btn-primary"
+              data-testid="create-pdf-btn"
             >
-              {t("launcher.newPdf")}
-            </h2>
-            <p
-              style={{
-                margin: "0",
-                fontSize: "0.875rem",
-                color: "var(--text-muted)",
-                lineHeight: "1.5rem",
-              }}
-            >
-              {t("launcher.newPdfDesc")}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => createPlaceholderProject("pdf")}
-            className="btn-primary"
-            data-testid="create-pdf-btn"
-          >
-            {t("launcher.newPdfCta")}
-          </button>
-        </article>
+              {t("launcher.newPdfCta")}
+            </button>
+          }
+        />
 
         {/* Card 3: New Circuit (Tech outline button) */}
-        <article className="launcher-card" data-testid="card-circuit">
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-            <div
-              style={{
-                inlineSize: "var(--control-md)",
-                blockSize: "var(--control-md)",
-                borderRadius: "var(--radius-sm)",
-                backgroundColor: "var(--badge-tech-bg)",
-                color: "var(--badge-tech-text)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+        <Card
+          testId="card-circuit"
+          iconBg="var(--badge-tech-bg)"
+          iconColor="var(--badge-tech-text)"
+          iconBorder="var(--badge-tech-bd)"
+          icon={
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
             >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <rect width="18" height="18" x="3" y="3" rx="2" />
-                <path d="M7 7h10" />
-                <path d="M7 12h10" />
-                <path d="M7 17h10" />
-              </svg>
-            </div>
-
-            <h2
-              style={{
-                margin: "0",
-                fontSize: "1.25rem",
-                fontWeight: "var(--weight-semibold)",
-                color: "var(--text-main)",
-              }}
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M7 7h10" />
+              <path d="M7 12h10" />
+              <path d="M7 17h10" />
+            </svg>
+          }
+          title={t("launcher.newCircuit")}
+          description={t("launcher.newCircuitDesc")}
+          action={
+            <button
+              type="button"
+              onClick={() => createPlaceholderProject("circuit")}
+              className="btn-tech"
+              data-testid="create-circuit-btn"
             >
-              {t("launcher.newCircuit")}
-            </h2>
-            <p
-              style={{
-                margin: "0",
-                fontSize: "0.875rem",
-                color: "var(--text-muted)",
-                lineHeight: "1.5rem",
-              }}
-            >
-              {t("launcher.newCircuitDesc")}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => createPlaceholderProject("circuit")}
-            className="btn-tech"
-            data-testid="create-circuit-btn"
-          >
-            {t("launcher.newCircuitCta")}
-          </button>
-        </article>
+              {t("launcher.newCircuitCta")}
+            </button>
+          }
+        />
       </section>
 
-      {/* Recent Projects Area (Empty State for now) */}
+      {/* Recent Projects Section with Graceful Empty State */}
       <section
         aria-labelledby="recent-projects-heading"
         style={{
           display: "flex",
           flexDirection: "column",
           gap: "var(--space-3)",
-          marginBlockStart: "var(--space-4)",
+          marginBlockStart: "var(--space-2)",
         }}
       >
-        <h2
-          id="recent-projects-heading"
+        <div
           style={{
-            margin: "0",
-            fontSize: "1.25rem",
-            fontWeight: "var(--weight-semibold)",
-            color: "var(--text-main)",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
           }}
         >
-          {t("launcher.recentProjects")}
-        </h2>
+          <h2
+            id="recent-projects-heading"
+            style={{
+              margin: 0,
+              fontSize: "1.25rem",
+              lineHeight: "1.75rem",
+              fontWeight: "var(--weight-semibold)",
+              color: "var(--text-main)",
+            }}
+          >
+            {t("launcher.recentProjects")}
+          </h2>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              blockSize: "var(--space-3)",
+              paddingInline: "var(--space-1)",
+              borderRadius: "var(--radius-full)",
+              backgroundColor: "var(--bg-subtle)",
+              border: "1px solid var(--border-card)",
+              fontSize: "0.75rem",
+              fontWeight: "var(--weight-medium)",
+              color: "var(--text-muted)",
+              fontFamily: "var(--font-mono)",
+              boxSizing: "border-box",
+            }}
+          >
+            0
+          </span>
+        </div>
 
         <div
           style={{
-            backgroundColor: "var(--bg-subtle)",
-            border: "1px dashed var(--border-subtle)",
+            backgroundColor: "var(--bg-surface)",
+            border: "1px solid var(--border-card)",
             borderRadius: "var(--radius-md)",
-            padding: "var(--space-6)",
+            paddingBlock: "var(--space-6)",
+            paddingInline: "var(--space-4)",
+            boxShadow: "var(--shadow-1)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
             gap: "var(--space-2)",
+            boxSizing: "border-box",
           }}
         >
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            color="var(--text-muted)"
-            aria-hidden="true"
+          <div
+            style={{
+              inlineSize: "var(--control-lg)",
+              blockSize: "var(--control-lg)",
+              borderRadius: "var(--radius-full)",
+              backgroundColor: "var(--bg-subtle)",
+              border: "1px solid var(--border-card)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--accent-text)",
+              boxSizing: "border-box",
+            }}
           >
-            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
-          </svg>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+            </svg>
+          </div>
 
           <span
             style={{
-              fontSize: "0.9375rem",
+              fontSize: "1rem",
               fontWeight: "var(--weight-medium)",
               color: "var(--text-main)",
+              lineHeight: "1.5rem",
             }}
           >
             {t("launcher.recentProjectsEmpty")}
           </span>
-          <span
+          <p
             style={{
-              fontSize: "0.8125rem",
+              margin: 0,
+              fontSize: "0.875rem",
               color: "var(--text-muted)",
+              lineHeight: "1.5rem",
+              maxInlineSize: "45ch",
             }}
           >
             {t("launcher.recentProjectsHint")}
-          </span>
+          </p>
         </div>
       </section>
 
@@ -637,6 +680,7 @@ export function LauncherContent({ user }: { user: User }) {
           gap: "var(--space-2)",
           fontSize: "0.8125rem",
           color: "var(--text-muted)",
+          boxSizing: "border-box",
         }}
       >
         <span>

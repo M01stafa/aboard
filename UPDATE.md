@@ -495,3 +495,30 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 17 · LAUNCH-1, AUTH-1
 **Open:** none (ready for Task 18).
 
+## 2026-10-14 — Elevate the Launcher's Visual Composition
+**Request:** Redesign the visual composition of apps/web/app/page.tsx (launcher) and extract a small reusable Card component under apps/web/src/components/card.tsx; ensure a single balanced row of 3 cards on desktop, intentional 2+1 on tablet, 1 column on mobile, a clear hero with "Open .alpha file" secondary action, an elevated "Recent projects" empty state, exactly 1 gold CTA on the screen (R7), full token and spacing compliance, and capture 4 preview screenshots.
+**Changes:**
+- `apps/web/src/components/card.tsx` (created): extracted reusable Card component strictly conforming to DESIGN.md §5.4 (top accent line, tokens only, no Next.js imports).
+- `apps/web/app/page.tsx` (changed): elevated composition with unified hero section, secondary "Open .alpha" control, balanced 3-column desktop grid with pixel-aligned bottom buttons, count badge and refined blueprint container for Recent Projects empty state.
+- `docs/preview/launcher/` (created): captured four screenshots at 1280x800 and 375x812 in light/dark and ar/en using installed Chrome via Playwright.
+- `UPDATE.md` (changed): appended this entry.
+**Decisions:**
+- Gold CTA Owner: "New Whiteboard" (`create-whiteboard-btn` / `btn-gold`) owns the single Gold CTA per R7 because the Whiteboard is the central integrative tool and flagship workspace of Aboard (Alpha board). The other two cards use Primary (PDF) and Tech Outline (Circuit).
+- Grid Composition: 3 equal-width columns on desktop (>=960px) in a single row, 2+1 stacked on tablet (640-959px), and single column stack on mobile (<640px).
+**Screenshots:**
+- `docs/preview/launcher/launcher-desktop-ar-light.png`
+- `docs/preview/launcher/launcher-desktop-en-dark.png`
+- `docs/preview/launcher/launcher-mobile-ar-light.png`
+- `docs/preview/launcher/launcher-mobile-en-dark.png`
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (20 unit tests passed).
+- `pnpm build`: PASS (clean production build).
+- `pnpm ci:security`: PASS (Gitleaks clean, audit clean, .next bundle scan clean).
+- Playwright visual audit: 3 cards balanced in 1 row at 1280px, buttons aligned, 1 gold CTA, 0 console errors, 0 CSP violations.
+**Related:** LAUNCH-1 · DESIGN.md §1, §4, §5.1, §5.4, §6, §10
+**Open:** none
+
+
