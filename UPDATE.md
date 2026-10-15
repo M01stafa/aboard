@@ -599,6 +599,31 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 19 · SEC-4 · docs/specs/storage-layer.md §11.2 · docs/specs/security.md §14.6
 **Open:** none (proceed to Task 20 upon owner prompt).
 
+## 2026-10-15 — Task 20: Build the StorageProvider Interface and the Project Service
+**Request:** Run Task 20 from docs/TASKS.md: build the StorageProvider interface and LocalProvider backing the Task 19 DB with pinned=true, build ProjectService as the single gateway for tool modules, implement content-addressed binary file storage with streaming SHA-256 via hash-wasm, write architecture boundary test preventing direct db imports from modules, and add unit tests covering every method of ProjectService and LocalProvider.
+**Changes:**
+- `apps/web/src/core/storage/types.ts` (created): defined StorageProvider interface, ItemRecord, ItemKind, and AlphaManifest types conforming literally to docs/specs/storage-layer.md §11.1 and docs/specs/alpha-format.md §12.3.
+- `apps/web/src/core/storage/sha256.ts` (created): implemented streaming chunk-based SHA-256 computation using hash-wasm@4.12.0 for large Blobs/Files without full in-memory buffering.
+- `apps/web/src/core/storage/local-provider.ts` (created): implemented LocalProvider backing StorageProvider interface with Dexie database, setting pinned=true on every write per Requirement 4.
+- `apps/web/src/core/storage/project-service.ts` (created): implemented ProjectService exposing openProject, createProject, readItem, saveBoard, saveCircuit, saveAnnotations, putFile (content-addressed with SHA-256 deduplication), getFile, createItem, renameItem, deleteItem, deleteProject, and phase 6/7 stubs.
+- `apps/web/src/core/storage/index.ts` (created): exported storage types, sha256, local-provider, and project-service.
+- `apps/web/src/core/storage/architecture.test.ts` (created): added architectural boundary test verifying that files under apps/web/src/modules/ never import Dexie or @/core/db directly.
+- `apps/web/src/core/storage/project-service.test.ts` (created): added comprehensive unit tests covering all ProjectService methods against an in-memory FakeStorageProvider (independent of IndexedDB).
+- `apps/web/src/core/storage/local-provider.test.ts` (created): added unit tests for LocalProvider verifying Dexie writes, read/delete operations, and pinned=true on file records.
+- `docs/PROGRESS.md` (changed): marked Task 20 as completed, set Next step to Task 21, and logged Task 20 decisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- `pnpm test`: PASS (41/41 unit tests passed across 9 test files).
+- `pnpm test:e2e`: PASS (4/4 Playwright tests passed in Chrome).
+- `pnpm build`: PASS (clean production build with Turbopack, 12 static routes prerendered).
+- `pnpm ci:security`: PASS.
+- `gitleaks git --verbose`: PASS (0 leaks found across all commits).
+**Related:** Task 20 · STORE-1, STORE-7 · docs/specs/storage-layer.md §11.1–11.2
+**Open:** none (proceed to Task 21 upon owner prompt).
+
 
 
 
