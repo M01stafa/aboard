@@ -174,6 +174,13 @@ export const en = {
     toBePublished: "This document will be published prior to public launch. User content is stored exclusively in the user's Google Drive or local browser storage.",
     backToLauncher: "Back to Launcher",
   },
+  saveStatus: {
+    savedDrive: "Saved to Google Drive",
+    saving: "Saving…",
+    savedLocal: "Saved on this device",
+    waitingConnection: "Waiting for connection",
+    reconnectDrive: "Reconnect Google Drive",
+  },
 } as const;
 
 type DeepStringRecord<T> = {

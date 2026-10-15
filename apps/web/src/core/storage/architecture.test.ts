@@ -48,4 +48,17 @@ describe("Storage Architecture Boundary (Task 20 / Requirement 3)", () => {
       `Modules must only interact with ProjectService. Found violations:\n${JSON.stringify(violations, null, 2)}`
     ).toEqual([]);
   });
+
+  it("enforces that SaveQueue is framework-agnostic and never imports React", () => {
+    const queueFile = path.resolve(__dirname, "save-queue.ts");
+    const content = fs.readFileSync(queueFile, "utf-8");
+    const lines = content.split("\n");
+
+    const reactImports = lines.filter(
+      (line) => /from\s+["']react["']/.test(line) || /from\s+["']react-dom["']/.test(line)
+    );
+
+    expect(reactImports).toHaveLength(0);
+  });
 });
+

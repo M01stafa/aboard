@@ -624,6 +624,28 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 20 · STORE-1, STORE-7 · docs/specs/storage-layer.md §11.1–11.2
 **Open:** none (proceed to Task 21 upon owner prompt).
 
-
-
-
+## 2026-10-15 — Task 21: Build the Save Queue and the Save Status Indicator
+**Request:** Run Task 21 from docs/TASKS.md: build framework-agnostic SaveQueue with ~500 ms debounce, coalescing per item, dirty→clean transition in local mode, structured Drive cadence (3s idle, 30s max), flush triggers (beforeunload, visibilitychange, project switch, flushNow), beforeunload leave-site dialog gating (never in local mode), silent persistence via navigator.storage.persist() skipping Firefox per STORE-9, top-bar save status indicator with 5 states (WS-3) using theme tokens and bilingual i18n keys, unit tests covering all queue behaviors, and a Playwright E2E test proving STORE-1.
+**Changes:**
+- `apps/web/src/core/storage/persistence.ts` (created): implemented `requestPersistenceSilently()` requesting persistent storage via `navigator.storage.persist()`, skipping Firefox entirely per STORE-9 and docs/specs/storage-layer.md §11.3.
+- `apps/web/src/core/storage/save-queue.ts` (created): built framework-agnostic `SaveQueue` under `apps/web/src/core/storage/` with ~500 ms debounce, per-item coalescing, flush hooks (`beforeunload`, `visibilitychange`, project switch, `flushNow`), dirty→clean transitions in local mode, and structured cadence for future Drive uploads (3s idle, max 30s).
+- `apps/web/src/core/storage/project-service.ts` (changed): wired change notifications to `saveQueue`, supported consistent pending reads, and exported singleton `saveQueue`.
+- `apps/web/src/core/storage/index.ts` (changed): exported `save-queue` and `persistence`.
+- `apps/web/src/workspace/save-status.tsx` (created): implemented thin React component for workspace top bar rendering the 5 status states from WS-3 with theme tokens and i18n keys; non-interactive `role="status"` with `aria-live="polite"`.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): mounted `SaveStatusIndicator` in workspace top-bar header and added `data-testid="workspace-host"`.
+- `apps/web/src/i18n/en.ts` (changed): added `saveStatus` keys for all five WS-3 states in English.
+- `apps/web/src/i18n/ar.ts` (changed): added `saveStatus` keys for all five WS-3 states in Arabic.
+- `apps/web/playwright.config.ts` (changed): set `workers: 1` for reliable sequential execution of browser auth and storage tests.
+- `apps/web/src/core/storage/save-queue.test.ts` (created): added 7 unit tests covering debounce collapse, per-item coalescing, `flushNow`, dirty→clean transition in local mode, `beforeunload` gating, and silent persistence.
+- `apps/web/src/core/storage/architecture.test.ts` (changed): added test verifying that `SaveQueue` is framework-agnostic and never imports React.
+- `apps/web/e2e/store-1-save-status.spec.ts` (created): added Playwright E2E test proving STORE-1 and WS-3/WS-4 in local mode (status transitions to "Saving…", debounces to "Saved on this device", no "leave site?" dialog appears).
+- `docs/PROGRESS.md` (changed): marked Task 21 as completed, set Next step to Task 22, and logged Task 21 decisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (All spacing and sizing properties follow the 8-point grid tokens).
+- `pnpm lint`: PASS (0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- `pnpm test`: PASS (49/49 unit tests passed across 10 test files).
+- `pnpm test:e2e`: PASS (5/5 Playwright tests passed in Chrome: auth-storage, sec-4-shared-computer, store-1-save-status, workspace-no-reload [iframe keep-alive and divider drag]).
+**Related:** Task 21 · STORE-1, STORE-3, STORE-9, WS-3, WS-4 · docs/specs/storage-layer.md §11.3–11.4
+**Open:** none (proceed to Task 22 upon owner prompt).

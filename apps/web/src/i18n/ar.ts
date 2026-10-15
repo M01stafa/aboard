@@ -176,4 +176,12 @@ export const ar: TranslationDictionary = {
     toBePublished: "سيتم نشر هذه الوثيقة قبل الإطلاق الرسمي. تبقى ملفات المستخدمين محفوظة في جوجل درايف الخاص بهم أو المتصفح المحلي فقط.",
     backToLauncher: "العودة للوحة التشغيل",
   },
+  saveStatus: {
+    savedDrive: "محفوظ في Google Drive",
+    saving: "جارٍ الحفظ…",
+    savedLocal: "محفوظ على هذا الجهاز",
+    waitingConnection: "بانتظار الاتصال",
+    reconnectDrive: "أعد ربط Google Drive",
+  },
 };
+
