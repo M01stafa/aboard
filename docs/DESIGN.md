@@ -1,6 +1,6 @@
 # Aboard Design System (DESIGN.md)
 
-> **Version:** 2.1.0 (replaces 2.0.0 and "Alpha Tech" v1.0.0; changes in section 11)
+> **Version:** 2.1.1 (replaces 2.0.0 and "Alpha Tech" v1.0.0; changes in section 11)
 > **Product:** Aboard ("Alpha board") · **Brand family:** Alpha
 > **Stack:** Next.js (App Router) + React · phone, tablet, desktop
 > **Directionality:** Arabic (RTL) and English (LTR), equal priority
@@ -186,7 +186,7 @@ Allowed non-grid values, and only these: `0`, `auto`, `%`, `fr`, `ch`; borders a
 - Control heights: `--control-sm` 32 · `--control-md` 40 (default) · `--control-lg` 48. On `(pointer: coarse)` every control uses 48. Touch targets are at least 48×48.
 - Controls are `display: inline-flex; align-items: center; block-size: var(--control-*); padding-block: 0; padding-inline: var(--space-2); box-sizing: border-box`. Height is fixed, so the border never adds to it and the 32px size works with a 24px line.
 - Icons: 16 · 24 · 32, stroke icons drawn with `currentColor`.
-- Workspace (proposed, confirm when built): tab bar 48 high, pane toolbar 48 high, split divider 8px hit area with a 2px visible line, minimum pane width 320.
+- Workspace: tab bar 48 high, pane toolbar 48 high, split divider 8px hit area with a 2px visible line, minimum pane width 320, enforced as a pixel floor on top of the ratio clamp; split disabled below 768px.
 
 ### 4.3 Breakpoints
 
@@ -410,6 +410,9 @@ html { background:var(--bg-body); color:var(--text-main); font-family:var(--font
 ---
 
 ## 11. Changelog
+
+**2.1.1**
+- 2.1.1 — Task 18 workspace dimensions confirmed; minimum pane width enforced as a 320px pixel floor in the split clamp.
 
 **2.1.0**
 - Fonts: replaced IBM Plex Sans Arabic + Inter + Space Grotesk with two variable families, Geist and Alexandria (100–900), in one fallback stack. Removed the never-loaded `Tajawal` fallback and `--font-tech`.

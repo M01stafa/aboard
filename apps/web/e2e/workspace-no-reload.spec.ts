@@ -132,4 +132,51 @@ test.describe("Workspace Host DOM Stability & Iframe Keep-Alive (Task 18 / WS-1,
     const count5 = parseInt(count5Text?.trim() || "0", 10);
     expect(count5).toBeGreaterThan(count4);
   });
+
+  test("divider dragging continues to work when moving pointer over an iframe pane", async ({
+    page,
+  }) => {
+    // 1. Open workspace with at least one pane rendering the existing iframe
+    await page.goto("/workspace?p=demo");
+    await expect(page.locator('[data-testid="ws-grid"]')).toBeVisible();
+
+    // 2. Enter split view (vertical split: Tab 1 is primary, Tab 2 with iframe is secondary)
+    await page.click('[data-testid="split-vertical-btn"]');
+    const divider = page.locator('[data-testid="ws-divider"]');
+    await expect(divider).toBeVisible();
+
+    const iframePane = page.locator('[data-testid="pane-slot-tab-2"]');
+    await expect(iframePane).toBeVisible();
+
+    // 3. Record the current split ratio
+    const grid = page.locator('[data-testid="ws-grid"]');
+    const initialRatio = await grid.evaluate((el) =>
+      parseFloat(el.style.getPropertyValue("--ratio"))
+    );
+    expect(initialRatio).toBe(0.5);
+
+    // 4. pointerdown on the divider, page.mouse.move to coordinate inside iframe pane's bounding box, then mouse.up
+    const dividerBox = await divider.boundingBox();
+    const iframeBox = await iframePane.boundingBox();
+    expect(dividerBox).not.toBeNull();
+    expect(iframeBox).not.toBeNull();
+
+    // Target a coordinate well inside the iframe pane
+    const targetX = iframeBox!.x + iframeBox!.width * 0.5;
+    const targetY = iframeBox!.y + iframeBox!.height * 0.5;
+
+    await page.mouse.move(
+      dividerBox!.x + dividerBox!.width / 2,
+      dividerBox!.y + dividerBox!.height / 2
+    );
+    await page.mouse.down();
+    await page.mouse.move(targetX, targetY, { steps: 5 });
+    await page.mouse.up();
+
+    // 5. Assert the split ratio changed (drag continued through the iframe)
+    const newRatio = await grid.evaluate((el) =>
+      parseFloat(el.style.getPropertyValue("--ratio"))
+    );
+    expect(newRatio).toBeGreaterThan(initialRatio);
+  });
 });

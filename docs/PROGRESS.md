@@ -12,7 +12,7 @@ This file is the project's memory between agent sessions.
 |---|---|
 | Active phase | 2 — Storage Core and Local Mode |
 | Current task | Task 18 — Build the Workspace Host With Tabs and Split View (completed) |
-| Last updated | 2026-10-14 |
+| Last updated | 2026-10-15 |
 | Next step | Task 19 — Create the Per-User Browser Database |
 | Blockers | None (carried open items tracked below) |
 
@@ -107,6 +107,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-14 | CI pipeline (.github/workflows/ci.yml), pnpm ci:security, gitleaks pre-commit hook, and branch protection / security scanning enabled (Task 16 / SEC-5, SEC-10) |
 | 2026-10-14 | Built launcher (3 cards, recent projects empty state, open alpha stub), Client Component AuthGuard wrapper, /workspace?p=... placeholder, and static Server Component legal pages (/privacy, /terms, /licenses) (Task 17 / LAUNCH-1) |
 | 2026-10-14 | Built WorkspaceHost with stable DOM panes, CSS grid data-slot layout, draggable divider with transparent drag shield, RTL mirroring, below-768px auto-collapse, Vitest happy-dom mount-counter test (0 remounts across 5 tab switches, 3 split toggles, 2 pane swaps, 1 close), and Playwright keep-alive test with active iframe (Task 18 / WS-1, WS-2) |
+| 2026-10-15 | Verified drag over iframe with Playwright; added .drag-shield CSS rule (position: fixed; inset: 0; z-index: 9999); enforced 320px floor in split clamp; updated DESIGN.md §4.2 and bumped version to 2.1.1 (Task 18 follow-up) |
 
 ## Lessons and corrections
 

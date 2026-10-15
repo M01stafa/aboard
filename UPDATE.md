@@ -550,5 +550,25 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 18 · WS-1, WS-2
 **Open:** none (Phase 1 complete; proceed to Phase 2 / Task 19 upon owner prompt).
 
+## 2026-10-15 — Task 18 Verification & DESIGN.md §4.2 Finalization
+**Request:** Verify divider dragging over iframe with a focused Playwright test, apply minimal fix for drag-shield if test fails, enforce 320px floor in split clamp, update DESIGN.md §4.2 with confirmed dimensions, bump version to 2.1.1, and add changelog entry in §11.
+**Changes:**
+- `apps/web/e2e/workspace-no-reload.spec.ts` (changed): added focused test verifying that divider dragging continues to work and updates split ratio when pointer moves over an iframe pane.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): added `.drag-shield` CSS rule (`position: fixed; inset: 0; z-index: 9999; cursor: col-resize;` and row-resize for horizontal split) fixing pointer event capture over iframes; enforced 320px minimum pane floor on top of ratio clamp in `updateRatio`.
+- `docs/DESIGN.md` (changed): bumped version to 2.1.1; updated §4.2 workspace dimensions from proposed to confirmed facts; added 2.1.1 entry to §11 Changelog.
+- `docs/PROGRESS.md` (changed): updated Last updated date to 2026-10-15 and logged verification decision.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- Initial Playwright test without drag-shield CSS: FAILED as predicted (`Expected: > 0.5, Received: 0.5`) because iframe swallowed pointer events.
+- Post-fix Playwright test: PASSED (`3 passed (10.7s)` in Chrome).
+- `node scripts/check-spacing.mjs`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- `pnpm test`: PASS (21/21 tests passed across 5 test files).
+- `pnpm test:e2e`: PASS (3/3 Playwright tests passed in Chrome).
+**Related:** Task 18 · WS-1, WS-2 · DESIGN.md §4.2
+**Open:** none (ready for Task 19 upon owner prompt).
+
+
 
 

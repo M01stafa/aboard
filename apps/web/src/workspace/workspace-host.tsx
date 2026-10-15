@@ -232,7 +232,11 @@ export function WorkspaceHost({
   // Action: Set ratio with min width 320px constraint
   const updateRatio = useCallback((newRatio: number) => {
     setLayout((prev) => {
-      const clamped = Math.max(0.2, Math.min(0.8, newRatio));
+      const gridEl = gridRef.current;
+      const gridWidth = gridEl ? gridEl.getBoundingClientRect().width : 0;
+      const minRatio = gridWidth >= 640 ? Math.max(0.2, 320 / gridWidth) : 0.2;
+      const maxRatio = gridWidth >= 640 ? Math.min(0.8, 1 - 320 / gridWidth) : 0.8;
+      const clamped = Math.max(minRatio, Math.min(maxRatio, newRatio));
       return { ...prev, ratio: clamped };
     });
   }, []);
@@ -535,6 +539,15 @@ export function WorkspaceHost({
         .ws-tool-btn:focus-visible {
           outline: 2px solid var(--focus-ring);
           outline-offset: 2px;
+        }
+        .drag-shield {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          cursor: col-resize;
+        }
+        .ws-grid[data-split="horizontal"] .drag-shield {
+          cursor: row-resize;
         }
       `}</style>
 
