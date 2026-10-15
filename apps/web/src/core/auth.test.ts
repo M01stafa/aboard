@@ -90,6 +90,38 @@ describe("Auth Core Helpers", () => {
     spy.mockRestore();
   });
 
+  it("wipes user database and clears flag on signOut when shared computer flag is set", async () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("aboard:shared_computer", "true");
+    }
+    const userSpy = vi.spyOn(supabase.auth, "getUser").mockResolvedValue({
+      data: {
+        user: {
+          id: "test-shared-user",
+          email: "student@example.com",
+          app_metadata: {},
+          user_metadata: {},
+          aud: "authenticated",
+          created_at: new Date().toISOString(),
+        },
+      },
+      error: null,
+    });
+    const signOutSpy = vi.spyOn(supabase.auth, "signOut").mockResolvedValue({
+      error: null,
+    });
+
+    const res = await signOut();
+    expect(signOutSpy).toHaveBeenCalled();
+    expect(res.error).toBeNull();
+    if (typeof window !== "undefined") {
+      expect(sessionStorage.getItem("aboard:shared_computer")).toBeNull();
+    }
+
+    userSpy.mockRestore();
+    signOutSpy.mockRestore();
+  });
+
   it("calls refreshSession to purge Google provider tokens from storage", async () => {
     const spy = vi.spyOn(supabase.auth, "refreshSession").mockResolvedValue({
       data: { user: null, session: null },

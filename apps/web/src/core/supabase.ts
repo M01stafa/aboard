@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { env } from "./env";
+import { closeDb, deleteUserDb, getActiveUserId } from "./db";
 
 export const supabase = createClient(
   env.NEXT_PUBLIC_SUPABASE_URL,
@@ -70,15 +71,53 @@ export async function signInWithGoogle(redirectTo?: string) {
 
 /**
  * Signs out the active user and clears local Supabase session storage.
+ * If "This is a shared computer" was checked:
+ * 1. Captures current user ID before session is terminated
+ * 2. Prepares hook for Task 21 flush
+ * 3. Closes the local Dexie database
+ * 4. Calls supabase.auth.signOut()
+ * 5. Deletes the local Dexie database aboard:<userId>
+ * 6. Clears the shared computer flag
  */
 export async function signOut() {
+  let userId: string | null = null;
+  let isShared = false;
+
   if (typeof window !== "undefined") {
-    const isShared = sessionStorage.getItem("aboard:shared_computer") === "true";
-    if (isShared) {
-      sessionStorage.removeItem("aboard:shared_computer");
-    }
+    isShared = sessionStorage.getItem("aboard:shared_computer") === "true";
   }
-  return supabase.auth.signOut();
+
+  // 1. Capture current user ID BEFORE calling supabase.auth.signOut() (after sign-out the session is gone)
+  try {
+    const { data } = await supabase.auth.getUser();
+    userId = data.user?.id ?? null;
+  } catch {
+    // ignore
+  }
+  if (!userId) {
+    userId = getActiveUserId();
+  }
+
+  // 2. Structured insertion point for Task 21: flush pending uploads before database deletion
+  // Task 21 hook: if (userId) { await flushPendingUploads(userId); }
+
+  // 3. Close the DB on sign-out before any local cleanup (Requirement 3)
+  await closeDb();
+
+  // 4. Terminate Supabase session
+  const res = await supabase.auth.signOut();
+
+  // 5. If shared-computer flag was set, delete the Dexie database aboard:<userId> after sign-out (Requirement 6)
+  if (isShared && userId) {
+    await deleteUserDb(userId);
+  }
+
+  // 6. Clear the flag itself as part of sign-out so it does not affect subsequent sign-outs
+  if (typeof window !== "undefined" && isShared) {
+    sessionStorage.removeItem("aboard:shared_computer");
+  }
+
+  return res;
 }
 
 /**

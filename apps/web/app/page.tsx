@@ -327,6 +327,7 @@ export function LauncherContent({ user }: { user: User }) {
             onClick={handleSignOut}
             disabled={signingOut}
             className="btn-danger-outline"
+            data-testid="sign-out-btn"
           >
             {signingOut ? t("auth.signingOut") : t("auth.signOut")}
           </button>

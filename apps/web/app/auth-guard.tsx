@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/core/supabase";
+import { openDb, closeDb } from "@/core/db";
 import type { User } from "@supabase/supabase-js";
 
 export async function checkAuthAndRedirect(
@@ -33,21 +34,24 @@ export function AuthGuard({ children, fallback = null }: AuthGuardProps) {
     checkAuthAndRedirect(
       () => supabase.auth.getUser(),
       (path) => router.replace(path)
-    ).then((authenticatedUser) => {
+    ).then(async (authenticatedUser) => {
       if (!mounted) return;
       if (authenticatedUser) {
+        await openDb(authenticatedUser.id);
         setUser(authenticatedUser);
         setLoading(false);
       }
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
         if (!mounted) return;
         if (!session?.user) {
           setUser(null);
+          await closeDb();
           router.replace("/login");
         } else {
+          await openDb(session.user.id);
           setUser(session.user);
           setLoading(false);
         }

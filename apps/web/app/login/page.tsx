@@ -38,7 +38,12 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [otpToken, setOtpToken] = useState("");
   const [step, setStep] = useState<"email" | "otp">("email");
-  const [isSharedComputer, setIsSharedComputer] = useState(false);
+  const [isSharedComputer, setIsSharedComputer] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("aboard:shared_computer") === "true";
+    }
+    return false;
+  });
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -195,6 +200,13 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMessage(null);
     try {
+      if (typeof window !== "undefined") {
+        if (isSharedComputer) {
+          sessionStorage.setItem("aboard:shared_computer", "true");
+        } else {
+          sessionStorage.removeItem("aboard:shared_computer");
+        }
+      }
       const { error } = await verifyEmailOtp(email.trim(), otpToken.trim());
       if (error) throw error;
       router.push("/");
@@ -403,7 +415,17 @@ export default function LoginPage() {
                 id="auth-shared-checkbox"
                 type="checkbox"
                 checked={isSharedComputer}
-                onChange={(e) => setIsSharedComputer(e.target.checked)}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setIsSharedComputer(checked);
+                  if (typeof window !== "undefined") {
+                    if (checked) {
+                      sessionStorage.setItem("aboard:shared_computer", "true");
+                    } else {
+                      sessionStorage.removeItem("aboard:shared_computer");
+                    }
+                  }
+                }}
                 style={{
                   marginBlockStart: "var(--space-1)",
                   cursor: "pointer",

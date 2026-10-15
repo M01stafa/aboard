@@ -1,51 +1,12 @@
 import { test, expect } from "@playwright/test";
+import { mockSignIn } from "./helpers/auth";
 
 test.describe("Workspace Host DOM Stability & Iframe Keep-Alive (Task 18 / WS-1, WS-2)", () => {
   test.beforeEach(async ({ page }) => {
-    const user = {
+    await mockSignIn(page, {
       id: "test-user-id",
-      aud: "authenticated",
-      role: "authenticated",
       email: "student@example.com",
-      app_metadata: {},
-      user_metadata: {},
-      created_at: new Date().toISOString(),
-    };
-
-    const session = {
-      access_token: "test-access-token",
-      token_type: "bearer",
-      expires_in: 3600,
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-      refresh_token: "test-refresh-token",
-      user,
-    };
-
-    // Intercept Supabase Auth checks
-    await page.route("**/auth/v1/**", async (route) => {
-      const url = route.request().url();
-      if (url.includes("/token")) {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify(session),
-        });
-      } else {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify(user),
-        });
-      }
     });
-
-    // Provide pre-seeded session in localStorage with expires_at
-    await page.addInitScript((sessionData) => {
-      window.localStorage.setItem(
-        "sb-fmlpkcbpoziwkjuxuyaf-auth-token",
-        JSON.stringify(sessionData)
-      );
-    }, session);
   });
 
   test("iframe counter continuously increments and never reloads across split toggles, swaps, and tab switches", async ({

@@ -569,6 +569,36 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 18 · WS-1, WS-2 · DESIGN.md §4.2
 **Open:** none (ready for Task 19 upon owner prompt).
 
+## 2026-10-15 — Task 19: Create the Per-User Browser Database and Shared-Computer Sign-Out
+**Request:** Run Task 19 from docs/TASKS.md: build per-user IndexedDB schema using Dexie@4.4.1 named aboard:<userId>, add openDb(userId), closeDb(), getDb(), and deleteUserDb(userId), initialize and persist deviceId in meta store, add "This is a shared computer" checkbox to sign-in screen with sessionStorage flag, extend signOut to close DB and delete aboard:<userId> when flag set, extract reusable E2E auth helper with mockSignIn and mockSignOut, update workspace-no-reload.spec.ts, and add Playwright test proving SEC-4.
+**Changes:**
+- `apps/web/src/core/db/schema.ts` (created): defined IndexedDB schema with stores `projects`, `items`, `files`, `outbox`, and `meta` conforming to docs/specs/storage-layer.md §11.2; documented version(1) immutability.
+- `apps/web/src/core/db/lifecycle.ts` (created): implemented `openDb`, `closeDb`, `getDb`, `getActiveUserId`, and `deleteUserDb` with idempotent open, unique deviceId generation/persistence in `meta`, and test factory injection.
+- `apps/web/src/core/db/index.ts` (created): re-exported schema and lifecycle functions.
+- `apps/web/src/core/supabase.ts` (changed): extended `signOut` to capture userId before session termination, close DB, wipe `aboard:<userId>` when `aboard:shared_computer` is set in sessionStorage, and clear the flag; prepared hook for Task 21 flush.
+- `apps/web/app/auth-guard.tsx` (changed): invoked `openDb(user.id)` upon resolving authenticated user and `closeDb()` when session is cleared.
+- `apps/web/app/login/page.tsx` (changed): synced "This is a shared computer" checkbox directly with `sessionStorage` under `aboard:shared_computer`.
+- `apps/web/app/page.tsx` (changed): added `data-testid="sign-out-btn"` to launcher sign-out button.
+- `apps/web/src/core/db/lifecycle.test.ts` (created): added unit tests for database open, idempotent open, close, device ID persistence across close/reopen, multi-user switching, and invalid input rejection.
+- `apps/web/src/core/auth.test.ts` (changed): added unit test asserting database wipe and sessionStorage flag cleanup upon shared-computer sign-out.
+- `apps/web/e2e/helpers/auth.ts` (created): extracted reusable E2E authentication helpers `mockSignIn(page, user)` and `mockSignOut(page)` supporting arbitrary user IDs and emails across multiple logins in a single browser context.
+- `apps/web/e2e/workspace-no-reload.spec.ts` (changed): refactored test to use `mockSignIn` helper without altering any test assertions.
+- `apps/web/e2e/sec-4-shared-computer.spec.ts` (created): added Playwright E2E test proving SEC-4 in real Chrome (user A marker isolation from user B, persistence on standard sign-out, and complete database wipe upon shared-computer sign-out).
+- `docs/PROGRESS.md` (changed): updated Current task to Task 19 completed, Next step to Task 20, and logged Task 19 decisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- `pnpm test`: PASS (28/28 unit tests passed across 6 test files).
+- `pnpm test:e2e`: PASS (4/4 Playwright tests passed in Chrome: auth-storage, sec-4-shared-computer, workspace-no-reload [iframe keep-alive and divider drag]).
+- `pnpm build`: PASS (clean production build with Turbopack, 12 static routes prerendered).
+- `pnpm ci:security`: PASS.
+- `gitleaks git --verbose`: PASS (0 leaks found across all commits).
+- Bundle secret scan: PASS (0 occurrences of disallowed secrets in `.next/static`).
+**Related:** Task 19 · SEC-4 · docs/specs/storage-layer.md §11.2 · docs/specs/security.md §14.6
+**Open:** none (proceed to Task 20 upon owner prompt).
+
 
 
 
