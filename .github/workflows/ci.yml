@@ -66,12 +66,24 @@ jobs:
           echo "$OUTPUT"
           node -e '
             const output = process.argv[1] || "";
-            const jsonStart = output.indexOf("{");
-            const jsonEnd = output.lastIndexOf("}");
-            if (jsonStart !== -1 && jsonEnd > jsonStart) {
+            const startIdx = Math.min(
+              output.indexOf("[") !== -1 ? output.indexOf("[") : Infinity,
+              output.indexOf("{") !== -1 ? output.indexOf("{") : Infinity
+            );
+            const endIdx = Math.max(output.lastIndexOf("]"), output.lastIndexOf("}"));
+            if (startIdx !== Infinity && endIdx > startIdx) {
               try {
-                const parsed = JSON.parse(output.slice(jsonStart, jsonEnd + 1));
-                if (Array.isArray(parsed.rows)) {
+                const parsed = JSON.parse(output.slice(startIdx, endIdx + 1));
+                if (Array.isArray(parsed)) {
+                  if (parsed.length === 0) {
+                    console.log("RLS guard passed: all public tables have Row Level Security enabled.");
+                    process.exit(0);
+                  } else {
+                    console.error("RLS guard FAILED: unshielded public tables detected:", JSON.stringify(parsed));
+                    process.exit(1);
+                  }
+                }
+                if (parsed && Array.isArray(parsed.rows)) {
                   if (parsed.rows.length === 0) {
                     console.log("RLS guard passed: all public tables have Row Level Security enabled.");
                     process.exit(0);
