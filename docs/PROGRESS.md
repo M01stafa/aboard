@@ -112,6 +112,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-15 | Task 20: Built StorageProvider interface, LocalProvider (with pinned=true on every write), ProjectService (single gateway for tools), streaming SHA-256 via hash-wasm for content-addressed binary files, architectural boundary test, and 13 unit tests across ProjectService and LocalProvider (Task 20 / STORE-1, STORE-7) |
 | 2026-10-15 | Task 21: Built framework-agnostic SaveQueue with 500 ms debounce, per-item coalescing, dirty→clean local transition, structured Drive cadence (3s/30s), flush hooks, beforeunload gating (never prompts in local mode), silent persistence via navigator.storage.persist() skipping Firefox per STORE-9, top bar SaveStatusIndicator with 5 states (WS-3) via theme tokens/i18n, and Playwright test proving STORE-1 |
 | 2026-10-16 | Task 22: Connected launcher to Supabase project index with touch_updated_at trigger handling updatedAt; storage badges mapped to theme tokens (--badge-tech for Drive, --badge-primary for this device, --badge-bronze for another device); rename & delete implemented (local path deletes Dexie + Supabase row, Drive delete stubbed with notice); Playwright E2E test verified create/reload/rename/delete lifecycle |
+| 2026-10-16 | Owner decision: keep the repository public and keep the same Google API key. The historical commit that contains the key is accepted; the key will be hidden from the current tree only. Rotation deferred. |
 
 ## Lessons and corrections
 
@@ -120,4 +121,5 @@ When the owner corrects the same thing twice, or a review finds something the ag
 | Date | Lesson | Promoted to |
 |---|---|---|
 | 2026-10-16 | Local checks passing is not the same as CI passing. Every task report must verify the GitHub Actions run for the pushed commit and report its conclusion, not just the local test result. | AGENTS.md |
+| 2026-10-16 | Throwaway spike code is still tracked and scanned. Hard-coded secrets belong in environment variables even in spikes/. | .agents/rules/security.md |
 

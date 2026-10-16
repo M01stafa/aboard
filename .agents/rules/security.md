@@ -24,6 +24,7 @@ Principle: deny by default, least privilege, never trust the browser. These rule
 - `NEXT_PUBLIC_GOOGLE_API_KEY` (Picker) is public but must be restricted in Google Cloud: API = Picker only, HTTP referrers = our domains only.
 - Secrets live only in Supabase Edge Function secrets: `GOOGLE_CLIENT_SECRET`, `TOKEN_ENC_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (bypasses RLS). Never in the web app, Vercel env, gateway, repo, logs, tests or screenshots.
 - `.env*` files are git-ignored. Never commit real values; use `.env.example` with placeholders.
+- No secret may be hard-coded in any tracked file, including spikes/. Config files must read secrets from environment variables; .env.example may show placeholders only.
 - Next.js server code that reads a secret imports `server-only`.
 - If you find a secret in code or history, stop and tell the owner; follow the rotation runbook (`docs/specs/security.md` §14.10).
 

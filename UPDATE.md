@@ -694,3 +694,20 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 22 · LAUNCH-2, LAUNCH-4, STORE-1, SEC-1, SEC-5 · docs/specs/storage-layer.md §11.5, docs/specs/database.md §9.1
 **Open:** none (proceed to Task 23 upon owner prompt).
 
+## 2026-10-16 — Security: Hide Leaked Google API Key in Tree and Exclude Spikes from Dependabot
+**Request:** Hide the hard-coded Google API key flagged in Secret Scanning from the current working tree by replacing it with an environment variable placeholder; create .github/dependabot.yml to exclude /spikes/ and watch only root and apps/web; scan working tree for other likely secrets; add hard-coded secret rule to .agents/rules/security.md; add lesson and owner decision to docs/PROGRESS.md; keep repo public without key rotation or git history rewrite.
+**Changes:**
+- `spikes/S4-drive/app/config.ts` (changed): replaced hard-coded `googleApiKey` value at line 7 with `process.env.NEXT_PUBLIC_GOOGLE_API_KEY || ""` placeholder.
+- `.github/dependabot.yml` (created): configured Dependabot v2 to monitor root workspace (`/`) and web app (`/apps/web`) only, preventing Dependabot from scanning `/spikes/`.
+- `.agents/rules/security.md` (changed): added rule under Section 2 prohibiting hard-coded secrets in any tracked file including `spikes/`.
+- `docs/PROGRESS.md` (changed): added owner decision accepting historical commit and deferring rotation while keeping repo public, and added lesson on scanning tracked spike code.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- `pnpm test`: PASS (62/62 unit tests passed across 11 test files).
+- `pnpm ci:security`: PASS (Gitleaks, production dependency audit, and .next bundle secret scan).
+- Secret scan across working tree: confirmed zero hard-coded secrets in tracked source outside existing test mock data.
+**Related:** SEC-5, SEC-10 · docs/specs/security.md §14.2
+**Open:** none (proceed to Task 23 upon owner prompt).
+
