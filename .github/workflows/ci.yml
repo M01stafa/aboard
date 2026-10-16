@@ -51,8 +51,8 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
-          cache: true
+          version: 2.120.0
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Start Supabase local stack
         run: supabase start
