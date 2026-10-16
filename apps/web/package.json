@@ -31,7 +31,7 @@
     "@excalidraw/excalidraw": "0.18.1",
     "@supabase/supabase-js": "2.117.3",
     "@zip.js/zip.js": "2.23.0",
-    "dexie": "4.4.1",
+    "dexie": "4.4.6",
     "hash-wasm": "4.12.0",
     "mitt": "3.0.1",
     "next": "16.4.0",
