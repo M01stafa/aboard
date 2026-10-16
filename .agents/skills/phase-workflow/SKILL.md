@@ -31,7 +31,7 @@ description: Starts, continues and finishes Aboard implementation phases and spi
 - Do not widen scope: note extra ideas as open issues in the report instead of implementing them.
 
 ## Finishing a task
-1. Run: `pnpm lint && pnpm typecheck && pnpm test && supabase test db && pnpm ci:security` (and `pnpm test:e2e` when UI flows changed).
+1. Run: `pnpm lint && pnpm typecheck && pnpm test && supabase test db && pnpm ci:security` (and `pnpm test:e2e` when UI flows changed). Push and verify that GitHub Actions CI passes for the pushed commit hash.
 2. Check the phase's acceptance criteria. A phase is `Done (YYYY-MM-DD)` only when all of them pass on the listed browsers/devices; otherwise keep `In progress` and list what is left.
 3. Append an entry to `UPDATE.md` using the template from Task 1 in `docs/TASKS.md` (request, files changed, checks, related IDs, open items). Append only.
 4. Update `docs/PROGRESS.md`:
@@ -41,7 +41,7 @@ description: Starts, continues and finishes Aboard implementation phases and spi
    - decisions log (only owner-approved decisions);
    - lessons (when the owner corrected something or a mistake repeated), then promote the lesson to a rule in `AGENTS.md` or `.agents/rules/` and note where.
 5. Keep `AGENTS.md` under 200 lines; move detail to rule files or specs.
-6. Report to the owner in Arabic: what changed, test results, acceptance status, open items, next step.
+6. Report to the owner in Arabic: what changed, test results, GitHub Actions CI run URL and conclusion for the pushed commit, acceptance status, open items, next step.
 
 ## Decision tree: what next?
 - A VERIFY item blocks the active phase → resolve it.

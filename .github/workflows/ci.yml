@@ -62,14 +62,42 @@ jobs:
 
       - name: RLS guard
         run: |
-          OUTPUT=$(supabase db query --file supabase/tests/rls_guard.sql)
+          OUTPUT=$(supabase db query --output-format json --file supabase/tests/rls_guard.sql 2>&1 || supabase db query --file supabase/tests/rls_guard.sql 2>&1)
           echo "$OUTPUT"
-          if echo "$OUTPUT" | grep -q '"rows": \[\]'; then
-            echo "RLS guard passed: all public tables have Row Level Security enabled."
-          else
-            echo "RLS guard FAILED: unshielded public tables detected!"
-            exit 1
-          fi
+          node -e '
+            const output = process.argv[1] || "";
+            const jsonStart = output.indexOf("{");
+            const jsonEnd = output.lastIndexOf("}");
+            if (jsonStart !== -1 && jsonEnd > jsonStart) {
+              try {
+                const parsed = JSON.parse(output.slice(jsonStart, jsonEnd + 1));
+                if (Array.isArray(parsed.rows)) {
+                  if (parsed.rows.length === 0) {
+                    console.log("RLS guard passed: all public tables have Row Level Security enabled.");
+                    process.exit(0);
+                  } else {
+                    console.error("RLS guard FAILED: unshielded public tables detected:", JSON.stringify(parsed.rows));
+                    process.exit(1);
+                  }
+                }
+              } catch (_) {}
+            }
+            const lines = output.split("\n").map(l => l.trim()).filter(Boolean);
+            const dividerIdx = lines.findIndex(l => l.includes("├"));
+            const footerIdx = lines.findIndex(l => l.includes("└"));
+            if (dividerIdx !== -1 && footerIdx !== -1 && footerIdx > dividerIdx) {
+              const rowLines = lines.slice(dividerIdx + 1, footerIdx).filter(l => l.includes("│"));
+              if (rowLines.length === 0) {
+                console.log("RLS guard passed: all public tables have Row Level Security enabled.");
+                process.exit(0);
+              } else {
+                console.error("RLS guard FAILED: unshielded public tables detected:", JSON.stringify(rowLines));
+                process.exit(1);
+              }
+            }
+            console.error("RLS guard FAILED: could not verify query output.");
+            process.exit(1);
+          ' "$OUTPUT"
 
       - name: Install Gitleaks 8.30.1
         run: |

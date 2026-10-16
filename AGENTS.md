@@ -79,7 +79,7 @@ Define these scripts in Phase 1 and keep the names stable (update this list if a
 - `pnpm ci:security` → gitleaks + bundle secret grep + dependency audit (`.agents/rules/security.md`)
 - `supabase start` · `supabase db reset` · `supabase test db` (pgTAP RLS suite) · `supabase functions serve`
 - `scripts/build-circuit.sh` (builds the fork, copies output without `WEB-INF/` to `apps/web/public/circuit/`)
-- Before saying a task is done: `pnpm lint && pnpm typecheck && pnpm test && supabase test db && pnpm ci:security`
+- Before saying a task is done: `pnpm lint && pnpm typecheck && pnpm test && supabase test db && pnpm ci:security`, push, and verify that the GitHub Actions CI run for the pushed commit hash passes.
 
 ## Hard rules
 Architecture
@@ -119,7 +119,7 @@ Correctness
 2. Write a short plan (files to change, requirement IDs, tests, any VERIFY items) and wait for the owner's approval when the change touches the database, auth, Drive, security, or more than one module.
 3. Implement in small steps; run the checks in "Commands".
 4. Append an entry to `UPDATE.md` (format in Task 1 of `docs/TASKS.md`), then update `docs/PROGRESS.md` (current task, phase status, VERIFY results, decisions, lessons). Skill `phase-workflow` has the steps.
-5. Report to the owner in Arabic: what changed, what was tested, what is still open.
+5. Report to the owner in Arabic: what changed, what was tested, what is still open. Every future task's Return line must include the GitHub Actions CI run URL and its conclusion for the pushed commit hash.
 
 ## Ask the owner before
 - Changing a decision in the decisions log, a requirement in `docs/PRD.md`, or a pinned version.
