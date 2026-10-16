@@ -649,3 +649,22 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (5/5 Playwright tests passed in Chrome: auth-storage, sec-4-shared-computer, store-1-save-status, workspace-no-reload [iframe keep-alive and divider drag]).
 **Related:** Task 21 · STORE-1, STORE-3, STORE-9, WS-3, WS-4 · docs/specs/storage-layer.md §11.3–11.4
 **Open:** none (proceed to Task 22 upon owner prompt).
+
+## 2026-10-16 — CI Fix: Fix the Failing GitHub Actions CI Pipeline (SEC-1, SEC-10)
+**Request:** Diagnose and resolve the failing GitHub Actions CI pipeline blocking Task 22; fetch failed run logs via `gh` CLI, identify root cause without disabling/weakening any security check or adding `continue-on-error`, update workflow/code, push and watch new runs to completion until green, add lesson to docs/PROGRESS.md, update reporting rules in AGENTS.md and .agents/skills/phase-workflow/SKILL.md to include GitHub Actions CI verification on pushed commits.
+**Changes:**
+- `.github/workflows/ci.yml` (changed): updated RLS guard step to pass `--output-format json` and use a robust inline Node.js parser supporting JSON arrays (`[]`), JSON objects with rows (`{ rows: [] }`), and ASCII table formats, while strictly failing closed if unshielded public tables exist or if output cannot be parsed.
+- `AGENTS.md` (changed): updated pre-done commands rule and workflow step 5 to require verification of the GitHub Actions CI run URL and its conclusion (success) for the pushed commit hash.
+- `.agents/skills/phase-workflow/SKILL.md` (changed): updated finishing task steps 1 and 6 to include pushing and verifying GitHub Actions CI before marking a task complete.
+- `docs/PROGRESS.md` (changed): updated Current state date to 2026-10-16 and added lesson: "Local checks passing is not the same as CI passing. Every task report must verify the GitHub Actions run for the pushed commit and report its conclusion, not just the local test result."
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `gh run view 38734616170 --log-failed`: identified that `supabase db query --file supabase/tests/rls_guard.sql` in Ubuntu runner outputs ASCII table format or JSON array `[]`, causing `grep -q '"rows": \[\]'` to fail despite zero unshielded tables existing.
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- `pnpm test`: PASS (49/49 unit tests passed across 10 test files).
+- `pnpm ci:security`: PASS (Gitleaks, production audit, and .next bundle secret scan).
+- GitHub Actions CI run `38907758118`: SUCCESS (all steps passed in 2m35s: Lint, Typecheck, Unit tests, Setup Supabase CLI, Start Supabase local stack, Run pgTAP RLS suite, RLS guard, Install Gitleaks 8.30.1, Run security checks, Build the app, Search bundle for secrets).
+**Related:** CI Fix · SEC-1, SEC-5, SEC-10 · docs/specs/security.md §14.3, §14.9
+**Open:** none (proceed to Task 22 upon owner prompt).
+

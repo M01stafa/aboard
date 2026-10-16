@@ -12,7 +12,7 @@ This file is the project's memory between agent sessions.
 |---|---|
 | Active phase | 2 — Storage Core and Local Mode |
 | Current task | Task 21 — Build the Save Queue and the Save Status Indicator (completed) |
-| Last updated | 2026-10-15 |
+| Last updated | 2026-10-16 |
 | Next step | Task 22 — Sync the Project Index and Build the Recent Projects List |
 | Blockers | None (carried open items tracked below) |
 
@@ -118,5 +118,5 @@ When the owner corrects the same thing twice, or a review finds something the ag
 
 | Date | Lesson | Promoted to |
 |---|---|---|
-| | | |
+| 2026-10-16 | Local checks passing is not the same as CI passing. Every task report must verify the GitHub Actions run for the pushed commit and report its conclusion, not just the local test result. | AGENTS.md |
 
