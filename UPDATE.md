@@ -668,3 +668,29 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** CI Fix · SEC-1, SEC-5, SEC-10 · docs/specs/security.md §14.3, §14.9
 **Open:** none (proceed to Task 22 upon owner prompt).
 
+## 2026-10-16 — Task 22: Sync the Project Index and Build the Recent Projects List
+**Request:** Run Task 22 from docs/TASKS.md: wire project lifecycle events (create, rename, delete, storage-mode change stub) to sync with Supabase projects table without client-updating updated_at (Postgres touch_updated_at trigger sets it), build recent projects list sorted by updated_at desc with title, subject, storage badge, and timestamp, support rename (inline) and delete (local removes Dexie + Supabase row, Drive stubbed with notice), handle loading, empty, and error states with retry, wire launch cards to create project row, add unit tests for index syncer and badge selection, and add a Playwright E2E test.
+**Changes:**
+- `apps/web/src/core/db/lifecycle.ts` (changed): added `getDeviceId(userId?: string)` to read or generate persistent device ID from the Dexie meta store.
+- `apps/web/src/core/storage/project-index.ts` (created): built `SupabaseProjectIndex` implementing `ProjectIndexSyncer` for create (insert), rename (update title), delete (delete or soft-delete), and storage-mode change, plus `getProjectStorageBadge` mapping storage modes to theme tokens (`--badge-tech`, `--badge-primary`, `--badge-bronze`).
+- `apps/web/src/core/storage/save-queue.ts` (changed): added `cancelAllForProject(projectId)` to clear pending debounce writes on project deletion.
+- `apps/web/src/core/storage/project-service.ts` (changed): integrated `ProjectIndexSyncer` into project lifecycle methods (`createProject`, `renameProject`, `deleteProject`, `moveProject`), and wired default singleton with `projectIndex`.
+- `apps/web/src/core/storage/index.ts` (changed): exported `project-index`.
+- `apps/web/src/i18n/en.ts` (changed): added English translation keys for recent projects list (badges, rename, delete, save, cancel, confirm delete, drive notice, loading, error, retry, updated prefix).
+- `apps/web/src/i18n/ar.ts` (changed): added Arabic translation keys for recent projects list.
+- `apps/web/app/page.tsx` (changed): wired tool cards to `handleCreateProject`, rendered recent projects list with loading, error (with retry), empty, and populated states, inline rename form, delete confirmation dialog, and storage badges conforming to DESIGN.md tokens (R1, R3, R5, R7: one gold CTA max).
+- `apps/web/src/core/storage/project-index.test.ts` (created): added 12 unit tests for badge mapping, Supabase CRUD payload validity (verifying `updated_at` is never passed from client), error handling, and ProjectService lifecycle integration.
+- `apps/web/src/core/storage/project-service.test.ts` (changed): updated test for `moveProject` stub verifying `onStorageModeChanged` call.
+- `apps/web/e2e/launch-project-index.spec.ts` (created): added Playwright E2E test verifying full lifecycle in local mode: create project, reload launcher, assert "This device" badge, inline rename, reload, assert renamed title, delete with confirmation dialog, reload, assert empty state.
+- `docs/PROGRESS.md` (changed): marked Task 22 as completed, set Next step to Task 23, and logged Task 22 decisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (All spacing and sizing properties follow the 8-point grid tokens).
+- `pnpm lint`: PASS (0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- `pnpm test`: PASS (62/62 unit tests passed across 11 test files).
+- `pnpm test:e2e`: PASS (6/6 Playwright E2E tests passed in Chrome: auth-storage, launch-project-index, sec-4-shared-computer, store-1-save-status, workspace-no-reload [keep-alive and divider drag]).
+- `pnpm ci:security`: PASS (Gitleaks, production dependency audit, and .next bundle secret scan).
+**Related:** Task 22 · LAUNCH-2, LAUNCH-4, STORE-1, SEC-1, SEC-5 · docs/specs/storage-layer.md §11.5, docs/specs/database.md §9.1
+**Open:** none (proceed to Task 23 upon owner prompt).
+

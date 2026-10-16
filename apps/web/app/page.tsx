@@ -1,32 +1,187 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "./auth-guard";
 import { signOut } from "@/core/supabase";
 import { useI18n } from "@/i18n/provider";
 import { Card } from "@/components/card";
+import {
+  projectService,
+  projectIndex,
+  getProjectStorageBadge,
+  type ProjectIndexRow,
+} from "@/core/storage";
+import { getDeviceId } from "@/core/db/lifecycle";
 import type { User } from "@supabase/supabase-js";
 
 export function LauncherContent({ user }: { user: User }) {
   const { t } = useI18n();
   const router = useRouter();
-  const [alphaNotice, setAlphaNotice] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
 
-  function createPlaceholderProject(kind: "board" | "pdf" | "circuit") {
-    const projectId =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `${Date.now()}`;
-    router.push(`/workspace?p=${projectId}&kind=${kind}`);
+  // Project index & device state
+  const [projects, setProjects] = useState<ProjectIndexRow[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+
+  // Card creation & UI action states
+  const [creatingKind, setCreatingKind] = useState<"board" | "pdf" | "circuit" | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameTitle, setRenameTitle] = useState<string>("");
+  const [deletingProject, setDeletingProject] = useState<ProjectIndexRow | null>(null);
+  const [driveNotice, setDriveNotice] = useState<string | null>(null);
+  const [alphaNotice, setAlphaNotice] = useState<boolean>(false);
+  const [signingOut, setSigningOut] = useState<boolean>(false);
+
+  // Load device ID and recent project list from Supabase
+  const loadRecentProjects = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const devId = await getDeviceId(user.id);
+      setDeviceId(devId);
+      const list = await projectIndex.fetchRecentProjects();
+      setProjects(list);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to load projects";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [user.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function init() {
+      try {
+        const devId = await getDeviceId(user.id);
+        if (cancelled) return;
+        setDeviceId(devId);
+        const list = await projectIndex.fetchRecentProjects();
+        if (cancelled) return;
+        setProjects(list);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const msg = err instanceof Error ? err.message : "Failed to load projects";
+        setError(msg);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+    init();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  // Create project via ProjectService (wires Dexie + Supabase project row insert)
+  async function handleCreateProject(kind: "board" | "pdf" | "circuit") {
+    if (creatingKind) return;
+    setCreatingKind(kind);
+    try {
+      const currentDevId = deviceId ?? (await getDeviceId(user.id));
+      const defaultTitle =
+        kind === "board"
+          ? t("launcher.newWhiteboard")
+          : kind === "pdf"
+          ? t("launcher.newPdf")
+          : t("launcher.newCircuit");
+
+      const manifest = await projectService.createProject(defaultTitle, undefined, {
+        storage: "local",
+        localDeviceId: currentDevId,
+      });
+
+      router.push(`/workspace?p=${manifest.project.id}&kind=${kind}`);
+    } catch (err) {
+      console.error("Failed to create project:", err);
+      setCreatingKind(null);
+    }
+  }
+
+  // Open project in workspace if interactive
+  function handleOpenProject(p: ProjectIndexRow) {
+    const badge = getProjectStorageBadge(p, deviceId);
+    if (!badge.isInteractive) return;
+    router.push(`/workspace?p=${p.id}`);
+  }
+
+  // Rename handlers
+  function handleStartRename(p: ProjectIndexRow, e?: React.MouseEvent) {
+    e?.stopPropagation();
+    setRenamingId(p.id);
+    setRenameTitle(p.title);
+  }
+
+  function handleCancelRename(e?: React.MouseEvent) {
+    e?.stopPropagation();
+    setRenamingId(null);
+  }
+
+  async function handleSaveRename(projectId: string, e?: React.FormEvent) {
+    e?.preventDefault();
+    const trimmed = renameTitle.trim();
+    if (!trimmed) return;
+    try {
+      await projectService.renameProject(projectId, trimmed);
+      setProjects((prev) =>
+        prev.map((p) => (p.id === projectId ? { ...p, title: trimmed } : p))
+      );
+      setRenamingId(null);
+    } catch (err) {
+      console.error("Failed to rename project:", err);
+    }
+  }
+
+  // Delete handlers
+  function handleStartDelete(p: ProjectIndexRow, e?: React.MouseEvent) {
+    e?.stopPropagation();
+    setDeletingProject(p);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deletingProject) return;
+    const target = deletingProject;
+    try {
+      if (target.storage === "local") {
+        await projectService.deleteProject(target.id, "local");
+        setProjects((prev) => prev.filter((p) => p.id !== target.id));
+      } else {
+        // Drive project stub
+        await projectService.deleteProject(target.id, "drive");
+        setProjects((prev) => prev.filter((p) => p.id !== target.id));
+        setDriveNotice(t("launcher.driveTrashNotice"));
+        setTimeout(() => setDriveNotice(null), 6000);
+      }
+    } catch (err) {
+      console.error("Failed to delete project:", err);
+    } finally {
+      setDeletingProject(null);
+    }
   }
 
   async function handleSignOut() {
     setSigningOut(true);
     await signOut();
     router.replace("/login");
+  }
+
+  function formatDateTime(isoString: string): string {
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return isoString;
+      return d.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return isoString;
+    }
   }
 
   return (
@@ -98,6 +253,47 @@ export function LauncherContent({ user }: { user: User }) {
             max-inline-size: 100%;
             margin-inline: 0;
           }
+        }
+        .recent-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: var(--space-3);
+          inline-size: 100%;
+        }
+        @media (min-width: 640px) {
+          .recent-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+        @media (min-width: 960px) {
+          .recent-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+        .recent-card {
+          position: relative;
+          background-color: var(--bg-surface);
+          border: 1px solid var(--border-card);
+          border-radius: var(--radius-md);
+          padding: var(--space-3);
+          box-shadow: var(--shadow-1);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          gap: var(--space-3);
+          box-sizing: border-box;
+          inline-size: 100%;
+          text-align: start;
+          transition: transform var(--motion-base) var(--ease-standard),
+                      box-shadow var(--motion-base) var(--ease-standard),
+                      border-color var(--motion-fast) var(--ease-standard);
+        }
+        .recent-card-interactive {
+          cursor: pointer;
+        }
+        .recent-card-disabled {
+          opacity: 0.68;
+          cursor: not-allowed;
         }
         .btn-gold {
           background-color: var(--btn-gold-bg);
@@ -186,8 +382,8 @@ export function LauncherContent({ user }: { user: User }) {
         }
         .btn-danger-outline {
           background-color: transparent;
-          color: var(--color-danger-text);
-          border: 1px solid var(--color-danger-border);
+          color: var(--danger-text);
+          border: 1px solid var(--danger-bg);
           border-radius: var(--radius-sm);
           block-size: var(--control-sm);
           padding-block: 0;
@@ -200,14 +396,16 @@ export function LauncherContent({ user }: { user: User }) {
           align-items: center;
           justify-content: center;
           box-sizing: border-box;
-          transition: background-color var(--motion-fast) var(--ease-standard);
+          transition: background-color var(--motion-fast) var(--ease-standard),
+                      border-color var(--motion-fast) var(--ease-standard);
         }
         .btn-gold:focus-visible,
         .btn-primary:focus-visible,
         .btn-tech:focus-visible,
         .btn-subtle:focus-visible,
         .btn-danger-outline:focus-visible,
-        .launcher-card:focus-visible {
+        .launcher-card:focus-visible,
+        .recent-card:focus-visible {
           outline: 2px solid var(--focus-ring);
           outline-offset: 2px;
         }
@@ -215,6 +413,11 @@ export function LauncherContent({ user }: { user: User }) {
           .launcher-card:hover {
             transform: translateY(-2px);
             box-shadow: var(--shadow-2);
+          }
+          .recent-card-interactive:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-2);
+            border-color: var(--border-input);
           }
           .btn-gold:hover {
             background-color: var(--btn-gold-hover);
@@ -234,11 +437,13 @@ export function LauncherContent({ user }: { user: User }) {
             border-color: var(--border-input);
           }
           .btn-danger-outline:hover {
-            background-color: var(--color-danger-bg);
+            background-color: var(--danger-bg);
+            border-color: var(--danger-text);
           }
         }
         @media (prefers-reduced-motion: reduce) {
-          .launcher-card:hover {
+          .launcher-card:hover,
+          .recent-card-interactive:hover {
             transform: none;
           }
         }
@@ -334,7 +539,7 @@ export function LauncherContent({ user }: { user: User }) {
         </div>
       </header>
 
-      {/* Hero / Title Area with Integrated Secondary Action */}
+      {/* Hero / Title Area */}
       <section
         aria-label={t("launcher.pageTitle")}
         style={{
@@ -413,7 +618,7 @@ export function LauncherContent({ user }: { user: User }) {
               role="status"
               style={{
                 fontSize: "0.8125rem",
-                color: "var(--accent-text-strong)",
+                color: "var(--badge-tech-fg)",
                 backgroundColor: "var(--badge-tech-bg)",
                 border: "1px solid var(--badge-tech-bd)",
                 paddingBlock: "var(--space-1)",
@@ -427,6 +632,27 @@ export function LauncherContent({ user }: { user: User }) {
             </div>
           )}
         </div>
+
+        {/* Transient Drive Notice banner */}
+        {driveNotice && (
+          <div
+            role="status"
+            style={{
+              fontSize: "0.875rem",
+              color: "var(--badge-tech-fg)",
+              backgroundColor: "var(--badge-tech-bg)",
+              border: "1px solid var(--badge-tech-bd)",
+              paddingBlock: "var(--space-2)",
+              paddingInline: "var(--space-3)",
+              borderRadius: "var(--radius-sm)",
+              lineHeight: "1.25rem",
+              boxSizing: "border-box",
+              marginBlockStart: "var(--space-1)",
+            }}
+          >
+            {driveNotice}
+          </div>
+        )}
       </section>
 
       {/* Balanced 3-Card Tool Grid */}
@@ -434,11 +660,11 @@ export function LauncherContent({ user }: { user: User }) {
         aria-label={t("launcher.pageTitle")}
         className="cards-grid"
       >
-        {/* Card 1: New Whiteboard (R7: Gold CTA button) */}
+        {/* Card 1: New Whiteboard (R7: Single Gold CTA button on page) */}
         <Card
           testId="card-whiteboard"
           iconBg="var(--badge-gold-bg)"
-          iconColor="var(--badge-gold-text)"
+          iconColor="var(--badge-gold-fg)"
           iconBorder="var(--badge-gold-bd)"
           icon={
             <svg
@@ -462,11 +688,12 @@ export function LauncherContent({ user }: { user: User }) {
           action={
             <button
               type="button"
-              onClick={() => createPlaceholderProject("board")}
+              onClick={() => handleCreateProject("board")}
+              disabled={creatingKind !== null}
               className="btn-gold"
               data-testid="create-whiteboard-btn"
             >
-              {t("launcher.newWhiteboardCta")}
+              {creatingKind === "board" ? t("saveStatus.saving") : t("launcher.newWhiteboardCta")}
             </button>
           }
         />
@@ -475,7 +702,7 @@ export function LauncherContent({ user }: { user: User }) {
         <Card
           testId="card-pdf"
           iconBg="var(--badge-primary-bg)"
-          iconColor="var(--badge-primary-text)"
+          iconColor="var(--badge-primary-fg)"
           iconBorder="var(--badge-primary-bd)"
           icon={
             <svg
@@ -501,11 +728,12 @@ export function LauncherContent({ user }: { user: User }) {
           action={
             <button
               type="button"
-              onClick={() => createPlaceholderProject("pdf")}
+              onClick={() => handleCreateProject("pdf")}
+              disabled={creatingKind !== null}
               className="btn-primary"
               data-testid="create-pdf-btn"
             >
-              {t("launcher.newPdfCta")}
+              {creatingKind === "pdf" ? t("saveStatus.saving") : t("launcher.newPdfCta")}
             </button>
           }
         />
@@ -514,7 +742,7 @@ export function LauncherContent({ user }: { user: User }) {
         <Card
           testId="card-circuit"
           iconBg="var(--badge-tech-bg)"
-          iconColor="var(--badge-tech-text)"
+          iconColor="var(--badge-tech-fg)"
           iconBorder="var(--badge-tech-bd)"
           icon={
             <svg
@@ -539,17 +767,18 @@ export function LauncherContent({ user }: { user: User }) {
           action={
             <button
               type="button"
-              onClick={() => createPlaceholderProject("circuit")}
+              onClick={() => handleCreateProject("circuit")}
+              disabled={creatingKind !== null}
               className="btn-tech"
               data-testid="create-circuit-btn"
             >
-              {t("launcher.newCircuitCta")}
+              {creatingKind === "circuit" ? t("saveStatus.saving") : t("launcher.newCircuitCta")}
             </button>
           }
         />
       </section>
 
-      {/* Recent Projects Section with Graceful Empty State */}
+      {/* Recent Projects Section */}
       <section
         aria-labelledby="recent-projects-heading"
         style={{
@@ -568,6 +797,7 @@ export function LauncherContent({ user }: { user: User }) {
         >
           <h2
             id="recent-projects-heading"
+            data-testid="recent-projects-heading"
             style={{
               margin: 0,
               fontSize: "1.25rem",
@@ -579,10 +809,12 @@ export function LauncherContent({ user }: { user: User }) {
             {t("launcher.recentProjects")}
           </h2>
           <span
+            data-testid="recent-projects-count"
             style={{
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
+              minInlineSize: "var(--space-3)",
               blockSize: "var(--space-3)",
               paddingInline: "var(--space-1)",
               borderRadius: "var(--radius-full)",
@@ -595,78 +827,445 @@ export function LauncherContent({ user }: { user: User }) {
               boxSizing: "border-box",
             }}
           >
-            0
+            {loading ? "…" : projects.length}
           </span>
         </div>
 
-        <div
-          style={{
-            backgroundColor: "var(--bg-surface)",
-            border: "1px solid var(--border-card)",
-            borderRadius: "var(--radius-md)",
-            paddingBlock: "var(--space-6)",
-            paddingInline: "var(--space-4)",
-            boxShadow: "var(--shadow-1)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            textAlign: "center",
-            gap: "var(--space-2)",
-            boxSizing: "border-box",
-          }}
-        >
+        {/* 1. Loading State */}
+        {loading && (
           <div
+            data-testid="recent-projects-loading"
             style={{
-              inlineSize: "var(--control-lg)",
-              blockSize: "var(--control-lg)",
-              borderRadius: "var(--radius-full)",
-              backgroundColor: "var(--bg-subtle)",
+              backgroundColor: "var(--bg-surface)",
               border: "1px solid var(--border-card)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--accent-text)",
+              borderRadius: "var(--radius-md)",
+              paddingBlock: "var(--space-6)",
+              paddingInline: "var(--space-4)",
+              textAlign: "center",
+              color: "var(--text-muted)",
+              fontSize: "0.875rem",
               boxSizing: "border-box",
             }}
           >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
-            </svg>
+            {t("launcher.loadingRecent")}
           </div>
+        )}
 
-          <span
+        {/* 2. Error State */}
+        {!loading && error && (
+          <div
+            data-testid="recent-projects-error"
             style={{
-              fontSize: "1rem",
-              fontWeight: "var(--weight-medium)",
-              color: "var(--text-main)",
-              lineHeight: "1.5rem",
+              backgroundColor: "var(--bg-surface)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "var(--radius-md)",
+              paddingBlock: "var(--space-5)",
+              paddingInline: "var(--space-4)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "var(--space-2)",
+              textAlign: "center",
+              boxSizing: "border-box",
             }}
           >
-            {t("launcher.recentProjectsEmpty")}
-          </span>
-          <p
+            <span style={{ color: "var(--danger-text)", fontWeight: "var(--weight-medium)" }}>
+              {t("launcher.recentError")}
+            </span>
+            <button
+              type="button"
+              onClick={loadRecentProjects}
+              className="btn-subtle"
+              style={{ blockSize: "var(--control-sm)" }}
+              data-testid="retry-recent-btn"
+            >
+              {t("launcher.retry")}
+            </button>
+          </div>
+        )}
+
+        {/* 3. Empty State */}
+        {!loading && !error && projects.length === 0 && (
+          <div
+            data-testid="recent-projects-empty"
             style={{
-              margin: 0,
-              fontSize: "0.875rem",
-              color: "var(--text-muted)",
-              lineHeight: "1.5rem",
-              maxInlineSize: "45ch",
+              backgroundColor: "var(--bg-surface)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "var(--radius-md)",
+              paddingBlock: "var(--space-6)",
+              paddingInline: "var(--space-4)",
+              boxShadow: "var(--shadow-1)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
+              gap: "var(--space-2)",
+              boxSizing: "border-box",
             }}
           >
-            {t("launcher.recentProjectsHint")}
-          </p>
-        </div>
+            <div
+              style={{
+                inlineSize: "var(--control-lg)",
+                blockSize: "var(--control-lg)",
+                borderRadius: "var(--radius-full)",
+                backgroundColor: "var(--bg-subtle)",
+                border: "1px solid var(--border-card)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--accent-text)",
+                boxSizing: "border-box",
+              }}
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+              </svg>
+            </div>
+
+            <span
+              style={{
+                fontSize: "1rem",
+                fontWeight: "var(--weight-medium)",
+                color: "var(--text-main)",
+                lineHeight: "1.5rem",
+              }}
+            >
+              {t("launcher.recentProjectsEmpty")}
+            </span>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "0.875rem",
+                color: "var(--text-muted)",
+                lineHeight: "1.5rem",
+                maxInlineSize: "45ch",
+              }}
+            >
+              {t("launcher.recentProjectsHint")}
+            </p>
+          </div>
+        )}
+
+        {/* 4. Populated State */}
+        {!loading && !error && projects.length > 0 && (
+          <div className="recent-grid" data-testid="recent-projects-list">
+            {projects.map((project) => {
+              const badge = getProjectStorageBadge(project, deviceId);
+              const isRenaming = renamingId === project.id;
+
+              return (
+                <article
+                  key={project.id}
+                  data-testid={`project-card-${project.id}`}
+                  className={`recent-card ${
+                    badge.isInteractive ? "recent-card-interactive" : "recent-card-disabled"
+                  }`}
+                  onClick={() => handleOpenProject(project)}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "var(--space-2)",
+                    }}
+                  >
+                    {/* Header: Storage Badge + Timestamp */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        gap: "var(--space-1)",
+                      }}
+                    >
+                      <span
+                        data-testid={`badge-${project.id}`}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          paddingBlock: "var(--space-1)",
+                          paddingInline: "var(--space-2)",
+                          borderRadius: "var(--radius-full)",
+                          fontSize: "0.75rem",
+                          fontWeight: "var(--weight-medium)",
+                          lineHeight: "1rem",
+                          backgroundColor: `var(${badge.tokenPrefix}-bg)`,
+                          color: `var(${badge.tokenPrefix}-fg)`,
+                          border: `1px solid var(${badge.tokenPrefix}-bd)`,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {t(badge.labelKey)}
+                      </span>
+
+                      <time
+                        dateTime={project.updated_at}
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--text-muted)",
+                          fontFamily: "var(--font-mono)",
+                        }}
+                      >
+                        {t("launcher.updatedPrefix")} {formatDateTime(project.updated_at)}
+                      </time>
+                    </div>
+
+                    {/* Title & Subject or Inline Rename Input */}
+                    {isRenaming ? (
+                      <form
+                        onSubmit={(e) => handleSaveRename(project.id, e)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "var(--space-1)",
+                          marginBlockStart: "var(--space-1)",
+                        }}
+                      >
+                        <input
+                          type="text"
+                          autoFocus
+                          value={renameTitle}
+                          onChange={(e) => setRenameTitle(e.target.value)}
+                          data-testid={`rename-input-${project.id}`}
+                          style={{
+                            blockSize: "var(--control-sm)",
+                            paddingInline: "var(--space-2)",
+                            backgroundColor: "var(--input-bg)",
+                            border: "1px solid var(--border-input)",
+                            borderRadius: "var(--radius-sm)",
+                            color: "var(--text-main)",
+                            fontSize: "0.875rem",
+                            fontFamily: "var(--font-sans)",
+                            boxSizing: "border-box",
+                            inlineSize: "100%",
+                          }}
+                        />
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "var(--space-1)",
+                            justifyContent: "flex-end",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={handleCancelRename}
+                            className="btn-subtle"
+                            style={{
+                              blockSize: "var(--control-sm)",
+                              paddingInline: "var(--space-2)",
+                              fontSize: "0.8125rem",
+                            }}
+                          >
+                            {t("launcher.cancel")}
+                          </button>
+                          <button
+                            type="submit"
+                            className="btn-primary"
+                            style={{
+                              blockSize: "var(--control-sm)",
+                              paddingInline: "var(--space-2)",
+                              fontSize: "0.8125rem",
+                            }}
+                            data-testid={`rename-save-${project.id}`}
+                          >
+                            {t("launcher.save")}
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "var(--space-1)",
+                        }}
+                      >
+                        <h3
+                          data-testid={`project-title-${project.id}`}
+                          style={{
+                            margin: 0,
+                            fontSize: "1.0625rem",
+                            lineHeight: "1.5rem",
+                            fontWeight: "var(--weight-semibold)",
+                            color: "var(--text-main)",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {project.title}
+                        </h3>
+                        {project.subject && (
+                          <span
+                            style={{
+                              fontSize: "0.8125rem",
+                              color: "var(--text-muted)",
+                            }}
+                          >
+                            {project.subject}
+                          </span>
+                        )}
+                        {!badge.isInteractive && (
+                          <span
+                            data-testid={`disabled-hint-${project.id}`}
+                            style={{
+                              fontSize: "0.8125rem",
+                              color: "var(--text-muted)",
+                              fontStyle: "italic",
+                              marginBlockStart: "var(--space-1)",
+                            }}
+                          >
+                            {t("launcher.anotherDeviceHint")}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions: Rename / Delete buttons */}
+                  {!isRenaming && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                        gap: "var(--space-2)",
+                        borderBlockStart: "1px solid var(--border-card)",
+                        paddingBlockStart: "var(--space-2)",
+                        marginBlockStart: "var(--space-1)",
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => handleStartRename(project, e)}
+                        className="btn-subtle"
+                        style={{
+                          blockSize: "var(--control-sm)",
+                          paddingInline: "var(--space-2)",
+                          fontSize: "0.8125rem",
+                        }}
+                        data-testid={`rename-btn-${project.id}`}
+                      >
+                        {t("launcher.rename")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleStartDelete(project, e)}
+                        className="btn-danger-outline"
+                        data-testid={`delete-btn-${project.id}`}
+                      >
+                        {t("launcher.delete")}
+                      </button>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
+
+      {/* Delete Confirmation Modal */}
+      {deletingProject && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-dialog-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "var(--overlay-backdrop)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "var(--space-3)",
+            zIndex: 50,
+          }}
+          onClick={() => setDeletingProject(null)}
+        >
+          <div
+            style={{
+              backgroundColor: "var(--bg-surface)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "var(--radius-md)",
+              padding: "var(--space-4)",
+              maxInlineSize: "46ch",
+              inlineSize: "100%",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-3)",
+              boxShadow: "var(--shadow-3)",
+              boxSizing: "border-box",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3
+              id="delete-dialog-title"
+              style={{
+                margin: 0,
+                fontSize: "1.125rem",
+                fontWeight: "var(--weight-semibold)",
+                color: "var(--text-main)",
+              }}
+            >
+              {t("launcher.confirmDeleteTitle")}
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "0.875rem",
+                lineHeight: "1.5rem",
+                color: "var(--text-muted)",
+              }}
+            >
+              {t("launcher.confirmDelete")}
+            </p>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "var(--space-2)",
+                marginBlockStart: "var(--space-1)",
+              }}
+            >
+              <button
+                type="button"
+                className="btn-subtle"
+                style={{ blockSize: "var(--control-sm)" }}
+                onClick={() => setDeletingProject(null)}
+              >
+                {t("launcher.cancel")}
+              </button>
+              <button
+                type="button"
+                className="btn-danger-outline"
+                style={{
+                  blockSize: "var(--control-sm)",
+                  backgroundColor: "var(--danger-bg)",
+                  color: "var(--danger-text)",
+                  borderColor: "var(--danger-text)",
+                }}
+                onClick={handleConfirmDelete}
+                data-testid="confirm-delete-btn"
+              >
+                {t("launcher.delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer Navigation */}
       <footer

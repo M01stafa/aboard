@@ -191,6 +191,21 @@ describe("ProjectService (Task 20 / STORE-1, STORE-7)", () => {
   it("throws descriptive errors for future phase stubs", async () => {
     await expect(service.exportAlpha("p1")).rejects.toThrow("Phase 6");
     await expect(service.importAlpha(new Blob())).rejects.toThrow("Phase 6");
-    await expect(service.moveProject("p1", "drive")).rejects.toThrow("Phase 7");
+  });
+
+  it("stubs moveProject by notifying index syncer", async () => {
+    let notified: { id: string; storage: string } | null = null;
+    service.setIndexSyncer({
+      onProjectCreated: async () => {},
+      onProjectRenamed: async () => {},
+      onProjectDeleted: async () => {},
+      onStorageModeChanged: async (id, params) => {
+        notified = { id, storage: params.storage };
+      },
+    });
+
+    await service.moveProject("p1", "drive", { driveFolderId: "f-123" });
+    expect(notified).toEqual({ id: "p1", storage: "drive" });
   });
 });
+

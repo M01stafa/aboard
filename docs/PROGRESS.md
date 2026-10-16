@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 2 — Storage Core and Local Mode |
-| Current task | Task 21 — Build the Save Queue and the Save Status Indicator (completed) |
+| Current task | Task 22 — Sync the Project Index and Build the Recent Projects List (completed) |
 | Last updated | 2026-10-16 |
-| Next step | Task 22 — Sync the Project Index and Build the Recent Projects List |
+| Next step | Task 23 — Spike Fork: CircuitJS Custom Toolbar & Headless Host |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -111,6 +111,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-15 | Task 19: Built per-user IndexedDB schema (projects, items, files, outbox, meta) via Dexie@4.4.1 under aboard:<userId>; deviceId stored in meta; shared-computer flag stored in sessionStorage under aboard:shared_computer; extended signOut closes DB and wipes aboard:<userId> if flag set; extracted E2E helper mockSignIn/mockSignOut; verified SEC-4 via Playwright (Task 19 / SEC-4) |
 | 2026-10-15 | Task 20: Built StorageProvider interface, LocalProvider (with pinned=true on every write), ProjectService (single gateway for tools), streaming SHA-256 via hash-wasm for content-addressed binary files, architectural boundary test, and 13 unit tests across ProjectService and LocalProvider (Task 20 / STORE-1, STORE-7) |
 | 2026-10-15 | Task 21: Built framework-agnostic SaveQueue with 500 ms debounce, per-item coalescing, dirty→clean local transition, structured Drive cadence (3s/30s), flush hooks, beforeunload gating (never prompts in local mode), silent persistence via navigator.storage.persist() skipping Firefox per STORE-9, top bar SaveStatusIndicator with 5 states (WS-3) via theme tokens/i18n, and Playwright test proving STORE-1 |
+| 2026-10-16 | Task 22: Connected launcher to Supabase project index with touch_updated_at trigger handling updatedAt; storage badges mapped to theme tokens (--badge-tech for Drive, --badge-primary for this device, --badge-bronze for another device); rename & delete implemented (local path deletes Dexie + Supabase row, Drive delete stubbed with notice); Playwright E2E test verified create/reload/rename/delete lifecycle |
 
 ## Lessons and corrections
 

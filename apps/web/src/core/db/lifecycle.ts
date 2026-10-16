@@ -78,6 +78,32 @@ export function getActiveUserId(): string | null {
 }
 
 /**
+ * Returns the persistent device ID for the current user from the meta store.
+ * Opens the database if necessary.
+ */
+export async function getDeviceId(userId?: string): Promise<string> {
+  const targetUserId = userId ?? currentUserId;
+  if (!targetUserId) {
+    if (currentDb && currentDb.isOpen()) {
+      const rec = await currentDb.meta.get("deviceId");
+      if (rec && typeof rec.value === "string") return rec.value;
+    }
+    return "unknown-device";
+  }
+
+  const db = await openDb(targetUserId);
+  const rec = await db.meta.get("deviceId");
+  if (rec && typeof rec.value === "string") return rec.value;
+
+  const newId =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `dev-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  await db.meta.put({ key: "deviceId", value: newId });
+  return newId;
+}
+
+/**
  * Deletes the specified user's database (aboard:<userId>).
  * Closes active connection first if open.
  */
@@ -87,3 +113,4 @@ export async function deleteUserDb(userId: string): Promise<void> {
   }
   await Dexie.delete(`aboard:${userId}`);
 }
+

@@ -4,3 +4,5 @@ export * from "./local-provider";
 export * from "./project-service";
 export * from "./persistence";
 export * from "./save-queue";
+export * from "./project-index";
+

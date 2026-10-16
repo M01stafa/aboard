@@ -2,22 +2,37 @@ import type { StorageProvider, ItemRecord, ItemKind, AlphaManifest } from "./typ
 import { LocalProvider } from "./local-provider";
 import { computeBlobSha256 } from "./sha256";
 import { SaveQueue } from "./save-queue";
+import { projectIndex, type ProjectIndexSyncer } from "./project-index";
 
 /**
  * ProjectService: the single gateway through which tool modules (Circuit, Board, PDF) read and write.
- * Implements docs/specs/storage-layer.md §11.1.
+ * Implements docs/specs/storage-layer.md §11.1 and §11.5.
  * Modules never know whether content is local or in Drive; the service routes each call.
  */
 export class ProjectService {
   private provider: StorageProvider;
   private saveQueue?: SaveQueue;
+  private indexSyncer?: ProjectIndexSyncer;
 
-  constructor(provider?: StorageProvider, saveQueue?: SaveQueue) {
+  constructor(
+    provider?: StorageProvider,
+    saveQueue?: SaveQueue,
+    indexSyncer?: ProjectIndexSyncer
+  ) {
     this.provider = provider ?? new LocalProvider();
     this.saveQueue = saveQueue;
+    this.indexSyncer = indexSyncer;
     if (this.saveQueue) {
       this.saveQueue.setProjectService(this);
     }
+  }
+
+  setIndexSyncer(syncer?: ProjectIndexSyncer): void {
+    this.indexSyncer = syncer;
+  }
+
+  getIndexSyncer(): ProjectIndexSyncer | undefined {
+    return this.indexSyncer;
   }
 
   /**
@@ -52,9 +67,13 @@ export class ProjectService {
   }
 
   /**
-   * Creates a new project with an initial AlphaManifest.
+   * Creates a new project with an initial AlphaManifest and notifies the index syncer.
    */
-  async createProject(title: string, subject?: string): Promise<AlphaManifest> {
+  async createProject(
+    title: string,
+    subject?: string,
+    options?: { storage?: "local" | "drive"; localDeviceId?: string; driveFolderId?: string }
+  ): Promise<AlphaManifest> {
     const id =
       typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID()
@@ -78,6 +97,18 @@ export class ProjectService {
     };
 
     await this.provider.createProject(manifest);
+
+    if (this.indexSyncer) {
+      await this.indexSyncer.onProjectCreated({
+        id,
+        title,
+        subject,
+        storage: options?.storage ?? (this.provider.kind === "drive" ? "drive" : "local"),
+        localDeviceId: options?.localDeviceId,
+        driveFolderId: options?.driveFolderId,
+      });
+    }
+
     return manifest;
   }
 
@@ -320,10 +351,36 @@ export class ProjectService {
   }
 
   /**
-   * Deletes a whole project and all its associated items and files.
+   * Renames an existing project in local storage and notifies the index syncer.
    */
-  async deleteProject(projectId: string): Promise<void> {
+  async renameProject(projectId: string, newTitle: string): Promise<void> {
+    try {
+      const manifest = await this.provider.loadManifest(projectId);
+      manifest.project.title = newTitle;
+      manifest.project.updatedAt = new Date().toISOString();
+      await this.provider.saveManifest(manifest);
+    } catch {
+      // ignore if manifest missing
+    }
+
+    if (this.indexSyncer) {
+      await this.indexSyncer.onProjectRenamed(projectId, newTitle);
+    }
+  }
+
+  /**
+   * Deletes a whole project and all its associated items and files,
+   * and notifies the index syncer.
+   */
+  async deleteProject(projectId: string, storageMode: "local" | "drive" = "local"): Promise<void> {
+    if (this.saveQueue) {
+      this.saveQueue.cancelAllForProject(projectId);
+    }
     await this.provider.deleteProject(projectId);
+
+    if (this.indexSyncer) {
+      await this.indexSyncer.onProjectDeleted(projectId, storageMode);
+    }
   }
 
   /**
@@ -356,14 +413,25 @@ export class ProjectService {
   /**
    * Move project between storage modes (Phase 7 / Task 37 stub).
    */
-  async moveProject(_projectId: string, _toMode: "drive" | "local"): Promise<void> {
-    throw new Error("moveProject is implemented in Phase 7 (Task 37)");
+  async moveProject(
+    projectId: string,
+    toMode: "drive" | "local",
+    details?: { localDeviceId?: string; driveFolderId?: string }
+  ): Promise<void> {
+    if (this.indexSyncer) {
+      await this.indexSyncer.onStorageModeChanged(projectId, {
+        storage: toMode,
+        localDeviceId: details?.localDeviceId,
+        driveFolderId: details?.driveFolderId,
+      });
+    }
   }
 }
 
 export const projectService = new ProjectService();
 export const saveQueue = new SaveQueue(projectService);
 projectService.setSaveQueue(saveQueue);
+projectService.setIndexSyncer(projectIndex);
 
 // Expose on window for E2E testing in browser environments
 if (typeof window !== "undefined") {

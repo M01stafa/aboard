@@ -160,6 +160,17 @@ export class SaveQueue {
     }
   }
 
+  public cancelAllForProject(projectId: string): void {
+    for (const key of Array.from(this.pendingMap.keys())) {
+      if (key.startsWith(`${projectId}:`)) {
+        this.pendingMap.delete(key);
+      }
+    }
+    if (this.pendingMap.size === 0 && this.status === "saving") {
+      this.setStatus(this.isLocalMode() ? "saved-local" : "saved-drive");
+    }
+  }
+
   /**
    * Notification from ProjectService when a binary file is saved.
    */
