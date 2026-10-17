@@ -3,7 +3,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import "@excalidraw/excalidraw/index.css";
-import type { ExcalidrawImperativeAPI, ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
+import type {
+  BinaryFileData,
+  ExcalidrawImperativeAPI,
+  ExcalidrawInitialDataState,
+} from "@excalidraw/excalidraw/types";
 import { useI18n } from "@/i18n/provider";
 import type { BoardPaneProps } from "./types";
 import { useBoardPersistence } from "./use-board-persistence";
@@ -78,7 +82,7 @@ export function BoardPane({
   const langCode = language === "ar" ? "ar-SA" : "en";
 
   // Persistence hook: loads initialData once from ProjectService and debounces saves
-  const { initialData, isLoaded, saveBoard } = useBoardPersistence({
+  const { initialData, isLoaded, saveBoard, loadedFiles } = useBoardPersistence({
     projectId,
     itemId: tab.itemId,
     title: tab.title,
@@ -140,6 +144,19 @@ export function BoardPane({
       excalidrawApiRef.current = api;
       onApiReady?.(api);
 
+      // Inject restored files into Excalidraw API on attach
+      if (
+        loadedFiles &&
+        Object.keys(loadedFiles).length > 0 &&
+        typeof api.addFiles === "function"
+      ) {
+        try {
+          api.addFiles(Object.values(loadedFiles) as unknown as BinaryFileData[]);
+        } catch (err) {
+          console.error("Failed to inject files into Excalidraw on API attach:", err);
+        }
+      }
+
       // Expose API for E2E testing
       if (typeof window !== "undefined") {
         const win = window as unknown as {
@@ -149,13 +166,35 @@ export function BoardPane({
         win.__aboard_boardApi[tab.id] = api;
       }
     },
-    [tab.id, onApiReady]
+    [tab.id, onApiReady, loadedFiles]
   );
+
+  // Re-inject files if they finish loading after API has attached
+  useEffect(() => {
+    if (
+      excalidrawApiRef.current &&
+      loadedFiles &&
+      Object.keys(loadedFiles).length > 0 &&
+      typeof excalidrawApiRef.current.addFiles === "function"
+    ) {
+      try {
+        excalidrawApiRef.current.addFiles(
+          Object.values(loadedFiles) as unknown as BinaryFileData[]
+        );
+      } catch (err) {
+        console.error("Failed to inject files into Excalidraw on file load:", err);
+      }
+    }
+  }, [loadedFiles]);
 
   // Black-box persistence: push changes to saveBoard without triggering React re-renders
   const handleChange = useCallback(
-    (elements: readonly unknown[], appState: unknown) => {
-      saveBoard(elements, appState as Record<string, unknown>);
+    (elements: readonly unknown[], appState: unknown, files?: unknown) => {
+      saveBoard(
+        elements,
+        appState as Record<string, unknown>,
+        files as Record<string, unknown> | undefined
+      );
     },
     [saveBoard]
   );
@@ -187,7 +226,13 @@ export function BoardPane({
         <Excalidraw
           excalidrawAPI={handleApi as unknown as (api: unknown) => void}
           initialData={initialData as ExcalidrawInitialDataState | undefined}
-          onChange={handleChange as unknown as (elements: unknown, appState: unknown) => void}
+          onChange={
+            handleChange as unknown as (
+              elements: unknown,
+              appState: unknown,
+              files: unknown
+            ) => void
+          }
           theme={activeTheme}
           langCode={langCode}
           UIOptions={UI_OPTIONS}

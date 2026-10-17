@@ -41,6 +41,8 @@ describe("BoardPane Component (Task 25 / BOARD-1, BOARD-2, BOARD-4)", () => {
       getAppState: vi.fn(() => ({} as never)),
       getSceneElements: vi.fn(() => []),
       updateScene: vi.fn(),
+      addFiles: vi.fn(),
+      getFiles: vi.fn(() => ({})),
     };
 
     // Spy on ResizeObserver to capture callback and trigger manual resize events
@@ -276,5 +278,61 @@ describe("BoardPane Component (Task 25 / BOARD-1, BOARD-2, BOARD-4)", () => {
       gridModeEnabled: true,
     });
     expect(parsed.appState.cursorButton).toBeUndefined();
+  });
+
+  it("handles image insertions in onChange by calling putFile and saving clean fileMap (BOARD-2)", async () => {
+    const saveSpy = vi.spyOn(projectService, "saveBoard").mockImplementation(async () => {});
+    const putFileSpy = vi.spyOn(projectService, "putFile").mockImplementation(async () => ({
+      key: "sha256-pane-img-hash",
+    }));
+
+    await act(async () => {
+      root.render(
+        React.createElement(
+          I18nProvider,
+          null,
+          React.createElement(BoardPane, {
+            projectId: "test-board-proj",
+            tab: { id: "tab-b6", kind: "board", itemId: "item-b6", title: "Board 6" },
+            visible: true,
+          })
+        )
+      );
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const onChangeFn = lastExcalidrawProps?.onChange as (
+      elements: unknown[],
+      appState: Record<string, unknown>,
+      files?: unknown
+    ) => void;
+
+    const testElements = [{ id: "img-node", type: "image", fileId: "pane-file-1" }];
+    const testAppState = { viewBackgroundColor: "#edeae1" };
+    const testFiles = {
+      "pane-file-1": {
+        id: "pane-file-1",
+        dataURL: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        mimeType: "image/png",
+        created: Date.now(),
+      },
+    };
+
+    await act(async () => {
+      onChangeFn(testElements, testAppState, testFiles);
+    });
+
+    expect(putFileSpy).toHaveBeenCalledTimes(1);
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+
+    const [, , payload] = saveSpy.mock.calls[0];
+    const parsed = JSON.parse(payload);
+    expect(parsed.files).toEqual({
+      "pane-file-1": "sha256-pane-img-hash",
+    });
+    expect(payload.includes("data:image/png;base64")).toBe(false);
   });
 });

@@ -825,3 +825,28 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 25 · BOARD-1, BOARD-2, BOARD-4, WS-1, WS-2, STORE-1 · docs/specs/modules.md §7.1, docs/specs/architecture.md §6.2
 **Open:** none (proceed to Task 26 upon owner prompt).
 
+## 2026-10-17 — Task 26: Handle Images Inside Boards
+**Request:** Run Task 26 from docs/TASKS.md: extract Excalidraw binary image files in onChange and persist via ProjectService.putFile content-addressed by SHA-256; ensure board JSON state stores only Excalidraw file IDs and SHA-256 hashes (no raw base64 dataURLs in element JSON); restore image binary blobs on board initialization via ProjectService.getFile and inject into Excalidraw via api.addFiles / initialData.files; inspect @excalidraw/excalidraw to verify auto-downscale behavior (record V20 in docs/PROGRESS.md); implement image compression capping dimensions and enforcing the 4MB limit (BOARD-3); write unit tests and a Playwright E2E test verifying simulated 5MB photo insertion, compression/storage, and survival across full page reload; run all checks and commit/push.
+**Changes:**
+- `apps/web/src/modules/board/image-utils.ts` (created): image utilities including `dataURLToBlob`, `blobToDataURL`, `extractImageFileIds`, and `compressImageIfNeeded` capping dimensions to 1440px and compressing to WebP/JPEG under the 4MB limit (BOARD-3) using standard browser Canvas/OffscreenCanvas without third-party dependencies.
+- `apps/web/src/modules/board/types.ts` (changed): updated `BoardItemPayload` with optional `files: Record<string, string>` mapping Excalidraw `fileId` to content-addressed SHA-256 key.
+- `apps/web/src/modules/board/use-board-persistence.ts` (changed): extracted image files from `onChange`, compressed images > 4MB, saved blobs via `ProjectService.putFile`, saved lightweight JSON payload with `files` map (excluding base64 strings), and restored image blobs on mount via `ProjectService.getFile` into `loadedFiles` and `initialData.files`.
+- `apps/web/src/modules/board/board-pane.tsx` (changed): forwarded `files` argument in Excalidraw's `onChange` to `saveBoard`, and injected restored files into Excalidraw via `api.addFiles` on API ready and file load.
+- `apps/web/src/test/setup.ts` (changed): added `addFiles` and `getFiles` mocks to global Excalidraw mock.
+- `apps/web/src/modules/board/image-utils.test.ts` (created): unit tests verifying dataURL/Blob roundtrips, fileId extraction from scene elements, small image passthrough, SVG preservation, and 4MB image compression.
+- `apps/web/src/modules/board/use-board-persistence.test.ts` (changed): added unit tests for image extraction, content-addressed `putFile`, base64-free JSON payload persistence, `getFile` restoration into `initialData.files`, and 4MB compression.
+- `apps/web/src/modules/board/board-pane.test.tsx` (changed): added unit test for `BoardPane` image file handling and `putFile` invocation.
+- `apps/web/e2e/board-images.spec.ts` (created): Playwright E2E test inserting a simulated 5.4MB photo, verifying client-side compression to <= 4MB, content-addressed `putFile` storage, lightweight JSON persistence, and complete recovery across page reload.
+- `docs/PROGRESS.md` (changed): marked Task 26 complete, set Next step to Task 27, logged V20 VERIFY row confirming Excalidraw's auto-downscale behavior, and recorded Task 26 decision.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing.mjs 8-point grid passed).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (94/94 unit tests passed across 16 test files).
+- `pnpm test:e2e`: PASS (9/9 Playwright E2E tests passed in Chromium).
+- `pnpm build`: PASS (Next.js 16.4.0 static build compiled cleanly).
+- `pnpm ci:security`: PASS (Gitleaks, dependency audit, .next bundle secret scan).
+**Related:** Task 26 · BOARD-2, BOARD-3 · docs/specs/modules.md §7.1, docs/specs/storage-layer.md §11.2 · VERIFY: V20
+**Open:** none (proceed to Task 27 upon owner prompt).
+
+

@@ -20,6 +20,7 @@ export type PersistedAppState = Partial<Record<PersistedAppStateKey, unknown>>;
 export interface BoardItemPayload {
   elements: readonly unknown[];
   appState: PersistedAppState;
+  files?: Record<string, string>; // maps Excalidraw fileId -> SHA-256 content key
 }
 
 export interface BoardPaneProps {

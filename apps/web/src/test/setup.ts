@@ -33,6 +33,8 @@ vi.mock("@excalidraw/excalidraw", () => ({
         getAppState: vi.fn(() => ({})),
         getSceneElements: vi.fn(() => []),
         updateScene: vi.fn(),
+        addFiles: vi.fn(),
+        getFiles: vi.fn(() => ({})),
       });
     }
     return React.createElement("div", {

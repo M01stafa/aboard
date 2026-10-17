@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 4 — Board Module |
-| Current task | Task 25 — Build the Board Pane and Its Persistence (completed) |
+| Current task | Task 26 — Handle Images Inside Boards (completed) |
 | Last updated | 2026-10-17 |
-| Next step | Task 26 — Handle Images Inside Boards |
+| Next step | Task 27 — Build the Study Templates Panel |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -67,6 +67,7 @@ Status values: `Open` · `Confirmed` · `Changed (spec updated)`
 | V17 | Supabase API key rotation procedure | security.md §14.10 | 11 | Open | |
 | V18 | JDK version for the CircuitJS fork build (GWT 2.8.2) | setup-and-deploy.md §5.2 | 0 (S2) | Changed (spec updated) | Confirmed in Spike S2: OpenJDK 11 builds GWT 2.8.2 cleanly with Gradle 8.7; JDK 17 not required; spec updated / 2026-10-13 |
 | V19 | Current `zod` major version | setup-and-deploy.md §5.6 | 1 | Open | |
+| V20 | Excalidraw user image auto-downscale behavior | modules.md §7.1 | 4 | Confirmed | Yes: downscales to 1440px via resizeImageFile (pica/image-blob-reduce), checks MAX_ALLOWED_FILE_BYTES (4MB) / 2026-10-17 |
 
 ## Decisions log
 
@@ -116,6 +117,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-17 | Task 23: Applied Aboard fork patches a–e in M01stafa/circuitjs1 (commit 53c63bf4) and documented in PATCHES.md; built cross-platform automation scripts/build-circuit.mjs; verified apps/web/public/circuit/ without WEB-INF or service worker; finalized /circuit/:path* CSP with worker-src 'none'. |
 | 2026-10-17 | Task 24: Built framework-agnostic CircuitAdapter (dual attachment, callback fanning, Strict Mode detach) and CircuitPane embedding /circuit/circuitjs.html with theme tokens, state persistence via ProjectService on onanalyze, theme switching without loss via export -> iframe reload -> import, and CIRC-4 pause-when-hidden (default ON for mobile, OFF for desktop). Playwright verified persistence across tab switch, theme change, and page reload. |
 | 2026-10-17 | Task 25: Built BoardPane with Excalidraw loaded via next/dynamic with ssr: false, silent persistence via useBoardPersistence and ProjectService.saveBoard debounced by SaveQueue with 6 confirmed AppState keys, ResizeObserver + visibility refresh(), brand accent styling per DESIGN.md R1, and zero React re-render loops on drawing. Playwright verified persistence across tab switch, split divider drag, and full page reload. |
+| 2026-10-17 | Task 26: Excalidraw auto-downscale confirmed (V20); client-side Canvas compression implemented for programmatic & >4MB images; content-addressed image blobs stored via ProjectService.putFile; board JSON stores only fileId -> SHA-256 key mapping without raw base64. |
 
 ## Lessons and corrections
 
