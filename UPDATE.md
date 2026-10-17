@@ -711,3 +711,17 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** SEC-5, SEC-10 · docs/specs/security.md §14.2
 **Open:** none (proceed to Task 23 upon owner prompt).
 
+## 2026-10-17 — Security: Replace Real Google API Key in env.test.ts with Mock
+**Request:** Replace real Google API key at apps/web/src/core/env.test.ts:9 with a 39-character mock string beginning with "AIza" and ending with an obvious test marker, ensuring it passes Zod validation; run unit tests; push to main and watch CI.
+**Changes:**
+- `apps/web/src/core/env.test.ts` (changed): replaced real key string with mock fixture `"AIzaSyDummyTestKeyDummyTestKeyDummyTest"`.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm --filter web test src/core/env.test.ts`: PASS (6/6 tests).
+- `pnpm test`: PASS (62/62 tests across 11 test files).
+- `pnpm lint`: PASS (0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- `pnpm ci:security`: PASS (Gitleaks, production dependency audit, and .next bundle secret scan).
+**Related:** SEC-5, SEC-10 · docs/specs/security.md §14.2
+**Open:** none (proceed to Task 23 upon owner prompt).
+

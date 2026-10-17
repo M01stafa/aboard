@@ -6,7 +6,7 @@ describe("env configuration validation", () => {
     NEXT_PUBLIC_SUPABASE_URL: "https://fmlpkcbpoziwkjuxuyaf.supabase.co",
     NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy",
     NEXT_PUBLIC_GOOGLE_CLIENT_ID: "791651476865-vvdeqhfn5tn9vie6gif05di83etol9jr.apps.googleusercontent.com",
-    NEXT_PUBLIC_GOOGLE_API_KEY: "AIzaSyAZg12mJFXpdbRTj-RPlnw1o-vkRdE1T8U",
+    NEXT_PUBLIC_GOOGLE_API_KEY: "AIzaSyDummyTestKeyDummyTestKeyDummyTest",
     NEXT_PUBLIC_GOOGLE_APP_ID: "791651476865",
     NEXT_PUBLIC_PDF_API_URL: "http://localhost:8080",
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAAABk9xxxxxxxx",
