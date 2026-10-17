@@ -875,5 +875,19 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 27 · BOARD-5 · docs/specs/modules.md §7.1, docs/DESIGN.md
 **Open:** none (proceed to Task 28 upon owner prompt).
 
+## 2026-10-17 — Audit and Shorten i18n Strings for Better UI Space
+**Request:** Audit apps/web/src/i18n/en.ts and ar.ts, identify strings used for UI elements (buttons, badges, menu items, short labels) that are longer than 3 words, shorten them to concise 1–3 word phrases while preserving exact meaning and 100% key parity, ensure natural Arabic translations fitting RTL layout, verify all unit and E2E tests pass, and push to main.
+**Changes:**
+- `apps/web/src/i18n/en.ts` (changed): shortened 15 verbose UI strings across auth, launcher, workspace, circuit, saveStatus, and templates to 1–3 words for space efficiency on mobile and split-view workspace.
+- `apps/web/src/i18n/ar.ts` (changed): shortened 24 Arabic UI strings across common, auth, launcher, workspace, circuit, saveStatus, and templates to natural 1–3 word phrasing fitting RTL layout with 100% key parity.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing.mjs 8-point grid passed).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (123/123 unit tests passed across 17 test files, including i18n parity test).
+- `pnpm test:e2e`: PASS (10/10 Playwright E2E tests passed in Chromium).
+**Related:** i18n cleanup · docs/DESIGN.md
+**Open:** none (ready for Task 28).
+
 
 
