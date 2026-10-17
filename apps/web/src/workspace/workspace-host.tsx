@@ -6,6 +6,7 @@ import { useI18n } from "@/i18n/provider";
 import { slotOf, type LayoutState, type ModuleKind, type SplitMode, type Tab } from "./types";
 import { IframePlaceholder, StaticPlaceholder } from "./placeholders";
 import { SaveStatusIndicator } from "./save-status";
+import { CircuitPane } from "@/modules/circuit";
 
 /*
  * Tab Bar & Divider Keyboard Interaction Map
@@ -807,6 +808,13 @@ export function WorkspaceHost({
             >
               {tab.isIframe ? (
                 <IframePlaceholder
+                  tab={tab}
+                  visible={slot !== "hidden"}
+                  onMount={onPaneMount}
+                />
+              ) : tab.kind === "circuit" ? (
+                <CircuitPane
+                  projectId={projectId || "demo"}
                   tab={tab}
                   visible={slot !== "hidden"}
                   onMount={onPaneMount}

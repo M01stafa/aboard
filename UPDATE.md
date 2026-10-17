@@ -759,3 +759,27 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 23 · CIRC-1, CIRC-3, CIRC-6, CIRC-7, SEC-6 · docs/specs/modules.md §7.2, docs/specs/security.md §14.6
 **Open:** none (proceed to Task 24 upon owner prompt).
 
+## 2026-10-17 — Task 24: Build the Circuit Adapter and the Circuit Pane
+**Request:** Run Task 24 from docs/TASKS.md: build framework-agnostic CircuitAdapter in apps/web/src/modules/circuit/ (attaching immediately or via oncircuitjsloaded, owning single callback slots and fanning out, clean detach on React Strict Mode), build CircuitPane component (rendering same-origin iframe to /circuit/circuitjs.html with theme parameters, loading saved circuit via importCircuit, saving on onanalyze via ProjectService.saveCircuit debounced by SaveQueue), handle theme switching without losing user changes (export -> reload iframe with light/dark params -> re-import), implement pause-when-hidden option (CIRC-4, default ON for mobile, OFF for desktop), integrate with WorkspaceHost data-slot logic, write unit tests for adapter and pane, write Playwright E2E test proving persistence across tab switch, theme change, and reload, run checks, update docs, commit and push to main, and watch GitHub Actions CI.
+**Changes:**
+- `apps/web/src/modules/circuit/types.ts` (created): TypeScript definitions for `CircuitJS1Api`, `CircuitWindow`, `CircuitUrlOptions`, and event listeners.
+- `apps/web/src/modules/circuit/circuit-url.ts` (created): `buildCircuitUrl` function generating `/circuit/circuitjs.html?...` query strings matching docs/specs/modules.md §7.2 with theme tokens (`whiteBackground`, `positiveColor`, `negativeColor`, `selectColor`, `currentColor`, `running`, `lang`, `editable`).
+- `apps/web/src/modules/circuit/circuit-adapter.ts` (created): framework-agnostic bridge attaching to `contentWindow.CircuitJS1` immediately or via `contentWindow.oncircuitjsloaded`, owning simulator callback slots (`onupdate`, `ontimestep`, `onanalyze`, `onsvgrendered`), fanning out to multiple subscribers, providing `requestSVG()`, and cleaning up listeners on `detach()`.
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (created): React component rendering iframe, persisting state via `projectService.saveCircuit` on `onanalyze`, preserving/restoring circuit state across theme changes, pausing simulation when hidden (CIRC-4), and styling top chrome with 8-point grid tokens.
+- `apps/web/src/modules/circuit/index.ts` (created): barrel export for circuit module.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): rendered `CircuitPane` when `tab.kind === "circuit" && !tab.isIframe` within existing data-slot layout structure.
+- `apps/web/src/i18n/en.ts` & `ar.ts` (changed): added `circuit.pauseWhenHidden`, `circuit.simRunning`, `circuit.simPaused`, and `circuit.reloadError` translations.
+- `apps/web/src/modules/circuit/circuit-adapter.test.ts` (created): 6 unit tests covering dual attachment, callback fanning, requestSVG resolution/rejection, and Strict Mode idempotency.
+- `apps/web/src/modules/circuit/circuit-pane.test.tsx` (created): 3 unit tests covering iframe URL parameters, auto-save on analyze, and pause-when-hidden option.
+- `apps/web/e2e/circuit-module.spec.ts` (created): Playwright E2E test verifying circuit survives tab switch, theme change, and page reload.
+- `docs/PROGRESS.md` (changed): marked Task 24 complete (next step: Task 25), updated Phase 3 status and decisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing.mjs 8-point grid passed).
+- `pnpm typecheck`: PASS (TypeScript 0 errors).
+- `pnpm test`: PASS (71/71 tests passed across 13 test files).
+- `pnpm test:e2e`: PASS (7/7 Playwright tests passed in Chromium).
+- `pnpm ci:security`: PASS (Gitleaks, production dependency audit, and .next bundle secret scan).
+**Related:** Task 24 · CIRC-1, CIRC-2, CIRC-3, CIRC-4, WS-1, WS-2, STORE-1 · docs/specs/modules.md §7.2, §8
+**Open:** none (proceed to Task 25 upon owner prompt).
+

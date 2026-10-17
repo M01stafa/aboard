@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 3 — Circuit Module |
-| Current task | Task 23 — Apply the Fork Patches and Automate the Circuit Build (completed) |
+| Current task | Task 24 — Build the Circuit Adapter and the Circuit Pane (completed) |
 | Last updated | 2026-10-17 |
-| Next step | Task 24 — Build the Circuit Adapter and the Circuit Pane |
+| Next step | Task 25 — Build the Board Module (Excalidraw Pane) |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -114,6 +114,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-16 | Task 22: Connected launcher to Supabase project index with touch_updated_at trigger handling updatedAt; storage badges mapped to theme tokens (--badge-tech for Drive, --badge-primary for this device, --badge-bronze for another device); rename & delete implemented (local path deletes Dexie + Supabase row, Drive delete stubbed with notice); Playwright E2E test verified create/reload/rename/delete lifecycle |
 | 2026-10-16 | Owner decision: keep the repository public and keep the same Google API key. The historical commit that contains the key is accepted; the key will be hidden from the current tree only. Rotation deferred. |
 | 2026-10-17 | Task 23: Applied Aboard fork patches a–e in M01stafa/circuitjs1 (commit 53c63bf4) and documented in PATCHES.md; built cross-platform automation scripts/build-circuit.mjs; verified apps/web/public/circuit/ without WEB-INF or service worker; finalized /circuit/:path* CSP with worker-src 'none'. |
+| 2026-10-17 | Task 24: Built framework-agnostic CircuitAdapter (dual attachment, callback fanning, Strict Mode detach) and CircuitPane embedding /circuit/circuitjs.html with theme tokens, state persistence via ProjectService on onanalyze, theme switching without loss via export -> iframe reload -> import, and CIRC-4 pause-when-hidden (default ON for mobile, OFF for desktop). Playwright verified persistence across tab switch, theme change, and page reload. |
 
 ## Lessons and corrections
 

@@ -182,6 +182,12 @@ export const en = {
     pdfTabTitle: "PDF Document {n}",
     circuitTabTitle: "Circuit {n}",
   },
+  circuit: {
+    pauseWhenHidden: "Pause when hidden",
+    simRunning: "Running",
+    simPaused: "Paused",
+    reloadError: "Could not reload circuit",
+  },
   legal: {
     privacyTitle: "Privacy Policy",
     termsTitle: "Terms of Service",

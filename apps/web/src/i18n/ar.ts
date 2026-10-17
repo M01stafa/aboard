@@ -184,6 +184,12 @@ export const ar: TranslationDictionary = {
     pdfTabTitle: "مستند {n} PDF",
     circuitTabTitle: "دائرة كهربائية {n}",
   },
+  circuit: {
+    pauseWhenHidden: "إيقاف مؤقت عند الإخفاء",
+    simRunning: "قيد التشغيل",
+    simPaused: "متوقف مؤقتاً",
+    reloadError: "تعذر إعادة تحميل الدائرة",
+  },
   legal: {
     privacyTitle: "سياسة الخصوصية",
     termsTitle: "شروط الخدمة",
