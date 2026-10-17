@@ -783,3 +783,19 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 24 · CIRC-1, CIRC-2, CIRC-3, CIRC-4, WS-1, WS-2, STORE-1 · docs/specs/modules.md §7.2, §8
 **Open:** none (proceed to Task 25 upon owner prompt).
 
+## 2026-10-17 — GitHub Actions: Resolve Deprecation Warnings for Node 20 and ubuntu-latest
+**Request:** Resolve two proactive GitHub Actions annotations on main: Node 20 deprecation across action wrappers and upcoming ubuntu-latest migration to Ubuntu 26. Upgrade affected action wrappers to latest stable releases running on Node 24 without altering the project's build Node version (22.x), pin the runner OS to ubuntu-24.04, verify checks, commit/push, and watch CI to confirm both annotations are eliminated.
+**Changes:**
+- `.github/workflows/ci.yml` (changed):
+  - Changed `runs-on: ubuntu-latest` to `runs-on: ubuntu-24.04` to pin runner environment.
+  - Upgraded `actions/checkout@v4` to `actions/checkout@v7` (native Node 24 execution).
+  - Upgraded `actions/setup-node@v4` to `actions/setup-node@v7` (native Node 24 execution) while keeping project `node-version: 22`.
+  - Upgraded `supabase/setup-cli@v1` to `supabase/setup-cli@v3` (composite action running on Bun/npm without Node 20 runtime requirement; removed deprecated `github-token` input per v3 release notes).
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- GitHub Actions CI on main: verified green with zero deprecation annotations.
+**Related:** SEC-10 · docs/specs/setup-and-deploy.md §13, docs/specs/security.md §14.9
+**Open:** none.
+
