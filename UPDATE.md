@@ -799,3 +799,29 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** SEC-10 · docs/specs/setup-and-deploy.md §13, docs/specs/security.md §14.9
 **Open:** none.
 
+## 2026-10-17 — Task 25: Build the Board Pane and Its Persistence
+**Request:** Run Task 25 from docs/TASKS.md: build the BoardPane React component under apps/web/src/modules/board/ loading Excalidraw via next/dynamic with ssr: false, load initialData once from ProjectService and persist onChange via ProjectService.saveBoard without feeding back into React state (preserving 60fps drawing performance), apply i18n rules (langCode: ar-SA for Arabic, en for English), apply light/dark theme, configure UIOptions to hide Excalidraw's own load and save-to-disk actions, attach ResizeObserver to pane container and call api.refresh() when visible or resized (supporting split view and tab switching), integrate with WorkspaceHost without breaking mount-counter test (WS-1), write unit tests for BoardPane and persistence hook, write Playwright E2E test proving board survives tab switch, split view resize, and reload, run all checks, update documentation, and push to main.
+**Changes:**
+- `apps/web/src/modules/board/types.ts` (created): defined BoardItemPayload, BoardPaneProps, PersistedAppStateKey, and pickPersistedAppState extracting the 6 verified keys (viewBackgroundColor, scrollX, scrollY, zoom, gridSize, gridModeEnabled).
+- `apps/web/src/modules/board/use-board-persistence.ts` (created): custom hook loading initialData asynchronously from ProjectService.readItem and debouncing/persisting changes via ProjectService.saveBoard without triggering React re-renders.
+- `apps/web/src/modules/board/board-pane.tsx` (created): React component rendering Excalidraw via next/dynamic with ssr: false, tracking pane mount identity token, syncing theme and i18n (ar-SA/en), applying UIOptions (loadScene: false, saveToActiveFile: false), calling api.refresh() on visibility changes and ResizeObserver container resizes, and scoping brand accent CSS variables per DESIGN.md R1 and spec §15.
+- `apps/web/src/modules/board/index.ts` (created): barrel exports for board module.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): rendered BoardPane for tab.kind === "board" within the stable data-slot grid layout.
+- `apps/web/src/test/setup.ts` (created): global mock for @excalidraw/excalidraw and ResizeObserver fallback for Vitest happy-dom unit tests.
+- `apps/web/vitest.config.mjs` (changed): added setupFiles pointing to src/test/setup.ts.
+- `apps/web/src/modules/board/use-board-persistence.test.ts` (created): unit tests verifying appState key filtering, initial loading, missing item fallback, and persistence calls.
+- `apps/web/src/modules/board/board-pane.test.tsx` (created): unit tests for BoardPane verifying attributes, i18n langCode, UIOptions, refresh on visibility change, refresh on ResizeObserver resize, and onChange persistence without state loops.
+- `apps/web/e2e/board-module.spec.ts` (created): Playwright E2E test proving board survives tab switch, split-view divider resize, and full page reload.
+- `apps/web/next-env.d.ts` (changed): synchronized route types from Next.js build.
+- `docs/PROGRESS.md` (changed): marked Task 25 complete, set Next step to Task 26, updated Phase 4 status to In progress, and recorded Task 25 decision.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing.mjs 8-point grid passed).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (81/81 unit tests passed across 15 test files, including WS-1 mount counter).
+- `pnpm test:e2e`: PASS (8/8 Playwright tests passed in Chrome, including board-module.spec.ts).
+- `supabase test db supabase/tests/rls.test.sql`: PASS (17/17 pgTAP assertions passed).
+- `pnpm ci:security`: PASS.
+**Related:** Task 25 · BOARD-1, BOARD-2, BOARD-4, WS-1, WS-2, STORE-1 · docs/specs/modules.md §7.1, docs/specs/architecture.md §6.2
+**Open:** none (proceed to Task 26 upon owner prompt).
+

@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 3 — Circuit Module |
-| Current task | Task 24 — Build the Circuit Adapter and the Circuit Pane (completed) |
+| Active phase | 4 — Board Module |
+| Current task | Task 25 — Build the Board Pane and Its Persistence (completed) |
 | Last updated | 2026-10-17 |
-| Next step | Task 25 — Build the Board Module (Excalidraw Pane) |
+| Next step | Task 26 — Handle Images Inside Boards |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -28,7 +28,7 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | **1. Foundation** | Done (2026-10-14) | Next.js app, routes, theme, RTL/i18n, Supabase Auth (email + Google), migration 0001, workspace host with placeholder panes, **hardened migration + pgTAP RLS suite + CI guards (gitleaks, bundle grep) (§9, §14.3, §14.9)** | Mount counter stays 1 during tab/split changes; RLS test: user A cannot read B's `projects`; client cannot read `google_drive_links` |
 | **2. Storage core + local mode** | In progress | Dexie schema, `LocalProvider`, `ProjectService`, SaveQueue, save status, silent persistence, project index sync | Create project → reload → data intact; no prompt appears in Chrome/Safari/Firefox |
 | **3. Circuit module** | In progress | Fork patches a–e, build script, adapter, saving via ProjectService | Circuit survives reload; no extra service worker registered |
-| **4. Board module** | Not started | Excalidraw pane, files via `putFile`, templates panel | Board with images survives reload |
+| **4. Board module** | In progress | Excalidraw pane, files via `putFile`, templates panel | Board with images survives reload |
 | **5. PDF module** | Not started | Viewer, annotations JSON, page operations, annotated download | Annotations survive reload; annotated download opens with highlights in another viewer |
 | **6. `.alpha` export/import** | Not started | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
 | **7. Google Drive** | Not started | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
@@ -115,6 +115,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-16 | Owner decision: keep the repository public and keep the same Google API key. The historical commit that contains the key is accepted; the key will be hidden from the current tree only. Rotation deferred. |
 | 2026-10-17 | Task 23: Applied Aboard fork patches a–e in M01stafa/circuitjs1 (commit 53c63bf4) and documented in PATCHES.md; built cross-platform automation scripts/build-circuit.mjs; verified apps/web/public/circuit/ without WEB-INF or service worker; finalized /circuit/:path* CSP with worker-src 'none'. |
 | 2026-10-17 | Task 24: Built framework-agnostic CircuitAdapter (dual attachment, callback fanning, Strict Mode detach) and CircuitPane embedding /circuit/circuitjs.html with theme tokens, state persistence via ProjectService on onanalyze, theme switching without loss via export -> iframe reload -> import, and CIRC-4 pause-when-hidden (default ON for mobile, OFF for desktop). Playwright verified persistence across tab switch, theme change, and page reload. |
+| 2026-10-17 | Task 25: Built BoardPane with Excalidraw loaded via next/dynamic with ssr: false, silent persistence via useBoardPersistence and ProjectService.saveBoard debounced by SaveQueue with 6 confirmed AppState keys, ResizeObserver + visibility refresh(), brand accent styling per DESIGN.md R1, and zero React re-render loops on drawing. Playwright verified persistence across tab switch, split divider drag, and full page reload. |
 
 ## Lessons and corrections
 

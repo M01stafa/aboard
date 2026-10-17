@@ -29,6 +29,7 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}"],
     exclude: ["e2e/**", "node_modules/**"],
     env: loadLocalEnv(),
+    setupFiles: [path.resolve(__dirname, "./src/test/setup.ts")],
   },
   resolve: {
     alias: {

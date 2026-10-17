@@ -7,6 +7,7 @@ import { slotOf, type LayoutState, type ModuleKind, type SplitMode, type Tab } f
 import { IframePlaceholder, StaticPlaceholder } from "./placeholders";
 import { SaveStatusIndicator } from "./save-status";
 import { CircuitPane } from "@/modules/circuit";
+import { BoardPane } from "@/modules/board";
 
 /*
  * Tab Bar & Divider Keyboard Interaction Map
@@ -814,6 +815,13 @@ export function WorkspaceHost({
                 />
               ) : tab.kind === "circuit" ? (
                 <CircuitPane
+                  projectId={projectId || "demo"}
+                  tab={tab}
+                  visible={slot !== "hidden"}
+                  onMount={onPaneMount}
+                />
+              ) : tab.kind === "board" ? (
+                <BoardPane
                   projectId={projectId || "demo"}
                   tab={tab}
                   visible={slot !== "hidden"}
