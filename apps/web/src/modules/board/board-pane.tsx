@@ -11,6 +11,7 @@ import type {
 import { useI18n } from "@/i18n/provider";
 import type { BoardPaneProps } from "./types";
 import { useBoardPersistence } from "./use-board-persistence";
+import { TemplatesPanel } from "./templates-panel";
 
 /**
  * Excalidraw loaded on client only via next/dynamic with ssr: false,
@@ -42,6 +43,7 @@ export function BoardPane({
   const { resolvedTheme: i18nTheme, language } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
+  const getApi = useCallback(() => excalidrawApiRef.current, []);
   const visibleRef = useRef(visible);
 
   // Persistent identity token for mount-tracking & Strict Mode safety
@@ -223,20 +225,23 @@ export function BoardPane({
       }
     >
       {isLoaded && (
-        <Excalidraw
-          excalidrawAPI={handleApi as unknown as (api: unknown) => void}
-          initialData={initialData as ExcalidrawInitialDataState | undefined}
-          onChange={
-            handleChange as unknown as (
-              elements: unknown,
-              appState: unknown,
-              files: unknown
-            ) => void
-          }
-          theme={activeTheme}
-          langCode={langCode}
-          UIOptions={UI_OPTIONS}
-        />
+        <>
+          <Excalidraw
+            excalidrawAPI={handleApi as unknown as (api: unknown) => void}
+            initialData={initialData as ExcalidrawInitialDataState | undefined}
+            onChange={
+              handleChange as unknown as (
+                elements: unknown,
+                appState: unknown,
+                files: unknown
+              ) => void
+            }
+            theme={activeTheme}
+            langCode={langCode}
+            UIOptions={UI_OPTIONS}
+          />
+          <TemplatesPanel getApi={getApi} />
+        </>
       )}
     </div>
   );

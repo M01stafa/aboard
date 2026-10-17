@@ -30,7 +30,7 @@ vi.mock("@excalidraw/excalidraw", () => ({
     if (typeof props.excalidrawAPI === "function") {
       props.excalidrawAPI({
         refresh: vi.fn(),
-        getAppState: vi.fn(() => ({})),
+        getAppState: vi.fn(() => ({ scrollX: 0, scrollY: 0, zoom: { value: 1 }, width: 800, height: 600 })),
         getSceneElements: vi.fn(() => []),
         updateScene: vi.fn(),
         addFiles: vi.fn(),
@@ -42,4 +42,49 @@ vi.mock("@excalidraw/excalidraw", () => ({
       className: "excalidraw",
     });
   }),
+  convertToExcalidrawElements: vi.fn(
+    (
+      skeletons: Array<Record<string, unknown>> | null,
+      opts?: { regenerateIds?: boolean }
+    ) => {
+      if (!skeletons) return [];
+      let counter = 0;
+      return skeletons.map((s) => {
+        counter++;
+        const id =
+          opts?.regenerateIds !== false
+            ? `mock-el-${counter}-${Math.random().toString(36).slice(2, 7)}`
+            : ((s.id as string) || `mock-el-${counter}`);
+        return {
+          type: s.type || "rectangle",
+          x: s.x ?? 0,
+          y: s.y ?? 0,
+          width: s.width ?? 100,
+          height: s.height ?? 50,
+          angle: 0,
+          strokeColor: s.strokeColor ?? "#1e1e1e",
+          backgroundColor: s.backgroundColor ?? "transparent",
+          fillStyle: s.fillStyle ?? "solid",
+          strokeWidth: s.strokeWidth ?? 1,
+          strokeStyle: s.strokeStyle ?? "solid",
+          roundness: s.roundness ?? null,
+          roughness: s.roughness ?? 1,
+          opacity: s.opacity ?? 100,
+          groupIds: s.groupIds ?? [],
+          frameId: null,
+          index: `a${counter}`,
+          version: 1,
+          versionNonce: 1,
+          isDeleted: false,
+          boundElements: null,
+          updated: Date.now(),
+          link: null,
+          locked: s.locked ?? false,
+          customData: s.customData,
+          ...s,
+          id,
+        };
+      });
+    }
+  ),
 }));

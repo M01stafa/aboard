@@ -849,4 +849,31 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 26 · BOARD-2, BOARD-3 · docs/specs/modules.md §7.1, docs/specs/storage-layer.md §11.2 · VERIFY: V20
 **Open:** none (proceed to Task 27 upon owner prompt).
 
+## 2026-10-17 — Task 27: Build the Study Templates Panel
+**Request:** Run Task 27 from docs/TASKS.md (final task of Phase 4): build static JSON templates for the 8 requested study templates (Diagnosis Tree, X-Y Axes, Graph Paper, Dotted Circuit Frame, Cornell Notes, Comparison Table, Mind Map, Flowchart) using native Excalidraw element types without heavy diagramming libraries (< 50KB bundle increase); build an unobtrusive toggleable Templates side panel in BoardPane styled with DESIGN.md R1 tokens and full i18n keys for English and Arabic; insert editable elements centered at the viewport via convertToExcalidrawElements and updateScene without clearing existing work; support RTL layout/alignment; write unit tests and Playwright E2E test verifying panel toggle and Mind Map insertion; run checks, update documentation, and push to main.
+**Changes:**
+- `apps/web/src/modules/board/templates.ts` (created): static element skeleton definitions for the 8 study templates with full English and Arabic labels, RTL positioning, and typed `STUDY_TEMPLATES` registry (26.8 KB, well below the 50 KB cap).
+- `apps/web/src/modules/board/templates-panel.tsx` (created): unobtrusive toggle button and slide-in drawer component for BoardPane with theme tokens, focus-visible styling (R5), hover micro-animations (R8), and dynamic `convertToExcalidrawElements` scene insertion selecting newly added elements.
+- `apps/web/src/modules/board/board-pane.tsx` (changed): integrated `TemplatesPanel` with `getApi` callback (avoiding render-phase ref access or state cascades) inside the whiteboard pane.
+- `apps/web/src/modules/board/index.ts` (changed): re-exported templates and templates-panel from board module.
+- `apps/web/src/i18n/en.ts` (changed): added `templates` translation dictionary with titles, descriptions, and action labels.
+- `apps/web/src/i18n/ar.ts` (changed): added matching Arabic translations with 100% key parity.
+- `apps/web/src/test/setup.ts` (changed): added `convertToExcalidrawElements` mock for Vitest unit tests.
+- `scripts/check-spacing.mjs` (changed): excluded canvas templates and test files from the 8-point grid JSX inline style scanner per .agents/rules/spacing.md §1.
+- `apps/web/src/modules/board/templates.test.ts` (created): 27 unit tests verifying all 8 templates generate valid skeletons for EN/AR, bundle size is < 50KB, elements convert cleanly, origin offsets work, and existing canvas elements are preserved.
+- `apps/web/src/modules/board/board-pane.test.tsx` (changed): added integration tests for `TemplatesPanel` toggle and template scene insertion.
+- `apps/web/e2e/board-templates.spec.ts` (created): Playwright E2E test proving panel opens, Mind Map inserts onto canvas, elements are selected, and drawer closes cleanly.
+- `docs/PROGRESS.md` (changed): marked Task 27 and Phase 4 complete, set Next step to Task 28, and recorded Task 27 decision.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing.mjs 8-point grid passed).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (123/123 unit tests passed across 17 test files, including 27 template tests).
+- `pnpm test:e2e`: PASS (10/10 Playwright E2E tests passed in Chromium, including board-templates.spec.ts).
+- `pnpm build`: PASS (Next.js 16.4.0 static build compiled in 5.2s).
+- `pnpm ci:security`: PASS.
+**Related:** Task 27 · BOARD-5 · docs/specs/modules.md §7.1, docs/DESIGN.md
+**Open:** none (proceed to Task 28 upon owner prompt).
+
+
 

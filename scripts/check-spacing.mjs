@@ -14,6 +14,9 @@ const scanDirs = [
 
 const ignoredFiles = new Set([
   path.normalize(path.join(rootDir, "apps/web/src/theme/tokens.css")),
+  // Exclude whiteboard canvas drawing templates per .agents/rules/spacing.md §1
+  path.normalize(path.join(rootDir, "apps/web/src/modules/board/templates.ts")),
+  path.normalize(path.join(rootDir, "apps/web/src/test/setup.ts")),
 ]);
 
 function getFiles(dir) {
@@ -27,7 +30,7 @@ function getFiles(dir) {
       if (file !== "node_modules" && file !== ".next" && file !== "fonts") {
         results = results.concat(getFiles(fullPath));
       }
-    } else if (/\.(css|tsx?)$/.test(file)) {
+    } else if (/\.(css|tsx)$/.test(file) && !file.includes(".test.") && !file.includes(".spec.")) {
       if (!ignoredFiles.has(path.normalize(fullPath))) {
         results.push(fullPath);
       }
@@ -148,7 +151,7 @@ for (const dir of scanDirs) {
             }
           }
         }
-      } else {
+      } else if (file.endsWith(".tsx")) {
         // Check JSX inline style objects: prop: "value" or prop: value
         const jsxMatch = trimmed.match(/\b([a-zA-Z]+)\s*:\s*["']?([^,"';}]+)["']?[,]?/);
         if (jsxMatch) {

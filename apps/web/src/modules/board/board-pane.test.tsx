@@ -26,6 +26,51 @@ vi.mock("@excalidraw/excalidraw", () => ({
       className: "excalidraw",
     });
   }),
+  convertToExcalidrawElements: vi.fn(
+    (
+      skeletons: Array<Record<string, unknown>> | null,
+      opts?: { regenerateIds?: boolean }
+    ) => {
+      if (!skeletons) return [];
+      let counter = 0;
+      return skeletons.map((s) => {
+        counter++;
+        const id =
+          opts?.regenerateIds !== false
+            ? `mock-el-${counter}-${Math.random().toString(36).slice(2, 7)}`
+            : ((s.id as string) || `mock-el-${counter}`);
+        return {
+          type: s.type || "rectangle",
+          x: s.x ?? 0,
+          y: s.y ?? 0,
+          width: s.width ?? 100,
+          height: s.height ?? 50,
+          angle: 0,
+          strokeColor: s.strokeColor ?? "#1e1e1e",
+          backgroundColor: s.backgroundColor ?? "transparent",
+          fillStyle: s.fillStyle ?? "solid",
+          strokeWidth: s.strokeWidth ?? 1,
+          strokeStyle: s.strokeStyle ?? "solid",
+          roundness: s.roundness ?? null,
+          roughness: s.roughness ?? 1,
+          opacity: s.opacity ?? 100,
+          groupIds: s.groupIds ?? [],
+          frameId: null,
+          index: `a${counter}`,
+          version: 1,
+          versionNonce: 1,
+          isDeleted: false,
+          boundElements: null,
+          updated: Date.now(),
+          link: null,
+          locked: s.locked ?? false,
+          customData: s.customData,
+          ...s,
+          id,
+        };
+      });
+    }
+  ),
 }));
 
 describe("BoardPane Component (Task 25 / BOARD-1, BOARD-2, BOARD-4)", () => {
@@ -334,5 +379,128 @@ describe("BoardPane Component (Task 25 / BOARD-1, BOARD-2, BOARD-4)", () => {
       "pane-file-1": "sha256-pane-img-hash",
     });
     expect(payload.includes("data:image/png;base64")).toBe(false);
+  });
+
+  it("renders templates toggle button and opens templates drawer on click (Task 27 / BOARD-5)", async () => {
+    const tab = {
+      id: "tab-board-templates-1",
+      itemId: "item-board-templates-1",
+      kind: "board" as const,
+      title: "Board with Templates",
+    };
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <BoardPane projectId="proj-tpl-1" tab={tab} visible={true} />
+        </I18nProvider>
+      );
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const toggleBtn = container.querySelector(
+      '[data-testid="templates-panel-toggle"]'
+    ) as HTMLButtonElement | null;
+    expect(toggleBtn).toBeTruthy();
+    expect(toggleBtn?.getAttribute("aria-expanded")).toBe("false");
+
+    // Click toggle to open drawer
+    await act(async () => {
+      toggleBtn?.click();
+    });
+
+    const drawer = container.querySelector(
+      '[data-testid="aboard-templates-drawer"]'
+    );
+    expect(drawer).toBeTruthy();
+    expect(toggleBtn?.getAttribute("aria-expanded")).toBe("true");
+
+    // Check all 8 template cards are rendered
+    const cards = container.querySelectorAll('[data-testid^="template-card-"]');
+    expect(cards).toHaveLength(8);
+
+    // Click close button
+    const closeBtn = container.querySelector(
+      '[data-testid="templates-panel-close"]'
+    ) as HTMLButtonElement | null;
+    expect(closeBtn).toBeTruthy();
+
+    await act(async () => {
+      closeBtn?.click();
+    });
+
+    expect(
+      container.querySelector('[data-testid="aboard-templates-drawer"]')
+    ).toBeNull();
+  });
+
+  it("clicking insert on a template calls updateScene with converted elements and selects them without clearing canvas (Task 27 / BOARD-5)", async () => {
+    const tab = {
+      id: "tab-board-templates-2",
+      itemId: "item-board-templates-2",
+      kind: "board" as const,
+      title: "Board Insert Test",
+    };
+
+    const initialElement = {
+      id: "pre-existing-shape",
+      type: "rectangle",
+      x: 50,
+      y: 50,
+    };
+    mockExcalidrawApi.getSceneElements = vi.fn(() => [initialElement as never]);
+    mockExcalidrawApi.getAppState = vi.fn(() => ({
+      scrollX: 100,
+      scrollY: 100,
+      zoom: { value: 1 },
+      width: 1000,
+      height: 800,
+    } as never));
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <BoardPane projectId="proj-tpl-2" tab={tab} visible={true} />
+        </I18nProvider>
+      );
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const toggleBtn = container.querySelector(
+      '[data-testid="templates-panel-toggle"]'
+    ) as HTMLButtonElement | null;
+    await act(async () => {
+      toggleBtn?.click();
+    });
+
+    const mindMapInsertBtn = container.querySelector(
+      '[data-testid="template-insert-mind-map"]'
+    ) as HTMLButtonElement | null;
+    expect(mindMapInsertBtn).toBeTruthy();
+
+    await act(async () => {
+      mindMapInsertBtn?.click();
+      await Promise.resolve();
+    });
+
+    expect(mockExcalidrawApi.updateScene).toHaveBeenCalledTimes(1);
+    const updateCall = (mockExcalidrawApi.updateScene as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0];
+
+    // Proves pre-existing elements are preserved
+    expect(updateCall.elements[0].id).toBe("pre-existing-shape");
+    expect(updateCall.elements.length).toBeGreaterThan(1);
+
+    // Proves inserted elements are selected in appState
+    expect(updateCall.appState.selectedElementIds).toBeDefined();
+    const insertedIds = updateCall.elements.slice(1).map((e: { id: string }) => e.id);
+    for (const id of insertedIds) {
+      expect(updateCall.appState.selectedElementIds[id]).toBe(true);
+    }
   });
 });
