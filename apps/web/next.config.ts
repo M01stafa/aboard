@@ -58,7 +58,7 @@ const circuitCsp = [
   "font-src 'self' data:",
   "connect-src 'self'",
   "frame-src 'self' javascript:",
-  "worker-src 'self' blob:",
+  "worker-src 'none'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

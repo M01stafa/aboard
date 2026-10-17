@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 2 — Storage Core and Local Mode |
-| Current task | Task 22 — Sync the Project Index and Build the Recent Projects List (completed) |
-| Last updated | 2026-10-16 |
-| Next step | Task 23 — Spike Fork: CircuitJS Custom Toolbar & Headless Host |
+| Active phase | 3 — Circuit Module |
+| Current task | Task 23 — Apply the Fork Patches and Automate the Circuit Build (completed) |
+| Last updated | 2026-10-17 |
+| Next step | Task 24 — Build the Circuit Adapter and the Circuit Pane |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -27,7 +27,7 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | **0. Spikes** | Done (2026-10-13) | **S1** Excalidraw in Next.js (`dynamic` + `ssr:false`, CSS import, React Strict Mode double mount, self-hosted fonts, `refresh()`). **S2** Build the CircuitJS fork with Gradle 8.7, `/circuit/`, API attach, export/import, SVG, served from `public/circuit/` inside the Next.js app and attached correctly after a Strict Mode double mount. **S3** EmbedPDF: 50 MB PDF, highlights, `exportAnnotations`/`importAnnotations` round-trip including a stamp. **S4** Google: test-mode OAuth client, `drive-connect`/`callback`/`token` deployed, create folder + multipart + **resumable 100 MB upload from the browser** (Location/Range headers readable), Picker opens; no Google token left in browser storage after sign-in (§10.1). **S5** `.alpha`: export/import 500 MB on Chrome (stream) and 200 MB on iPhone; check file name keeps `.alpha`. | Written spike report (`docs/spikes/S<n>.md`) with versions and open issues |
 | **1. Foundation** | Done (2026-10-14) | Next.js app, routes, theme, RTL/i18n, Supabase Auth (email + Google), migration 0001, workspace host with placeholder panes, **hardened migration + pgTAP RLS suite + CI guards (gitleaks, bundle grep) (§9, §14.3, §14.9)** | Mount counter stays 1 during tab/split changes; RLS test: user A cannot read B's `projects`; client cannot read `google_drive_links` |
 | **2. Storage core + local mode** | In progress | Dexie schema, `LocalProvider`, `ProjectService`, SaveQueue, save status, silent persistence, project index sync | Create project → reload → data intact; no prompt appears in Chrome/Safari/Firefox |
-| **3. Circuit module** | Not started | Fork patches 1–4, build script, adapter, saving via ProjectService | Circuit survives reload; no extra service worker registered |
+| **3. Circuit module** | In progress | Fork patches a–e, build script, adapter, saving via ProjectService | Circuit survives reload; no extra service worker registered |
 | **4. Board module** | Not started | Excalidraw pane, files via `putFile`, templates panel | Board with images survives reload |
 | **5. PDF module** | Not started | Viewer, annotations JSON, page operations, annotated download | Annotations survive reload; annotated download opens with highlights in another viewer |
 | **6. `.alpha` export/import** | Not started | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
@@ -113,6 +113,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-15 | Task 21: Built framework-agnostic SaveQueue with 500 ms debounce, per-item coalescing, dirty→clean local transition, structured Drive cadence (3s/30s), flush hooks, beforeunload gating (never prompts in local mode), silent persistence via navigator.storage.persist() skipping Firefox per STORE-9, top bar SaveStatusIndicator with 5 states (WS-3) via theme tokens/i18n, and Playwright test proving STORE-1 |
 | 2026-10-16 | Task 22: Connected launcher to Supabase project index with touch_updated_at trigger handling updatedAt; storage badges mapped to theme tokens (--badge-tech for Drive, --badge-primary for this device, --badge-bronze for another device); rename & delete implemented (local path deletes Dexie + Supabase row, Drive delete stubbed with notice); Playwright E2E test verified create/reload/rename/delete lifecycle |
 | 2026-10-16 | Owner decision: keep the repository public and keep the same Google API key. The historical commit that contains the key is accepted; the key will be hidden from the current tree only. Rotation deferred. |
+| 2026-10-17 | Task 23: Applied Aboard fork patches a–e in M01stafa/circuitjs1 (commit 53c63bf4) and documented in PATCHES.md; built cross-platform automation scripts/build-circuit.mjs; verified apps/web/public/circuit/ without WEB-INF or service worker; finalized /circuit/:path* CSP with worker-src 'none'. |
 
 ## Lessons and corrections
 

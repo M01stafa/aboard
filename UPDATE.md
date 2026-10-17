@@ -725,3 +725,37 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** SEC-5, SEC-10 · docs/specs/security.md §14.2
 **Open:** none (proceed to Task 23 upon owner prompt).
 
+## 2026-10-17 — Task 23: Apply CircuitJS1 Fork Patches and Automate the Circuit Build
+**Request:** Run Task 23 from docs/TASKS.md: apply 5 fork patches inside vendor/circuitjs1 submodule (remove service worker registration & manifest link from war/circuitjs.html; disable Dropbox, Google Drive, and short-URL features; add runCommand and getCircuitAsPNG to JSInterface; add Arabic locale file; adjust colors and fonts in war/circuitjs.css without hardcoding theme colors), document in vendor/circuitjs1/PATCHES.md, commit and push inside submodule to M01stafa/circuitjs1, update parent submodule pointer, build cross-platform automation scripts/build-circuit.mjs deploying output into apps/web/public/circuit/ excluding WEB-INF and service workers, finalize /circuit/:path* CSP with worker-src 'none', run checks, update docs/PROGRESS.md, push to main and watch CI.
+**Changes:**
+- `vendor/circuitjs1/war/circuitjs.html` (changed): removed `<link rel="manifest">` and `serviceWorker.register` script block; linked `circuitjs.css`.
+- `vendor/circuitjs1/src/com/lushprojects/circuitjs1/client/Menus.java` (changed): disabled Dropbox menu item (`importFromDropboxItem`).
+- `vendor/circuitjs1/src/com/lushprojects/circuitjs1/client/CommandManager.java` (changed): disabled `importfromdropbox` command action.
+- `vendor/circuitjs1/src/com/lushprojects/circuitjs1/client/CirSim.java` (changed): disabled Dropbox link loading on `startCircuitLink`.
+- `vendor/circuitjs1/src/com/lushprojects/circuitjs1/client/circuitjs1.java` (changed): disabled `shortRelaySupported` (set to `false`).
+- `vendor/circuitjs1/src/com/lushprojects/circuitjs1/client/ExportAsUrlDialog.java` (changed): forced `shortIsSupported()` to return `false`.
+- `vendor/circuitjs1/src/com/lushprojects/circuitjs1/client/JSInterface.java` (changed): added `runCommand(menu, item)` calling `app.commands.menuPerformed` and `getCircuitAsPNG()` calling `app.imageExporter.getCircuitAsCanvas(CAC_IMAGE).toDataUrl()`, and exposed on `window.CircuitJS1`.
+- `vendor/circuitjs1/src/com/lushprojects/circuitjs1/public/locale_ar.txt` (created): added 1,549 Arabic translation keys covering all CircuitJS1 UI components, menus, and scopes.
+- `vendor/circuitjs1/war/circuitjs.css` (created): added clean system typography and neutral chrome styles aligning with DESIGN.md without hardcoding theme hex colors.
+- `vendor/circuitjs1/build.gradle` (changed): replaced shell `ls` invocation in `makeSite` with native Groovy file listing for cross-platform execution.
+- `vendor/circuitjs1/PATCHES.md` (created): documented patches a–e and build fix with files touched and rationale.
+- `scripts/build-circuit.mjs` (created): Node.js cross-platform build automation script compiling GWT via Gradle 8.7 and deploying to `apps/web/public/circuit/` with idempotent cleaning, excluding `WEB-INF/` and service worker files.
+- `scripts/build-circuit.sh` (created): POSIX shell wrapper for `build-circuit.mjs`.
+- `apps/web/next.config.ts` (changed): finalized isolated `/circuit/:path*` CSP with `worker-src 'none'`.
+- `apps/web/eslint.config.mjs` (changed): added global ignores for `public/**` and `.next/**` preventing ESLint from scanning compiled GWT JavaScript bundles.
+- `apps/web/public/circuit/` (created): compiled CircuitJS1 application assets ready for Next.js serving without WEB-INF or service workers.
+- `docs/PROGRESS.md` (changed): transitioned active phase to Phase 3: Circuit Module (In progress), marked Task 23 complete (next step: Task 24), and logged Task 23 decisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `gradle compileGwt`: PASS (compiled 5 GWT permutations and linked into `build/gwt/out/circuitjs1` in 48s).
+- `gradle makeSite`: PASS (assembled static and GWT assets into `site/` in 7s).
+- `node scripts/build-circuit.mjs`: PASS (idempotent clean, copy to `apps/web/public/circuit/`, WEB-INF excluded, service workers absent).
+- Submodule push to `https://github.com/M01stafa/circuitjs1.git`: PASS (commit `53c63bf4` verified on GitHub via `gh api`).
+- `pnpm lint`: PASS (0 errors, 0 warnings; spacing check passed).
+- `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- `pnpm test`: PASS (62/62 tests across 11 test files).
+- `pnpm test:e2e`: PASS (6/6 Playwright tests passed in Chromium).
+- `pnpm ci:security`: PASS (Gitleaks, production dependency audit, and .next bundle secret scan).
+**Related:** Task 23 · CIRC-1, CIRC-3, CIRC-6, CIRC-7, SEC-6 · docs/specs/modules.md §7.2, docs/specs/security.md §14.6
+**Open:** none (proceed to Task 24 upon owner prompt).
+

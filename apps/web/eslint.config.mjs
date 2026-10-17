@@ -3,6 +3,9 @@ import reactPlugin from "eslint-plugin-react";
 import noUnsanitizedPlugin from "eslint-plugin-no-unsanitized";
 
 const config = [
+  {
+    ignores: ["public/**", ".next/**"],
+  },
   ...nextConfig,
   {
     plugins: {
