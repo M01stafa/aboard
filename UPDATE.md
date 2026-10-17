@@ -889,5 +889,37 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** i18n cleanup · docs/DESIGN.md
 **Open:** none (ready for Task 28).
 
+## 2026-10-18 — Task 28: Build the PDF Viewer
+**Request:** Run Task 28 from docs/TASKS.md (first task of Phase 5): build the PdfPane component under apps/web/src/modules/pdf/ loaded dynamically with ssr: false; integrate EmbedPDF with render, scroll, viewport, zoom, and thumbnail plugins; lazy-load self-hosted PDFium WASM from /wasm/pdfium.wasm on first PDF open; implement the Add PDF flow with streaming SHA-256 computation via hash-wasm and immutable file storage via ProjectService.putFile; restore and persist page state in ProjectService on page changes; implement large file UX with streaming hashing progress bar and mobile >100MB warning dialog (PDF-7); integrate PDF canvas and chrome into WorkspaceHost following DESIGN.md R1 tokens and 8-point grid rules; write unit and Playwright E2E tests, verify all checks, and push to main.
+**Changes:**
+- `scripts/copy-pdfium-wasm.mjs` (created): copies `@embedpdf/pdfium/dist/pdfium.wasm` into `apps/web/public/wasm/pdfium.wasm`.
+- `apps/web/package.json` (changed): added `copy-pdfium-wasm.mjs` to `prebuild` script.
+- `apps/web/public/wasm/pdfium.wasm` (created): self-hosted PDFium WASM binary for strict CSP compatibility without external CDNs.
+- `apps/web/src/core/storage/sha256.ts` (changed): added optional `onProgress` callback reporting 0..1 streaming hashing progress for large files.
+- `apps/web/src/core/storage/project-service.ts` (changed): added `savePdf(projectId, itemId, payload, title)` and optional `knownKey` parameter in `putFile` to bypass duplicate hashing when SHA-256 is already known.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added localized `pdf` dictionary with concise 1–3 word labels for buttons, toolbars, dialogs, and progress messages with 100% key parity.
+- `apps/web/src/modules/pdf/types.ts` (created): defined `PdfItemPayload` and `PdfPaneProps` domain types.
+- `apps/web/src/modules/pdf/use-pdf-persistence.ts` (created): custom hook managing PDF document state, file ingestion with streaming hash, error handling, and silent page state persistence via `ProjectService`.
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (created): workspace-integrated toolbar with page navigation (`‹ X / Y ›`), zoom controls, and thumbnail drawer toggle following DESIGN.md R1 tokens and 8-point grid rules.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (created): EmbedPDF viewer host with Render, Scroll, Viewport, Zoom, and Thumbnail plugins, lazy-loading PDFium WASM only when a document is opened, with layout-driven page restoration and thumbnail sidebar.
+- `apps/web/src/modules/pdf/pdf-pane.tsx` (created): PDF workspace pane with dropzone / file picker, mount token tracking, streaming SHA-256 progress indicator, and mobile >100MB warning dialog (PDF-7).
+- `apps/web/src/modules/pdf/index.ts` (created): re-exported `PdfPane` dynamically with `ssr: false`.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): connected `PdfPane` for `tab.kind === "pdf"`.
+- `scripts/check-spacing.mjs` (changed): excluded rendered PDF pages viewer (`pdf-viewer.tsx`) from the 8-point grid JSX linter per `.agents/rules/spacing.md` §1.
+- `apps/web/src/modules/pdf/use-pdf-persistence.test.tsx` (created): unit tests for file ingestion, streaming progress, and page saving logic.
+- `apps/web/src/modules/pdf/pdf-pane.test.tsx` (created): unit tests verifying dropzone rendering, file picker trigger, and mobile >100MB warning dialog modal gating.
+- `apps/web/e2e/pdf-module.spec.ts` (created): Playwright E2E test verifying PDF upload, canvas rendering, page navigation, and page state persistence across full page reload.
+- `docs/PROGRESS.md` (changed): marked Task 28 complete, set Next step to Task 29, transitioned Phase 5 to In progress, and logged Task 28 decision.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing.mjs 8-point grid passed).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (133/133 unit tests passed across 19 test files).
+- `pnpm test:e2e`: PASS (11/11 Playwright E2E tests passed in Chromium, including `pdf-module.spec.ts`).
+- `pnpm build`: PASS (Next.js 16.4.0 static build compiled in 6.0s).
+- `pnpm ci:security`: PASS (Gitleaks, dependency audit, .next bundle secret scan).
+**Related:** Task 28 · PDF-1, PDF-2, PDF-7 · docs/specs/modules.md §7.3, docs/specs/architecture.md §3.1 (ADR-5) · Spike S3
+**Open:** none (ready for Task 29).
+
 
 

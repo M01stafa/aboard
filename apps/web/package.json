@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node ../../scripts/copy-excalidraw-fonts.mjs",
+    "prebuild": "node ../../scripts/copy-excalidraw-fonts.mjs && node ../../scripts/copy-pdfium-wasm.mjs",
     "build": "next build",
     "lint": "eslint . && node ../../scripts/check-spacing.mjs",
     "typecheck": "tsc --noEmit",

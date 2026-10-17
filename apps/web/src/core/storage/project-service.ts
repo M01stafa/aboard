@@ -199,6 +199,30 @@ export class ProjectService {
   }
 
   /**
+   * Saves a PDF item state (JSON descriptor with fileKey, lastPage, etc.).
+   * Routes through SaveQueue for ~500 ms debouncing and coalescing when queue is attached.
+   */
+  async savePdf(
+    projectId: string,
+    itemId: string,
+    payload: string,
+    title?: string
+  ): Promise<void> {
+    const item: ItemRecord = {
+      id: itemId,
+      projectId,
+      kind: "pdf",
+      title: title ?? "PDF Document",
+      updatedAt: Date.now(),
+    };
+    if (this.saveQueue) {
+      this.saveQueue.enqueue(projectId, item, payload);
+    } else {
+      await this.provider.writeItem(projectId, item, payload);
+    }
+  }
+
+  /**
    * Stores large binary files content-addressed by their streaming SHA-256 hash.
    * If the file is already stored for this project, writing is skipped (deduplicated).
    * Notifies SaveQueue upon completion.
@@ -206,9 +230,10 @@ export class ProjectService {
   async putFile(
     projectId: string,
     blob: Blob,
-    meta: { name?: string; mime: string }
+    meta: { name?: string; mime: string },
+    knownKey?: string
   ): Promise<{ key: string }> {
-    const key = await computeBlobSha256(blob);
+    const key = knownKey ?? (await computeBlobSha256(blob));
     const exists = await this.provider.hasFile(projectId, key);
     if (!exists) {
       await this.provider.writeFile(projectId, key, blob, meta);

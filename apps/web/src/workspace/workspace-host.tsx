@@ -8,6 +8,7 @@ import { IframePlaceholder, StaticPlaceholder } from "./placeholders";
 import { SaveStatusIndicator } from "./save-status";
 import { CircuitPane } from "@/modules/circuit";
 import { BoardPane } from "@/modules/board";
+import { PdfPane } from "@/modules/pdf";
 
 /*
  * Tab Bar & Divider Keyboard Interaction Map
@@ -822,6 +823,13 @@ export function WorkspaceHost({
                 />
               ) : tab.kind === "board" ? (
                 <BoardPane
+                  projectId={projectId || "demo"}
+                  tab={tab}
+                  visible={slot !== "hidden"}
+                  onMount={onPaneMount}
+                />
+              ) : tab.kind === "pdf" ? (
+                <PdfPane
                   projectId={projectId || "demo"}
                   tab={tab}
                   visible={slot !== "hidden"}
