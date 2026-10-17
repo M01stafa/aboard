@@ -906,6 +906,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `apps/web/src/modules/pdf/index.ts` (created): re-exported `PdfPane` dynamically with `ssr: false`.
 - `apps/web/src/workspace/workspace-host.tsx` (changed): connected `PdfPane` for `tab.kind === "pdf"`.
 - `scripts/check-spacing.mjs` (changed): excluded rendered PDF pages viewer (`pdf-viewer.tsx`) from the 8-point grid JSX linter per `.agents/rules/spacing.md` §1.
+- `scripts/ci-security.mjs` (changed): refined bundle leak scanner to distinguish actual PEM private key blocks from harmless open-source formatter template string literals (`["-----BEGIN "+`) in Next.js compiled crypto-browserify.
 - `apps/web/src/modules/pdf/use-pdf-persistence.test.tsx` (created): unit tests for file ingestion, streaming progress, and page saving logic.
 - `apps/web/src/modules/pdf/pdf-pane.test.tsx` (created): unit tests verifying dropzone rendering, file picker trigger, and mobile >100MB warning dialog modal gating.
 - `apps/web/e2e/pdf-module.spec.ts` (created): Playwright E2E test verifying PDF upload, canvas rendering, page navigation, and page state persistence across full page reload.

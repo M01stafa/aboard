@@ -81,6 +81,15 @@ function scanBuildOutput(dir) {
       const content = fs.readFileSync(fullPath, "utf8");
       for (const pattern of forbiddenStrings) {
         if (content.includes(pattern)) {
+          // If matching "-----BEGIN", verify it is an actual PEM secret block,
+          // not the harmless string formatter ["-----BEGIN "+label+"-----"] inside crypto-browserify
+          if (pattern === "-----BEGIN") {
+            const hasActualPemKey = /-----BEGIN [A-Z0-9 _-]+-----\s*[A-Za-z0-9+/=]{10,}/.test(content);
+            const isJustFormatterTemplate = content.includes('["-----BEGIN "+') && !hasActualPemKey;
+            if (isJustFormatterTemplate) {
+              continue;
+            }
+          }
           hits.push({
             file: path.relative(nextDir, fullPath),
             pattern,
