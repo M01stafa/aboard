@@ -21,6 +21,7 @@
     "@embedpdf/plugin-annotation": "2.15.1",
     "@embedpdf/plugin-export": "2.15.1",
     "@embedpdf/plugin-history": "2.15.1",
+    "@embedpdf/plugin-interaction-manager": "2.15.1",
     "@embedpdf/plugin-render": "2.15.1",
     "@embedpdf/plugin-scroll": "2.15.1",
     "@embedpdf/plugin-search": "2.15.1",

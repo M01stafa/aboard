@@ -209,6 +209,13 @@ export const en = {
     continueLoading: "Continue",
     cancel: "Cancel",
     loadError: "Failed to open PDF.",
+    toolSelect: "Select",
+    toolHighlight: "Highlight",
+    toolInk: "Draw",
+    toolText: "Text",
+    toolStamp: "Stamp",
+    undo: "Undo",
+    redo: "Redo",
   },
   legal: {
     privacyTitle: "Privacy Policy",

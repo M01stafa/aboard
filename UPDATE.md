@@ -919,8 +919,26 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (11/11 Playwright E2E tests passed in Chromium, including `pdf-module.spec.ts`).
 - `pnpm build`: PASS (Next.js 16.4.0 static build compiled in 6.0s).
 - `pnpm ci:security`: PASS (Gitleaks, dependency audit, .next bundle secret scan).
-**Related:** Task 28 · PDF-1, PDF-2, PDF-7 · docs/specs/modules.md §7.3, docs/specs/architecture.md §3.1 (ADR-5) · Spike S3
-**Open:** none (ready for Task 29).
-
-
-
+## 2026-10-18 — Task 29: Store Annotations Separately From the PDF
+**Request:** Run Task 29 from docs/TASKS.md: enable annotation tools (highlight, freehand ink, free text, stamp, undo/redo) in PdfPane / PdfViewer; listen to onAnnotationEvent from Spike S3; export annotations via exportAnnotations(); offload stamp images as content-addressed SHA-256 blobs via ProjectService.putFile replacing binary data with lightweight references ({ fileId: hash, fileKey: hash }) and guaranteeing zero base64 in annotations JSON; save clean JSON via ProjectService.saveAnnotations(pdfHash, json) debounced through SaveQueue; restore annotations on PDF load via ProjectService.getFile(hash) and importAnnotations(); support undo/redo triggering debounced save; write unit tests and Playwright E2E test; verify all checks, commit and push to main, and report GitHub Actions CI run conclusion.
+**Changes:**
+- `apps/web/package.json` & `pnpm-lock.yaml` (changed): linked `@embedpdf/plugin-interaction-manager@2.15.1` (peer dependency in pinned 2.15.x EmbedPDF family) required by AnnotationPlugin and SelectionPlugin.
+- `apps/web/src/core/storage/project-service.ts` (changed): added overloads for `saveAnnotations`, `readAnnotations`, `putFile`, and `getFile` supporting activeProjectId resolution, content-addressed file indexing, and SaveQueue integration.
+- `apps/web/src/modules/pdf/annotation-storage.ts` (created): implemented `serializeAnnotations` (extracts stamp binary `ctx.data`, hashes with SHA-256, stores via `putFile`, purges base64/buffers) and `deserializeAnnotations` (fetches stamp blobs via `getFile`, reconstructs `ArrayBuffer`, preserves pageIndex and segmentRects).
+- `apps/web/src/modules/pdf/annotation-storage.test.ts` (created): unit tests verifying serialization, stamp SHA-256 binary extraction, putFile call, zero base64 in JSON, and full deserialization round-trip.
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): added Select, Highlight, Ink, Text, Stamp (with hidden `data-testid="pdf-stamp-input"`), Undo, Redo, and Zoom controls following DESIGN.md tokens, 8-point grid rules, and accessible focus styles.
+- `apps/web/src/modules/pdf/pdf-toolbar.test.tsx` (created): unit tests verifying tool switching, stamp input activation, and undo/redo disabled/enabled states.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added localized `toolSelect`, `toolHighlight`, `toolInk`, `toolText`, `toolStamp`, `undo`, `redo` keys with 100% key parity.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts` (created): custom hook managing active tool state, undo/redo history capabilities, stamp image reading, initial restoration via `importAnnotations`, and debounced saving via `SaveQueue` upon `onAnnotationEvent` and `onHistoryChange`.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): registered `InteractionManagerPluginPackage`, `SelectionPluginPackage`, `AnnotationPluginPackage`, `HistoryPluginPackage`, added `AnnotationLayer`, and wired up annotation toolbar controls and state.
+- `apps/web/src/modules/pdf/pdf-pane.tsx` (changed): propagated `projectId` and `pdfHash` props to `PdfViewer`.
+- `apps/web/e2e/pdf-annotations.spec.ts` (created): Playwright E2E test verifying highlight creation, stamp creation via file input, separate storage verification in ProjectService, zero base64 in stored JSON, stamp SHA-256 reference verification, undo/redo buttons triggering debounced save, and full annotation restoration across page reload.
+- `docs/PROGRESS.md` (changed): marked Task 29 complete, set Next step to Task 30, and logged Task 29 decision.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing.mjs 8-point grid passed).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (140/140 unit tests passed across 21 test files).
+- `pnpm test:e2e`: PASS (12/12 Playwright E2E tests passed in Chromium, including `pdf-annotations.spec.ts` and `pdf-module.spec.ts`).
+**Related:** Task 29 · PDF-3, PDF-4 · docs/specs/modules.md §7.3 · Spike S3
+**Open:** none (ready for Task 30).

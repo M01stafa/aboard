@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 5 — PDF Module (In progress) |
-| Current task | Task 28 — Build the PDF Viewer (completed) |
+| Current task | Task 29 — Store Annotations Separately From the PDF (completed) |
 | Last updated | 2026-10-18 |
-| Next step | Task 29 — Build the PDF Annotation Layer |
+| Next step | Task 30 — Implement PDF Page Operations and Annotated Download |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -120,6 +120,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-17 | Task 26: Excalidraw auto-downscale confirmed (V20); client-side Canvas compression implemented for programmatic & >4MB images; content-addressed image blobs stored via ProjectService.putFile; board JSON stores only fileId -> SHA-256 key mapping without raw base64. |
 | 2026-10-17 | Task 27: Built Study Templates Panel (BOARD-5) with 8 static JSON templates in templates.ts (Diagnosis Tree, X-Y Axes, Graph Paper, Dotted Circuit Frame, Cornell Notes, Comparison Table, Mind Map, Flowchart); rendered unobtrusive toggleable drawer in BoardPane; inserted templates via convertToExcalidrawElements without overwriting existing canvas elements; RTL handled for Arabic |
 | 2026-10-18 | Task 28: Built PdfPane with EmbedPDF (Render, Scroll, Viewport, Zoom, Thumbnail plugins), lazy-loading self-hosted PDFium WASM from /wasm/pdfium.wasm on first open, streaming SHA-256 computation via hash-wasm, immutable blob storage via ProjectService.putFile, page restoration via scrollScope layout listener, and mobile >100MB warning dialog (PDF-1, PDF-2, PDF-7) |
+| 2026-10-18 | Task 29: PDF annotations (highlight, ink, free text, stamp) stored separately as lightweight JSON linked by PDF hash (PDF-3, PDF-4); stamp images extracted to SHA-256 binary blobs via ProjectService.putFile; zero base64 in annotation JSON; undo/redo capability integrated with SaveQueue debouncing. |
 
 ## Lessons and corrections
 

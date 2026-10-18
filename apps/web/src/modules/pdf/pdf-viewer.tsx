@@ -19,9 +19,15 @@ import { ZoomPluginPackage } from "@embedpdf/plugin-zoom";
 import { useZoom } from "@embedpdf/plugin-zoom/react";
 import { ThumbnailPluginPackage } from "@embedpdf/plugin-thumbnail";
 import { ThumbnailsPane, ThumbImg } from "@embedpdf/plugin-thumbnail/react";
+import { InteractionManagerPluginPackage } from "@embedpdf/plugin-interaction-manager";
+import { SelectionPluginPackage, SelectionLayer } from "@embedpdf/plugin-selection/react";
+import { AnnotationPluginPackage, AnnotationLayer } from "@embedpdf/plugin-annotation/react";
+import { HistoryPluginPackage } from "@embedpdf/plugin-history";
 import type { PdfDocumentObject } from "@embedpdf/models";
+import type { ProjectService } from "@/core/storage";
 import { useI18n } from "@/i18n/provider";
 import { PdfToolbar } from "./pdf-toolbar";
+import { usePdfAnnotations } from "./use-pdf-annotations";
 
 export interface PdfViewerProps {
   documentId: string;
@@ -29,6 +35,9 @@ export interface PdfViewerProps {
   documentTitle?: string;
   initialPage?: number;
   onPageChange: (page: number) => void;
+  projectId?: string;
+  pdfHash?: string;
+  projectServiceOverride?: ProjectService;
 }
 
 const plugins = [
@@ -37,6 +46,10 @@ const plugins = [
   { package: ViewportPluginPackage },
   { package: ZoomPluginPackage },
   { package: ThumbnailPluginPackage },
+  { package: InteractionManagerPluginPackage },
+  { package: SelectionPluginPackage },
+  { package: AnnotationPluginPackage },
+  { package: HistoryPluginPackage },
 ] as unknown as PluginBatchRegistrations;
 
 interface ViewerInnerProps {
@@ -44,6 +57,9 @@ interface ViewerInnerProps {
   documentTitle?: string;
   initialPage: number;
   onPageChange: (page: number) => void;
+  projectId?: string;
+  pdfHash?: string;
+  projectServiceOverride?: ProjectService;
 }
 
 function ViewerInner({
@@ -51,6 +67,9 @@ function ViewerInner({
   documentTitle,
   initialPage,
   onPageChange,
+  projectId,
+  pdfHash,
+  projectServiceOverride,
 }: ViewerInnerProps) {
   const { provides: scrollScope, state: scrollState } = useScroll(documentId);
   const { provides: zoomScope, state: zoomState } = useZoom(documentId);
@@ -58,6 +77,22 @@ function ViewerInner({
   const [displayPage, setDisplayPage] = useState(initialPage);
   const hasRestoredPageRef = useRef(false);
   const isSettledRef = useRef(initialPage <= 1);
+
+  const {
+    activeTool,
+    canUndo,
+    canRedo,
+    handleSelectTool,
+    handleUndo,
+    handleRedo,
+    handleAddStamp,
+  } = usePdfAnnotations({
+    documentId,
+    projectId,
+    pdfHash,
+    currentPage: displayPage || scrollState.currentPage || 1,
+    projectServiceOverride,
+  });
 
   // Restore the student's initial page position once the document is layout-ready
   useEffect(() => {
@@ -158,6 +193,13 @@ function ViewerInner({
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onResetZoom={handleResetZoom}
+        activeTool={activeTool}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onSelectTool={handleSelectTool}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onAddStamp={handleAddStamp}
       />
 
       <div
@@ -266,6 +308,14 @@ function ViewerInner({
                   documentId={documentId}
                   pageIndex={layout.pageIndex}
                 />
+                <SelectionLayer
+                  documentId={documentId}
+                  pageIndex={layout.pageIndex}
+                />
+                <AnnotationLayer
+                  documentId={documentId}
+                  pageIndex={layout.pageIndex}
+                />
               </div>
             )}
           />
@@ -281,6 +331,9 @@ export function PdfViewer({
   documentTitle,
   initialPage = 1,
   onPageChange,
+  projectId,
+  pdfHash,
+  projectServiceOverride,
 }: PdfViewerProps) {
   const { t } = useI18n();
 
@@ -402,6 +455,9 @@ export function PdfViewer({
             documentTitle={documentTitle}
             initialPage={initialPage}
             onPageChange={onPageChange}
+            projectId={projectId}
+            pdfHash={pdfHash}
+            projectServiceOverride={projectServiceOverride}
           />
         ) : (
           <div

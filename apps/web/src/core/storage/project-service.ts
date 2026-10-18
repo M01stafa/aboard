@@ -13,6 +13,7 @@ export class ProjectService {
   private provider: StorageProvider;
   private saveQueue?: SaveQueue;
   private indexSyncer?: ProjectIndexSyncer;
+  private activeProjectId?: string;
 
   constructor(
     provider?: StorageProvider,
@@ -33,6 +34,14 @@ export class ProjectService {
 
   getIndexSyncer(): ProjectIndexSyncer | undefined {
     return this.indexSyncer;
+  }
+
+  getActiveProjectId(): string | undefined {
+    return this.activeProjectId;
+  }
+
+  setActiveProjectId(projectId?: string): void {
+    this.activeProjectId = projectId;
   }
 
   /**
@@ -60,6 +69,7 @@ export class ProjectService {
    * Flushes any pending writes from previous projects before opening.
    */
   async openProject(projectId: string): Promise<AlphaManifest> {
+    this.activeProjectId = projectId;
     if (this.saveQueue) {
       await this.saveQueue.flushNow();
     }
@@ -97,6 +107,7 @@ export class ProjectService {
     };
 
     await this.provider.createProject(manifest);
+    this.activeProjectId = id;
 
     if (this.indexSyncer) {
       await this.indexSyncer.onProjectCreated({
@@ -183,7 +194,49 @@ export class ProjectService {
     itemId: string,
     payload: string,
     title?: string
+  ): Promise<void>;
+  async saveAnnotations(
+    itemId: string,
+    payload: string,
+    title?: string
+  ): Promise<void>;
+  async saveAnnotations(
+    arg1: string,
+    arg2: string,
+    arg3?: string,
+    arg4?: string
   ): Promise<void> {
+    let projectId: string;
+    let itemId: string;
+    let payload: string;
+    let title: string | undefined;
+
+    if (arg4 !== undefined) {
+      projectId = arg1;
+      itemId = arg2;
+      payload = arg3!;
+      title = arg4;
+    } else if (arg3 !== undefined) {
+      if (this.activeProjectId && arg1 === this.activeProjectId) {
+        projectId = arg1;
+        itemId = arg2;
+        payload = arg3;
+      } else if (this.activeProjectId) {
+        projectId = this.activeProjectId;
+        itemId = arg1;
+        payload = arg2;
+        title = arg3;
+      } else {
+        projectId = arg1;
+        itemId = arg2;
+        payload = arg3;
+      }
+    } else {
+      projectId = this.activeProjectId ?? "default";
+      itemId = arg1;
+      payload = arg2;
+    }
+
     const item: ItemRecord = {
       id: itemId,
       projectId,
@@ -195,6 +248,21 @@ export class ProjectService {
       this.saveQueue.enqueue(projectId, item, payload);
     } else {
       await this.provider.writeItem(projectId, item, payload);
+    }
+  }
+
+  /**
+   * Reads an annotations item payload, or returns null if not found.
+   */
+  async readAnnotations(projectId: string, itemId: string): Promise<string | null>;
+  async readAnnotations(itemId: string): Promise<string | null>;
+  async readAnnotations(arg1: string, arg2?: string): Promise<string | null> {
+    const projectId = arg2 !== undefined ? arg1 : (this.activeProjectId ?? "default");
+    const itemId = arg2 !== undefined ? arg2 : arg1;
+    try {
+      return await this.readItem(projectId, itemId);
+    } catch {
+      return null;
     }
   }
 
@@ -230,9 +298,42 @@ export class ProjectService {
   async putFile(
     projectId: string,
     blob: Blob,
-    meta: { name?: string; mime: string },
+    meta?: { name?: string; mime: string },
     knownKey?: string
+  ): Promise<{ key: string }>;
+  async putFile(
+    knownKey: string,
+    blob: Blob,
+    meta?: { name?: string; mime: string }
+  ): Promise<{ key: string }>;
+  async putFile(
+    arg1: string,
+    arg2: Blob,
+    arg3?: { name?: string; mime: string } | string,
+    arg4?: string
   ): Promise<{ key: string }> {
+    let projectId: string;
+    let blob: Blob;
+    let meta: { name?: string; mime: string };
+    let knownKey: string | undefined;
+
+    if (arg3 && typeof arg3 === "object" && "mime" in arg3) {
+      // (projectId, blob, meta, knownKey)
+      projectId = arg1;
+      blob = arg2;
+      meta = arg3;
+      knownKey = arg4;
+    } else {
+      // (knownKey, blob, meta?)
+      projectId = this.activeProjectId ?? "default";
+      knownKey = arg1;
+      blob = arg2;
+      meta =
+        typeof arg3 === "object"
+          ? arg3
+          : { name: `file-${knownKey}`, mime: blob.type || "application/octet-stream" };
+    }
+
     const key = knownKey ?? (await computeBlobSha256(blob));
     const exists = await this.provider.hasFile(projectId, key);
     if (!exists) {
@@ -247,7 +348,11 @@ export class ProjectService {
   /**
    * Retrieves a binary file by its content key.
    */
-  async getFile(projectId: string, key: string): Promise<Blob> {
+  async getFile(projectId: string, key: string): Promise<Blob>;
+  async getFile(key: string): Promise<Blob>;
+  async getFile(arg1: string, arg2?: string): Promise<Blob> {
+    const projectId = arg2 !== undefined ? arg1 : (this.activeProjectId ?? "default");
+    const key = arg2 !== undefined ? arg2 : arg1;
     return this.provider.readFile(projectId, key);
   }
 

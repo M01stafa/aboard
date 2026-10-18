@@ -211,6 +211,13 @@ export const ar: TranslationDictionary = {
     continueLoading: "متابعة",
     cancel: "إلغاء",
     loadError: "تعذر فتح ملف PDF.",
+    toolSelect: "تحديد",
+    toolHighlight: "تظليل",
+    toolInk: "رسم",
+    toolText: "نص",
+    toolStamp: "ختم",
+    undo: "تراجع",
+    redo: "إعادة",
   },
   legal: {
     privacyTitle: "سياسة الخصوصية",

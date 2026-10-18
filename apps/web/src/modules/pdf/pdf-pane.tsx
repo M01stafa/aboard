@@ -147,6 +147,9 @@ export function PdfPane({
           documentTitle={payload?.name || tab.title}
           initialPage={payload?.lastPage || 1}
           onPageChange={saveLastPage}
+          projectId={projectId}
+          pdfHash={payload?.fileKey || tab.itemId}
+          projectServiceOverride={projectServiceOverride}
         />
       </div>
     );
