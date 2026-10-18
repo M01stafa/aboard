@@ -265,6 +265,21 @@ export const en = {
     flowchartTitle: "Flowchart",
     flowchartDesc: "Flowchart with terminals, process steps, and decision diamond",
   },
+  export: {
+    button: "Export",
+    title: "Export Project (.alpha)",
+    description: "Package your project, boards, circuits, PDFs, and annotations into a single portable .alpha file.",
+    includePdfs: "Include PDF documents",
+    includePdfsHint: "Bundles original PDF files inside the archive (recommended).",
+    includeAnnotated: "Include annotated copies of PDFs",
+    includeAnnotatedHint: "Burns your highlights and drawings directly into extra copy PDFs.",
+    exporting: "Exporting project…",
+    action: "Export .alpha",
+    success: "Project exported successfully.",
+    capExceeded: "Project size ({size} MB) exceeds in-memory export limit ({cap} MB) on this device.",
+    capExceededHint: "Try exporting without PDFs or use Google Drive mode for large files.",
+    cancel: "Cancel",
+  },
 } as const;
 
 type DeepStringRecord<T> = {

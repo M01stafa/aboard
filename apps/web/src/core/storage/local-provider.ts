@@ -121,6 +121,19 @@ export class LocalProvider implements StorageProvider {
     });
   }
 
+  async listFiles(
+    projectId: string
+  ): Promise<Array<{ key: string; name?: string; mime: string; size: number }>> {
+    const db = this.resolveDb();
+    const records = await db.files.where("projectId").equals(projectId).toArray();
+    return records.map((r) => ({
+      key: r.key,
+      name: `file-${r.key}`,
+      mime: r.mime || "application/octet-stream",
+      size: r.size || (r.blob?.size ?? 0),
+    }));
+  }
+
   async deleteProject(projectId: string): Promise<void> {
     const db = this.resolveDb();
     await db.transaction("rw", [db.projects, db.items, db.files], async () => {

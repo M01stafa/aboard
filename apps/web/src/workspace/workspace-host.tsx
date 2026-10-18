@@ -9,6 +9,7 @@ import { SaveStatusIndicator } from "./save-status";
 import { CircuitPane } from "@/modules/circuit";
 import { BoardPane } from "@/modules/board";
 import { PdfPane } from "@/modules/pdf";
+import { ExportDialog } from "@/core/alpha/export-dialog";
 
 /*
  * Tab Bar & Divider Keyboard Interaction Map
@@ -100,6 +101,7 @@ export function WorkspaceHost({
 
   const [isMobile, setIsMobile] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const previousSplitRef = useRef<SplitMode>("none");
 
   // Track responsive screen width for split view (< 768px breakpoint md)
@@ -683,6 +685,40 @@ export function WorkspaceHost({
               <path d="M4 17h16" />
             </svg>
           </button>
+
+          <div
+            style={{
+              inlineSize: "1px",
+              blockSize: "24px",
+              backgroundColor: "var(--border-card)",
+              marginInline: "var(--space-1)",
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={() => setShowExportDialog(true)}
+            className="ws-tool-btn"
+            title={t("export.title")}
+            aria-label={t("export.title")}
+            data-testid="workspace-export-btn"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" x2="12" y1="15" y2="3" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -865,6 +901,13 @@ export function WorkspaceHost({
         {/* Transparent Full-Screen Drag Shield so Iframes cannot swallow pointer events */}
         {dragging && <div className="drag-shield" data-testid="drag-shield" />}
       </div>
+
+      {/* Export .alpha dialog (Task 31 / ALPHA-6) */}
+      <ExportDialog
+        projectId={projectId || "demo"}
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { StorageProvider, ItemRecord, ItemKind, AlphaManifest } from "./types";
+import type { StorageProvider, ItemRecord, ItemKind, AlphaManifest, ProjectBundle } from "./types";
 import { LocalProvider } from "./local-provider";
 import { computeBlobSha256 } from "./sha256";
 import { SaveQueue } from "./save-queue";
@@ -520,6 +520,136 @@ export class ProjectService {
     if (this.saveQueue) {
       await this.saveQueue.flushNow();
     }
+  }
+
+  /**
+   * Lists all binary files stored for a project.
+   */
+  async listFiles(
+    projectId?: string
+  ): Promise<Array<{ key: string; name?: string; mime: string; size: number }>> {
+    const pId = projectId ?? this.activeProjectId ?? "default";
+    return this.provider.listFiles(pId);
+  }
+
+  /**
+   * Collects all manifest metadata, item payloads, and binary file streams for export.
+   * Flushes SaveQueue before collecting so dirty writes are included.
+   * Implements docs/specs/alpha-format.md §12.4.
+   */
+  async collect(
+    projectId: string,
+    options?: { includePdfs?: boolean; includeAnnotated?: boolean }
+  ): Promise<ProjectBundle> {
+    if (this.saveQueue) {
+      await this.saveQueue.flushNow();
+    }
+
+    let manifest: AlphaManifest;
+    try {
+      manifest = await this.openProject(projectId);
+    } catch {
+      const now = new Date().toISOString();
+      manifest = {
+        format: "alpha-project",
+        formatVersion: 1,
+        app: { name: "Aboard", version: "0.1.0" },
+        project: {
+          id: projectId,
+          title: "Aboard Project",
+          createdAt: now,
+          updatedAt: now,
+        },
+        items: [],
+        files: [],
+        layout: { tabs: [], split: "none" },
+      };
+      await this.provider.saveManifest(manifest);
+    }
+    const textEntries: Array<{ path: string; text: string }> = [];
+    let totalBytes = 0;
+
+    // 1. Collect all registered items and their text payloads
+    const updatedItems = [...manifest.items];
+    for (let i = 0; i < updatedItems.length; i++) {
+      const it = updatedItems[i];
+      try {
+        const text = await this.readItem(projectId, it.id);
+        textEntries.push({ path: it.path, text });
+        totalBytes += new TextEncoder().encode(text).length;
+
+        // If PDF, check if annotations exist
+        if (it.kind === "pdf" && it.fileKey) {
+          const annoJson = await this.readAnnotations(projectId, it.fileKey).catch(() => "");
+          if (annoJson && annoJson.trim().length > 0) {
+            const annoPath = `annotations/${it.id}.json`;
+            it.annotationsPath = annoPath;
+            textEntries.push({ path: annoPath, text: annoJson });
+            totalBytes += new TextEncoder().encode(annoJson).length;
+          }
+        }
+      } catch (err) {
+        console.warn(`[ProjectService.collect] Failed reading item ${it.id}:`, err);
+      }
+    }
+
+    // 2. Collect binary files (PDFs, images, stamps)
+    const storedFiles = await this.provider.listFiles(projectId);
+    const files: ProjectBundle["files"] = [];
+    const manifestFiles: AlphaManifest["files"] = [];
+
+    const includePdfs = options?.includePdfs !== false; // default true
+
+    for (const f of storedFiles) {
+      const isPdf = f.mime === "application/pdf";
+      if (isPdf && !includePdfs) {
+        continue;
+      }
+
+      const ext = isPdf
+        ? "pdf"
+        : f.mime === "image/png"
+        ? "png"
+        : f.mime === "image/jpeg"
+        ? "jpg"
+        : f.mime === "image/webp"
+        ? "webp"
+        : "bin";
+      const filePath = `files/${f.key}.${ext}`;
+
+      files.push({
+        key: f.key,
+        path: filePath,
+        mime: f.mime,
+        size: f.size,
+        name: f.name,
+        getBlob: () => this.getFile(projectId, f.key),
+      });
+
+      manifestFiles.push({
+        key: f.key,
+        path: filePath,
+        mime: f.mime,
+        size: f.size,
+        name: f.name,
+        sha256: f.key,
+      });
+
+      totalBytes += f.size;
+    }
+
+    const completeManifest: AlphaManifest = {
+      ...manifest,
+      items: updatedItems,
+      files: manifestFiles,
+    };
+
+    return {
+      manifest: completeManifest,
+      totalBytes,
+      textEntries,
+      files,
+    };
   }
 
   /**

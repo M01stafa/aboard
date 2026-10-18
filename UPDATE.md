@@ -986,6 +986,33 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `UPDATE.md` (changed): appended this entry.
 **Checks:** Line count verified (136 lines <= 200 line limit).
 **Related:** AGENTS.md
-**Open:** none.
+## 2026-10-18 — Task 31: Define the Manifest and Build the Export
+**Request:** Define the manifest schema in apps/web/src/core/alpha/manifest.ts using zod strictly following §12.1–12.3; build the export engine in apps/web/src/core/alpha/export.ts using @zip.js/zip.js (flushing SaveQueue, storing uncompressed mimetype first, uncompressed level 0 for PDFs and images, streaming via showSaveFilePicker on Chromium desktop, and memory-capped in-memory fallback on Safari/iOS/Firefox with .alpha download extension); implement the Export Options UI (ALPHA-6) in an accessible ExportDialog (R1 tokens, R5 focus-visible, i18n parity); write unit and Playwright E2E tests, verify all checks pass, and report CI conclusion.
+**Changes:**
+- `apps/web/src/core/alpha/manifest.ts` (created): defined strict Zod schema for AlphaManifest, AlphaProject, AlphaItem, AlphaFile, and AlphaLayout matching spec §12.1–§12.3 with integer formatVersion = 1, safe path validation (`isSafePath`), and `ALPHA_MIME = "application/x-alpha-project"`.
+- `apps/web/src/core/alpha/manifest.test.ts` (created): 7 unit tests validating valid manifest fixtures, rejects negative formatVersion, rejects traversal/absolute paths, validates file SHA-256 strings, and enforces required fields.
+- `apps/web/src/core/alpha/export.ts` (created): implemented `exportAlpha`, `safeFileName`, stored level 0 for mimetype / PDFs / images, streaming sink via `showSaveFilePicker` on Chromium desktop with flat memory, in-memory fallback with Spike S5 cap enforcement (300MB mobile, 1GB desktop), `ExportCapExceededError`, and octet-stream download trigger preserving `.alpha` extension.
+- `apps/web/src/core/alpha/export.test.ts` (created): 4 unit tests verifying that mimetype is first entry and uncompressed (level 0), manifest.json is second entry, PDFs and images are stored with level 0, JSON payloads are compressed, includePdfs / includeAnnotated options work, and memory caps throw `ExportCapExceededError`.
+- `apps/web/src/core/alpha/export-dialog.tsx` (created): accessible modal dialog with includePdfs (default ON) and includeAnnotated (default OFF) toggles, accessible focus-visible styles, 8-point grid tokens, clear translated cap exceeded alerts, and keyboard Esc dismissal.
+- `apps/web/src/core/alpha/export-dialog.test.tsx` (created): 4 unit tests verifying dialog rendering, default toggle values, toggle interaction, cancel and submit callbacks.
+- `apps/web/src/core/storage/types.ts` (changed): added `listFiles` method to `StorageProvider` interface and defined `ProjectBundle` type.
+- `apps/web/src/core/storage/local-provider.ts` (changed): implemented `listFiles(projectId)` returning key, name, mime, and size from IndexedDB.
+- `apps/web/src/core/storage/project-service.ts` (changed): implemented `listFiles(projectId)` and `collect(projectId, options)` that flushes SaveQueue, gathers project manifest, all items, annotations, and binary files, synthesizing a default manifest if the workspace has not yet persisted one.
+- `apps/web/src/core/storage/project-service.test.ts`, `apps/web/src/core/storage/project-index.test.ts`, `apps/web/src/core/storage/save-queue.test.ts` (changed): updated mock storage providers to include `listFiles()`.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added localized translation keys for export modal, options, errors, hints, and button actions with 100% key parity.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): added Export Project action button (`data-testid="workspace-export-btn"`) in header and rendered `ExportDialog`.
+- `apps/web/e2e/alpha-export.spec.ts` (created): Playwright E2E test exercising export flow in workspace, verifying `.alpha` file download, validating uncompressed `mimetype` first entry, and verifying `manifest.json` second entry.
+- `docs/PROGRESS.md` (changed): marked Task 31 complete, set Phase 6 to In progress, set Next step to Task 32, and logged Task 31 decision.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 violations, 8-point grid verified).
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (163/163 unit tests passed across 25 test files).
+- `pnpm test:e2e`: PASS (14/14 Playwright E2E tests passed in Chromium, including `alpha-export.spec.ts`).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle secret scan clean).
+**Related:** Task 31 · ALPHA-1, ALPHA-5, ALPHA-6, ALPHA-8 · docs/specs/alpha-format.md §12.1–§12.4 · Spike S5
+**Open:** none (ready for Task 32).
+
 
 

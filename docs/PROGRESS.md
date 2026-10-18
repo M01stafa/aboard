@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 5 — PDF Module (Done) |
-| Current task | Task 30 — Implement PDF Page Operations and Annotated Download (completed) |
+| Active phase | 6 — .alpha Project File |
+| Current task | Task 31 — Define the Manifest and Build the Export (completed) |
 | Last updated | 2026-10-18 |
-| Next step | Task 31 — Define the Manifest and Build the Export (.alpha) |
+| Next step | Task 32 — Build the Import and Migration Engine (.alpha) |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -30,7 +30,7 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | **3. Circuit module** | In progress | Fork patches a–e, build script, adapter, saving via ProjectService | Circuit survives reload; no extra service worker registered |
 | **4. Board module** | Done (2026-10-17) | Excalidraw pane, files via `putFile`, templates panel | Board with images survives reload |
 | **5. PDF module** | Done (2026-10-18) | Viewer, annotations JSON, page operations, annotated download | Annotations survive reload; annotated download opens with highlights in another viewer |
-| **6. `.alpha` export/import** | Not started | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
+| **6. `.alpha` export/import** | In progress | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
 | **7. Google Drive** | Not started | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
 | **8. Integration** | Not started | §8 actions | All four actions work across modes |
 | **9. Stirling** | Not started | Compose stack, gateway, UI with progress/cancel, results saved into project | OCR and Office→PDF work; Stirling unreachable from the internet |
@@ -122,6 +122,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-18 | Task 28: Built PdfPane with EmbedPDF (Render, Scroll, Viewport, Zoom, Thumbnail plugins), lazy-loading self-hosted PDFium WASM from /wasm/pdfium.wasm on first open, streaming SHA-256 computation via hash-wasm, immutable blob storage via ProjectService.putFile, page restoration via scrollScope layout listener, and mobile >100MB warning dialog (PDF-1, PDF-2, PDF-7) |
 | 2026-10-18 | Task 29: PDF annotations (highlight, ink, free text, stamp) stored separately as lightweight JSON linked by PDF hash (PDF-3, PDF-4); stamp images extracted to SHA-256 binary blobs via ProjectService.putFile; zero base64 in annotation JSON; undo/redo capability integrated with SaveQueue debouncing. |
 | 2026-10-18 | Task 30: PDF page operations (rotate, reorder, delete, insert image) implemented with @cantoo/pdf-lib; restructuring produces new immutable PDF with new SHA-256 hash; warning toast informs user that annotations do not carry over to restructured PDFs; annotated download burns annotations and re-injects stamp images via ProjectService.getFile (PDF-5, PDF-6). |
+| 2026-10-18 | Task 31: Defined strict Zod schema for AlphaManifest (formatVersion: 1) adhering to §12.1-12.3; implemented exportAlpha engine with uncompressed mimetype first entry, uncompressed level 0 for PDFs and images, streaming sink via showSaveFilePicker on Chromium desktop with flat memory, in-memory fallback capped at 300MB mobile / 1GB desktop (Spike S5), octet-stream download trigger, and ExportDialog with ALPHA-6 toggles. |
 
 ## Lessons and corrections
 
@@ -134,4 +135,5 @@ When the owner corrects the same thing twice, or a review finds something the ag
 | 2026-10-18 | Never guess numeric enum values (e.g. PdfAnnotationSubtype); always import the TypeScript enum or inspect node_modules. In Task 29, hardcoding 8 (Polyline) instead of 9 (Highlight) caused Polyline to mount without vertices and crash with vertices.map undefined. | .agents/rules/frontend.md |
 | 2026-10-18 | In EmbedPDF, scope.getAnnotations() returns a page-keyed object ({ [page: number]: { object: PdfAnnotationObject }[] }), not a flat array. Always normalize with Object.values(res).flat(). | .agents/rules/frontend.md |
 | 2026-10-18 | Declaring an existing workspace peer dependency in package.json is still considered adding a dependency. If a peer plugin (e.g. @embedpdf/plugin-interaction-manager) is needed for batch registration, stop and ask the owner before editing package.json. | AGENTS.md |
+| 2026-10-18 | The spacing token suffix is an 8-point multiplier (--space-1 = 8px, --space-2 = 16px, --space-3 = 24px), not a pixel value. Writing --space-16 produces 128px (8rem), not 16px, pushing modal dialog elements outside the viewport. | .agents/rules/spacing.md |
 

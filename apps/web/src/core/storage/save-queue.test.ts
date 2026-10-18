@@ -110,6 +110,9 @@ class MockStorageProvider implements StorageProvider {
     return new Blob();
   }
   async writeFile(_pId: string, _k: string, _b: Blob, _m: { name?: string; mime: string }): Promise<void> {}
+  async listFiles(_pId: string) {
+    return [];
+  }
   async deleteProject(_id: string): Promise<void> {}
 }
 

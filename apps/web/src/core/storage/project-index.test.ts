@@ -233,6 +233,9 @@ describe("Project Index & Badge Selection (Task 22 / LAUNCH-2, STORE-1)", () => 
         return new Blob();
       }
       async writeFile() {}
+      async listFiles() {
+        return [];
+      }
       async deleteProject(id: string) {
         this.manifests.delete(id);
       }

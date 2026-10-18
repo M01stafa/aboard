@@ -57,6 +57,24 @@ class FakeStorageProvider implements StorageProvider {
     this.files.set(`${projectId}:${key}`, { blob, meta });
   }
 
+  async listFiles(
+    projectId: string
+  ): Promise<Array<{ key: string; name?: string; mime: string; size: number }>> {
+    const list: Array<{ key: string; name?: string; mime: string; size: number }> = [];
+    for (const [k, v] of this.files.entries()) {
+      if (k.startsWith(`${projectId}:`)) {
+        const key = k.slice(projectId.length + 1);
+        list.push({
+          key,
+          name: v.meta.name,
+          mime: v.meta.mime,
+          size: v.blob.size,
+        });
+      }
+    }
+    return list;
+  }
+
   async deleteProject(projectId: string): Promise<void> {
     this.manifests.delete(projectId);
     for (const k of Array.from(this.items.keys())) {

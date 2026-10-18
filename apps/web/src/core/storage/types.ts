@@ -40,6 +40,20 @@ export interface AlphaManifest {
   layout?: { tabs: string[]; split?: "none" | "vertical" | "horizontal" };
 }
 
+export interface ProjectBundle {
+  manifest: AlphaManifest;
+  totalBytes: number;
+  textEntries: Array<{ path: string; text: string }>;
+  files: Array<{
+    key: string;
+    path: string;
+    mime: string;
+    size: number;
+    name?: string;
+    getBlob: () => Promise<Blob>;
+  }>;
+}
+
 export interface StorageProvider {
   readonly kind: "drive" | "local";
   createProject(manifest: AlphaManifest): Promise<{ driveFolderId?: string }>;
@@ -51,5 +65,7 @@ export interface StorageProvider {
   hasFile(projectId: string, key: string): Promise<boolean>;
   readFile(projectId: string, key: string): Promise<Blob>;
   writeFile(projectId: string, key: string, blob: Blob, meta: { name?: string; mime: string }): Promise<void>;
+  listFiles(projectId: string): Promise<Array<{ key: string; name?: string; mime: string; size: number }>>;
   deleteProject(projectId: string): Promise<void>;
 }
+

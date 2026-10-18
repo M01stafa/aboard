@@ -267,5 +267,20 @@ export const ar: TranslationDictionary = {
     flowchartTitle: "مخطط انسيابي",
     flowchartDesc: "مخطط تدفق قياسي مع بدايات ونهايات وعمليات ونقطة قرار",
   },
+  export: {
+    button: "تصدير",
+    title: "تصدير المشروع (.alpha)",
+    description: "حزم المشروع واللوحات والدوائر ومستندات الـ PDF والتعليقات في ملف .alpha محمول واحد.",
+    includePdfs: "تضمين مستندات الـ PDF",
+    includePdfsHint: "حزم ملفات الـ PDF الأصلية داخل الأرشيف (موصى به).",
+    includeAnnotated: "تضمين نسخ الـ PDF مع التعليقات",
+    includeAnnotatedHint: "دمج التظليلات والرسومات مباشرة في نسخ PDF إضافية.",
+    exporting: "جاري تصدير المشروع…",
+    action: "تصدير .alpha",
+    success: "تم تصدير المشروع بنجاح.",
+    capExceeded: "حجم المشروع ({size} ميغابايت) يتجاوز حد التصدير في الذاكرة ({cap} ميغابايت) على هذا الجهاز.",
+    capExceededHint: "جرّب التصدير بدون ملفات PDF أو استخدم وضع Google Drive للملفات الكبيرة.",
+    cancel: "إلغاء",
+  },
 };
 
