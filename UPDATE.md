@@ -1095,3 +1095,27 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 34 · AUTH-1, AUTH-3, SEC-2 · docs/specs/google-drive.md §10.1, §10.5 · docs/specs/security.md §14.6
 **Open:** none (ready for Task 35).
 
+## 2026-10-18 — Task 35: Build the Drive API Layer and the Drive Provider
+**Request:** Run Task 35 from docs/TASKS.md: build the Google Drive API layer (apps/web/src/core/drive/api.ts) with in-memory token injection, single 401 retry, 5-attempt exponential backoff with jitter on 429/5xx, multipart uploads (<5MB), resumable chunked uploads (>=5MB in 8 MiB chunks), and folder/file identification strictly via appProperties; build the DriveProvider implementing the StorageProvider interface with local IndexedDB buffering and SaveQueue outbox sync (3s idle / 30s continuous); implement LRU cache eviction enforcing the 500MB cap on clean files while strictly preserving pinned local files, dirty items, and outbox rows; write comprehensive unit tests and a Playwright E2E test verifying project creation, persistence, appProperties matching, and reload recovery in Drive mode.
+**Changes:**
+- `apps/web/src/core/drive/api.ts` (created): low-level Drive v3 API client with `driveFetch` wrapper injecting in-memory access token from `DriveTokenManager`, 401 retry, 5-attempt exponential backoff + jitter for 429/5xx/rateLimitExceeded, `StorageQuotaExceededError` detection on 403 quota errors, `createMultipartBody`, `multipartCreateFile`, `resumableCreateFile` (8 MiB chunks, 308 resume incomplete handling, status recovery query), `uploadFile` auto-switching by 5MB threshold, `findFiles`, `createFolder`, `trashFile`, `getOrCreateRootFolder` (`aboardKind: "root"`), and `getOrCreateProjectFolder` (`aboardKind: "project"`, `aboardProjectId`).
+- `apps/web/src/core/drive/cache-eviction.ts` (created): LRU cache eviction enforcing 500MB cap down to 400MB target; strictly protects `pinned === true` files (local mode), un-synced dirty rows, and pending outbox rows.
+- `apps/web/src/core/drive/drive-provider.ts` (created): implements `StorageProvider` (`kind: "drive"`); resolves/creates root & project folders using `appProperties`; caches items/files in local Dexie database while storing source of truth in Drive; writes content-addressed binary files only once (`writeFile`); downloads missing files on demand and updates `lastAccess` (`readFile`); soft-deletes folders on `deleteProject`; uploads pending items on `syncOutbox()`.
+- `apps/web/src/core/drive/tokens.ts` (changed): exposed `driveTokenManager` on `window` in browser environments for integration and testing.
+- `apps/web/src/core/drive/index.ts` (changed): added barrel exports for `api.ts`, `cache-eviction.ts`, and `drive-provider.ts`.
+- `apps/web/src/core/storage/project-service.ts` (changed): imported `DriveProvider`, wired automatic provider switching for `createProject(..., { storage: "drive" })`, connected `SaveQueue.setDriveUploadHook` to `syncOutbox()`, and exposed `DriveProvider` on `window`.
+- `apps/web/src/core/drive/api.test.ts` (created): 15 unit tests verifying token injection, 401 retry, 429/5xx backoff with jitter, 403 rate limit retry, 403 quota error handling, multipart boundary encoding, resumable chunk sequencing, findFiles query builder, and folder resolution.
+- `apps/web/src/core/drive/cache-eviction.test.ts` (created): 5 unit tests verifying LRU eviction down to target, clean-only eviction, no-op below cap, custom threshold override, and strictly never evicting pinned rows.
+- `apps/web/src/core/drive/drive-provider.test.ts` (created): 9 unit tests verifying project creation with root/project folders, reading items from local cache and Drive fallback, content-addressed file deduplication, outbox sync, and project deletion.
+- `apps/web/e2e/drive-provider.spec.ts` (created): Playwright E2E test mocking Google Drive v3 REST & upload endpoints and Supabase RPC/functions, proving project creation in Drive mode creates folders, manifest, and items strictly identified by `appProperties`, and survives a full page reload.
+- `docs/PROGRESS.md` (changed): marked Task 35 complete, set Next step to Task 36, and logged Task 35 architectural decisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (251/251 unit tests passed across 31 test files).
+- `pnpm test:e2e`: PASS (17/17 Playwright E2E tests passed in Chromium, including new drive-provider.spec.ts).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks across 63 commits, prod audit clean, bundle secret scan clean).
+**Related:** Task 35 · STORE-2, STORE-3, STORE-7, STORE-8 · docs/specs/google-drive.md §10.7–10.8 · docs/specs/storage-layer.md §11.2, §11.4
+**Open:** none (ready for Task 36).
+

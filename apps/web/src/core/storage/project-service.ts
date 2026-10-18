@@ -1,5 +1,6 @@
 import type { StorageProvider, ItemRecord, ItemKind, AlphaManifest, ProjectBundle } from "./types";
 import { LocalProvider } from "./local-provider";
+import { DriveProvider } from "../drive/drive-provider";
 import { computeBlobSha256 } from "./sha256";
 import { SaveQueue } from "./save-queue";
 import { projectIndex, type ProjectIndexSyncer } from "./project-index";
@@ -25,6 +26,14 @@ export class ProjectService {
     this.indexSyncer = indexSyncer;
     if (this.saveQueue) {
       this.saveQueue.setProjectService(this);
+      if (
+        "syncOutbox" in this.provider &&
+        typeof (this.provider as unknown as { syncOutbox?: () => Promise<void> }).syncOutbox === "function"
+      ) {
+        this.saveQueue.setDriveUploadHook(async () => {
+          await (this.provider as unknown as { syncOutbox: () => Promise<void> }).syncOutbox();
+        });
+      }
     }
   }
 
@@ -49,6 +58,15 @@ export class ProjectService {
    */
   setProvider(provider: StorageProvider): void {
     this.provider = provider;
+    if (
+      this.saveQueue &&
+      "syncOutbox" in provider &&
+      typeof (provider as unknown as { syncOutbox?: () => Promise<void> }).syncOutbox === "function"
+    ) {
+      this.saveQueue.setDriveUploadHook(async () => {
+        await (provider as unknown as { syncOutbox: () => Promise<void> }).syncOutbox();
+      });
+    }
   }
 
   getProvider(): StorageProvider {
@@ -58,6 +76,14 @@ export class ProjectService {
   setSaveQueue(saveQueue: SaveQueue): void {
     this.saveQueue = saveQueue;
     this.saveQueue.setProjectService(this);
+    if (
+      "syncOutbox" in this.provider &&
+      typeof (this.provider as unknown as { syncOutbox?: () => Promise<void> }).syncOutbox === "function"
+    ) {
+      this.saveQueue.setDriveUploadHook(async () => {
+        await (this.provider as unknown as { syncOutbox: () => Promise<void> }).syncOutbox();
+      });
+    }
   }
 
   getSaveQueue(): SaveQueue | undefined {
@@ -105,6 +131,12 @@ export class ProjectService {
       files: [],
       layout: { tabs: [], split: "none" },
     };
+
+    if (options?.storage === "drive" && this.provider.kind !== "drive") {
+      this.setProvider(new DriveProvider());
+    } else if (options?.storage === "local" && this.provider.kind !== "local") {
+      this.setProvider(new LocalProvider());
+    }
 
     await this.provider.createProject(manifest);
     this.activeProjectId = id;
@@ -700,4 +732,6 @@ if (typeof window !== "undefined") {
   (window as unknown as { __aboard_projectService?: ProjectService }).__aboard_projectService =
     projectService;
   (window as unknown as { __aboard_saveQueue?: SaveQueue }).__aboard_saveQueue = saveQueue;
+  (window as unknown as { __aboard_DriveProvider?: typeof DriveProvider }).__aboard_DriveProvider =
+    DriveProvider;
 }

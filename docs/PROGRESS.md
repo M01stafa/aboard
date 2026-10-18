@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 7 — Google Drive |
-| Current task | Task 34 — Build the Connection Flows and the Token Manager (completed) |
+| Current task | Task 35 — Build the Drive API Layer and the Drive Provider (completed) |
 | Last updated | 2026-10-18 |
-| Next step | Task 35 — Build the Drive Storage Provider |
+| Next step | Task 36 — Handle Conflicts and Drive Errors |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -126,6 +126,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-18 | Task 32: Built .alpha import engine with strict security checks (SEC-7, §12.5); confirmed limits (5000 entries, 2GB total uncompressed, 500MB single entry, 100:1 ratio zip bomb guard for >10MB entries); rejected path traversal, oversized entries, and format version mismatches; sanitized Excalidraw board links (stripped javascript: and data:); handled project collisions by importing copy with rewritten alpha://pdf/... links; performed atomic rollback on failure; wired launcher UI with no accept filter for iOS compatibility. |
 | 2026-10-18 | Task 33: Built and deployed 5 Supabase Edge Functions (drive-connect, drive-callback, drive-link-token, drive-token, drive-disconnect) with exact-origin CORS, rate-limiting, and Zod input validation; derived 32-byte AES-256 keys via SHA-256 from TOKEN_ENC_KEY; confirmed verify_jwt = false for drive-callback only in supabase/config.toml (AUTH-3, SEC-2, SEC-6). |
 | 2026-10-18 | Task 34: In-memory DriveTokenManager caches Google access tokens with 60-second early refresh via drive-token; emits drive:reconnect-required on 409/404; Path A links provider_refresh_token outside auth listener synchronous body and calls refreshSession() to eliminate tokens from browser storage; Path B uses drive-connect URL redirection and handles ?drive=connected in Settings; get_drive_status RPC response handles both PostgREST table array and object formats. Playwright verified 0 Google tokens in localStorage, sessionStorage, and IndexedDB across both paths. |
+| 2026-10-18 | Task 35: Implemented Drive API client with 401 single-retry, 5-attempt exponential backoff with jitter on 429/5xx, multipart (<5MB) and resumable (>=5MB in 8MiB chunks) uploads; strictly identified folders/files by appProperties; implemented DriveProvider with local IndexedDB buffering and SaveQueue outbox sync (3s idle / 30s continuous); implemented LRU clean-file eviction with 500MB cap; Playwright E2E verified create/reload lifecycle in Drive mode. |
 
 ## Lessons and corrections
 

@@ -77,3 +77,9 @@ export class DriveTokenManager {
 }
 
 export const driveTokenManager = new DriveTokenManager();
+
+if (typeof window !== "undefined") {
+  (window as unknown as { __aboard_driveTokenManager?: DriveTokenManager }).__aboard_driveTokenManager =
+    driveTokenManager;
+}
+
