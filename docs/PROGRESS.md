@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 6 — .alpha Project File |
-| Current task | Task 32 — Build the Import and Migration Engine (.alpha) (completed) |
+| Active phase | 7 — Google Drive |
+| Current task | Task 33 — Build and Deploy the Edge Functions (completed) |
 | Last updated | 2026-10-18 |
-| Next step | Task 33 — Cross-Tool Integration: PDF to Whiteboard (BOARD-3, INT-1) |
+| Next step | Task 34 — Build the Connection Flows and the Token Manager |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -31,7 +31,7 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | **4. Board module** | Done (2026-10-17) | Excalidraw pane, files via `putFile`, templates panel | Board with images survives reload |
 | **5. PDF module** | Done (2026-10-18) | Viewer, annotations JSON, page operations, annotated download | Annotations survive reload; annotated download opens with highlights in another viewer |
 | **6. `.alpha` export/import** | In progress | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
-| **7. Google Drive** | Not started | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
+| **7. Google Drive** | In progress | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
 | **8. Integration** | Not started | §8 actions | All four actions work across modes |
 | **9. Stirling** | Not started | Compose stack, gateway, UI with progress/cancel, results saved into project | OCR and Office→PDF work; Stirling unreachable from the internet |
 | **10. UI redesign** | Not started | Circuit toolbar via `runCommand`, advanced menu toggle, PDF toolbars, unified styling | Every circuit action reachable |
@@ -124,6 +124,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-18 | Task 30: PDF page operations (rotate, reorder, delete, insert image) implemented with @cantoo/pdf-lib; restructuring produces new immutable PDF with new SHA-256 hash; warning toast informs user that annotations do not carry over to restructured PDFs; annotated download burns annotations and re-injects stamp images via ProjectService.getFile (PDF-5, PDF-6). |
 | 2026-10-18 | Task 31: Defined strict Zod schema for AlphaManifest (formatVersion: 1) adhering to §12.1-12.3; implemented exportAlpha engine with uncompressed mimetype first entry, uncompressed level 0 for PDFs and images, streaming sink via showSaveFilePicker on Chromium desktop with flat memory, in-memory fallback capped at 300MB mobile / 1GB desktop (Spike S5), octet-stream download trigger, and ExportDialog with ALPHA-6 toggles. |
 | 2026-10-18 | Task 32: Built .alpha import engine with strict security checks (SEC-7, §12.5); confirmed limits (5000 entries, 2GB total uncompressed, 500MB single entry, 100:1 ratio zip bomb guard for >10MB entries); rejected path traversal, oversized entries, and format version mismatches; sanitized Excalidraw board links (stripped javascript: and data:); handled project collisions by importing copy with rewritten alpha://pdf/... links; performed atomic rollback on failure; wired launcher UI with no accept filter for iOS compatibility. |
+| 2026-10-18 | Task 33: Built and deployed 5 Supabase Edge Functions (drive-connect, drive-callback, drive-link-token, drive-token, drive-disconnect) with exact-origin CORS, rate-limiting, and Zod input validation; derived 32-byte AES-256 keys via SHA-256 from TOKEN_ENC_KEY; confirmed verify_jwt = false for drive-callback only in supabase/config.toml (AUTH-3, SEC-2, SEC-6). |
 
 ## Lessons and corrections
 

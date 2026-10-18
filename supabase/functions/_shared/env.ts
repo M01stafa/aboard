@@ -1,11 +1,24 @@
-export const env = {
-  supabaseUrl: Deno.env.get("SUPABASE_URL")!,
-  serviceRoleKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  googleClientId: Deno.env.get("GOOGLE_CLIENT_ID")!,
-  googleClientSecret: Deno.env.get("GOOGLE_CLIENT_SECRET")!,
-  tokenEncKey: Deno.env.get("TOKEN_ENC_KEY")!,
-  appUrl: Deno.env.get("APP_URL") ?? "http://localhost:3000",
-  appOrigins: (Deno.env.get("APP_ORIGINS") ?? "http://localhost:3000").split(",").map((s) => s.trim()).filter(Boolean),
+const getEnv = (key: string): string => {
+  if (typeof Deno !== "undefined" && Deno.env) {
+    return Deno.env.get(key) ?? "";
+  }
+  return (typeof process !== "undefined" && process.env ? process.env[key] : "") ?? "";
 };
+
+export const env = {
+  supabaseUrl: getEnv("SUPABASE_URL"),
+  serviceRoleKey: getEnv("SUPABASE_SERVICE_ROLE_KEY"),
+  googleClientId: getEnv("GOOGLE_CLIENT_ID"),
+  googleClientSecret: getEnv("GOOGLE_CLIENT_SECRET"),
+  tokenEncKey: getEnv("TOKEN_ENC_KEY"),
+  appUrl: getEnv("APP_URL") || "http://localhost:3000",
+  get appOrigins(): string[] {
+    return (getEnv("APP_ORIGINS") || "http://localhost:3000")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  },
+};
+
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 export const REDIRECT_URI = `${env.supabaseUrl}/functions/v1/drive-callback`;

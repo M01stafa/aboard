@@ -15,7 +15,8 @@ async function tokenRequest(params: Record<string, string>) {
       ...params,
     }),
   });
-  const body = await res.json();
+
+  const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new HttpError(
       body.error === "invalid_grant" ? 409 : 502,
@@ -51,11 +52,11 @@ export async function revoke(token: string) {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ token }),
-  });
+  }).catch(() => {});
 }
 
 export function assertDriveScope(scope: string) {
-  if (!scope.split(" ").includes(DRIVE_SCOPE)) {
+  if (!scope || !scope.split(" ").includes(DRIVE_SCOPE)) {
     throw new HttpError(403, "drive_scope_not_granted");
   }
 }
@@ -63,8 +64,10 @@ export function assertDriveScope(scope: string) {
 export function emailFromIdToken(idToken?: string): string | null {
   if (!idToken) return null;
   try {
+    const parts = idToken.split(".");
+    if (parts.length < 2) return null;
     const payload = JSON.parse(
-      atob(idToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
     );
     return typeof payload.email === "string" ? payload.email : null;
   } catch {
@@ -89,5 +92,8 @@ export async function saveLink(
     revoked_at: null,
   });
   if (error) throw new HttpError(500, "store_failed");
-  await admin.from("profiles").update({ default_storage: "drive" }).eq("user_id", userId);
+  await admin
+    .from("profiles")
+    .update({ default_storage: "drive" })
+    .eq("user_id", userId);
 }

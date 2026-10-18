@@ -6,18 +6,25 @@ import {
   assertDriveScope,
   saveLink,
 } from "../_shared/google.ts";
+import { linkTokenBodySchema } from "../_shared/validation.ts";
 
-Deno.serve(
-  handler(async (req) => {
-    const user = await requireUser(req);
-    await rateLimit(`${user.id}:drive-link-token`, 5, 600);
-    const { refresh_token } = await req.json().catch(() => ({}));
-    if (typeof refresh_token !== "string" || refresh_token.length < 20) {
-      throw new HttpError(400, "bad_request");
-    }
-    const tok = await refreshAccessToken(refresh_token);
-    assertDriveScope(tok.scope);
-    await saveLink(user.id, refresh_token, tok.scope, user.email ?? null);
-    return json(req, 200, { connected: true });
-  })
-);
+export async function handleDriveLinkToken(req: Request): Promise<Response> {
+  const user = await requireUser(req);
+  await rateLimit(`${user.id}:drive-link-token`, 5, 600);
+
+  const rawBody = await req.json().catch(() => ({}));
+  const parseRes = linkTokenBodySchema.safeParse(rawBody);
+  if (!parseRes.success) {
+    throw new HttpError(400, "bad_request");
+  }
+
+  const { refresh_token } = parseRes.data;
+  const tok = await refreshAccessToken(refresh_token);
+  assertDriveScope(tok.scope);
+  await saveLink(user.id, refresh_token, tok.scope, user.email ?? null);
+  return json(req, 200, { connected: true });
+}
+
+if (typeof Deno !== "undefined" && Deno.serve) {
+  Deno.serve(handler(handleDriveLinkToken));
+}

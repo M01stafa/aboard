@@ -1037,3 +1037,34 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle secret scan clean).
 **Related:** Task 32 · ALPHA-2, ALPHA-3, ALPHA-4, SEC-7 · docs/specs/alpha-format.md §12.5 · docs/specs/security.md §14.6
 **Open:** none (ready for Task 33).
+
+## 2026-10-18 — Task 33: Build and Deploy the Edge Functions
+**Request:** Run Task 33 from docs/TASKS.md: build the 5 Supabase Edge Functions (drive-connect, drive-callback, drive-link-token, drive-token, drive-disconnect) and shared modules under supabase/functions/_shared/ (CORS exact-origin check, admin client with requireUser, AES-256-GCM encryption with SHA-256 key derivation, Google OAuth helpers, rate limiting, and Zod input validation); ensure verify_jwt = false for drive-callback only in supabase/config.toml; write unit and mock tests; deploy all 5 functions to Supabase project fmlpkcbpoziwkjuxuyaf.
+**Changes:**
+- `supabase/functions/_shared/env.ts` (changed): added cross-runtime environment getter supporting both Deno and Node for test harnesses.
+- `supabase/functions/_shared/crypto.ts` (changed): implemented AES-256-GCM encryption and decryption with SHA-256 key derivation from `TOKEN_ENC_KEY`, producing guaranteed 32-byte keys for Web Crypto's `importKey`, along with `randomToken` and `pkceChallenge`.
+- `supabase/functions/_shared/http.ts` (changed): implemented exact-origin CORS handling (rejecting unknown origins without `Access-Control-Allow-Origin`), OPTIONS preflight responses, JSON formatter with `Cache-Control: no-store` and `nosniff`, and secure HttpError handler.
+- `supabase/functions/_shared/supabase.ts` (changed): implemented admin client and `requireUser` helper extracting Bearer token and verifying against Supabase Auth.
+- `supabase/functions/_shared/google.ts` (changed): implemented token exchange, refresh, revocation, scope assertion (`https://www.googleapis.com/auth/drive.file`), and encrypted link persistence.
+- `supabase/functions/_shared/ratelimit.ts` (changed): implemented Postgres-backed fixed-window rate limiter via `check_rate_limit` RPC with fail-closed semantics.
+- `supabase/functions/_shared/validation.ts` (created): added strict Zod schemas for `drive-connect` body, `drive-link-token` body, and `drive-callback` query parameters.
+- `supabase/functions/drive-connect/index.ts` (changed): added Zod body validation, safe relative path check, state/verifier generation, and Google OAuth URL generation with PKCE challenge.
+- `supabase/functions/drive-callback/index.ts` (changed): added query validation, atomic one-time state deletion, token exchange, scope assertion, and redirect responses with clean error parameters.
+- `supabase/functions/drive-link-token/index.ts` (changed): added Zod body validation, token test refresh, scope assertion, and encrypted link persistence.
+- `supabase/functions/drive-token/index.ts` (changed): added link fetch, refresh token decryption, Google token refresh, rotation handling, and `invalid_grant` revocation detection.
+- `supabase/functions/drive-disconnect/index.ts` (created): added token revocation at Google, row deletion from `google_drive_links`, and local storage fallback.
+- `supabase/config.toml` (verified): confirmed `[functions.drive-callback]` has `verify_jwt = false` while other functions retain default JWT verification.
+- `apps/web/vitest.config.mjs` (changed): included `supabase/functions/**/*.test.ts` and added `denoNpmPlugin` resolving `npm:@supabase/supabase-js@2` and `npm:zod@3` to the exact installed monorepo packages.
+- `supabase/functions/edge-functions.test.ts` (created): added 30 unit and mock tests covering crypto key derivation, CORS allow/deny, rate limiting, and all 5 Edge Functions.
+- Deployed all 5 Edge Functions (`drive-connect`, `drive-callback`, `drive-link-token`, `drive-token`, `drive-disconnect`) to Supabase project `fmlpkcbpoziwkjuxuyaf`.
+- `docs/PROGRESS.md` (changed): marked Task 33 complete, set Phase 7 to In progress, and set Next step to Task 34.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (211/211 unit tests passed across 27 test files, including 30 Edge Function tests).
+- `pnpm test:e2e`: PASS (15/15 Playwright E2E tests passed).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle secret scan clean).
+- `npx supabase functions deploy`: PASS (All 5 functions deployed to project `fmlpkcbpoziwkjuxuyaf`).
+**Related:** Task 33 · AUTH-3, SEC-2, SEC-6 · docs/specs/google-drive.md §10.2–§10.4, §10.6 · docs/specs/security.md §14.5
+**Open:** none (ready for Task 34).

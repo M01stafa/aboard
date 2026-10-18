@@ -6,11 +6,31 @@ export const b64url = (u: Uint8Array) =>
   b64(u).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
 let cachedKey: CryptoKey | null = null;
-async function getKey(): Promise<CryptoKey> {
+
+export async function getKey(customSecret?: string): Promise<CryptoKey> {
+  if (customSecret) {
+    const rawKeyBytes = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(customSecret)
+    );
+    return crypto.subtle.importKey(
+      "raw",
+      rawKeyBytes,
+      "AES-GCM",
+      false,
+      ["encrypt", "decrypt"]
+    );
+  }
+
   if (!cachedKey) {
+    const secret = env.tokenEncKey;
+    const rawKeyBytes = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(secret)
+    );
     cachedKey = await crypto.subtle.importKey(
       "raw",
-      unb64(env.tokenEncKey),
+      rawKeyBytes,
       "AES-GCM",
       false,
       ["encrypt", "decrypt"]
@@ -19,8 +39,14 @@ async function getKey(): Promise<CryptoKey> {
   return cachedKey;
 }
 
-export async function encrypt(plain: string) {
-  const key = await getKey();
+export async function encrypt(plain: string, keyOrSecret?: CryptoKey | string) {
+  const key =
+    keyOrSecret instanceof CryptoKey
+      ? keyOrSecret
+      : typeof keyOrSecret === "string"
+      ? await getKey(keyOrSecret)
+      : await getKey();
+
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = new Uint8Array(
     await crypto.subtle.encrypt(
@@ -32,8 +58,18 @@ export async function encrypt(plain: string) {
   return { ct: b64(ct), iv: b64(iv) };
 }
 
-export async function decrypt(ct: string, iv: string) {
-  const key = await getKey();
+export async function decrypt(
+  ct: string,
+  iv: string,
+  keyOrSecret?: CryptoKey | string
+) {
+  const key =
+    keyOrSecret instanceof CryptoKey
+      ? keyOrSecret
+      : typeof keyOrSecret === "string"
+      ? await getKey(keyOrSecret)
+      : await getKey();
+
   const pt = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv: unb64(iv) },
     key,

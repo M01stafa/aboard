@@ -2,8 +2,10 @@ import { defineConfig } from "vitest/config";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { createRequire } from "module";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
 
 function loadLocalEnv() {
   const envPath = path.resolve(__dirname, ".env.local");
@@ -24,12 +26,32 @@ function loadLocalEnv() {
   return envVars;
 }
 
+const denoNpmPlugin = {
+  name: "deno-npm-resolver",
+  enforce: "pre",
+  resolveId(source) {
+    if (source.startsWith("npm:@supabase/supabase-js")) {
+      return require.resolve("@supabase/supabase-js");
+    }
+    if (source.startsWith("npm:zod")) {
+      return require.resolve("zod");
+    }
+    return null;
+  },
+};
+
 export default defineConfig({
+  plugins: [denoNpmPlugin],
   test: {
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "../../supabase/functions/**/*.test.ts"],
     exclude: ["e2e/**", "node_modules/**"],
     env: loadLocalEnv(),
     setupFiles: [path.resolve(__dirname, "./src/test/setup.ts")],
+    server: {
+      deps: {
+        inline: [/@supabase\/supabase-js/, /zod/],
+      },
+    },
   },
   resolve: {
     alias: {
