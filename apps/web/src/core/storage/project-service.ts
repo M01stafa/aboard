@@ -664,10 +664,12 @@ export class ProjectService {
   }
 
   /**
-   * Import from .alpha format (Phase 6 / Tasks 31-32 stub).
+   * Import from .alpha format (Phase 6 / Task 32).
    */
-  async importAlpha(_file: File | Blob): Promise<string> {
-    throw new Error("importAlpha is implemented in Phase 6 (Tasks 31-32)");
+  async importAlpha(file: File | Blob): Promise<string> {
+    const { importAlpha: doImport } = await import("@/core/alpha/import");
+    const result = await doImport(file, { projectService: this });
+    return result.projectId;
   }
 
   /**

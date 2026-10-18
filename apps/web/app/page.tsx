@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "./auth-guard";
@@ -13,12 +13,15 @@ import {
   getProjectStorageBadge,
   type ProjectIndexRow,
 } from "@/core/storage";
+import { importAlpha, ImportError } from "@/core/alpha";
 import { getDeviceId } from "@/core/db/lifecycle";
+import type { I18nKey } from "@/i18n/types";
 import type { User } from "@supabase/supabase-js";
 
 export function LauncherContent({ user }: { user: User }) {
   const { t } = useI18n();
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Project index & device state
   const [projects, setProjects] = useState<ProjectIndexRow[]>([]);
@@ -32,7 +35,9 @@ export function LauncherContent({ user }: { user: User }) {
   const [renameTitle, setRenameTitle] = useState<string>("");
   const [deletingProject, setDeletingProject] = useState<ProjectIndexRow | null>(null);
   const [driveNotice, setDriveNotice] = useState<string | null>(null);
-  const [alphaNotice, setAlphaNotice] = useState<boolean>(false);
+  const [isImporting, setIsImporting] = useState<boolean>(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
   const [signingOut, setSigningOut] = useState<boolean>(false);
 
   // Load device ID and recent project list from Supabase
@@ -164,6 +169,82 @@ export function LauncherContent({ user }: { user: User }) {
     }
   }
 
+  async function handleImportFile(file: File) {
+    if (isImporting) return;
+    setIsImporting(true);
+    setImportError(null);
+    try {
+      const result = await importAlpha(file, { userId: user.id });
+      router.push(`/workspace?p=${result.projectId}`);
+    } catch (err: unknown) {
+      console.error("Import error:", err);
+      if (err instanceof ImportError) {
+        const errorKeyMap: Record<string, I18nKey> = {
+          not_alpha_file: "import.errors.not_alpha_file",
+          too_many_entries: "import.errors.too_many_entries",
+          total_size_exceeded: "import.errors.total_size_exceeded",
+          entry_too_large: "import.errors.entry_too_large",
+          zip_bomb_detected: "import.errors.zip_bomb_detected",
+          path_traversal: "import.errors.path_traversal",
+          missing_manifest: "import.errors.missing_manifest",
+          invalid_manifest: "import.errors.invalid_manifest",
+          newer_format: "import.errors.newer_format",
+          hash_mismatch: "import.errors.hash_mismatch",
+          missing_file: "import.errors.missing_file",
+          missing_item: "import.errors.missing_item",
+          corrupted_zip: "import.errors.corrupted_zip",
+        };
+        const key = errorKeyMap[err.code];
+        setImportError(key ? t(key) : err.message);
+      } else {
+        const msg = err instanceof Error ? err.message : t("import.errors.corrupted_zip");
+        setImportError(msg);
+      }
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImportFile(file);
+    }
+  }
+
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+      handleImportFile(file);
+    }
+  }
+
   async function handleSignOut() {
     setSigningOut(true);
     await signOut();
@@ -186,7 +267,12 @@ export function LauncherContent({ user }: { user: User }) {
 
   return (
     <main
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       style={{
+        position: "relative",
         paddingInline: "var(--space-4)",
         paddingBlock: "var(--space-6)",
         maxInlineSize: "120ch",
@@ -200,6 +286,43 @@ export function LauncherContent({ user }: { user: User }) {
         inlineSize: "100%",
       }}
     >
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileInputChange}
+        style={{ display: "none" }}
+        data-testid="launcher-alpha-file-input"
+      />
+      {isDragging && (
+        <div
+          data-testid="launcher-drop-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "var(--overlay-backdrop)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "var(--space-2)",
+            border: "3px dashed var(--accent-text)",
+            margin: "var(--space-4)",
+            borderRadius: "var(--radius-lg)",
+            pointerEvents: "none",
+            zIndex: 100,
+          }}
+        >
+          <div
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: "var(--weight-bold)",
+              color: "var(--text-main)",
+            }}
+          >
+            {t("import.dropToImport")}
+          </div>
+        </div>
+      )}
       <style>{`
         .launcher-card {
           position: relative;
@@ -591,7 +714,8 @@ export function LauncherContent({ user }: { user: User }) {
         >
           <button
             type="button"
-            onClick={() => setAlphaNotice((prev) => !prev)}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
             className="btn-subtle"
             data-testid="open-alpha-btn"
           >
@@ -610,28 +734,54 @@ export function LauncherContent({ user }: { user: User }) {
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" x2="12" y1="15" y2="3" />
             </svg>
-            <span>{t("launcher.openAlpha")}</span>
+            <span>{isImporting ? t("import.importing") : t("launcher.openAlpha")}</span>
           </button>
+        </div>
 
-          {alphaNotice && (
-            <div
-              role="status"
+        {/* Import Error Banner */}
+        {importError && (
+          <div
+            role="alert"
+            data-testid="launcher-import-error"
+            style={{
+              fontSize: "0.875rem",
+              color: "var(--danger-text)",
+              backgroundColor: "var(--danger-bg)",
+              border: "1px solid var(--danger-text)",
+              paddingBlock: "var(--space-2)",
+              paddingInline: "var(--space-3)",
+              borderRadius: "var(--radius-sm)",
+              lineHeight: "1.25rem",
+              boxSizing: "border-box",
+              marginBlockStart: "var(--space-1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "var(--space-2)",
+            }}
+          >
+            <span>{importError}</span>
+            <button
+              type="button"
+              onClick={() => setImportError(null)}
+              aria-label={t("launcher.cancel")}
               style={{
-                fontSize: "0.8125rem",
-                color: "var(--badge-tech-fg)",
-                backgroundColor: "var(--badge-tech-bg)",
-                border: "1px solid var(--badge-tech-bd)",
-                paddingBlock: "var(--space-1)",
-                paddingInline: "var(--space-2)",
-                borderRadius: "var(--radius-sm)",
-                lineHeight: "1.25rem",
-                boxSizing: "border-box",
+                background: "none",
+                border: "none",
+                color: "var(--danger-text)",
+                cursor: "pointer",
+                padding: "var(--space-1)",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "1rem",
+                lineHeight: "1rem",
               }}
             >
-              {t("launcher.openAlphaComingSoon")}
-            </div>
-          )}
-        </div>
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Transient Drive Notice banner */}
         {driveNotice && (

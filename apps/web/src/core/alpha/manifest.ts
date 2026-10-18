@@ -15,7 +15,7 @@ export const CURRENT_FORMAT_VERSION = 1 as const;
  * Safe path validator per SEC-7 and §12.5.
  * Rejects path traversal (..), absolute paths, and backslashes.
  */
-export const safePathRegex = /^(?:boards\/[a-zA-Z0-9_-]+\.json|circuits\/[a-zA-Z0-9_-]+\.txt|pdfs\/[a-zA-Z0-9_-]+\.json|annotations\/[a-zA-Z0-9_-]+\.json|files\/[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+|manifest\.json|thumbnail\.png)$/;
+export const safePathRegex = /^(?:boards\/[a-zA-Z0-9_-]+\.json|circuits\/[a-zA-Z0-9_-]+\.txt|pdfs\/[a-zA-Z0-9_-]+\.json|annotations\/[a-zA-Z0-9_-]+\.json|files\/[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9]+)?|manifest\.json|thumbnail\.png)$/;
 
 export function isSafePath(path: string): boolean {
   if (path.includes("..") || path.startsWith("/") || path.startsWith("\\") || path.includes("\\")) {

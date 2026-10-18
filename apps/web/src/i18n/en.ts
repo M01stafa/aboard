@@ -280,6 +280,27 @@ export const en = {
     capExceededHint: "Try exporting without PDFs or use Google Drive mode for large files.",
     cancel: "Cancel",
   },
+  import: {
+    importing: "Importing project…",
+    dropToImport: "Drop .alpha file here to import",
+    success: "Project imported successfully.",
+    errors: {
+      not_alpha_file: "The selected file is not a valid .alpha project archive.",
+      too_many_entries: "Project archive exceeds the maximum allowed entry count (5,000).",
+      total_size_exceeded: "Project archive exceeds the maximum uncompressed size of 2 GB.",
+      entry_too_large: "An entry inside the project archive exceeds 500 MB.",
+      zip_bomb_detected: "Suspicious compression ratio detected in archive (Zip Bomb protection).",
+      path_traversal: "Archive contains invalid or unsafe file paths.",
+      missing_manifest: "Archive is missing manifest.json.",
+      invalid_manifest: "Archive contains an invalid or malformed project manifest.",
+      newer_format: "This project was created with a newer version of Aboard. Please update the app.",
+      hash_mismatch: "Integrity check failed: file content does not match its expected checksum.",
+      missing_file: "A required project file is missing from the archive.",
+      missing_item: "A required project item is missing from the archive.",
+      corrupted_zip: "The archive is corrupted or could not be opened.",
+      generic: "Failed to import project.",
+    },
+  },
 } as const;
 
 type DeepStringRecord<T> = {

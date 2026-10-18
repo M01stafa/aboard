@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 6 — .alpha Project File |
-| Current task | Task 31 — Define the Manifest and Build the Export (completed) |
+| Current task | Task 32 — Build the Import and Migration Engine (.alpha) (completed) |
 | Last updated | 2026-10-18 |
-| Next step | Task 32 — Build the Import and Migration Engine (.alpha) |
+| Next step | Task 33 — Cross-Tool Integration: PDF to Whiteboard (BOARD-3, INT-1) |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -123,6 +123,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-18 | Task 29: PDF annotations (highlight, ink, free text, stamp) stored separately as lightweight JSON linked by PDF hash (PDF-3, PDF-4); stamp images extracted to SHA-256 binary blobs via ProjectService.putFile; zero base64 in annotation JSON; undo/redo capability integrated with SaveQueue debouncing. |
 | 2026-10-18 | Task 30: PDF page operations (rotate, reorder, delete, insert image) implemented with @cantoo/pdf-lib; restructuring produces new immutable PDF with new SHA-256 hash; warning toast informs user that annotations do not carry over to restructured PDFs; annotated download burns annotations and re-injects stamp images via ProjectService.getFile (PDF-5, PDF-6). |
 | 2026-10-18 | Task 31: Defined strict Zod schema for AlphaManifest (formatVersion: 1) adhering to §12.1-12.3; implemented exportAlpha engine with uncompressed mimetype first entry, uncompressed level 0 for PDFs and images, streaming sink via showSaveFilePicker on Chromium desktop with flat memory, in-memory fallback capped at 300MB mobile / 1GB desktop (Spike S5), octet-stream download trigger, and ExportDialog with ALPHA-6 toggles. |
+| 2026-10-18 | Task 32: Built .alpha import engine with strict security checks (SEC-7, §12.5); confirmed limits (5000 entries, 2GB total uncompressed, 500MB single entry, 100:1 ratio zip bomb guard for >10MB entries); rejected path traversal, oversized entries, and format version mismatches; sanitized Excalidraw board links (stripped javascript: and data:); handled project collisions by importing copy with rewritten alpha://pdf/... links; performed atomic rollback on failure; wired launcher UI with no accept filter for iOS compatibility. |
 
 ## Lessons and corrections
 

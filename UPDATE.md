@@ -1014,5 +1014,26 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 31 · ALPHA-1, ALPHA-5, ALPHA-6, ALPHA-8 · docs/specs/alpha-format.md §12.1–§12.4 · Spike S5
 **Open:** none (ready for Task 32).
 
-
-
+## 2026-10-18 — Task 32: Build the Import with Safety Checks
+**Request:** Run Task 32 from docs/TASKS.md: build the import engine in apps/web/src/core/alpha/import.ts using @zip.js/zip.js treating every archive as untrusted data (SEC-7); enforce strict safety checks before extraction (mimetype verification, max 5,000 entries, max 2GB total uncompressed, max 500MB single entry, 100:1 compression ratio zip bomb guard, path traversal protection rejecting .., leading /, and backslashes, zod manifest validation, format version check, SHA-256 verification of every file against manifest); sanitize Excalidraw board elements by stripping javascript: and data: links; handle project collisions by importing as a copy with new IDs and rewritten alpha://pdf/... internal links; clean up partial projects on failure (atomic rollback); wire launcher UI with "Open .alpha file" button and drag-and-drop zone using no accept filter on file input for iOS compatibility; write unit tests for all malicious cases and Playwright E2E test verifying export -> clear DB -> import round-trip.
+**Changes:**
+- `apps/web/src/core/alpha/import.ts` (created): implemented `importAlpha`, `assertArchiveSafety`, `sanitizeBoardJson`, `ImportError`, memory-efficient streaming reading from File/Blob via `@zip.js/zip.js` `ZipReader(new BlobReader(file))` without buffering archive in RAM, SHA-256 verification for all binary files, internal link remapping, and atomic rollback on failure.
+- `apps/web/src/core/alpha/manifest.ts` (changed): updated `safePathRegex` in manifest schema to support extensioned or extensionless filenames under `files/`.
+- `apps/web/src/core/alpha/index.ts` (created): centralized export barrel for alpha manifest, export, import, and dialog modules.
+- `apps/web/src/core/storage/project-service.ts` (changed): delegated `importAlpha(file)` to `importAlpha` engine.
+- `apps/web/src/core/storage/project-service.test.ts` (changed): updated stub expectation for `service.importAlpha` to expect rejection on invalid inputs now that the method is active.
+- `apps/web/app/page.tsx` (changed): wired "Open .alpha file" button (`[data-testid="open-alpha-btn"]`) to trigger hidden `<input type="file" data-testid="launcher-alpha-file-input" />` (with zero `accept` attribute for iOS Safari compatibility per Spike S5), added drag-and-drop overlay (`[data-testid="launcher-drop-overlay"]`), import error alert banner (`[data-testid="launcher-import-error"]`), and automatic workspace navigation on success.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added complete bilingual translation dictionary for import states and all 13 error codes with 100% key parity.
+- `apps/web/src/core/alpha/import.test.ts` (created): 18 comprehensive unit tests asserting rejection of non-alpha mimetype, invalid mimetype content, path traversal (`..`, `/`, `\`, unexpected root paths), oversized single entry, total uncompressed size limit exceeded, zip bomb compression ratio, max entry count exceeded, missing/invalid manifest, newer format version, SHA-256 mismatch, atomic rollback cleanup on failure, link sanitization, collision copy handling with rewritten links, and round-trip export -> import.
+- `apps/web/e2e/alpha-import.spec.ts` (created): Playwright E2E test executing export in workspace, clearing IndexedDB, uploading `.alpha` file on launcher, and verifying restored workspace and whiteboard module.
+- `docs/PROGRESS.md` (changed): marked Task 32 complete, set Next step to Task 33, and logged Task 32 decision.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 violations, 8-point grid verified).
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (181/181 unit tests passed across 26 test files).
+- `pnpm test:e2e`: PASS (15/15 Playwright E2E tests passed in Chromium, including `alpha-import.spec.ts`).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle secret scan clean).
+**Related:** Task 32 · ALPHA-2, ALPHA-3, ALPHA-4, SEC-7 · docs/specs/alpha-format.md §12.5 · docs/specs/security.md §14.6
+**Open:** none (ready for Task 33).

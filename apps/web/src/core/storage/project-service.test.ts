@@ -208,7 +208,7 @@ describe("ProjectService (Task 20 / STORE-1, STORE-7)", () => {
 
   it("throws descriptive errors for future phase stubs", async () => {
     await expect(service.exportAlpha("p1")).rejects.toThrow("Phase 6");
-    await expect(service.importAlpha(new Blob())).rejects.toThrow("Phase 6");
+    await expect(service.importAlpha(new Blob())).rejects.toThrow();
   });
 
   it("stubs moveProject by notifying index syncer", async () => {
