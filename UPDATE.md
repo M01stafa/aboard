@@ -953,3 +953,29 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Checks:** Verified AGENTS.md line count (135 lines <= 200 limit); verified zero application code or test files modified (`git status`); verified exact match with project rules and conventions.
 **Related:** Task 29 Post-Mortem · PDF-3, PDF-4
 **Open:** none (ready for Task 30).
+
+## 2026-10-18 — Task 30: Build the Annotated Download and Page Operations
+**Request:** Run Task 30 from docs/TASKS.md: allow downloading PDF with burned-in annotations (PDF-5), re-injecting extracted stamp images via ProjectService.getFile(hash); implement page operations (rotate, reorder with move up/down, delete with multi-page guard, insert image as page) using @cantoo/pdf-lib (PDF-6); keep original PDF immutable and save restructured PDFs under new SHA-256 hashes via ProjectService.putFile; notify users via translated warning toast that annotations do not carry over to restructured PDFs; write unit and Playwright E2E tests; run all checks, push to main, and report GitHub Actions CI run.
+**Changes:**
+- `apps/web/src/modules/pdf/page-operations.ts` (created): implemented `rotatePage`, `deletePage`, `reorderPages`, `insertImagePage`, and fallback `burnAnnotationsWithPdfLib` using `@cantoo/pdf-lib` with strict imported `PdfAnnotationSubtype` enums and stamp re-injection.
+- `apps/web/src/modules/pdf/page-operations.test.ts` (created): 6 unit tests validating rotation, deletion, page order swap, image page insertion, and annotation burning with stamp injection.
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): added Download button (`[data-testid="pdf-download-btn"]`) and Page Operations menu (`[data-testid="pdf-page-operations-menu"]`) with Rotate 90°, Move Page Up, Move Page Down, Insert Image, and Delete Page actions following DESIGN.md R1 tokens, 8-point grid rules, and accessible focus styles.
+- `apps/web/src/modules/pdf/pdf-toolbar.test.tsx` (changed): added unit tests for Page Operations menu toggle, page action callbacks, and download button state.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): registered `ExportPluginPackage`, wired `useExport`, added `handleDownloadAnnotated` (with stamp injection and browser download trigger), executed page operations, saved restructured PDF versions, and displayed warning toast notification.
+- `apps/web/src/modules/pdf/pdf-pane.tsx` (changed): wired `onSaveRestructuredPdf={addPdfFile}` to `PdfViewer`.
+- `apps/web/src/modules/pdf/use-pdf-persistence.ts` (changed): preserved canonical `ProjectService.putFile(projectId, file, meta, hash)` argument order for correct project scoping.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added localized strings for page operations, download, and restructure warning with 100% key parity.
+- `apps/web/e2e/pdf-page-operations.spec.ts` (created): Playwright E2E test verifying rotate, image page insertion, delete page, restructure toast notification, and annotated PDF download verification with valid PDFDocument parsing.
+- `docs/PROGRESS.md` (changed): marked Task 30 complete, set Next step to Task 31, and logged Task 30 decision.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 violations, 8-point grid verified).
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (148/148 unit tests passed across 22 test files).
+- `pnpm test:e2e`: PASS (13/13 Playwright E2E tests passed in Chromium, including `pdf-page-operations.spec.ts`).
+- `pnpm build`: PASS (Next.js 16.4.0 static build compiled in 3.9s).
+- `pnpm ci:security`: PASS (Gitleaks, dependency audit, .next bundle secret scan).
+**Related:** Task 30 · PDF-5, PDF-6 · docs/specs/modules.md §7.3
+**Open:** none (ready for Task 31).
+

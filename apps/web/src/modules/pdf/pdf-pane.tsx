@@ -150,6 +150,7 @@ export function PdfPane({
           projectId={projectId}
           pdfHash={payload?.fileKey || tab.itemId}
           projectServiceOverride={projectServiceOverride}
+          onSaveRestructuredPdf={addPdfFile}
         />
       </div>
     );

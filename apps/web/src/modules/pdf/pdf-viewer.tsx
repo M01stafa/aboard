@@ -23,11 +23,20 @@ import { InteractionManagerPluginPackage } from "@embedpdf/plugin-interaction-ma
 import { SelectionPluginPackage, SelectionLayer } from "@embedpdf/plugin-selection/react";
 import { AnnotationPluginPackage, AnnotationLayer } from "@embedpdf/plugin-annotation/react";
 import { HistoryPluginPackage } from "@embedpdf/plugin-history";
+import { ExportPluginPackage, useExport } from "@embedpdf/plugin-export/react";
 import type { PdfDocumentObject } from "@embedpdf/models";
-import type { ProjectService } from "@/core/storage";
+import { projectService as defaultProjectService, type ProjectService } from "@/core/storage";
+import { computeBlobSha256 } from "@/core/storage/sha256";
 import { useI18n } from "@/i18n/provider";
 import { PdfToolbar } from "./pdf-toolbar";
 import { usePdfAnnotations } from "./use-pdf-annotations";
+import {
+  rotatePage,
+  deletePage,
+  reorderPages,
+  insertImagePage,
+  burnAnnotationsWithPdfLib,
+} from "./page-operations";
 
 export interface PdfViewerProps {
   documentId: string;
@@ -38,6 +47,7 @@ export interface PdfViewerProps {
   projectId?: string;
   pdfHash?: string;
   projectServiceOverride?: ProjectService;
+  onSaveRestructuredPdf?: (newBlob: Blob) => Promise<void>;
 }
 
 const plugins = [
@@ -50,31 +60,45 @@ const plugins = [
   { package: SelectionPluginPackage },
   { package: AnnotationPluginPackage },
   { package: HistoryPluginPackage },
+  { package: ExportPluginPackage },
 ] as unknown as PluginBatchRegistrations;
 
 interface ViewerInnerProps {
   documentId: string;
+  blob: Blob;
   documentTitle?: string;
   initialPage: number;
   onPageChange: (page: number) => void;
   projectId?: string;
   pdfHash?: string;
   projectServiceOverride?: ProjectService;
+  onSaveRestructuredPdf?: (newBlob: Blob) => Promise<void>;
+  onShowToast: (message: string) => void;
 }
 
 function ViewerInner({
   documentId,
+  blob,
   documentTitle,
   initialPage,
   onPageChange,
-  projectId,
+  projectId = "default",
   pdfHash,
   projectServiceOverride,
+  onSaveRestructuredPdf,
+  onShowToast,
 }: ViewerInnerProps) {
+  const { t } = useI18n();
+  const ps = projectServiceOverride ?? defaultProjectService;
   const { provides: scrollScope, state: scrollState } = useScroll(documentId);
   const { provides: zoomScope, state: zoomState } = useZoom(documentId);
+  const { provides: exportScope } = useExport(documentId);
+
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [displayPage, setDisplayPage] = useState(initialPage);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isOperatingPage, setIsOperatingPage] = useState(false);
+
   const hasRestoredPageRef = useRef(false);
   const isSettledRef = useRef(initialPage <= 1);
 
@@ -171,6 +195,122 @@ function ViewerInner({
     zoomScope?.requestZoom(1.0);
   };
 
+  // Download PDF with burned-in annotations (PDF-5)
+  const handleDownloadAnnotated = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      let pdfBytes: Uint8Array;
+      if (exportScope) {
+        // 1. Live PDFium Export with all active/imported annotations
+        const task = exportScope.saveAsCopy();
+        const arrayBuffer = await task.toPromise();
+        pdfBytes = new Uint8Array(arrayBuffer);
+      } else {
+        // 2. Standalone burning fallback using @cantoo/pdf-lib
+        const curBuffer = await blob.arrayBuffer();
+        const savedJson = (await ps.readAnnotations(projectId, pdfHash || documentId)) ?? "";
+        pdfBytes = await burnAnnotationsWithPdfLib(curBuffer, savedJson, projectId, ps);
+      }
+
+      const annotatedBlob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
+      const hash = await computeBlobSha256(annotatedBlob);
+      const baseName = (documentTitle ?? "document").replace(/\.pdf$/i, "");
+      const downloadName = `${baseName}-annotated.pdf`;
+
+      // Save to ProjectService using canonical Task 20 signature: putFile(projectId, blob, meta, knownKey)
+      await ps.putFile(
+        projectId,
+        annotatedBlob,
+        {
+          name: downloadName,
+          mime: "application/pdf",
+        },
+        hash
+      );
+
+      // Trigger browser download
+      const downloadUrl = URL.createObjectURL(annotatedBlob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = downloadName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error("[PdfViewer] Download annotated PDF failed:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Helper executing page operations and warning user that annotations do not carry over (PDF-6)
+  const executePageOp = async (op: (curBytes: ArrayBuffer) => Promise<Uint8Array>) => {
+    if (isOperatingPage) return;
+    setIsOperatingPage(true);
+    try {
+      const curBuffer = await blob.arrayBuffer();
+      const newBytes = await op(curBuffer);
+      const newBlob = new Blob([newBytes.buffer as ArrayBuffer], { type: "application/pdf" });
+
+      await onSaveRestructuredPdf?.(newBlob);
+      onShowToast(t("pdf.restructuredWarning"));
+    } catch (err) {
+      console.error("[PdfViewer] Page operation failed:", err);
+      onShowToast(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsOperatingPage(false);
+    }
+  };
+
+  const handleRotatePage = async () => {
+    const curPage = displayPage || scrollState.currentPage || 1;
+    const pageIdx = Math.max(0, curPage - 1);
+    await executePageOp((bytes) => rotatePage(bytes, pageIdx, 90));
+  };
+
+  const handleMovePageUp = async () => {
+    const curPage = displayPage || scrollState.currentPage || 1;
+    if (curPage <= 1) return;
+    const total = scrollState.totalPages || 1;
+    const newOrder = Array.from({ length: total }, (_, i) => i);
+    const fromIdx = curPage - 1;
+    const toIdx = fromIdx - 1;
+    [newOrder[fromIdx], newOrder[toIdx]] = [newOrder[toIdx], newOrder[fromIdx]];
+
+    await executePageOp((bytes) => reorderPages(bytes, newOrder));
+  };
+
+  const handleMovePageDown = async () => {
+    const curPage = displayPage || scrollState.currentPage || 1;
+    const total = scrollState.totalPages || 1;
+    if (curPage >= total) return;
+    const newOrder = Array.from({ length: total }, (_, i) => i);
+    const fromIdx = curPage - 1;
+    const toIdx = fromIdx + 1;
+    [newOrder[fromIdx], newOrder[toIdx]] = [newOrder[toIdx], newOrder[fromIdx]];
+
+    await executePageOp((bytes) => reorderPages(bytes, newOrder));
+  };
+
+  const handleDeletePage = async () => {
+    const total = scrollState.totalPages || 1;
+    if (total <= 1) {
+      onShowToast(t("pdf.deletePageError"));
+      return;
+    }
+    const curPage = displayPage || scrollState.currentPage || 1;
+    const pageIdx = Math.max(0, curPage - 1);
+    await executePageOp((bytes) => deletePage(bytes, pageIdx));
+  };
+
+  const handleInsertImagePage = async (file: File) => {
+    const curPage = displayPage || scrollState.currentPage || 1;
+    const imgBuffer = await file.arrayBuffer();
+    await executePageOp((bytes) => insertImagePage(bytes, imgBuffer, file.type, curPage));
+  };
+
   return (
     <div
       style={{
@@ -200,6 +340,14 @@ function ViewerInner({
         onUndo={handleUndo}
         onRedo={handleRedo}
         onAddStamp={handleAddStamp}
+        onDownloadAnnotated={handleDownloadAnnotated}
+        isDownloading={isDownloading}
+        onRotatePage={handleRotatePage}
+        onMovePageUp={handleMovePageUp}
+        onMovePageDown={handleMovePageDown}
+        onDeletePage={handleDeletePage}
+        onInsertImagePage={handleInsertImagePage}
+        isOperatingPage={isOperatingPage}
       />
 
       <div
@@ -216,7 +364,7 @@ function ViewerInner({
           <aside
             data-testid="pdf-thumbnails-pane"
             style={{
-              width: "160px",
+              width: "calc(var(--space-16) * 1.25)",
               height: "100%",
               borderInlineEnd: "1px solid var(--border-card)",
               backgroundColor: "var(--bg-subtle)",
@@ -249,23 +397,23 @@ function ViewerInner({
                     documentId={documentId}
                     meta={meta}
                     style={{
-                      width: `${meta.width}px`,
-                      height: `${meta.height}px`,
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
-                      borderRadius: "var(--radius-sm)",
                       border:
-                        scrollState.currentPage === meta.pageIndex + 1
-                          ? "2px solid var(--accent-text)"
+                        displayPage === meta.pageIndex + 1
+                          ? "2px solid var(--brand-primary)"
                           : "1px solid var(--border-card)",
+                      borderRadius: "var(--radius-sm)",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                     }}
                   />
                   <span
-                    dir="ltr"
                     style={{
                       fontSize: "12px",
-                      color: "var(--text-muted)",
                       marginTop: "var(--space-8)",
-                      fontVariantNumeric: "tabular-nums",
+                      color:
+                        displayPage === meta.pageIndex + 1
+                          ? "var(--brand-primary)"
+                          : "var(--text-muted)",
+                      fontWeight: displayPage === meta.pageIndex + 1 ? 600 : 400,
                     }}
                   >
                     {meta.pageIndex + 1}
@@ -276,45 +424,32 @@ function ViewerInner({
           </aside>
         )}
 
-        {/* Main PDF canvas view */}
-        <Viewport
-          documentId={documentId}
-          data-testid="pdf-viewport"
-          style={{
-            flex: 1,
-            width: "100%",
-            height: "100%",
-            overflow: "auto",
-            backgroundColor: "var(--bg-body)",
-            boxSizing: "border-box",
-          }}
-        >
+        {/* Viewport with Canvas Render, Selection, and Annotation Layers */}
+        <Viewport documentId={documentId} style={{ flex: 1, height: "100%" }}>
           <Scroller
             documentId={documentId}
-            renderPage={(layout) => (
+            renderPage={(page) => (
               <div
-                key={layout.pageNumber}
-                data-page-number={layout.pageNumber}
-                data-testid={`pdf-page-${layout.pageNumber}`}
+                key={page.pageIndex}
+                data-testid={`pdf-page-${page.pageIndex + 1}`}
                 style={{
                   position: "relative",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
                   backgroundColor: "#ffffff",
-                  width: `${layout.rotatedWidth}px`,
-                  height: `${layout.rotatedHeight}px`,
+                  boxSizing: "border-box",
                 }}
               >
                 <RenderLayer
                   documentId={documentId}
-                  pageIndex={layout.pageIndex}
+                  pageIndex={page.pageIndex}
                 />
                 <SelectionLayer
                   documentId={documentId}
-                  pageIndex={layout.pageIndex}
+                  pageIndex={page.pageIndex}
                 />
                 <AnnotationLayer
                   documentId={documentId}
-                  pageIndex={layout.pageIndex}
+                  pageIndex={page.pageIndex}
                 />
               </div>
             )}
@@ -334,6 +469,7 @@ export function PdfViewer({
   projectId,
   pdfHash,
   projectServiceOverride,
+  onSaveRestructuredPdf,
 }: PdfViewerProps) {
   const { t } = useI18n();
 
@@ -345,6 +481,18 @@ export function PdfViewer({
 
   const [isDocumentReady, setIsDocumentReady] = useState(false);
   const [docLoadError, setDocLoadError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (message: string) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToastMessage(message);
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage(null);
+    }, 4500);
+  };
 
   // Maintain Blob URL reference
   const objectUrl = useMemo(() => {
@@ -445,6 +593,7 @@ export function PdfViewer({
       data-testid="pdf-viewer-root"
     >
       <EmbedPDF
+        key={pdfHash || documentId}
         engine={engine}
         plugins={plugins}
         onInitialized={handleInitialized}
@@ -452,12 +601,15 @@ export function PdfViewer({
         {isDocumentReady ? (
           <ViewerInner
             documentId={documentId}
+            blob={blob}
             documentTitle={documentTitle}
             initialPage={initialPage}
             onPageChange={onPageChange}
             projectId={projectId}
             pdfHash={pdfHash}
             projectServiceOverride={projectServiceOverride}
+            onSaveRestructuredPdf={onSaveRestructuredPdf}
+            onShowToast={showToast}
           />
         ) : (
           <div
@@ -475,6 +627,54 @@ export function PdfViewer({
           </div>
         )}
       </EmbedPDF>
+
+      {/* Warning toast notification (PDF-6) */}
+      {toastMessage && (
+        <div
+          role="alert"
+          aria-live="polite"
+          data-testid="pdf-restructure-toast"
+          style={{
+            position: "absolute",
+            bottom: "var(--space-16)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "var(--slate-900, #0f172a)",
+            color: "#ffffff",
+            border: "1px solid var(--border-card)",
+            borderRadius: "var(--radius-md)",
+            padding: "var(--space-8) var(--space-16)",
+            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.3)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-8)",
+            fontSize: "14px",
+            fontWeight: 500,
+            maxWidth: "calc(var(--space-16) * 4)",
+            boxSizing: "border-box",
+          }}
+        >
+          <span>⚠️</span>
+          <span>{toastMessage}</span>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            aria-label="Close"
+            data-testid="pdf-dismiss-toast"
+            style={{
+              border: "none",
+              background: "transparent",
+              color: "#ffffff",
+              cursor: "pointer",
+              padding: "0 var(--space-8)",
+              fontSize: "16px",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }

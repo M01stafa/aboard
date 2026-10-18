@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n/provider";
 
 export type AnnotationToolType = "select" | "highlight" | "ink" | "freeText" | "stamp";
@@ -25,6 +25,15 @@ export interface PdfToolbarProps {
   onUndo?: () => void;
   onRedo?: () => void;
   onAddStamp?: (file: File) => void;
+  // Task 30: Annotated Download & Page Operations (PDF-5, PDF-6)
+  onDownloadAnnotated?: () => void;
+  isDownloading?: boolean;
+  onRotatePage?: () => void;
+  onMovePageUp?: () => void;
+  onMovePageDown?: () => void;
+  onDeletePage?: () => void;
+  onInsertImagePage?: (file: File) => void;
+  isOperatingPage?: boolean;
 }
 
 export function PdfToolbar({
@@ -46,9 +55,20 @@ export function PdfToolbar({
   onUndo,
   onRedo,
   onAddStamp,
+  onDownloadAnnotated,
+  isDownloading = false,
+  onRotatePage,
+  onMovePageUp,
+  onMovePageDown,
+  onDeletePage,
+  onInsertImagePage,
+  isOperatingPage = false,
 }: PdfToolbarProps) {
   const { t } = useI18n();
   const stampInputRef = useRef<HTMLInputElement>(null);
+  const imagePageInputRef = useRef<HTMLInputElement>(null);
+  const [showPageMenu, setShowPageMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const handleStampClick = () => {
     onSelectTool?.("stamp");
@@ -64,6 +84,41 @@ export function PdfToolbar({
       stampInputRef.current.value = "";
     }
   };
+
+  const handleImagePageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onInsertImagePage?.(file);
+    }
+    if (imagePageInputRef.current) {
+      imagePageInputRef.current.value = "";
+    }
+    setShowPageMenu(false);
+  };
+
+  // Close dropdown on click outside or escape key
+  useEffect(() => {
+    if (!showPageMenu) return;
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowPageMenu(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowPageMenu(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showPageMenu]);
 
   const getToolButtonStyle = (tool: AnnotationToolType): React.CSSProperties => {
     const isActive = activeTool === tool;
@@ -98,18 +153,36 @@ export function PdfToolbar({
         color: "var(--text-main)",
         boxSizing: "border-box",
         gap: "var(--space-16)",
-        flexShrink: 0,
-        flexWrap: "nowrap",
-        overflowX: "auto",
+        userSelect: "none",
+        position: "relative",
       }}
     >
-      {/* Left side: Thumbnails toggle & Document title */}
+      {/* Hidden file input for stamp image selection */}
+      <input
+        type="file"
+        ref={stampInputRef}
+        onChange={handleStampFileChange}
+        accept="image/png,image/jpeg"
+        data-testid="pdf-stamp-input"
+        style={{ display: "none" }}
+      />
+
+      {/* Hidden file input for image page insertion */}
+      <input
+        type="file"
+        ref={imagePageInputRef}
+        onChange={handleImagePageChange}
+        accept="image/png,image/jpeg"
+        data-testid="pdf-insert-image-input"
+        style={{ display: "none" }}
+      />
+
+      {/* Left side: Thumbnails & Page Navigation */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: "var(--space-8)",
-          minWidth: 0,
           flexShrink: 0,
         }}
       >
@@ -122,30 +195,102 @@ export function PdfToolbar({
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
+            width: "32px",
             height: "32px",
-            paddingInline: "var(--space-8)",
             borderRadius: "var(--radius-sm)",
             border: "1px solid var(--border-input)",
             backgroundColor: showThumbnails ? "var(--accent-text)" : "var(--bg-subtle)",
             color: showThumbnails ? "#ffffff" : "var(--text-main)",
             cursor: "pointer",
             fontSize: "14px",
-            fontWeight: 500,
           }}
         >
-          {t("pdf.thumbnails")}
+          ☰
         </button>
 
-        {documentTitle && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-8)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={onPrevPage}
+            disabled={currentPage <= 1}
+            aria-label={t("pdf.prevPage")}
+            data-testid="pdf-prev-page"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "32px",
+              height: "32px",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-input)",
+              backgroundColor: "var(--bg-subtle)",
+              color: "var(--text-main)",
+              cursor: currentPage <= 1 ? "not-allowed" : "pointer",
+              opacity: currentPage <= 1 ? 0.5 : 1,
+              fontSize: "16px",
+              fontWeight: 600,
+            }}
+          >
+            ‹
+          </button>
+
           <span
+            data-testid="pdf-page-display"
             style={{
               fontSize: "14px",
               fontWeight: 500,
-              color: "var(--text-muted)",
-              whiteSpace: "nowrap",
+              minWidth: "64px",
+              textAlign: "center",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {currentPage} / {totalPages || 1}
+          </span>
+
+          <button
+            type="button"
+            onClick={onNextPage}
+            disabled={currentPage >= totalPages}
+            aria-label={t("pdf.nextPage")}
+            data-testid="pdf-next-page"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "32px",
+              height: "32px",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-input)",
+              backgroundColor: "var(--bg-subtle)",
+              color: "var(--text-main)",
+              cursor: currentPage >= totalPages ? "not-allowed" : "pointer",
+              opacity: currentPage >= totalPages ? 0.5 : 1,
+              fontSize: "16px",
+              fontWeight: 600,
+            }}
+          >
+            ›
+          </button>
+        </div>
+
+        {documentTitle && (
+          <span
+            data-testid="pdf-document-title"
+            style={{
+              fontSize: "14px",
+              fontWeight: 600,
+              maxWidth: "var(--space-16)",
               overflow: "hidden",
               textOverflow: "ellipsis",
-              maxWidth: "320px",
+              whiteSpace: "nowrap",
+              marginInlineStart: "var(--space-8)",
+              color: "var(--text-muted)",
             }}
             title={documentTitle}
           >
@@ -154,97 +299,21 @@ export function PdfToolbar({
         )}
       </div>
 
-      {/* Center: Page Navigation Controls */}
+      {/* Center: Annotation Tools & History (PDF-3, PDF-4) */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: "var(--space-8)",
-          flexShrink: 0,
-        }}
-      >
-        <button
-          type="button"
-          onClick={onPrevPage}
-          disabled={currentPage <= 1}
-          aria-label={t("pdf.prevPage")}
-          data-testid="pdf-prev-page"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "32px",
-            height: "32px",
-            borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--border-input)",
-            backgroundColor: "var(--bg-subtle)",
-            color: "var(--text-main)",
-            cursor: currentPage <= 1 ? "not-allowed" : "pointer",
-            opacity: currentPage <= 1 ? 0.5 : 1,
-            fontSize: "16px",
-          }}
-        >
-          ‹
-        </button>
-
-        <div
-          dir="ltr"
-          data-testid="pdf-page-display"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "var(--space-8)",
-            fontSize: "14px",
-            fontVariantNumeric: "tabular-nums",
-            color: "var(--text-main)",
-            paddingInline: "var(--space-8)",
-          }}
-        >
-          <span>{currentPage}</span>
-          <span style={{ color: "var(--text-muted)" }}>/</span>
-          <span>{totalPages || 1}</span>
-        </div>
-
-        <button
-          type="button"
-          onClick={onNextPage}
-          disabled={totalPages > 0 && currentPage >= totalPages}
-          aria-label={t("pdf.nextPage")}
-          data-testid="pdf-next-page"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "32px",
-            height: "32px",
-            borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--border-input)",
-            backgroundColor: "var(--bg-subtle)",
-            color: "var(--text-main)",
-            cursor: totalPages > 0 && currentPage >= totalPages ? "not-allowed" : "pointer",
-            opacity: totalPages > 0 && currentPage >= totalPages ? 0.5 : 1,
-            fontSize: "16px",
-          }}
-        >
-          ›
-        </button>
-      </div>
-
-      {/* Center-Right: Annotation Tools & Undo / Redo */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-8)",
-          flexShrink: 0,
+          flexWrap: "nowrap",
         }}
       >
         <button
           type="button"
           onClick={() => onSelectTool?.("select")}
-          aria-label={t("pdf.toolSelect")}
           data-testid="pdf-tool-select"
           style={getToolButtonStyle("select")}
+          title={t("pdf.toolSelect")}
         >
           {t("pdf.toolSelect")}
         </button>
@@ -252,9 +321,9 @@ export function PdfToolbar({
         <button
           type="button"
           onClick={() => onSelectTool?.("highlight")}
-          aria-label={t("pdf.toolHighlight")}
           data-testid="pdf-tool-highlight"
           style={getToolButtonStyle("highlight")}
+          title={t("pdf.toolHighlight")}
         >
           {t("pdf.toolHighlight")}
         </button>
@@ -262,9 +331,9 @@ export function PdfToolbar({
         <button
           type="button"
           onClick={() => onSelectTool?.("ink")}
-          aria-label={t("pdf.toolInk")}
           data-testid="pdf-tool-ink"
           style={getToolButtonStyle("ink")}
+          title={t("pdf.toolInk")}
         >
           {t("pdf.toolInk")}
         </button>
@@ -272,28 +341,19 @@ export function PdfToolbar({
         <button
           type="button"
           onClick={() => onSelectTool?.("freeText")}
-          aria-label={t("pdf.toolText")}
           data-testid="pdf-tool-text"
           style={getToolButtonStyle("freeText")}
+          title={t("pdf.toolText")}
         >
           {t("pdf.toolText")}
         </button>
 
-        <input
-          type="file"
-          ref={stampInputRef}
-          accept="image/*"
-          data-testid="pdf-stamp-input"
-          style={{ display: "none" }}
-          onChange={handleStampFileChange}
-        />
-
         <button
           type="button"
           onClick={handleStampClick}
-          aria-label={t("pdf.toolStamp")}
           data-testid="pdf-tool-stamp"
           style={getToolButtonStyle("stamp")}
+          title={t("pdf.toolStamp")}
         >
           {t("pdf.toolStamp")}
         </button>
@@ -302,7 +362,7 @@ export function PdfToolbar({
           style={{
             width: "1px",
             height: "24px",
-            backgroundColor: "var(--border-card)",
+            backgroundColor: "var(--border-input)",
             marginInline: "var(--space-8)",
           }}
         />
@@ -358,7 +418,7 @@ export function PdfToolbar({
         </button>
       </div>
 
-      {/* Right side: Zoom Controls */}
+      {/* Right side: Page Operations, Download & Zoom Controls */}
       <div
         style={{
           display: "flex",
@@ -367,6 +427,230 @@ export function PdfToolbar({
           flexShrink: 0,
         }}
       >
+        {/* Page Operations Dropdown Menu (PDF-6) */}
+        <div ref={menuRef} style={{ position: "relative" }}>
+          <button
+            type="button"
+            onClick={() => setShowPageMenu((prev) => !prev)}
+            aria-haspopup="true"
+            aria-expanded={showPageMenu}
+            data-testid="pdf-page-operations-menu"
+            disabled={isOperatingPage}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "32px",
+              paddingInline: "var(--space-8)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-input)",
+              backgroundColor: showPageMenu ? "var(--bg-elevated)" : "var(--bg-subtle)",
+              color: "var(--text-main)",
+              cursor: isOperatingPage ? "wait" : "pointer",
+              fontSize: "14px",
+              fontWeight: 500,
+              gap: "var(--space-8)",
+            }}
+          >
+            <span>{t("pdf.pageOperations")}</span>
+            <span style={{ fontSize: "10px" }}>▼</span>
+          </button>
+
+          {showPageMenu && (
+            <div
+              data-testid="pdf-page-operations-dropdown"
+              style={{
+                position: "absolute",
+                top: "calc(100% + var(--space-8))",
+                right: 0,
+                backgroundColor: "var(--bg-surface)",
+                border: "1px solid var(--border-input)",
+                borderRadius: "var(--radius-md)",
+                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
+                zIndex: 100,
+                minWidth: "var(--space-16)",
+                padding: "var(--space-8)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-8)",
+              }}
+            >
+              {/* Rotate Page 90° */}
+              <button
+                type="button"
+                data-testid="pdf-rotate-page-btn"
+                onClick={() => {
+                  setShowPageMenu(false);
+                  onRotatePage?.();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  height: "32px",
+                  paddingInline: "var(--space-8)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  backgroundColor: "var(--bg-subtle)",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  textAlign: "start",
+                }}
+              >
+                {t("pdf.rotatePage")}
+              </button>
+
+              {/* Move Page Up */}
+              <button
+                type="button"
+                data-testid="pdf-move-page-up-btn"
+                disabled={currentPage <= 1}
+                onClick={() => {
+                  setShowPageMenu(false);
+                  onMovePageUp?.();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  height: "32px",
+                  paddingInline: "var(--space-8)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  backgroundColor: "var(--bg-subtle)",
+                  color: "var(--text-main)",
+                  cursor: currentPage <= 1 ? "not-allowed" : "pointer",
+                  opacity: currentPage <= 1 ? 0.5 : 1,
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  textAlign: "start",
+                }}
+              >
+                {t("pdf.movePageUp")}
+              </button>
+
+              {/* Move Page Down */}
+              <button
+                type="button"
+                data-testid="pdf-move-page-down-btn"
+                disabled={currentPage >= totalPages}
+                onClick={() => {
+                  setShowPageMenu(false);
+                  onMovePageDown?.();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  height: "32px",
+                  paddingInline: "var(--space-8)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  backgroundColor: "var(--bg-subtle)",
+                  color: "var(--text-main)",
+                  cursor: currentPage >= totalPages ? "not-allowed" : "pointer",
+                  opacity: currentPage >= totalPages ? 0.5 : 1,
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  textAlign: "start",
+                }}
+              >
+                {t("pdf.movePageDown")}
+              </button>
+
+              {/* Insert Image as Page */}
+              <button
+                type="button"
+                data-testid="pdf-insert-image-btn"
+                onClick={() => {
+                  imagePageInputRef.current?.click();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  height: "32px",
+                  paddingInline: "var(--space-8)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  backgroundColor: "var(--bg-subtle)",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  textAlign: "start",
+                }}
+              >
+                {t("pdf.insertImagePage")}
+              </button>
+
+              {/* Delete Page */}
+              <button
+                type="button"
+                data-testid="pdf-delete-page-btn"
+                disabled={totalPages <= 1}
+                onClick={() => {
+                  setShowPageMenu(false);
+                  onDeletePage?.();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  height: "32px",
+                  paddingInline: "var(--space-8)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  backgroundColor: "var(--bg-subtle)",
+                  color: totalPages <= 1 ? "var(--text-muted)" : "var(--brand-danger, #ef4444)",
+                  cursor: totalPages <= 1 ? "not-allowed" : "pointer",
+                  opacity: totalPages <= 1 ? 0.5 : 1,
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  textAlign: "start",
+                }}
+              >
+                {t("pdf.deletePage")}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Download Annotated PDF (PDF-5) */}
+        <button
+          type="button"
+          onClick={onDownloadAnnotated}
+          disabled={isDownloading}
+          aria-label={t("pdf.downloadAnnotated")}
+          data-testid="pdf-download-btn"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "32px",
+            paddingInline: "var(--space-8)",
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--border-input)",
+            backgroundColor: "var(--bg-subtle)",
+            color: "var(--text-main)",
+            cursor: isDownloading ? "wait" : "pointer",
+            fontSize: "14px",
+            fontWeight: 500,
+            gap: "var(--space-8)",
+          }}
+          title={t("pdf.downloadAnnotated")}
+        >
+          <span style={{ fontSize: "14px" }}>⤓</span>
+          <span>{isDownloading ? t("pdf.downloading") : t("pdf.downloadAnnotated")}</span>
+        </button>
+
+        <div
+          style={{
+            width: "1px",
+            height: "24px",
+            backgroundColor: "var(--border-input)",
+            marginInline: "var(--space-8)",
+          }}
+        />
+
+        {/* Zoom Controls */}
         <button
           type="button"
           onClick={onZoomOut}

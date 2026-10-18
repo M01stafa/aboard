@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 5 — PDF Module (In progress) |
-| Current task | Task 29 — Store Annotations Separately From the PDF (completed) |
+| Active phase | 5 — PDF Module (Done) |
+| Current task | Task 30 — Implement PDF Page Operations and Annotated Download (completed) |
 | Last updated | 2026-10-18 |
-| Next step | Task 30 — Implement PDF Page Operations and Annotated Download |
+| Next step | Task 31 — Define the Manifest and Build the Export (.alpha) |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -29,7 +29,7 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | **2. Storage core + local mode** | In progress | Dexie schema, `LocalProvider`, `ProjectService`, SaveQueue, save status, silent persistence, project index sync | Create project → reload → data intact; no prompt appears in Chrome/Safari/Firefox |
 | **3. Circuit module** | In progress | Fork patches a–e, build script, adapter, saving via ProjectService | Circuit survives reload; no extra service worker registered |
 | **4. Board module** | Done (2026-10-17) | Excalidraw pane, files via `putFile`, templates panel | Board with images survives reload |
-| **5. PDF module** | In progress | Viewer, annotations JSON, page operations, annotated download | Annotations survive reload; annotated download opens with highlights in another viewer |
+| **5. PDF module** | Done (2026-10-18) | Viewer, annotations JSON, page operations, annotated download | Annotations survive reload; annotated download opens with highlights in another viewer |
 | **6. `.alpha` export/import** | Not started | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
 | **7. Google Drive** | Not started | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
 | **8. Integration** | Not started | §8 actions | All four actions work across modes |
@@ -121,6 +121,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-17 | Task 27: Built Study Templates Panel (BOARD-5) with 8 static JSON templates in templates.ts (Diagnosis Tree, X-Y Axes, Graph Paper, Dotted Circuit Frame, Cornell Notes, Comparison Table, Mind Map, Flowchart); rendered unobtrusive toggleable drawer in BoardPane; inserted templates via convertToExcalidrawElements without overwriting existing canvas elements; RTL handled for Arabic |
 | 2026-10-18 | Task 28: Built PdfPane with EmbedPDF (Render, Scroll, Viewport, Zoom, Thumbnail plugins), lazy-loading self-hosted PDFium WASM from /wasm/pdfium.wasm on first open, streaming SHA-256 computation via hash-wasm, immutable blob storage via ProjectService.putFile, page restoration via scrollScope layout listener, and mobile >100MB warning dialog (PDF-1, PDF-2, PDF-7) |
 | 2026-10-18 | Task 29: PDF annotations (highlight, ink, free text, stamp) stored separately as lightweight JSON linked by PDF hash (PDF-3, PDF-4); stamp images extracted to SHA-256 binary blobs via ProjectService.putFile; zero base64 in annotation JSON; undo/redo capability integrated with SaveQueue debouncing. |
+| 2026-10-18 | Task 30: PDF page operations (rotate, reorder, delete, insert image) implemented with @cantoo/pdf-lib; restructuring produces new immutable PDF with new SHA-256 hash; warning toast informs user that annotations do not carry over to restructured PDFs; annotated download burns annotations and re-injects stamp images via ProjectService.getFile (PDF-5, PDF-6). |
 
 ## Lessons and corrections
 

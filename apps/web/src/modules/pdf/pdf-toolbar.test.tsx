@@ -44,6 +44,12 @@ describe("PdfToolbar Annotation Controls (Task 29 / PDF-3, PDF-4)", () => {
     onUndo: vi.fn(),
     onRedo: vi.fn(),
     onAddStamp: vi.fn(),
+    onDownloadAnnotated: vi.fn(),
+    onRotatePage: vi.fn(),
+    onMovePageUp: vi.fn(),
+    onMovePageDown: vi.fn(),
+    onDeletePage: vi.fn(),
+    onInsertImagePage: vi.fn(),
   };
 
   it("renders all annotation tools and pagination controls", () => {
@@ -63,6 +69,8 @@ describe("PdfToolbar Annotation Controls (Task 29 / PDF-3, PDF-4)", () => {
     expect(container.querySelector('[data-testid="pdf-tool-stamp"]')).not.toBeNull();
     expect(container.querySelector('[data-testid="pdf-undo-button"]')).not.toBeNull();
     expect(container.querySelector('[data-testid="pdf-redo-button"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="pdf-download-btn"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="pdf-page-operations-menu"]')).not.toBeNull();
   });
 
   it("triggers onSelectTool when clicking different annotation tool buttons", () => {
@@ -101,35 +109,48 @@ describe("PdfToolbar Annotation Controls (Task 29 / PDF-3, PDF-4)", () => {
     expect(onSelectTool).toHaveBeenCalledWith("select");
   });
 
-  it("handles stamp upload via the stamp file input", () => {
+  it("activates stamp file input and calls onAddStamp on file change", () => {
     const onAddStamp = vi.fn();
+    const onSelectTool = vi.fn();
 
     act(() => {
       root.render(
         <I18nProvider>
-          <PdfToolbar {...defaultProps} onAddStamp={onAddStamp} />
+          <PdfToolbar
+            {...defaultProps}
+            onSelectTool={onSelectTool}
+            onAddStamp={onAddStamp}
+          />
         </I18nProvider>
       );
     });
 
-    const fileInput = container.querySelector('input[data-testid="pdf-stamp-input"]') as HTMLInputElement;
-    const testFile = new File(["dummy-png-data"], "anatomy-stamp.png", {
-      type: "image/png",
-    });
+    const stampBtn = container.querySelector('[data-testid="pdf-tool-stamp"]') as HTMLButtonElement;
+    const fileInput = container.querySelector('[data-testid="pdf-stamp-input"]') as HTMLInputElement;
+
+    expect(fileInput).not.toBeNull();
+    const clickSpy = vi.spyOn(fileInput, "click");
 
     act(() => {
-      const event = new Event("change", { bubbles: true });
-      Object.defineProperty(fileInput, "files", {
-        value: [testFile],
-        writable: true,
-      });
-      fileInput.dispatchEvent(event);
+      stampBtn.click();
     });
 
-    expect(onAddStamp).toHaveBeenCalledWith(testFile);
+    expect(onSelectTool).toHaveBeenCalledWith("stamp");
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    const dummyFile = new File(["dummy png bytes"], "approved.png", { type: "image/png" });
+    act(() => {
+      Object.defineProperty(fileInput, "files", {
+        value: [dummyFile],
+        writable: true,
+      });
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(onAddStamp).toHaveBeenCalledWith(dummyFile);
   });
 
-  it("disables undo and redo buttons when canUndo and canRedo are false, and enables them when true", () => {
+  it("disables undo and redo buttons when their history stacks are empty", () => {
     const onUndo = vi.fn();
     const onRedo = vi.fn();
 
@@ -186,5 +207,98 @@ describe("PdfToolbar Annotation Controls (Task 29 / PDF-3, PDF-4)", () => {
       redoBtn.click();
     });
     expect(onRedo).toHaveBeenCalledTimes(1);
+  });
+
+  it("triggers onDownloadAnnotated when download button is clicked", () => {
+    const onDownloadAnnotated = vi.fn();
+
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <PdfToolbar
+            {...defaultProps}
+            onDownloadAnnotated={onDownloadAnnotated}
+          />
+        </I18nProvider>
+      );
+    });
+
+    const downloadBtn = container.querySelector('[data-testid="pdf-download-btn"]') as HTMLButtonElement;
+    expect(downloadBtn).not.toBeNull();
+
+    act(() => {
+      downloadBtn.click();
+    });
+    expect(onDownloadAnnotated).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens Page Operations menu and triggers rotate, move up, move down, and delete", () => {
+    const onRotatePage = vi.fn();
+    const onMovePageUp = vi.fn();
+    const onMovePageDown = vi.fn();
+    const onDeletePage = vi.fn();
+
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <PdfToolbar
+            {...defaultProps}
+            currentPage={2}
+            totalPages={5}
+            onRotatePage={onRotatePage}
+            onMovePageUp={onMovePageUp}
+            onMovePageDown={onMovePageDown}
+            onDeletePage={onDeletePage}
+          />
+        </I18nProvider>
+      );
+    });
+
+    const menuBtn = container.querySelector('[data-testid="pdf-page-operations-menu"]') as HTMLButtonElement;
+    expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).toBeNull();
+
+    // Open dropdown menu
+    act(() => {
+      menuBtn.click();
+    });
+    expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).not.toBeNull();
+
+    // Click Rotate
+    const rotateBtn = container.querySelector('[data-testid="pdf-rotate-page-btn"]') as HTMLButtonElement;
+    act(() => {
+      rotateBtn.click();
+    });
+    expect(onRotatePage).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).toBeNull();
+
+    // Reopen menu and click Move Page Up
+    act(() => {
+      menuBtn.click();
+    });
+    const moveUpBtn = container.querySelector('[data-testid="pdf-move-page-up-btn"]') as HTMLButtonElement;
+    act(() => {
+      moveUpBtn.click();
+    });
+    expect(onMovePageUp).toHaveBeenCalledTimes(1);
+
+    // Reopen menu and click Move Page Down
+    act(() => {
+      menuBtn.click();
+    });
+    const moveDownBtn = container.querySelector('[data-testid="pdf-move-page-down-btn"]') as HTMLButtonElement;
+    act(() => {
+      moveDownBtn.click();
+    });
+    expect(onMovePageDown).toHaveBeenCalledTimes(1);
+
+    // Reopen menu and click Delete
+    act(() => {
+      menuBtn.click();
+    });
+    const deleteBtn = container.querySelector('[data-testid="pdf-delete-page-btn"]') as HTMLButtonElement;
+    act(() => {
+      deleteBtn.click();
+    });
+    expect(onDeletePage).toHaveBeenCalledTimes(1);
   });
 });
