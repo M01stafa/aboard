@@ -103,6 +103,7 @@ Correctness
 14. Do not add or declare dependencies without asking the owner. Even if a peer dependency already exists in `pnpm-lock.yaml`, stop and ask before adding it to `package.json`.
 15. Do not change product decisions in `docs/PROGRESS.md` → "Decisions log" without the owner.
 16. After **every** owner request, even one that changes no files, append an entry to `UPDATE.md`. Append only; never edit past entries; never write secrets there.
+17. Always reply in English in all conversations and reports, regardless of the language used by the user or the UI. The only exceptions are literal UI strings, translation files (i18n), or Arabic text explicitly requested as content.
 
 ## Conventions
 - TypeScript strict; no `any` without a comment explaining why. Validate external input with `zod`.
@@ -110,7 +111,7 @@ Correctness
 - UI text through i18n keys only (Arabic and English); use logical CSS properties (`margin-inline-start`, not `margin-left`).
 - Styling and visual decisions follow `DESIGN.md`; colors only through theme tokens in `src/theme/tokens.css`.
 - Interface spacing and component sizes are 8 px or multiples of 8, only through `--space-*` tokens (`.agents/rules/spacing.md`).
-- Code, comments, commit messages and docs in English. Talk to the owner in Arabic, briefly and directly.
+- Code, comments, commit messages, docs and all conversations with the owner in English.
 - Commits: small, one concern each, message starts with the area (e.g. `board: persist images via putFile`) and cites requirement IDs when relevant.
 - Tests live next to the code (`*.test.ts`); e2e in `apps/web/e2e/`; RLS tests in `supabase/tests/`.
 
@@ -119,7 +120,7 @@ Correctness
 2. Write a short plan (files to change, requirement IDs, tests, any VERIFY items) and wait for the owner's approval when the change touches the database, auth, Drive, security, or more than one module.
 3. Implement in small steps; run the checks in "Commands".
 4. Append an entry to `UPDATE.md` (format in Task 1 of `docs/TASKS.md`), then update `docs/PROGRESS.md` (current task, phase status, VERIFY results, decisions, lessons). Skill `phase-workflow` has the steps.
-5. Report to the owner in Arabic: what changed, what was tested, what is still open. Every future task's Return line must include the GitHub Actions CI run URL and its conclusion for the pushed commit hash.
+5. Report to the owner in English: what changed, what was tested, what is still open. Every future task's Return line must include the GitHub Actions CI run URL and its conclusion for the pushed commit hash.
 
 ## Ask the owner before
 - Changing a decision in the decisions log, a requirement in `docs/PRD.md`, or a pinned version.

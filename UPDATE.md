@@ -979,3 +979,13 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 30 · PDF-5, PDF-6 · docs/specs/modules.md §7.3
 **Open:** none (ready for Task 31).
 
+## 2026-10-18 — Enforce English Language Rule
+**Request:** Add permanent rule in AGENTS.md mandating English in all conversations and reports (with exceptions only for literal UI strings, translation files, or Arabic text explicitly requested as content), update conventions and workflow accordingly, commit, and push.
+**Changes:**
+- `AGENTS.md` (changed): added Hard Rule 17 enforcing English for all replies and reports, and aligned Conventions and Workflow item 5 to English.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:** Line count verified (136 lines <= 200 line limit).
+**Related:** AGENTS.md
+**Open:** none.
+
+
