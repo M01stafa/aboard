@@ -53,8 +53,8 @@ export async function verifyEmailOtp(email: string, token: string) {
 }
 
 /**
- * Initiates Google sign-in via OAuth.
- * Scope is standard profile/email only. Drive scope and offline access are NOT requested in Task 14.
+ * Initiates Google sign-in via OAuth with Google Drive scope (Path A, §10.1).
+ * Requests offline access to ensure a refresh token is provided on consent.
  */
 export async function signInWithGoogle(redirectTo?: string) {
   return supabase.auth.signInWithOAuth({
@@ -65,6 +65,8 @@ export async function signInWithGoogle(redirectTo?: string) {
         (typeof window !== "undefined"
           ? `${window.location.origin}/auth/callback`
           : undefined),
+      scopes: "https://www.googleapis.com/auth/drive.file",
+      queryParams: { access_type: "offline", include_granted_scopes: "true" },
     },
   });
 }

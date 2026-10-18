@@ -62,7 +62,7 @@ describe("Auth Core Helpers", () => {
     spy.mockRestore();
   });
 
-  it("calls signInWithGoogle without Drive scope or offline access in Task 14", async () => {
+  it("calls signInWithGoogle with Drive scope and offline access in Task 34", async () => {
     const spy = vi.spyOn(supabase.auth, "signInWithOAuth").mockResolvedValue({
       data: { provider: "google", url: "https://accounts.google.com/o/oauth2/auth" },
       error: null,
@@ -73,6 +73,8 @@ describe("Auth Core Helpers", () => {
       provider: "google",
       options: {
         redirectTo: "http://localhost:3000/auth/callback",
+        scopes: "https://www.googleapis.com/auth/drive.file",
+        queryParams: { access_type: "offline", include_granted_scopes: "true" },
       },
     });
     expect(res.error).toBeNull();

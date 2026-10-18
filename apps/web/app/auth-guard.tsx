@@ -44,16 +44,32 @@ export function AuthGuard({ children, fallback = null }: AuthGuardProps) {
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         if (!mounted) return;
         if (!session?.user) {
           setUser(null);
           await closeDb();
           router.replace("/login");
-        } else {
-          await openDb(session.user.id);
-          setUser(session.user);
-          setLoading(false);
+          return;
+        }
+
+        await openDb(session.user.id);
+        setUser(session.user);
+        setLoading(false);
+
+        // Path A (Task 34 / §10.1): outside synchronous callback to prevent deadlock
+        const refresh = session.provider_refresh_token ?? null;
+        if (event === "SIGNED_IN" && refresh) {
+          setTimeout(async () => {
+            try {
+              await supabase.functions.invoke("drive-link-token", {
+                body: { refresh_token: refresh },
+              });
+              await supabase.auth.refreshSession();
+            } catch {
+              // Non-blocking
+            }
+          }, 0);
         }
       }
     );

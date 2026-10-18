@@ -26,9 +26,21 @@ export default function AuthCallbackPage() {
         }
 
         if (code) {
-          const { error: exchangeError } =
+          const { data: exchangeData, error: exchangeError } =
             await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
+
+          // Path A (Task 34): If Google provided a refresh token on consent, link it to the server
+          const refreshToken = exchangeData?.session?.provider_refresh_token;
+          if (refreshToken) {
+            try {
+              await supabase.functions.invoke("drive-link-token", {
+                body: { refresh_token: refreshToken },
+              });
+            } catch {
+              // Non-blocking: user can still link later in Settings via Path B
+            }
+          }
         }
 
         // Purge Google provider tokens immediately via refreshSession (SEC-2)

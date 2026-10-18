@@ -1068,3 +1068,30 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `npx supabase functions deploy`: PASS (All 5 functions deployed to project `fmlpkcbpoziwkjuxuyaf`).
 **Related:** Task 33 · AUTH-3, SEC-2, SEC-6 · docs/specs/google-drive.md §10.2–§10.4, §10.6 · docs/specs/security.md §14.5
 **Open:** none (ready for Task 34).
+
+## 2026-10-18 — Task 34: Build the Connection Flows and the Token Manager
+**Request:** Run Task 34 from docs/TASKS.md: build the frontend logic to connect Google Drive and manage the access token securely in memory. Build DriveTokenManager under apps/web/src/core/drive/ keeping Google Access Token strictly in memory, single-flight refresh 1 minute before expiry via drive-token Edge Function, and emit reconnect-required on 409/404. Implement Path A: add Drive scopes + offline access to signInWithGoogle, intercept provider_refresh_token outside synchronous body in onAuthStateChange and auth/callback, call drive-link-token, and immediately call supabase.auth.refreshSession() to purge tokens from browser. Implement Path B: build "Connect Google Drive" action in Settings, follow returned consent URL, handle return ?drive=connected and ?drive=error. Implement Disconnect: call drive-disconnect, clear token manager, and update UI. Display current Drive status via get_drive_status RPC with Connect/Disconnect/Reconnect actions. Extend Playwright browser-storage E2E test to verify zero Google tokens across localStorage, sessionStorage, and IndexedDB for both Path A and Path B.
+**Changes:**
+- `apps/web/src/core/bus.ts` (created): built typed event bus using `mitt` with `"drive:reconnect-required"`, `"drive:connected"`, and `"drive:disconnected"` events.
+- `apps/web/src/core/drive/tokens.ts` (created): built framework-agnostic `DriveTokenManager` with in-memory token cache, single-flight refresh 60 seconds before expiry via `drive-token` function, and reconnect event emission on 409/404.
+- `apps/web/src/core/drive/drive-store.ts` (created): implemented Zustand store `useDriveStore` managing Drive connection status, `fetchStatus` (calling `get_drive_status` RPC supporting both PostgREST table array and single-row responses), `connect` (`drive-connect`), `disconnect` (`drive-disconnect`), and `handlePathA` (`drive-link-token` + `refreshSession`).
+- `apps/web/src/core/drive/index.ts` (created): barrel exports for `DriveTokenManager` and `useDriveStore`.
+- `apps/web/src/core/supabase.ts` (changed): updated `signInWithGoogle` with Drive scope `https://www.googleapis.com/auth/drive.file` and queryParams `{ access_type: "offline", include_granted_scopes: "true" }`.
+- `apps/web/app/auth/callback/page.tsx` (changed): updated auth callback to send `provider_refresh_token` to `drive-link-token` before purging via `refreshAndPurgeProviderTokens()`.
+- `apps/web/app/auth-guard.tsx` (changed): added Path A token linking inside `onAuthStateChange` via asynchronous `setTimeout(..., 0)` to prevent GoTrue deadlocks.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added complete bilingual localized strings for Google Drive connection settings (title, description, statuses, email label, buttons, error messages, and confirm prompt) with 100% key parity.
+- `apps/web/app/settings/page.tsx` (changed): added Google Drive section with status badge (Connected, Not connected, Reconnect required), connected email, Connect, Disconnect, and Reconnect action buttons, and `?drive=connected` / `?drive=error` banners.
+- `apps/web/src/core/auth.test.ts` (changed): updated `signInWithGoogle` unit test expectation for Drive scopes.
+- `apps/web/src/core/drive/tokens.test.ts` (created): 11 unit tests for `DriveTokenManager` (in-memory storage, token caching, single-flight refresh, pre-expiration refresh, reconnect emission on 409, manual invalidation) and `useDriveStore` (status fetch, connect, disconnect, path A handling).
+- `apps/web/e2e/auth-storage.spec.ts` (changed): extended Playwright test suite to verify Path A (sign-in + purge) and Path B (Settings connect + redirect), proving exactly 0 Google tokens exist in localStorage, sessionStorage, and IndexedDB across both flows.
+- `docs/PROGRESS.md` (changed): marked Task 34 complete, set Next step to Task 35, and logged Task 34 decisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (222/222 unit tests passed across 28 test files).
+- `pnpm test:e2e`: PASS (16/16 Playwright E2E tests passed in Chromium, including both Path A and Path B storage hygiene tests).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle secret scan clean).
+**Related:** Task 34 · AUTH-1, AUTH-3, SEC-2 · docs/specs/google-drive.md §10.1, §10.5 · docs/specs/security.md §14.6
+**Open:** none (ready for Task 35).
+
