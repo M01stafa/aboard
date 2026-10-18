@@ -48,6 +48,9 @@ Specs: `docs/specs/architecture.md` (§3.1 Next.js rules, §6 workspace, §15 th
 ## PDF — EmbedPDF + `@cantoo/pdf-lib` (spec §7.3)
 - Viewer and annotations: `@embedpdf/core` + plugins. Annotations are saved as JSON (`exportAnnotations()` / `importAnnotations()`), separate from the PDF, keyed by the PDF's SHA-256.
 - Stamp images move to `putFile` and are replaced by `{ fileKey }` in the JSON.
+- Always import and use the `PdfAnnotationSubtype` enum from `@embedpdf/models` (never hardcode numeric constants; e.g. `HIGHLIGHT` is 9, `POLYLINE` is 8, `STAMP` is 13). Passing wrong subtype IDs causes EmbedPDF to mount mismatched vector renderers (e.g. Polyline) that crash on undefined properties (`vertices.map`).
+- `scope.getAnnotations()` returns a dictionary keyed by page index (`{ [page: number]: Array<{ object: PdfAnnotationObject }> }`), never a flat array. Always normalize with `Object.values(scope.getAnnotations() || {}).flat()`.
+- EmbedPDF `AnnotationPluginPackage` and `SelectionPluginPackage` require `InteractionManagerPluginPackage` in the batch registration array.
 - The original PDF is immutable. Page operations create a new PDF item/version; warn that annotations do not carry over.
 - "Download annotated PDF" builds a new file with the export plugin. Do not use `pdf-lib` (unmaintained); use `@cantoo/pdf-lib`.
 - Online tools go through `src/core/stirling.ts` to the gateway with the Supabase JWT; results are saved into the project like any PDF.

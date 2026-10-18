@@ -942,3 +942,14 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (12/12 Playwright E2E tests passed in Chromium, including `pdf-annotations.spec.ts` and `pdf-module.spec.ts`).
 **Related:** Task 29 · PDF-3, PDF-4 · docs/specs/modules.md §7.3 · Spike S3
 **Open:** none (ready for Task 30).
+
+## 2026-10-18 — Post-Mortem of Task 29 and Hardening Agent Rules
+**Request:** Review Task 29 execution, identify root causes of the 2-hour delay and test/API iteration loops, document lessons in docs/PROGRESS.md, harden agent rules in AGENTS.md and .agents/rules/frontend.md, and explain the package.json and pnpm-lock.yaml modification.
+**Changes:**
+- `docs/PROGRESS.md` (changed): added 3 lessons to the Lessons log detailing numeric enum guessing pitfalls, EmbedPDF page-keyed annotation map normalization, and peer dependency declaration rules.
+- `AGENTS.md` (changed): hardened Rule 11 (explicitly prohibiting guessing numeric enum constants or substituting numbers for TypeScript enums), Rule 14 (clarifying that declaring existing lockfile peer dependencies in package.json requires owner approval), and added package.json modifications to the "Ask the owner before" list while keeping file under 200 lines (135 lines).
+- `.agents/rules/frontend.md` (changed): added 3 concrete EmbedPDF rules under spec §7.3 requiring imported `PdfAnnotationSubtype`, dictionary flattening for `scope.getAnnotations()`, and `InteractionManagerPluginPackage` batch registration.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:** Verified AGENTS.md line count (135 lines <= 200 limit); verified zero application code or test files modified (`git status`); verified exact match with project rules and conventions.
+**Related:** Task 29 Post-Mortem · PDF-3, PDF-4
+**Open:** none (ready for Task 30).

@@ -130,4 +130,7 @@ When the owner corrects the same thing twice, or a review finds something the ag
 |---|---|---|
 | 2026-10-16 | Local checks passing is not the same as CI passing. Every task report must verify the GitHub Actions run for the pushed commit and report its conclusion, not just the local test result. | AGENTS.md |
 | 2026-10-16 | Throwaway spike code is still tracked and scanned. Hard-coded secrets belong in environment variables even in spikes/. | .agents/rules/security.md |
+| 2026-10-18 | Never guess numeric enum values (e.g. PdfAnnotationSubtype); always import the TypeScript enum or inspect node_modules. In Task 29, hardcoding 8 (Polyline) instead of 9 (Highlight) caused Polyline to mount without vertices and crash with vertices.map undefined. | .agents/rules/frontend.md |
+| 2026-10-18 | In EmbedPDF, scope.getAnnotations() returns a page-keyed object ({ [page: number]: { object: PdfAnnotationObject }[] }), not a flat array. Always normalize with Object.values(res).flat(). | .agents/rules/frontend.md |
+| 2026-10-18 | Declaring an existing workspace peer dependency in package.json is still considered adding a dependency. If a peer plugin (e.g. @embedpdf/plugin-interaction-manager) is needed for batch registration, stop and ask the owner before editing package.json. | AGENTS.md |
 

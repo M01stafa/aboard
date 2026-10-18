@@ -97,10 +97,10 @@ Data and security (details: `.agents/rules/security.md`)
 10. User content never goes to our database or servers (except transient Stirling processing).
 
 Correctness
-11. Never guess an API. Confirm signatures in `node_modules/<pkg>` type definitions, the fork's Java source, or official docs. Items marked **VERIFY** in the specs must be confirmed and logged in `docs/PROGRESS.md` before code depends on them.
+11. Never guess an API or enum values. Confirm signatures and enum numbers in `node_modules/<pkg>` type definitions, the fork's Java source, or official docs. Never substitute numeric literals for imported TypeScript enums. Items marked **VERIFY** in the specs must be confirmed and logged in `docs/PROGRESS.md` before code depends on them.
 12. The upstream reference files contain errors: apply `docs/specs/reference-errata.md` first. When docs and source disagree, the source wins.
 13. If the code must differ from a spec, update the spec in the same change and add a line to the decisions log in `docs/PROGRESS.md`.
-14. Do not add dependencies outside §5.6 without asking the owner.
+14. Do not add or declare dependencies without asking the owner. Even if a peer dependency already exists in `pnpm-lock.yaml`, stop and ask before adding it to `package.json`.
 15. Do not change product decisions in `docs/PROGRESS.md` → "Decisions log" without the owner.
 16. After **every** owner request, even one that changes no files, append an entry to `UPDATE.md`. Append only; never edit past entries; never write secrets there.
 
@@ -123,6 +123,7 @@ Correctness
 
 ## Ask the owner before
 - Changing a decision in the decisions log, a requirement in `docs/PRD.md`, or a pinned version.
+- Adding or modifying dependencies in `package.json`, even for workspace peer packages already in `pnpm-lock.yaml`.
 - Anything that deletes user data, changes RLS/grants, changes OAuth scopes, or exposes a new endpoint.
 - Adding a paid service, a new third-party script, or analytics.
 
