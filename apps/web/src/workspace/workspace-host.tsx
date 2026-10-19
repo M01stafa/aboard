@@ -12,7 +12,9 @@ import { PdfPane } from "@/modules/pdf";
 import { ExportDialog } from "@/core/alpha/export-dialog";
 import { ModeSwitchModal } from "@/components/mode-switch-modal";
 import { DriveStatusBanner } from "@/components/drive-status-banner";
-import { bus } from "@/core/bus";
+import { bus, type AppEvents } from "@/core/bus";
+import { selectTargetBoard } from "@/integration/target-board";
+import { insertImageIntoBoard, insertCircuitSvgIntoBoard } from "@/integration/board-insertion";
 
 /*
  * Tab Bar & Divider Keyboard Interaction Map
@@ -171,6 +173,229 @@ export function WorkspaceHost({
     };
   }, []);
 
+  // Track layout in ref for event bus handlers
+  const layoutRef = useRef(layout);
+  useEffect(() => {
+    layoutRef.current = layout;
+  }, [layout]);
+
+  // Track most recently used board tabs
+  const mruBoardTabsRef = useRef<string[]>([]);
+  useEffect(() => {
+    if (mruBoardTabsRef.current.length === 0) {
+      const boards = layout.tabs.filter((t) => t.kind === "board").map((t) => t.id);
+      const visible = [layout.primary, layout.secondary].filter(Boolean) as string[];
+      const visibleBoards = boards.filter((id) => visible.includes(id));
+      const hiddenBoards = boards.filter((id) => !visible.includes(id));
+      mruBoardTabsRef.current = [...visibleBoards, ...hiddenBoards];
+    }
+  }, [layout]);
+
+  // Cross-tool integration: listen for Send to Board events (INT-1, INT-2)
+  useEffect(() => {
+    const handlePdfToBoard = async (event: AppEvents["pdf:page-to-board"]) => {
+      const currentLayout = layoutRef.current;
+      const decision = selectTargetBoard({
+        explicitTabId: event.targetBoardTabId,
+        sourceTabId: event.sourceTabId,
+        layout: currentLayout,
+        mruBoardTabIds: mruBoardTabsRef.current,
+      });
+
+      let targetTabId: string;
+
+      if (decision.type === "create") {
+        const newBoardId = `tab-${Date.now()}`;
+        const newItemId = `item-${Date.now()}`;
+        const newTab: Tab = {
+          id: newBoardId,
+          kind: "board",
+          itemId: newItemId,
+          title: t("workspace.boardTabTitle", { n: `${currentLayout.tabs.length + 1}` }),
+        };
+
+        setLayout((prev) => {
+          const isMobileWidth = typeof window !== "undefined" && window.innerWidth < 768;
+          let nextSplit = prev.split;
+          let nextPrimary = prev.primary;
+          let nextSecondary = prev.secondary;
+
+          if (isMobileWidth) {
+            nextPrimary = newBoardId;
+          } else if (prev.split === "none") {
+            nextSplit = "vertical";
+            nextSecondary = newBoardId;
+          } else {
+            if (event.sourceTabId && prev.secondary === event.sourceTabId) {
+              nextPrimary = newBoardId;
+            } else {
+              nextSecondary = newBoardId;
+            }
+          }
+
+          return {
+            ...prev,
+            tabs: [...prev.tabs, newTab],
+            tabBarOrder: [...prev.tabBarOrder, newBoardId],
+            primary: nextPrimary,
+            secondary: nextSecondary,
+            split: nextSplit,
+          };
+        });
+
+        targetTabId = newBoardId;
+        mruBoardTabsRef.current = [newBoardId, ...mruBoardTabsRef.current.filter((id) => id !== newBoardId)];
+      } else {
+        targetTabId = decision.tabId;
+        mruBoardTabsRef.current = [targetTabId, ...mruBoardTabsRef.current.filter((id) => id !== targetTabId)];
+
+        setLayout((prev) => {
+          const isVisible =
+            prev.primary === targetTabId ||
+            (prev.split !== "none" && prev.secondary === targetTabId);
+
+          if (isVisible) return prev;
+
+          const isMobileWidth = typeof window !== "undefined" && window.innerWidth < 768;
+          if (isMobileWidth) {
+            return { ...prev, primary: targetTabId };
+          }
+
+          if (prev.split === "none") {
+            return {
+              ...prev,
+              split: "vertical",
+              secondary: targetTabId,
+            };
+          } else {
+            if (event.sourceTabId && prev.secondary === event.sourceTabId) {
+              return { ...prev, primary: targetTabId };
+            } else {
+              return { ...prev, secondary: targetTabId };
+            }
+          }
+        });
+      }
+
+      try {
+        await insertImageIntoBoard({
+          projectId: projectId || "demo",
+          tabId: targetTabId,
+          blob: event.image,
+          mimeType: event.image.type || "image/webp",
+          ["width"]: event.width,
+          ["height"]: event.height,
+          locked: true,
+        });
+      } catch (err) {
+        console.error("[WorkspaceHost] Failed to insert PDF page into board:", err);
+      }
+    };
+
+    const handleCircuitToBoard = async (event: AppEvents["circuit:to-board"]) => {
+      const currentLayout = layoutRef.current;
+      const decision = selectTargetBoard({
+        explicitTabId: event.targetBoardTabId,
+        sourceTabId: event.sourceTabId,
+        layout: currentLayout,
+        mruBoardTabIds: mruBoardTabsRef.current,
+      });
+
+      let targetTabId: string;
+
+      if (decision.type === "create") {
+        const newBoardId = `tab-${Date.now()}`;
+        const newItemId = `item-${Date.now()}`;
+        const newTab: Tab = {
+          id: newBoardId,
+          kind: "board",
+          itemId: newItemId,
+          title: t("workspace.boardTabTitle", { n: `${currentLayout.tabs.length + 1}` }),
+        };
+
+        setLayout((prev) => {
+          const isMobileWidth = typeof window !== "undefined" && window.innerWidth < 768;
+          let nextSplit = prev.split;
+          let nextPrimary = prev.primary;
+          let nextSecondary = prev.secondary;
+
+          if (isMobileWidth) {
+            nextPrimary = newBoardId;
+          } else if (prev.split === "none") {
+            nextSplit = "vertical";
+            nextSecondary = newBoardId;
+          } else {
+            if (event.sourceTabId && prev.secondary === event.sourceTabId) {
+              nextPrimary = newBoardId;
+            } else {
+              nextSecondary = newBoardId;
+            }
+          }
+
+          return {
+            ...prev,
+            tabs: [...prev.tabs, newTab],
+            tabBarOrder: [...prev.tabBarOrder, newBoardId],
+            primary: nextPrimary,
+            secondary: nextSecondary,
+            split: nextSplit,
+          };
+        });
+
+        targetTabId = newBoardId;
+        mruBoardTabsRef.current = [newBoardId, ...mruBoardTabsRef.current.filter((id) => id !== newBoardId)];
+      } else {
+        targetTabId = decision.tabId;
+        mruBoardTabsRef.current = [targetTabId, ...mruBoardTabsRef.current.filter((id) => id !== targetTabId)];
+
+        setLayout((prev) => {
+          const isVisible =
+            prev.primary === targetTabId ||
+            (prev.split !== "none" && prev.secondary === targetTabId);
+
+          if (isVisible) return prev;
+
+          const isMobileWidth = typeof window !== "undefined" && window.innerWidth < 768;
+          if (isMobileWidth) {
+            return { ...prev, primary: targetTabId };
+          }
+
+          if (prev.split === "none") {
+            return {
+              ...prev,
+              split: "vertical",
+              secondary: targetTabId,
+            };
+          } else {
+            if (event.sourceTabId && prev.secondary === event.sourceTabId) {
+              return { ...prev, primary: targetTabId };
+            } else {
+              return { ...prev, secondary: targetTabId };
+            }
+          }
+        });
+      }
+
+      try {
+        await insertCircuitSvgIntoBoard({
+          projectId: projectId || "demo",
+          tabId: targetTabId,
+          svg: event.svg,
+        });
+      } catch (err) {
+        console.error("[WorkspaceHost] Failed to insert circuit SVG into board:", err);
+      }
+    };
+
+    bus.on("pdf:page-to-board", handlePdfToBoard);
+    bus.on("circuit:to-board", handleCircuitToBoard);
+
+    return () => {
+      bus.off("pdf:page-to-board", handlePdfToBoard);
+      bus.off("circuit:to-board", handleCircuitToBoard);
+    };
+  }, [projectId, t]);
+
   // Action: Open a tab or activate if already open
   const openTab = useCallback((tab: Tab) => {
     setLayout((prev) => {
@@ -190,6 +415,10 @@ export function WorkspaceHost({
 
   // Action: Activate tab in primary slot
   const activateTab = useCallback((tabId: string) => {
+    const tab = layoutRef.current.tabs.find((t) => t.id === tabId);
+    if (tab?.kind === "board") {
+      mruBoardTabsRef.current = [tabId, ...mruBoardTabsRef.current.filter((id) => id !== tabId)];
+    }
     setLayout((prev) => {
       if (prev.primary === tabId) return prev;
       // If activating the tab currently in secondary slot, swap them
@@ -206,6 +435,7 @@ export function WorkspaceHost({
 
   // Action: Close tab
   const closeTab = useCallback((tabId: string) => {
+    mruBoardTabsRef.current = mruBoardTabsRef.current.filter((id) => id !== tabId);
     setLayout((prev) => {
       if (prev.tabs.length <= 1) return prev; // Keep at least one tab
 

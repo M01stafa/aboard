@@ -34,6 +34,9 @@ export interface PdfToolbarProps {
   onDeletePage?: () => void;
   onInsertImagePage?: (file: File) => void;
   isOperatingPage?: boolean;
+  // Cross-Tool Integration (INT-1)
+  onSendToBoard?: () => void;
+  isSendingToBoard?: boolean;
 }
 
 export function PdfToolbar({
@@ -63,6 +66,8 @@ export function PdfToolbar({
   onDeletePage,
   onInsertImagePage,
   isOperatingPage = false,
+  onSendToBoard,
+  isSendingToBoard = false,
 }: PdfToolbarProps) {
   const { t } = useI18n();
   const stampInputRef = useRef<HTMLInputElement>(null);
@@ -641,12 +646,40 @@ export function PdfToolbar({
           <span>{isDownloading ? t("pdf.downloading") : t("pdf.downloadAnnotated")}</span>
         </button>
 
+        {/* Send to Board Button (INT-1) */}
+        <button
+          type="button"
+          onClick={onSendToBoard}
+          disabled={isSendingToBoard}
+          aria-label={t("pdf.sendToBoard")}
+          data-testid="pdf-send-to-board-btn"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "32px",
+            paddingInline: "var(--space-2)",
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--border-input)",
+            backgroundColor: "var(--bg-subtle)",
+            color: "var(--text-main)",
+            cursor: isSendingToBoard ? "wait" : "pointer",
+            fontSize: "14px",
+            fontWeight: 500,
+            gap: "var(--space-1)",
+          }}
+          title={t("pdf.sendToBoard")}
+        >
+          <span style={{ fontSize: "14px" }}>📋</span>
+          <span>{isSendingToBoard ? t("pdf.sendingToBoard") : t("pdf.sendToBoard")}</span>
+        </button>
+
         <div
           style={{
             width: "1px",
             height: "24px",
             backgroundColor: "var(--border-input)",
-            marginInline: "var(--space-8)",
+            marginInline: "var(--space-1)",
           }}
         />
 

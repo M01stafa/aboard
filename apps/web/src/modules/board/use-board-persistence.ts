@@ -198,7 +198,7 @@ export function useBoardPersistence({
       const activeFileIds = extractImageFileIds(elements);
       const fileMap: Record<string, string> = {};
       for (const fId of activeFileIds) {
-        const contentKey = persistedFilesMapRef.current[fId];
+        const contentKey = persistedFilesMapRef.current[fId] || fId;
         if (contentKey) {
           fileMap[fId] = contentKey;
         }

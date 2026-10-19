@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 8 — Integration |
-| Current task | Task 37 — Move Projects Between Modes and Add the Google Picker (completed) |
+| Current task | Task 38 — Cross-Tool Integration Actions: Event Bus, PDF to Board, Circuit to Board (completed) |
 | Last updated | 2026-10-19 |
-| Next step | Task 38 — Cross-Tool Integration Actions (Phase 8) |
+| Next step | Task 39 — Board to PDF and Selection to Note |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -129,6 +129,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-18 | Task 35: Implemented Drive API client with 401 single-retry, 5-attempt exponential backoff with jitter on 429/5xx, multipart (<5MB) and resumable (>=5MB in 8MiB chunks) uploads; strictly identified folders/files by appProperties; implemented DriveProvider with local IndexedDB buffering and SaveQueue outbox sync (3s idle / 30s continuous); implemented LRU clean-file eviction with 500MB cap; Playwright E2E verified create/reload lifecycle in Drive mode. |
 | 2026-10-19 | Task 36: Board conflicts reconciled via `@excalidraw/excalidraw`'s `reconcileElements` loaded via dynamic client-side `import()`; circuit & annotation conflicts produce timestamped conflict copies in Drive (`<title> (conflict YYYY-MM-DD)`), registered in Dexie `items` and project manifest, and reload remote payload; content-addressed files (SHA-256) never conflict; 403 quota errors keep local SaveQueue running in Dexie and display persistent DriveStatusBanner with `.alpha` export shortcut; 404 missing files recreate from Dexie cache; 401/409 revocation triggers `drive:reconnect-required` and auto-flushes on reconnect. |
 | 2026-10-19 | Task 37: Implemented bidirectional project mode migration (Local <-> Drive) in ProjectService with unpinning/pinning and optional Drive folder trashing; integrated Google Picker API for PDF and .alpha files; added Export to Drive saving to Aboard/Exports/; prompt banner for moving local projects to Drive. |
+| 2026-10-19 | Task 38: Built typed event bus in core/bus.ts using mitt; implemented target board selection across all 4 priorities (explicit -> visible split board -> MRU -> new board); implemented PDF Page to Board (INT-1) rendering WebP at scale 2 with annotations, compressing >4MB, saving via putFile, and inserting locked image element into Excalidraw; implemented Circuit to Board (INT-2) converting SVG string to binary image/svg+xml Blob (SEC-7 zero DOM injection) and inserting into board; built boardRegistry to track active imperative APIs; verified with 12 unit tests and Playwright split-view reload persistence test. |
 
 ## Lessons and corrections
 

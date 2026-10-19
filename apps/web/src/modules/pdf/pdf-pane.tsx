@@ -142,6 +142,8 @@ export function PdfPane({
         }}
       >
         <PdfViewer
+          tabId={tab.id}
+          itemId={tab.itemId}
           documentId={`pdf-doc-${tab.itemId}`}
           blob={blob}
           documentTitle={payload?.name || tab.title}

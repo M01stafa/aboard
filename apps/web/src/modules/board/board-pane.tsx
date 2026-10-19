@@ -12,6 +12,7 @@ import { useI18n } from "@/i18n/provider";
 import type { BoardPaneProps } from "./types";
 import { useBoardPersistence } from "./use-board-persistence";
 import { TemplatesPanel } from "./templates-panel";
+import { boardRegistry } from "./board-registry";
 
 /**
  * Excalidraw loaded on client only via next/dynamic with ssr: false,
@@ -57,6 +58,13 @@ export function BoardPane({
   useEffect(() => {
     onMount?.(tab.id, identityToken);
   }, [tab.id, identityToken, onMount]);
+
+  // Clean up boardRegistry on tab unmount
+  useEffect(() => {
+    return () => {
+      boardRegistry.unregister(tab.id);
+    };
+  }, [tab.id]);
 
   // Track DOM data-theme attribute in addition to i18n context
   const [domTheme, setDomTheme] = useState<"light" | "dark">(() => {
@@ -144,6 +152,7 @@ export function BoardPane({
   const handleApi = useCallback(
     (api: ExcalidrawImperativeAPI) => {
       excalidrawApiRef.current = api;
+      boardRegistry.register(tab.id, api);
       onApiReady?.(api);
 
       // Inject restored files into Excalidraw API on attach

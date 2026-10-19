@@ -1,6 +1,44 @@
 import mitt from "mitt";
 
+export type SaveState =
+  | "saved-local"
+  | "saving-local"
+  | "saved-drive"
+  | "syncing-drive"
+  | "offline"
+  | "error";
+
 export type AppEvents = {
+  "pdf:page-to-board": {
+    docItemId: string;
+    page: number;
+    image: Blob;
+    width: number;
+    height: number;
+    targetBoardTabId?: string;
+    sourceTabId?: string;
+  };
+  "circuit:to-board": {
+    circuitItemId: string;
+    svg: string;
+    targetBoardTabId?: string;
+    sourceTabId?: string;
+  };
+  "board:to-pdf": {
+    boardItemId: string;
+    image: Blob;
+    targetPdfItemId?: string;
+  };
+  "pdf:selection": {
+    docItemId: string;
+    page: number;
+    text: string;
+    targetBoardTabId?: string;
+  };
+  "save:status": {
+    projectId: string;
+    state: SaveState;
+  };
   "drive:reconnect-required": { reason?: string } | Record<string, never>;
   "drive:connected": { email?: string | null };
   "drive:disconnected": Record<string, never>;
@@ -9,3 +47,4 @@ export type AppEvents = {
 };
 
 export const bus = mitt<AppEvents>();
+

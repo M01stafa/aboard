@@ -211,6 +211,10 @@ export const en = {
     simRunning: "Running",
     simPaused: "Paused",
     reloadError: "Reload failed",
+    sendToBoard: "Send to Board",
+    sendingToBoard: "Sending…",
+    sentToBoardSuccess: "Circuit sent to whiteboard",
+    sendToBoardError: "Failed to send circuit to whiteboard",
   },
   pdf: {
     addPdf: "Add PDF",
@@ -250,6 +254,10 @@ export const en = {
     insertImagePage: "Insert Image as Page",
     restructuredWarning: "Annotations do not carry over to restructured PDFs in this version.",
     deletePageError: "Cannot delete the only page in the document.",
+    sendToBoard: "Send to Board",
+    sendingToBoard: "Sending…",
+    sentToBoardSuccess: "Page sent to whiteboard",
+    sendToBoardError: "Failed to send page to whiteboard",
   },
   legal: {
     privacyTitle: "Privacy Policy",

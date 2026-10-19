@@ -34,21 +34,29 @@ export function dataURLToBlob(dataURL: string): Blob {
 /**
  * Converts a binary Blob into a base64 data URL.
  */
-export function blobToDataURL(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-      } else {
-        reject(new Error("FileReader result is not a string"));
-      }
-    };
-    reader.onerror = () => {
-      reject(reader.error || new Error("Failed to read blob as data URL"));
-    };
-    reader.readAsDataURL(blob);
-  });
+export async function blobToDataURL(blob: Blob): Promise<string> {
+  if (typeof FileReader !== "undefined") {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          resolve(reader.result);
+        } else {
+          reject(new Error("FileReader result is not a string"));
+        }
+      };
+      reader.onerror = () => {
+        reject(reader.error || new Error("Failed to read blob as data URL"));
+      };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  // Fallback for Node.js / test environments where FileReader is not globally available
+  const buffer = await blob.arrayBuffer();
+  const base64 = Buffer.from(buffer).toString("base64");
+  const mime = blob.type || "application/octet-stream";
+  return `data:${mime};base64,${base64}`;
 }
 
 /**

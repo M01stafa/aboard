@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { Tab } from "@/workspace/types";
 import { useI18n } from "@/i18n/provider";
 import { projectService } from "@/core/storage";
+import { bus } from "@/core/bus";
 import { CircuitAdapter } from "./circuit-adapter";
 import { buildCircuitUrl } from "./circuit-url";
 
@@ -80,6 +81,23 @@ export function CircuitPane({
 
   // Track simulation state for UI indicator badge
   const [isSimRunning, setIsSimRunning] = useState<boolean>(true);
+  const [isExportingToBoard, setIsExportingToBoard] = useState<boolean>(false);
+
+  const handleSendToBoard = useCallback(async () => {
+    setIsExportingToBoard(true);
+    try {
+      const svg = await adapter.requestSVG();
+      bus.emit("circuit:to-board", {
+        circuitItemId: tab.itemId,
+        svg,
+        sourceTabId: tab.id,
+      });
+    } catch (err) {
+      console.error("[CircuitPane] Failed to send circuit to board:", err);
+    } finally {
+      setIsExportingToBoard(false);
+    }
+  }, [adapter, tab.itemId, tab.id]);
 
   // Preserve circuit text during theme reload
   const preservedCircuitRef = useRef<string | null>(null);
@@ -308,6 +326,31 @@ export function CircuitPane({
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <button
+            type="button"
+            data-testid="circuit-send-to-board-btn"
+            onClick={handleSendToBoard}
+            disabled={isExportingToBoard}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "var(--space-1)",
+              height: "var(--control-sm)",
+              paddingInline: "var(--space-2)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-card)",
+              backgroundColor: "var(--bg-surface)",
+              color: "var(--text-main)",
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              cursor: isExportingToBoard ? "wait" : "pointer",
+            }}
+            title={t("circuit.sendToBoard")}
+          >
+            <span>📋</span>
+            <span>{isExportingToBoard ? t("circuit.sendingToBoard") : t("circuit.sendToBoard")}</span>
+          </button>
+
           <label
             data-testid="pause-when-hidden-label"
             style={{

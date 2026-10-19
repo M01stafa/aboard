@@ -10,7 +10,10 @@ import {
   setDocumentLoaded,
 } from "@embedpdf/core";
 import { RenderPluginPackage } from "@embedpdf/plugin-render";
-import { RenderLayer } from "@embedpdf/plugin-render/react";
+import { RenderLayer, useRenderCapability } from "@embedpdf/plugin-render/react";
+import { bus } from "@/core/bus";
+import { MAX_ALLOWED_FILE_BYTES, compressImageIfNeeded } from "@/modules/board/image-utils";
+import { getImageDimensions } from "@/integration/board-insertion";
 import { ScrollPluginPackage } from "@embedpdf/plugin-scroll";
 import { Scroller, useScroll } from "@embedpdf/plugin-scroll/react";
 import { ViewportPluginPackage } from "@embedpdf/plugin-viewport";
@@ -46,6 +49,8 @@ export interface PdfViewerProps {
   onPageChange: (page: number) => void;
   projectId?: string;
   pdfHash?: string;
+  tabId?: string;
+  itemId?: string;
   projectServiceOverride?: ProjectService;
   onSaveRestructuredPdf?: (newBlob: Blob) => Promise<void>;
 }
@@ -71,6 +76,8 @@ interface ViewerInnerProps {
   onPageChange: (page: number) => void;
   projectId?: string;
   pdfHash?: string;
+  tabId?: string;
+  itemId?: string;
   projectServiceOverride?: ProjectService;
   onSaveRestructuredPdf?: (newBlob: Blob) => Promise<void>;
   onShowToast: (message: string) => void;
@@ -84,6 +91,8 @@ function ViewerInner({
   onPageChange,
   projectId = "default",
   pdfHash,
+  tabId,
+  itemId,
   projectServiceOverride,
   onSaveRestructuredPdf,
   onShowToast,
@@ -93,11 +102,59 @@ function ViewerInner({
   const { provides: scrollScope, state: scrollState } = useScroll(documentId);
   const { provides: zoomScope, state: zoomState } = useZoom(documentId);
   const { provides: exportScope } = useExport(documentId);
+  const { provides: renderCapability } = useRenderCapability();
 
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [displayPage, setDisplayPage] = useState(initialPage);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isOperatingPage, setIsOperatingPage] = useState(false);
+  const [isSendingToBoard, setIsSendingToBoard] = useState(false);
+
+  const handleSendToBoard = async () => {
+    if (!renderCapability) {
+      onShowToast(t("pdf.sendToBoardError"));
+      return;
+    }
+    setIsSendingToBoard(true);
+    try {
+      const renderScope = renderCapability.forDocument(documentId);
+      const pageNum = displayPage || scrollState.currentPage || 1;
+      const pageIndex = Math.max(0, pageNum - 1);
+
+      const task = renderScope.renderPage({
+        pageIndex,
+        options: {
+          scaleFactor: 2,
+          imageType: "image/webp",
+          imageQuality: 0.85,
+          withAnnotations: true,
+        },
+      });
+
+      let pageBlob = await task.toPromise();
+      if (pageBlob.size > MAX_ALLOWED_FILE_BYTES) {
+        pageBlob = await compressImageIfNeeded(pageBlob);
+      }
+
+      const { width, height } = await getImageDimensions(pageBlob);
+
+      bus.emit("pdf:page-to-board", {
+        docItemId: itemId || documentId,
+        page: pageNum,
+        image: pageBlob,
+        width,
+        height,
+        sourceTabId: tabId,
+      });
+
+      onShowToast(t("pdf.sentToBoardSuccess"));
+    } catch (err) {
+      console.error("[PdfViewer] Failed to send page to board:", err);
+      onShowToast(t("pdf.sendToBoardError"));
+    } finally {
+      setIsSendingToBoard(false);
+    }
+  };
 
   const hasRestoredPageRef = useRef(false);
   const isSettledRef = useRef(initialPage <= 1);
@@ -348,6 +405,8 @@ function ViewerInner({
         onDeletePage={handleDeletePage}
         onInsertImagePage={handleInsertImagePage}
         isOperatingPage={isOperatingPage}
+        onSendToBoard={handleSendToBoard}
+        isSendingToBoard={isSendingToBoard}
       />
 
       <div
@@ -468,6 +527,8 @@ export function PdfViewer({
   onPageChange,
   projectId,
   pdfHash,
+  tabId,
+  itemId,
   projectServiceOverride,
   onSaveRestructuredPdf,
 }: PdfViewerProps) {
@@ -607,6 +668,8 @@ export function PdfViewer({
             onPageChange={onPageChange}
             projectId={projectId}
             pdfHash={pdfHash}
+            tabId={tabId}
+            itemId={itemId}
             projectServiceOverride={projectServiceOverride}
             onSaveRestructuredPdf={onSaveRestructuredPdf}
             onShowToast={showToast}

@@ -213,6 +213,10 @@ export const ar: TranslationDictionary = {
     simRunning: "قيد التشغيل",
     simPaused: "متوقف مؤقتاً",
     reloadError: "فشل إعادة التحميل",
+    sendToBoard: "إرسال إلى اللوحة",
+    sendingToBoard: "جارٍ الإرسال…",
+    sentToBoardSuccess: "تم إرسال الدائرة إلى اللوحة البيضاء",
+    sendToBoardError: "فشل إرسال الدائرة إلى اللوحة البيضاء",
   },
   pdf: {
     addPdf: "إضافة PDF",
@@ -252,6 +256,10 @@ export const ar: TranslationDictionary = {
     insertImagePage: "إدراج صورة كصفحة",
     restructuredWarning: "لا تنتقل التعليقات التوضيحية إلى نسخة الـ PDF المعدلة في هذا الإصدار.",
     deletePageError: "لا يمكن حذف الصفحة الوحيدة في المستند.",
+    sendToBoard: "إرسال إلى اللوحة",
+    sendingToBoard: "جارٍ الإرسال…",
+    sentToBoardSuccess: "تم إرسال الصفحة إلى اللوحة البيضاء",
+    sendToBoardError: "فشل إرسال الصفحة إلى اللوحة البيضاء",
   },
   legal: {
     privacyTitle: "سياسة الخصوصية",

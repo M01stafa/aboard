@@ -1171,6 +1171,36 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (21/21 Playwright E2E tests passed in Chromium, including 3 new mode-switch/picker tests).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks across 65 commits, prod audit clean, bundle secret scan clean).
 **Related:** Task 37 · LAUNCH-5, LAUNCH-6, PDF-1, ALPHA-2, ALPHA-7 · docs/specs/storage-layer.md §11.6 · docs/specs/google-drive.md §10.11
-**Open:** none (Phase 7 complete; ready for Phase 8 / Task 38).
+## 2026-10-19 — Task 38: Build the Event Bus, PDF Page to Board, and Circuit to Board
+**Request:** Run Task 38 from docs/TASKS.md: set up the typed event bus via mitt in core/bus.ts; implement PDF Page to Board (INT-1) with Send to Board toolbar button, render current page to WebP at scale 2, compress >4MB images, compute SHA-256 and store via putFile, insert as locked image element into Excalidraw, and scroll to content; implement Circuit to Board (INT-2) with toolbar button, export circuit as SVG via CircuitAdapter, convert SVG string to binary image/svg+xml Blob (SEC-7 zero DOM injection), save via putFile, and insert into board; implement target board selection across all 4 priorities (explicit -> visible split board -> MRU -> new board); write unit tests verifying all 4 priority levels and board insertion; write Playwright E2E test verifying PDF to board in split view with persistence across reload.
+**Changes:**
+- `apps/web/src/core/bus.ts` (changed): declared fully-typed `AppEvents` for `pdf:page-to-board`, `circuit:to-board`, `board:to-pdf`, `pdf:selection`, and `save:status` with source/target tab IDs.
+- `apps/web/src/modules/board/board-registry.ts` (created): built imperative API registry (`register`, `unregister`, `get`, `waitFor`, `clear`) tracking active Excalidraw imperative APIs per tab ID and syncing `window.__aboard_boardApi[tabId]`.
+- `apps/web/src/modules/board/index.ts` (changed): exported `boardRegistry`.
+- `apps/web/src/modules/board/board-pane.tsx` (changed): registered active Excalidraw API in `boardRegistry` on attach and unregistered on unmount.
+- `apps/web/src/modules/board/use-board-persistence.ts` (changed): defaulted `contentKey` to `fId` in active file ID map so pre-saved files are always retained in board payload.
+- `apps/web/src/modules/board/image-utils.ts` (changed): added Node.js / test environment fallback for `blobToDataURL` using `arrayBuffer` and `Buffer`.
+- `apps/web/src/integration/target-board.ts` (created): implemented `selectTargetBoard(options)` strictly adhering to modules.md §8 priority chain (Priority 1: Explicit tab, Priority 2: Other visible pane in split view, Priority 3: Most recently used board, Priority 4: Create new board).
+- `apps/web/src/integration/board-insertion.ts` (created): implemented `parseSvgDimensions` without DOM inlining (SEC-7), `getImageDimensions`, `insertImageIntoBoard` (SHA-256 hash, putFile, addFiles, convertToExcalidrawElements with locked: true, updateScene, and scrollToContent), and `insertCircuitSvgIntoBoard` (binary image/svg+xml Blob conversion).
+- `apps/web/src/integration/index.ts` (created): barrel exports for integration modules.
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): added `onSendToBoard` prop, `isSendingToBoard` loading state, and "Send to Board" button (`data-testid="pdf-send-to-board-btn"`).
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): added `useRenderCapability`, `handleSendToBoard` rendering current page to WebP at scale 2 with `withAnnotations: true`, >4MB compression via `compressImageIfNeeded`, and emitting `pdf:page-to-board`.
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): added `isExportingToBoard`, `handleSendToBoard` exporting SVG via `adapter.requestSVG()`, emitting `circuit:to-board`, and rendered "Send to Board" button (`data-testid="circuit-send-to-board-btn"`).
+- `apps/web/src/workspace/workspace-host.tsx` (changed): wired event listeners for `pdf:page-to-board` and `circuit:to-board`, tracked MRU board tabs in `mruBoardTabsRef`, handled target board selection, revealed/created target boards, and called insertion engines.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added bilingual keys for PDF and Circuit "Send to Board" actions, success toasts, and error notices.
+- `apps/web/src/test/setup.ts` (changed): added `scrollToContent` to Excalidraw mock API.
+- `apps/web/src/integration/target-board.test.ts` (created): 7 unit tests covering all 4 priority levels.
+- `apps/web/src/integration/board-insertion.test.ts` (created): 5 unit tests verifying SVG dimension parsing, binary SVG blob handling (SEC-7), file storage, and scene element locking.
+- `apps/web/e2e/cross-tool-integration.spec.ts` (created): Playwright E2E test opening PDF and Board in split view, clicking "Send to Board", and verifying locked image element appears on board and survives reload.
+- `docs/PROGRESS.md` (changed): marked Task 38 complete, set Next step to Task 39, and logged Task 38 decisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors, all 8-point grid tokens).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (278/278 unit tests passed across 36 test files).
+- `pnpm test:e2e cross-tool-integration.spec.ts`: PASS (1/1 test passed in Chromium).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks across 66 commits, prod audit clean, bundle secret scan clean).
+**Related:** Task 38 · INT-1, INT-2, SEC-7 · docs/specs/modules.md §8 · docs/specs/security.md §14.6
+**Open:** none (ready for Task 39).
 
 
