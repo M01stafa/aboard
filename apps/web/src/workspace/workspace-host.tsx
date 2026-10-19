@@ -14,7 +14,14 @@ import { ModeSwitchModal } from "@/components/mode-switch-modal";
 import { DriveStatusBanner } from "@/components/drive-status-banner";
 import { bus, type AppEvents } from "@/core/bus";
 import { selectTargetBoard } from "@/integration/target-board";
-import { insertImageIntoBoard, insertCircuitSvgIntoBoard } from "@/integration/board-insertion";
+import {
+  insertImageIntoBoard,
+  insertCircuitSvgIntoBoard,
+  insertTextNoteIntoBoard,
+} from "@/integration/board-insertion";
+import { formatAlphaLink, parseAlphaLink } from "@/integration/alpha-link";
+import { appendBoardToPdf } from "@/integration/board-to-pdf";
+import { projectService as defaultProjectService } from "@/core/storage";
 
 /*
  * Tab Bar & Divider Keyboard Interaction Map
@@ -191,7 +198,112 @@ export function WorkspaceHost({
     }
   }, [layout]);
 
-  // Cross-tool integration: listen for Send to Board events (INT-1, INT-2)
+  const handleNavigateAlpha = useCallback(
+    async (url: string) => {
+      const parsed = parseAlphaLink(url);
+      if (!parsed || parsed.type !== "pdf") return;
+
+      const currentLayout = layoutRef.current;
+      // 1. Check if the PDF tab is already open
+      const existingTab = currentLayout.tabs.find(
+        (t) => t.kind === "pdf" && (t.itemId === parsed.itemId || t.id === parsed.itemId)
+      );
+
+      if (existingTab) {
+        // PDF is already open! Make sure it's visible
+        const isVisible =
+          currentLayout.primary === existingTab.id ||
+          (currentLayout.split !== "none" && currentLayout.secondary === existingTab.id);
+
+        if (!isVisible) {
+          setLayout((prev) => {
+            if (prev.split !== "none") {
+              return { ...prev, secondary: existingTab.id };
+            }
+            return { ...prev, primary: existingTab.id };
+          });
+        }
+
+        // Navigate to the target page
+        bus.emit("pdf:navigate-page", {
+          itemId: parsed.itemId,
+          page: parsed.page,
+        });
+      } else {
+        // 2. Tab is not open, open it in workspace
+        let title = t("workspace.pdfTabTitle", { n: `${currentLayout.tabs.length + 1}` });
+        try {
+          const item = await defaultProjectService.readItem(projectId || "default", parsed.itemId);
+          if (item) {
+            const parsedItem = JSON.parse(item) as { name?: string };
+            if (parsedItem.name) {
+              title = parsedItem.name;
+            }
+          }
+        } catch {
+          // Fallback title
+        }
+
+        const newPdfTabId = `tab-${Date.now()}`;
+        const newTab: Tab = {
+          id: newPdfTabId,
+          kind: "pdf",
+          itemId: parsed.itemId,
+          title,
+        };
+
+        setLayout((prev) => {
+          let nextPrimary = prev.primary;
+          let nextSecondary = prev.secondary;
+          let nextSplit = prev.split;
+
+          if (prev.split !== "none") {
+            nextSecondary = newPdfTabId;
+          } else {
+            nextPrimary = newPdfTabId;
+          }
+
+          return {
+            ...prev,
+            tabs: [...prev.tabs, newTab],
+            tabBarOrder: [...prev.tabBarOrder, newPdfTabId],
+            primary: nextPrimary,
+            secondary: nextSecondary,
+            split: nextSplit,
+          };
+        });
+
+        setTimeout(() => {
+          bus.emit("pdf:navigate-page", {
+            itemId: parsed.itemId,
+            page: parsed.page,
+          });
+        }, 300);
+      }
+    },
+    [projectId, t]
+  );
+
+  // Intercept anchor clicks on alpha:// links at workspace window level (INT-4)
+  useEffect(() => {
+    const handleAnchorClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement)?.closest?.("a");
+      if (!target) return;
+      const href = target.getAttribute("href");
+      if (href && href.startsWith("alpha://")) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleNavigateAlpha(href);
+      }
+    };
+
+    window.addEventListener("click", handleAnchorClick, true);
+    return () => {
+      window.removeEventListener("click", handleAnchorClick, true);
+    };
+  }, [handleNavigateAlpha]);
+
+  // Cross-tool integration: listen for Send to Board events (INT-1, INT-2, INT-4)
   useEffect(() => {
     const handlePdfToBoard = async (event: AppEvents["pdf:page-to-board"]) => {
       const currentLayout = layoutRef.current;
@@ -387,14 +499,162 @@ export function WorkspaceHost({
       }
     };
 
+    const handlePdfSelectionToBoard = async (event: AppEvents["pdf:selection"]) => {
+      const currentLayout = layoutRef.current;
+      const decision = selectTargetBoard({
+        explicitTabId: event.targetBoardTabId,
+        sourceTabId: event.sourceTabId,
+        layout: currentLayout,
+        mruBoardTabIds: mruBoardTabsRef.current,
+      });
+
+      let targetTabId: string;
+
+      if (decision.type === "create") {
+        const newBoardId = `tab-${Date.now()}`;
+        const newItemId = `item-${Date.now()}`;
+        const newTab: Tab = {
+          id: newBoardId,
+          kind: "board",
+          itemId: newItemId,
+          title: t("workspace.boardTabTitle", { n: `${currentLayout.tabs.length + 1}` }),
+        };
+
+        setLayout((prev) => {
+          const isMobileWidth = typeof window !== "undefined" && window.innerWidth < 768;
+          let nextSplit = prev.split;
+          let nextPrimary = prev.primary;
+          let nextSecondary = prev.secondary;
+
+          if (isMobileWidth) {
+            nextPrimary = newBoardId;
+          } else if (prev.split === "none") {
+            nextSplit = "vertical";
+            nextSecondary = newBoardId;
+          } else {
+            if (event.sourceTabId && prev.secondary === event.sourceTabId) {
+              nextPrimary = newBoardId;
+            } else {
+              nextSecondary = newBoardId;
+            }
+          }
+
+          return {
+            ...prev,
+            tabs: [...prev.tabs, newTab],
+            tabBarOrder: [...prev.tabBarOrder, newBoardId],
+            primary: nextPrimary,
+            secondary: nextSecondary,
+            split: nextSplit,
+          };
+        });
+
+        targetTabId = newBoardId;
+        mruBoardTabsRef.current = [newBoardId, ...mruBoardTabsRef.current.filter((id) => id !== newBoardId)];
+      } else {
+        targetTabId = decision.tabId;
+        mruBoardTabsRef.current = [targetTabId, ...mruBoardTabsRef.current.filter((id) => id !== targetTabId)];
+
+        setLayout((prev) => {
+          const isVisible =
+            prev.primary === targetTabId ||
+            (prev.split !== "none" && prev.secondary === targetTabId);
+
+          if (isVisible) return prev;
+
+          const isMobileWidth = typeof window !== "undefined" && window.innerWidth < 768;
+          if (isMobileWidth) {
+            return { ...prev, primary: targetTabId };
+          }
+
+          if (prev.split === "none") {
+            return {
+              ...prev,
+              split: "vertical",
+              secondary: targetTabId,
+            };
+          } else {
+            if (event.sourceTabId && prev.secondary === event.sourceTabId) {
+              return { ...prev, primary: targetTabId };
+            } else {
+              return { ...prev, secondary: targetTabId };
+            }
+          }
+        });
+      }
+
+      const link = formatAlphaLink({
+        type: "pdf",
+        itemId: event.docItemId,
+        page: event.page,
+      });
+
+      try {
+        await insertTextNoteIntoBoard({
+          projectId: projectId || "demo",
+          tabId: targetTabId,
+          text: event.text,
+          link,
+        });
+      } catch (err) {
+        console.error("[WorkspaceHost] Failed to insert text note into board:", err);
+      }
+    };
+
+    const handleBoardToPdf = async (event: AppEvents["board:to-pdf"]) => {
+      const currentLayout = layoutRef.current;
+      let targetPdfItemId = event.targetPdfItemId;
+
+      if (!targetPdfItemId) {
+        // Priority 1: The other visible pane if it is a PDF
+        const otherPaneTabId =
+          currentLayout.split !== "none"
+            ? (event.sourceTabId === currentLayout.primary ? currentLayout.secondary : currentLayout.primary)
+            : null;
+        const otherTab = otherPaneTabId
+          ? currentLayout.tabs.find((t) => t.id === otherPaneTabId)
+          : null;
+
+        if (otherTab && otherTab.kind === "pdf") {
+          targetPdfItemId = otherTab.itemId;
+        } else {
+          // Priority 2: Any open PDF tab in layout
+          const openPdfTab = currentLayout.tabs.find((t) => t.kind === "pdf");
+          if (openPdfTab) {
+            targetPdfItemId = openPdfTab.itemId;
+          }
+        }
+      }
+
+      try {
+        await appendBoardToPdf({
+          projectId: projectId || "default",
+          targetPdfItemId,
+          imageBlob: event.image,
+        });
+      } catch (err) {
+        console.error("[WorkspaceHost] Failed to append board to PDF:", err);
+      }
+    };
+
+    const handleNavigateAlphaEvent = (evt: AppEvents["navigate:alpha"]) => {
+      handleNavigateAlpha(evt.url);
+    };
+
     bus.on("pdf:page-to-board", handlePdfToBoard);
     bus.on("circuit:to-board", handleCircuitToBoard);
+    bus.on("board:to-pdf", handleBoardToPdf);
+    bus.on("pdf:selection", handlePdfSelectionToBoard);
+    bus.on("navigate:alpha", handleNavigateAlphaEvent);
 
     return () => {
       bus.off("pdf:page-to-board", handlePdfToBoard);
       bus.off("circuit:to-board", handleCircuitToBoard);
+      bus.off("board:to-pdf", handleBoardToPdf);
+      bus.off("pdf:selection", handlePdfSelectionToBoard);
+      bus.off("navigate:alpha", handleNavigateAlphaEvent);
     };
-  }, [projectId, t]);
+  }, [handleNavigateAlpha, projectId, t]);
 
   // Action: Open a tab or activate if already open
   const openTab = useCallback((tab: Tab) => {

@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 8 — Integration |
-| Current task | Task 38 — Cross-Tool Integration Actions: Event Bus, PDF to Board, Circuit to Board (completed) |
+| Active phase | 8 — Integration (completed) |
+| Current task | Task 39 — Board to PDF and Selection to Note (completed) |
 | Last updated | 2026-10-19 |
-| Next step | Task 39 — Board to PDF and Selection to Note |
+| Next step | Task 40 — Stirling-PDF Docker Compose Stack & PDF Gateway Service (Phase 9) |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -32,7 +32,7 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | **5. PDF module** | Done (2026-10-18) | Viewer, annotations JSON, page operations, annotated download | Annotations survive reload; annotated download opens with highlights in another viewer |
 | **6. `.alpha` export/import** | In progress | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
 | **7. Google Drive** | Done (2026-10-19) | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
-| **8. Integration** | In progress | §8 actions | All four actions work across modes |
+| **8. Integration** | Done (2026-10-19) | §8 actions | All four actions work across modes |
 | **9. Stirling** | Not started | Compose stack, gateway, UI with progress/cancel, results saved into project | OCR and Office→PDF work; Stirling unreachable from the internet |
 | **10. UI redesign** | Not started | Circuit toolbar via `runCommand`, advanced menu toggle, PDF toolbars, unified styling | Every circuit action reachable |
 | **11. Launch prep** | Not started | **§14.12 security checklist signed off**, security headers/CSP, privacy policy, terms, third-party notices, fork source published, Google app published + brand verification, monitoring | Google verification approved; refresh tokens no longer expire after 7 days |
@@ -130,6 +130,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-19 | Task 36: Board conflicts reconciled via `@excalidraw/excalidraw`'s `reconcileElements` loaded via dynamic client-side `import()`; circuit & annotation conflicts produce timestamped conflict copies in Drive (`<title> (conflict YYYY-MM-DD)`), registered in Dexie `items` and project manifest, and reload remote payload; content-addressed files (SHA-256) never conflict; 403 quota errors keep local SaveQueue running in Dexie and display persistent DriveStatusBanner with `.alpha` export shortcut; 404 missing files recreate from Dexie cache; 401/409 revocation triggers `drive:reconnect-required` and auto-flushes on reconnect. |
 | 2026-10-19 | Task 37: Implemented bidirectional project mode migration (Local <-> Drive) in ProjectService with unpinning/pinning and optional Drive folder trashing; integrated Google Picker API for PDF and .alpha files; added Export to Drive saving to Aboard/Exports/; prompt banner for moving local projects to Drive. |
 | 2026-10-19 | Task 38: Built typed event bus in core/bus.ts using mitt; implemented target board selection across all 4 priorities (explicit -> visible split board -> MRU -> new board); implemented PDF Page to Board (INT-1) rendering WebP at scale 2 with annotations, compressing >4MB, saving via putFile, and inserting locked image element into Excalidraw; implemented Circuit to Board (INT-2) converting SVG string to binary image/svg+xml Blob (SEC-7 zero DOM injection) and inserting into board; built boardRegistry to track active imperative APIs; verified with 12 unit tests and Playwright split-view reload persistence test. |
+| 2026-10-19 | Task 39: Board to PDF (INT-3) exports image via Excalidraw exportToBlob and appends as page to target PDF via @cantoo/pdf-lib, emitting pdf:item-updated and pdf:navigate-page with new content-addressed SHA-256 hash; Selection to Note (INT-4) detects PDF text selection and inserts text note into target board linked by internal alpha://pdf/<itemId>#page=<n>; workspace intercepts alpha:// links to switch tabs and scroll to page while preserving standard https:// links; board elements with alpha:// survive .alpha export/import; PdfPane renders toast notifications across viewer remounts. Phase 8 completed. |
 
 ## Lessons and corrections
 

@@ -3,6 +3,7 @@ import {
   parseSvgDimensions,
   insertImageIntoBoard,
   insertCircuitSvgIntoBoard,
+  insertTextNoteIntoBoard,
 } from "./board-insertion";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import type { ProjectService } from "@/core/storage";
@@ -144,6 +145,41 @@ describe("board-insertion", () => {
       expect(el.width).toBe(500);
       expect(el.height).toBe(400);
       expect(el.locked).toBe(true);
+    });
+  });
+
+  describe("insertTextNoteIntoBoard", () => {
+    it("inserts text element with alpha:// link and updates scene", async () => {
+      const mockUpdateScene = vi.fn();
+      const mockScrollToContent = vi.fn();
+
+      const mockApi: ExcalidrawImperativeAPI = {
+        getSceneElements: vi.fn().mockReturnValue([]),
+        updateScene: mockUpdateScene,
+        scrollToContent: mockScrollToContent,
+        getAppState: vi.fn(),
+        getFiles: vi.fn(),
+        refresh: vi.fn(),
+        addFiles: vi.fn(),
+      } as unknown as ExcalidrawImperativeAPI;
+
+      const elementId = await insertTextNoteIntoBoard({
+        projectId: "proj-1",
+        tabId: "tab-board",
+        text: "Important excerpt from textbook",
+        link: "alpha://pdf/doc-item-1#page=5",
+        apiOverride: mockApi,
+      });
+
+      expect(elementId).toBeDefined();
+      expect(mockUpdateScene).toHaveBeenCalledTimes(1);
+      const scenePayload = mockUpdateScene.mock.calls[0][0];
+      expect(scenePayload.elements).toHaveLength(1);
+      const el = scenePayload.elements[0];
+      expect(el.type).toBe("text");
+      expect(el.text).toBe("Important excerpt from textbook");
+      expect(el.link).toBe("alpha://pdf/doc-item-1#page=5");
+      expect(mockScrollToContent).toHaveBeenCalledWith(el, { fitToContent: true });
     });
   });
 });

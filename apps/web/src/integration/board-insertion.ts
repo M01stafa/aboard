@@ -213,3 +213,66 @@ export async function insertCircuitSvgIntoBoard({
     apiOverride,
   });
 }
+
+export interface InsertTextNoteOptions {
+  projectId: string;
+  tabId: string;
+  text: string;
+  link?: string;
+  apiOverride?: ExcalidrawImperativeAPI;
+}
+
+/**
+ * Inserts a text note element onto the target whiteboard with an optional internal link (INT-4).
+ */
+export async function insertTextNoteIntoBoard({
+  tabId,
+  text,
+  link,
+  apiOverride,
+}: InsertTextNoteOptions): Promise<string> {
+  const api = apiOverride ?? (await boardRegistry.waitFor(tabId, 5000));
+  const existing = typeof api.getSceneElements === "function" ? api.getSceneElements() : [];
+
+  let x = 100;
+  let y = 100;
+
+  if (existing.length > 0) {
+    let maxY = -Infinity;
+    let minX = Infinity;
+    for (const el of existing) {
+      if (!el.isDeleted) {
+        maxY = Math.max(maxY, el.y + (el.height || 0));
+        minX = Math.min(minX, el.x);
+      }
+    }
+    if (maxY !== -Infinity && isFinite(maxY)) {
+      y = maxY + 40;
+      x = isFinite(minX) ? minX : 100;
+    }
+  }
+
+  const { convertToExcalidrawElements } = await import("@excalidraw/excalidraw");
+
+  const [textElement] = convertToExcalidrawElements([
+    {
+      type: "text",
+      text,
+      x,
+      y,
+      fontSize: 20,
+      link: link || null,
+    },
+  ]);
+
+  if (typeof api.updateScene === "function") {
+    api.updateScene({ elements: [...existing, textElement] });
+  }
+
+  if (typeof api.scrollToContent === "function") {
+    api.scrollToContent(textElement, { fitToContent: true });
+  }
+
+  return textElement.id;
+}
+

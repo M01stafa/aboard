@@ -28,12 +28,24 @@ export type AppEvents = {
     boardItemId: string;
     image: Blob;
     targetPdfItemId?: string;
+    sourceTabId?: string;
   };
   "pdf:selection": {
     docItemId: string;
     page: number;
     text: string;
     targetBoardTabId?: string;
+    sourceTabId?: string;
+  };
+  "pdf:navigate-page": {
+    itemId?: string;
+    page: number;
+  };
+  "pdf:item-updated": {
+    itemId: string;
+  };
+  "navigate:alpha": {
+    url: string;
   };
   "save:status": {
     projectId: string;

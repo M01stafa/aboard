@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { BoardPane } from "./board-pane";
 import { I18nProvider } from "@/i18n/provider";
 import { projectService } from "@/core/storage";
+import { bus } from "@/core/bus";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 // @ts-expect-error React testing flag
@@ -14,8 +15,18 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let lastExcalidrawProps: Record<string, unknown> | null = null;
 let mockRefresh = vi.fn();
 let mockExcalidrawApi: Partial<ExcalidrawImperativeAPI> = {};
+export const mockAppendBoardToPdf = vi.fn().mockResolvedValue({
+  targetPdfItemId: "pdf-1",
+  pageCount: 2,
+  newFileKey: "hash-1",
+});
+
+vi.mock("@/integration/board-to-pdf", () => ({
+  appendBoardToPdf: (...args: unknown[]) => mockAppendBoardToPdf(...args),
+}));
 
 vi.mock("@excalidraw/excalidraw", () => ({
+  exportToBlob: vi.fn().mockResolvedValue(new Blob(["mock-png"], { type: "image/png" })),
   Excalidraw: vi.fn((props: Record<string, unknown>) => {
     lastExcalidrawProps = props;
     if (typeof props.excalidrawAPI === "function") {
@@ -502,5 +513,79 @@ describe("BoardPane Component (Task 25 / BOARD-1, BOARD-2, BOARD-4)", () => {
     for (const id of insertedIds) {
       expect(updateCall.appState.selectedElementIds[id]).toBe(true);
     }
+  });
+
+  it("intercepts alpha:// links in onLinkOpen and emits navigate:alpha (INT-4)", async () => {
+    const tab = { id: "tab-board-link", kind: "board" as const, itemId: "item-b-link", title: "Board Link" };
+    vi.spyOn(projectService, "readItem").mockResolvedValue(JSON.stringify({ elements: [], appState: {} }));
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <BoardPane projectId="proj-1" tab={tab} visible={true} />
+        </I18nProvider>
+      );
+      await Promise.resolve();
+    });
+
+    const onLinkOpen = (lastExcalidrawProps as { onLinkOpen?: (el: unknown, ev: unknown) => void })?.onLinkOpen;
+    expect(onLinkOpen).toBeTypeOf("function");
+
+    const emitSpy = vi.spyOn(bus, "emit");
+    const preventDefault = vi.fn();
+
+    onLinkOpen?.(
+      { link: "alpha://pdf/pdf-doc-1#page=4" },
+      { preventDefault }
+    );
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(emitSpy).toHaveBeenCalledWith("navigate:alpha", {
+      url: "alpha://pdf/pdf-doc-1#page=4",
+    });
+  });
+
+  it("renders Send to PDF button and triggers board:to-pdf event (INT-3)", async () => {
+    const tab = { id: "tab-board-pdf", kind: "board" as const, itemId: "item-b-pdf", title: "Board PDF" };
+    vi.spyOn(projectService, "readItem").mockResolvedValue(
+      JSON.stringify({
+        elements: [{ id: "shape-1", isDeleted: false, type: "rectangle" }],
+        appState: {},
+      })
+    );
+
+    mockExcalidrawApi.getSceneElements = vi.fn().mockReturnValue([
+      { id: "shape-1", isDeleted: false, type: "rectangle" },
+    ]);
+
+    const emitSpy = vi.spyOn(bus, "emit");
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <BoardPane projectId="proj-1" tab={tab} visible={true} />
+        </I18nProvider>
+      );
+      await Promise.resolve();
+    });
+
+    const sendToPdfBtn = container.querySelector(
+      '[data-testid="board-send-to-pdf-btn"]'
+    ) as HTMLButtonElement | null;
+    expect(sendToPdfBtn).toBeTruthy();
+
+    await act(async () => {
+      sendToPdfBtn?.click();
+      await Promise.resolve();
+    });
+
+    expect(emitSpy).toHaveBeenCalledWith(
+      "board:to-pdf",
+      expect.objectContaining({
+        boardItemId: "item-b-pdf",
+        sourceTabId: "tab-board-pdf",
+        image: expect.any(Blob),
+      })
+    );
   });
 });

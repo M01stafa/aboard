@@ -260,6 +260,16 @@ export const ar: TranslationDictionary = {
     sendingToBoard: "جارٍ الإرسال…",
     sentToBoardSuccess: "تم إرسال الصفحة إلى اللوحة البيضاء",
     sendToBoardError: "فشل إرسال الصفحة إلى اللوحة البيضاء",
+    selectionSendToBoard: "إرسال إلى اللوحة",
+    selectionSentToBoardSuccess: "تمت إضافة الملاحظة إلى اللوحة البيضاء",
+  },
+  board: {
+    sendToPdf: "إرسال إلى PDF",
+    sendingToPdf: "جارٍ الإرسال…",
+    sentToPdfSuccess: "تم إلحاق اللوحة بمستند PDF",
+    sendToPdfError: "فشل إلحاق اللوحة بمستند PDF",
+    noPdfInProject: "لا يوجد مستند PDF في المشروع",
+    emptyBoard: "اللوحة فارغة",
   },
   legal: {
     privacyTitle: "سياسة الخصوصية",

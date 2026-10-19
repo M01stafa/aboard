@@ -11,7 +11,7 @@ import {
 } from "@embedpdf/core";
 import { RenderPluginPackage } from "@embedpdf/plugin-render";
 import { RenderLayer, useRenderCapability } from "@embedpdf/plugin-render/react";
-import { bus } from "@/core/bus";
+import { bus, type AppEvents } from "@/core/bus";
 import { MAX_ALLOWED_FILE_BYTES, compressImageIfNeeded } from "@/modules/board/image-utils";
 import { getImageDimensions } from "@/integration/board-insertion";
 import { ScrollPluginPackage } from "@embedpdf/plugin-scroll";
@@ -53,6 +53,7 @@ export interface PdfViewerProps {
   itemId?: string;
   projectServiceOverride?: ProjectService;
   onSaveRestructuredPdf?: (newBlob: Blob) => Promise<void>;
+  onShowToast?: (message: string) => void;
 }
 
 const plugins = [
@@ -109,6 +110,10 @@ function ViewerInner({
   const [isDownloading, setIsDownloading] = useState(false);
   const [isOperatingPage, setIsOperatingPage] = useState(false);
   const [isSendingToBoard, setIsSendingToBoard] = useState(false);
+  const [selectedText, setSelectedText] = useState("");
+  const [selectionPos, setSelectionPos] = useState<{ top: number; left: number } | null>(null);
+  const [isSendingSelection, setIsSendingSelection] = useState(false);
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
 
   const handleSendToBoard = async () => {
     if (!renderCapability) {
@@ -218,6 +223,117 @@ function ViewerInner({
       }
     });
   }, [scrollScope, onPageChange]);
+
+  // Handle cross-module navigation requests (INT-4 / INT-3)
+  useEffect(() => {
+    if (!scrollScope) return;
+    const handleNavigatePage = (evt: AppEvents["pdf:navigate-page"]) => {
+      if (!evt.itemId || evt.itemId === itemId || evt.itemId === documentId) {
+        if (typeof evt.page === "number" && evt.page >= 1) {
+          scrollScope.scrollToPage({ pageNumber: evt.page, behavior: "smooth" });
+          setDisplayPage(evt.page);
+          onPageChange(evt.page);
+        }
+      }
+    };
+    bus.on("pdf:navigate-page", handleNavigatePage);
+    return () => {
+      bus.off("pdf:navigate-page", handleNavigatePage);
+    };
+  }, [scrollScope, itemId, documentId, onPageChange]);
+
+  // Detect text selection for "Selection to Note" (INT-4)
+  useEffect(() => {
+    const handleSelection = () => {
+      if (typeof window === "undefined") return;
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+        setSelectedText("");
+        setSelectionPos(null);
+        return;
+      }
+
+      const text = selection.toString().trim();
+      if (!text) {
+        setSelectedText("");
+        setSelectionPos(null);
+        return;
+      }
+
+      const container = viewerContainerRef.current;
+      if (!container) return;
+
+      const pdfPane = container.closest('[data-testid^="pane-pdf-"]') || container.parentElement || container;
+      const range = selection.getRangeAt(0);
+      const node = range.commonAncestorContainer;
+      const isInside =
+        container.contains(node) ||
+        pdfPane.contains(node) ||
+        (node.parentElement ? pdfPane.contains(node.parentElement) : false);
+      if (!isInside) {
+        return;
+      }
+
+      const rangeRect = range.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+
+      let top = 20;
+      let left = 40;
+      if (rangeRect && (rangeRect.width > 0 || rangeRect.height > 0)) {
+        top =
+          rangeRect.top - containerRect.top > 50
+            ? rangeRect.top - containerRect.top - 40
+            : rangeRect.bottom - containerRect.top + 8;
+        left = Math.max(
+          16,
+          Math.min(
+            containerRect.width - 160,
+            rangeRect.left - containerRect.left + rangeRect.width / 2 - 60
+          )
+        );
+      }
+
+      setSelectedText(text);
+      setSelectionPos({ top, left });
+    };
+
+    document.addEventListener("selectionchange", handleSelection);
+    const containerEl = viewerContainerRef.current;
+    if (containerEl) {
+      containerEl.addEventListener("mouseup", handleSelection);
+      containerEl.addEventListener("pointerup", handleSelection);
+    }
+
+    return () => {
+      document.removeEventListener("selectionchange", handleSelection);
+      if (containerEl) {
+        containerEl.removeEventListener("mouseup", handleSelection);
+        containerEl.removeEventListener("pointerup", handleSelection);
+      }
+    };
+  }, []);
+
+  const handleSendSelectionToBoard = async () => {
+    if (!selectedText) return;
+    setIsSendingSelection(true);
+    try {
+      const curPage = displayPage || scrollState.currentPage || 1;
+      bus.emit("pdf:selection", {
+        docItemId: itemId || documentId,
+        page: curPage,
+        text: selectedText,
+        sourceTabId: tabId,
+      });
+      onShowToast(t("pdf.selectionSentToBoardSuccess"));
+      setSelectedText("");
+      setSelectionPos(null);
+      window.getSelection()?.removeAllRanges();
+    } catch (err) {
+      console.error("[PdfViewer] Failed to send selection to board:", err);
+    } finally {
+      setIsSendingSelection(false);
+    }
+  };
 
   const handlePrevPage = () => {
     const cur = scrollState.currentPage || displayPage;
@@ -370,14 +486,48 @@ function ViewerInner({
 
   return (
     <div
+      ref={viewerContainerRef}
       style={{
         display: "flex",
         flexDirection: "column",
         width: "100%",
         height: "100%",
         overflow: "hidden",
+        position: "relative",
       }}
     >
+      {selectedText && selectionPos && (
+        <button
+          type="button"
+          data-testid="pdf-selection-to-board-btn"
+          onClick={handleSendSelectionToBoard}
+          disabled={isSendingSelection}
+          style={{
+            position: "absolute",
+            top: `${selectionPos.top}px`,
+            left: `${selectionPos.left}px`,
+            zIndex: 100,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "var(--space-1)",
+            padding: "var(--space-1) var(--space-2)",
+            backgroundColor: "var(--btn-primary-bg)",
+            color: "var(--btn-primary-text)",
+            border: "1px solid var(--border-card)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--shadow-2)",
+            fontSize: "0.8125rem",
+            fontWeight: "var(--weight-medium)",
+            cursor: isSendingSelection ? "wait" : "pointer",
+            userSelect: "none",
+            transition: "transform var(--motion-fast) var(--ease-standard)",
+          }}
+        >
+          <span>📝</span>
+          <span>{t("pdf.selectionSendToBoard")}</span>
+        </button>
+      )}
+
       <PdfToolbar
         documentTitle={documentTitle}
         currentPage={displayPage || scrollState.currentPage || 1}
@@ -531,6 +681,7 @@ export function PdfViewer({
   itemId,
   projectServiceOverride,
   onSaveRestructuredPdf,
+  onShowToast,
 }: PdfViewerProps) {
   const { t } = useI18n();
 
@@ -542,10 +693,20 @@ export function PdfViewer({
 
   const [isDocumentReady, setIsDocumentReady] = useState(false);
   const [docLoadError, setDocLoadError] = useState<string | null>(null);
+  const [prevDocId, setPrevDocId] = useState(documentId);
+  if (documentId !== prevDocId) {
+    setPrevDocId(documentId);
+    setIsDocumentReady(false);
+    setDocLoadError(null);
+  }
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (message: string) => {
+    if (onShowToast) {
+      onShowToast(message);
+      return;
+    }
     if (toastTimerRef.current) {
       clearTimeout(toastTimerRef.current);
     }
@@ -692,7 +853,7 @@ export function PdfViewer({
       </EmbedPDF>
 
       {/* Warning toast notification (PDF-6) */}
-      {toastMessage && (
+      {toastMessage && !onShowToast && (
         <div
           role="alert"
           aria-live="polite"

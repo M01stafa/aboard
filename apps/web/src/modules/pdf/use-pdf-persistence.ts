@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { projectService as defaultProjectService, type ProjectService } from "@/core/storage";
 import { computeBlobSha256 } from "@/core/storage/sha256";
+import { bus } from "@/core/bus";
 import type { PdfItemPayload } from "./types";
 
 export interface UsePdfPersistenceOptions {
@@ -84,8 +85,17 @@ export function usePdfPersistence({
 
     loadItem();
 
+    const handleUpdated = (event: { itemId: string }) => {
+      if (event.itemId === itemId) {
+        loadItem();
+      }
+    };
+
+    bus.on("pdf:item-updated", handleUpdated);
+
     return () => {
       isSubscribed = false;
+      bus.off("pdf:item-updated", handleUpdated);
     };
   }, [ps, projectId, itemId]);
 

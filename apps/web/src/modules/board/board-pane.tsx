@@ -13,6 +13,8 @@ import type { BoardPaneProps } from "./types";
 import { useBoardPersistence } from "./use-board-persistence";
 import { TemplatesPanel } from "./templates-panel";
 import { boardRegistry } from "./board-registry";
+import { bus } from "@/core/bus";
+import { appendBoardToPdf } from "@/integration/board-to-pdf";
 
 /**
  * Excalidraw loaded on client only via next/dynamic with ssr: false,
@@ -41,7 +43,7 @@ export function BoardPane({
   onMount,
   onApiReady,
 }: BoardPaneProps) {
-  const { resolvedTheme: i18nTheme, language } = useI18n();
+  const { t, resolvedTheme: i18nTheme, language } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const getApi = useCallback(() => excalidrawApiRef.current, []);
@@ -198,6 +200,87 @@ export function BoardPane({
     }
   }, [loadedFiles]);
 
+  const [isSendingToPdf, setIsSendingToPdf] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((message: string) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToastMessage(message);
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  }, []);
+
+  // Intercept anchor clicks on alpha:// URLs inside board pane (INT-4 / INT-3)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleAnchorClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement)?.closest?.("a");
+      if (!target) return;
+      const href = target.getAttribute("href");
+      if (href && href.startsWith("alpha://")) {
+        e.preventDefault();
+        e.stopPropagation();
+        bus.emit("navigate:alpha", { url: href });
+      }
+    };
+
+    container.addEventListener("click", handleAnchorClick, true);
+    return () => {
+      container.removeEventListener("click", handleAnchorClick, true);
+    };
+  }, []);
+
+  const handleSendToPdf = useCallback(async () => {
+    const api = excalidrawApiRef.current;
+    if (!api) return;
+
+    const elements = api.getSceneElements?.() || [];
+    const nonDeleted = elements.filter((el) => !el.isDeleted);
+    if (nonDeleted.length === 0) {
+      showToast(t("board.emptyBoard"));
+      return;
+    }
+
+    setIsSendingToPdf(true);
+    try {
+      const appState = api.getAppState?.() || {};
+      const files = api.getFiles?.() || null;
+      const { exportToBlob } = await import("@excalidraw/excalidraw");
+
+      // Export using high-quality clean background configuration
+      const imageBlob = await exportToBlob({
+        elements: nonDeleted,
+        appState: {
+          ...appState,
+          exportWithDarkMode: false,
+          exportBackground: true,
+        },
+        files,
+        mimeType: "image/png",
+        exportPadding: 10,
+      });
+
+      bus.emit("board:to-pdf", {
+        boardItemId: tab.itemId,
+        image: imageBlob,
+        sourceTabId: tab.id,
+      });
+
+      showToast(t("board.sentToPdfSuccess"));
+    } catch (err) {
+      console.error("[BoardPane] Failed to append board to PDF:", err);
+      showToast(t("board.sendToPdfError"));
+    } finally {
+      setIsSendingToPdf(false);
+    }
+  }, [tab.itemId, tab.id, showToast, t]);
+
   // Black-box persistence: push changes to saveBoard without triggering React re-renders
   const handleChange = useCallback(
     (elements: readonly unknown[], appState: unknown, files?: unknown) => {
@@ -245,11 +328,94 @@ export function BoardPane({
                 files: unknown
               ) => void
             }
+            onLinkOpen={(element: { link?: string | null }, event: CustomEvent) => {
+              if (element.link?.startsWith("alpha://")) {
+                event.preventDefault?.();
+                bus.emit("navigate:alpha", { url: element.link });
+              }
+            }}
             theme={activeTheme}
             langCode={langCode}
             UIOptions={UI_OPTIONS}
           />
+          <button
+            type="button"
+            data-testid="board-send-to-pdf-btn"
+            onClick={handleSendToPdf}
+            disabled={isSendingToPdf}
+            title={t("board.sendToPdf")}
+            style={{
+              position: "absolute",
+              insetBlockStart: "var(--space-2)",
+              insetInlineEnd: "calc(var(--space-2) + var(--space-16))",
+              zIndex: 10,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "var(--space-1)",
+              paddingBlock: "var(--space-1)",
+              paddingInline: "var(--space-2)",
+              backgroundColor: "var(--bg-surface)",
+              color: "var(--text-main)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "var(--radius-md)",
+              boxShadow: "var(--shadow-1)",
+              fontSize: "0.875rem",
+              fontWeight: "var(--weight-medium)",
+              cursor: isSendingToPdf ? "wait" : "pointer",
+              transition:
+                "background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard)",
+            }}
+          >
+            <svg
+              width={16}
+              height={16}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
+            <span>
+              {isSendingToPdf ? t("board.sendingToPdf") : t("board.sendToPdf")}
+            </span>
+          </button>
           <TemplatesPanel getApi={getApi} />
+          {toastMessage && (
+            <div
+              role="status"
+              aria-live="polite"
+              data-testid="board-toast-notice"
+              style={{
+                position: "absolute",
+                insetBlockEnd: "var(--space-4)",
+                left: "50%",
+                transform: "translateX(-50%)",
+                backgroundColor: "var(--slate-900)",
+                color: "#ffffff",
+                border: "1px solid var(--border-card)",
+                borderRadius: "var(--radius-md)",
+                paddingBlock: "var(--space-1)",
+                paddingInline: "var(--space-3)",
+                boxShadow: "var(--shadow-2)",
+                zIndex: 100,
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                fontSize: "0.875rem",
+                fontWeight: "var(--weight-medium)",
+              }}
+            >
+              <span>{toastMessage}</span>
+            </div>
+          )}
         </>
       )}
     </div>

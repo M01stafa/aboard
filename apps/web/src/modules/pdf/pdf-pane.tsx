@@ -52,6 +52,18 @@ export function PdfPane({
   // Mobile > 100MB warning dialog state (PDF-7)
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((message: string) => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToastMessage(message);
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage(null);
+    }, 4500);
+  }, []);
 
   const processFile = useCallback(
     async (file: File) => {
@@ -142,9 +154,10 @@ export function PdfPane({
         }}
       >
         <PdfViewer
+          key={payload?.fileKey || tab.itemId}
           tabId={tab.id}
           itemId={tab.itemId}
-          documentId={`pdf-doc-${tab.itemId}`}
+          documentId={`pdf-doc-${tab.itemId}-${payload?.fileKey || "init"}`}
           blob={blob}
           documentTitle={payload?.name || tab.title}
           initialPage={payload?.lastPage || 1}
@@ -153,7 +166,56 @@ export function PdfPane({
           pdfHash={payload?.fileKey || tab.itemId}
           projectServiceOverride={projectServiceOverride}
           onSaveRestructuredPdf={addPdfFile}
+          onShowToast={showToast}
         />
+
+        {/* Warning toast notification (PDF-6) */}
+        {toastMessage && (
+          <div
+            role="alert"
+            aria-live="polite"
+            data-testid="pdf-restructure-toast"
+            style={{
+              position: "absolute",
+              bottom: "var(--space-16)",
+              left: "50%",
+              transform: "translateX(-50%)",
+              backgroundColor: "var(--slate-900, #0f172a)",
+              color: "#ffffff",
+              border: "1px solid var(--border-card)",
+              borderRadius: "var(--radius-md)",
+              padding: "var(--space-8) var(--space-16)",
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.3)",
+              zIndex: 1000,
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-8)",
+              fontSize: "14px",
+              fontWeight: 500,
+              maxWidth: "calc(var(--space-16) * 4)",
+              boxSizing: "border-box",
+            }}
+          >
+            <span>⚠️</span>
+            <span>{toastMessage}</span>
+            <button
+              type="button"
+              onClick={() => setToastMessage(null)}
+              aria-label="Close"
+              data-testid="pdf-dismiss-toast"
+              style={{
+                border: "none",
+                background: "transparent",
+                color: "#ffffff",
+                cursor: "pointer",
+                padding: "0 var(--space-8)",
+                fontSize: "16px",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
     );
   }

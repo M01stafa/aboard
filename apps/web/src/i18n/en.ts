@@ -258,6 +258,16 @@ export const en = {
     sendingToBoard: "Sending…",
     sentToBoardSuccess: "Page sent to whiteboard",
     sendToBoardError: "Failed to send page to whiteboard",
+    selectionSendToBoard: "Send to Board",
+    selectionSentToBoardSuccess: "Note added to whiteboard",
+  },
+  board: {
+    sendToPdf: "Send to PDF",
+    sendingToPdf: "Sending…",
+    sentToPdfSuccess: "Board appended to PDF",
+    sendToPdfError: "Failed to append board to PDF",
+    noPdfInProject: "No PDF in project",
+    emptyBoard: "Whiteboard is empty",
   },
   legal: {
     privacyTitle: "Privacy Policy",

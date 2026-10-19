@@ -1203,4 +1203,36 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 38 · INT-1, INT-2, SEC-7 · docs/specs/modules.md §8 · docs/specs/security.md §14.6
 **Open:** none (ready for Task 39).
 
+## 2026-10-19 — Task 39: Build Board to PDF and Selection to Note (Phase 8 Complete)
+**Request:** Run Task 39 from docs/TASKS.md (final task of Phase 8): implement Board to PDF (INT-3) with toolbar button, export via Excalidraw's exportToBlob, append to target PDF via @cantoo/pdf-lib, save as new version via ProjectService, and show translated success message; implement Selection to Note (INT-4) detecting PDF text selection, showing floating "Send to Board" button, extracting selected text, finding target board via selectTargetBoard, inserting text element on board with internal alpha://pdf/<itemId>#page=<n> link; handle alpha:// link protocol in workspace by switching tabs/panes and scrolling to page while keeping standard https:// links in new tab; verify alpha:// links survive .alpha export/import; write unit tests and Playwright E2E test; mark Phase 8 complete.
+**Changes:**
+- `apps/web/src/integration/alpha-link.ts` (created): implemented `parseAlphaLink` and `formatAlphaLink` supporting both object and positional parameter signatures with validation.
+- `apps/web/src/integration/alpha-link.test.ts` (created): 7 unit tests verifying parsing of item IDs, page queries, invalid URLs, and format reconstruction.
+- `apps/web/src/integration/board-to-pdf.ts` (created): implemented `appendBoardToPdf` embedding Excalidraw PNG image into `@cantoo/pdf-lib` PDF document matching dimensions, saving immutable blob with streaming SHA-256 hash via `putFile`, updating PDF item descriptor via `savePdf`, and emitting `pdf:item-updated` and `pdf:navigate-page`.
+- `apps/web/src/integration/board-to-pdf.test.ts` (created): 2 unit tests verifying appending page to existing PDF and creating new document.
+- `apps/web/src/integration/board-insertion.ts` (changed): implemented `insertTextNoteIntoBoard` dynamically importing `@excalidraw/excalidraw` elements converter, positioning note next to existing elements, attaching internal link, updating scene, and scrolling to content.
+- `apps/web/src/integration/board-insertion.test.ts` (changed): added unit test for `insertTextNoteIntoBoard`.
+- `apps/web/src/integration/index.ts` (changed): exported `alpha-link` and `board-to-pdf` functions and types.
+- `apps/web/src/core/bus.ts` (changed): added `pdf:selection`, `pdf:navigate-page`, `pdf:item-updated`, and `navigate:alpha` events to `AppEvents`.
+- `apps/web/src/modules/board/board-pane.tsx` (changed): added "Send to PDF" button (`data-testid="board-send-to-pdf-btn"`), container anchor click interceptor for `alpha://` protocol emitting `navigate:alpha`, and `onLinkOpen` prop.
+- `apps/web/src/modules/board/board-pane.test.tsx` (changed): added unit tests for `onLinkOpen` link interception and "Send to PDF" button triggering `board:to-pdf`.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): added text selection detection with floating "Send to Board" button (`data-testid="pdf-selection-to-board-btn"`), `pdf:navigate-page` cross-module event listener, `prevDocId` render-time state synchronization, and `onShowToast` delegation.
+- `apps/web/src/modules/pdf/pdf-pane.tsx` (changed): dynamically updated `documentId` with fileKey hash, passed `onShowToast` callback, and preserved restructure warning toasts across viewer remounts.
+- `apps/web/src/modules/pdf/use-pdf-persistence.ts` (changed): listened to `pdf:item-updated` to reload updated blobs when modified externally.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): wired `handleBoardToPdf` resolving target PDF across split panes and tabs, wired `handlePdfSelectionToBoard` finding target board, and implemented `handleNavigateAlpha` switching to PDF tab and navigating to page.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added bilingual translations for "Send to PDF", selection "Send to Board", success toasts, and error notices.
+- `apps/web/e2e/cross-tool-notes-links.spec.ts` (created): Playwright E2E test selecting text in 2-page PDF, clicking "Send to Board", verifying note element inserted on board with `alpha://pdf/...#page=2` link, clicking link to navigate PDF to Page 2, clicking "Send to PDF" on board, and asserting PDF contains 3 pages.
+- `docs/PROGRESS.md` (changed): marked Task 39 complete, marked Phase 8 complete, set Next step to Task 40 (Phase 9), and logged Task 39 decisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 errors, all 8-point grid tokens).
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (290/290 unit tests passed across 38 test files).
+- `pnpm test:e2e`: PASS (23/23 Playwright E2E tests passed in Chromium, including new `cross-tool-notes-links.spec.ts`).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks across 67 commits, prod audit clean, bundle secret scan clean).
+**Related:** Task 39 · INT-3, INT-4 · docs/specs/modules.md §8
+**Open:** none (Phase 8 complete; ready for Phase 9 / Task 40).
+
+
 
