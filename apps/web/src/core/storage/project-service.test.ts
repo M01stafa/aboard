@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 import { ProjectService } from "./project-service";
 import type { StorageProvider, ItemRecord, AlphaManifest } from "./types";
 
@@ -206,12 +206,7 @@ describe("ProjectService (Task 20 / STORE-1, STORE-7)", () => {
     expect(fakeProvider.files.size).toBe(0);
   });
 
-  it("throws descriptive errors for future phase stubs", async () => {
-    await expect(service.exportAlpha("p1")).rejects.toThrow("Phase 6");
-    await expect(service.importAlpha(new Blob())).rejects.toThrow();
-  });
-
-  it("stubs moveProject by notifying index syncer", async () => {
+  it("moves project to drive and notifies index syncer", async () => {
     let notified: { id: string; storage: string } | null = null;
     service.setIndexSyncer({
       onProjectCreated: async () => {},
@@ -221,6 +216,25 @@ describe("ProjectService (Task 20 / STORE-1, STORE-7)", () => {
         notified = { id, storage: params.storage };
       },
     });
+
+    const { driveTokenManager } = await import("../drive/tokens");
+    vi.spyOn(driveTokenManager, "get").mockResolvedValue("mock-token");
+
+    const manifest: AlphaManifest = {
+      format: "alpha-project",
+      formatVersion: 1,
+      app: { name: "Aboard", version: "0.1.0" },
+      project: {
+        id: "p1",
+        title: "Project 1",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      items: [],
+      files: [],
+      layout: { tabs: [], split: "none" },
+    };
+    await fakeProvider.saveManifest(manifest);
 
     await service.moveProject("p1", "drive", { driveFolderId: "f-123" });
     expect(notified).toEqual({ id: "p1", storage: "drive" });

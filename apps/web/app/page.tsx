@@ -16,6 +16,8 @@ import {
 } from "@/core/storage";
 import { importAlpha, ImportError } from "@/core/alpha";
 import { getDeviceId } from "@/core/db/lifecycle";
+import { ModeSwitchModal } from "@/components/mode-switch-modal";
+import { useDriveStore } from "@/core/drive/drive-store";
 import type { I18nKey } from "@/i18n/types";
 import type { User } from "@supabase/supabase-js";
 
@@ -23,6 +25,10 @@ export function LauncherContent({ user }: { user: User }) {
   const { t } = useI18n();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Drive state
+  const isDriveConnected = useDriveStore((s) => s.connected);
+  const fetchDriveStatus = useDriveStore((s) => s.fetchStatus);
 
   // Project index & device state
   const [projects, setProjects] = useState<ProjectIndexRow[]>([]);
@@ -37,9 +43,24 @@ export function LauncherContent({ user }: { user: User }) {
   const [deletingProject, setDeletingProject] = useState<ProjectIndexRow | null>(null);
   const [driveNotice, setDriveNotice] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState<boolean>(false);
+  const [isImportingDrive, setIsImportingDrive] = useState<boolean>(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [signingOut, setSigningOut] = useState<boolean>(false);
+  const [modeSwitchTarget, setModeSwitchTarget] = useState<{
+    id: string;
+    title: string;
+    mode: "drive" | "local";
+  } | null>(null);
+  const [dismissedMovePrompt, setDismissedMovePrompt] = useState<boolean>(false);
+  const alreadyPrompted =
+    typeof window !== "undefined" &&
+    Boolean(localStorage.getItem(`aboard:prompted_move_local:${user.id}`));
+  const showMovePrompt =
+    !dismissedMovePrompt &&
+    !alreadyPrompted &&
+    isDriveConnected &&
+    projects.some((p) => p.storage === "local");
 
   // Load device ID and recent project list from Supabase
   const loadRecentProjects = useCallback(async () => {
@@ -83,6 +104,10 @@ export function LauncherContent({ user }: { user: User }) {
       cancelled = true;
     };
   }, [user.id]);
+
+  useEffect(() => {
+    fetchDriveStatus();
+  }, [fetchDriveStatus]);
 
   // Create project via ProjectService (wires Dexie + Supabase project row insert)
   async function handleCreateProject(kind: "board" | "pdf" | "circuit") {
@@ -157,16 +182,38 @@ export function LauncherContent({ user }: { user: User }) {
         await projectService.deleteProject(target.id, "local");
         setProjects((prev) => prev.filter((p) => p.id !== target.id));
       } else {
-        // Drive project stub
         await projectService.deleteProject(target.id, "drive");
         setProjects((prev) => prev.filter((p) => p.id !== target.id));
-        setDriveNotice(t("launcher.driveTrashNotice"));
+        setDriveNotice(t("launcher.driveTrashedNotice"));
         setTimeout(() => setDriveNotice(null), 6000);
       }
     } catch (err) {
       console.error("Failed to delete project:", err);
     } finally {
       setDeletingProject(null);
+    }
+  }
+
+  async function handleOpenAlphaFromDrive() {
+    if (isImporting || isImportingDrive) return;
+    setIsImportingDrive(true);
+    setImportError(null);
+    try {
+      const { openGooglePicker } = await import("@/core/drive/picker");
+      const res = await openGooglePicker({
+        mimeTypes: "application/octet-stream,.alpha,application/zip",
+        title: t("picker.selectAlphaTitle"),
+      });
+      if (res && res.blob) {
+        const file = new File([res.blob], res.name, { type: "application/octet-stream" });
+        await handleImportFile(file);
+      }
+    } catch (err: unknown) {
+      console.error("Open alpha from Drive failed:", err);
+      const msg = err instanceof Error ? err.message : t("picker.error");
+      setImportError(msg);
+    } finally {
+      setIsImportingDrive(false);
     }
   }
 
@@ -738,7 +785,99 @@ export function LauncherContent({ user }: { user: User }) {
             </svg>
             <span>{isImporting ? t("import.importing") : t("launcher.openAlpha")}</span>
           </button>
+
+          <button
+            type="button"
+            onClick={handleOpenAlphaFromDrive}
+            disabled={isImporting || isImportingDrive}
+            className="btn-subtle"
+            data-testid="open-alpha-drive-btn"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+            </svg>
+            <span>{isImportingDrive ? t("import.importing") : t("launcher.openAlphaDrive")}</span>
+          </button>
         </div>
+
+        {/* Prompt to move local projects to Google Drive */}
+        {showMovePrompt && (
+          <div
+            role="region"
+            aria-label={t("launcher.promptMoveLocalTitle")}
+            data-testid="prompt-move-local-banner"
+            style={{
+              backgroundColor: "var(--bg-surface)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "var(--radius-md)",
+              padding: "var(--space-3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "var(--space-2)",
+              boxShadow: "var(--shadow-1)",
+              marginBlockStart: "var(--space-1)",
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)", maxWidth: "60ch" }}>
+              <span style={{ fontWeight: "var(--weight-semibold)", color: "var(--text-main)" }}>
+                {t("launcher.promptMoveLocalTitle")}
+              </span>
+              <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>
+                {t("launcher.promptMoveLocalDesc")}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              <button
+                type="button"
+                className="btn-subtle"
+                data-testid="prompt-dismiss-btn"
+                style={{ blockSize: "var(--control-sm)", paddingInline: "var(--space-2)" }}
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem(`aboard:prompted_move_local:${user.id}`, "1");
+                  }
+                  setDismissedMovePrompt(true);
+                }}
+              >
+                {t("launcher.promptMoveLocalDismiss")}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                data-testid="prompt-move-local-btn"
+                style={{ blockSize: "var(--control-sm)", paddingInline: "var(--space-3)" }}
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem(`aboard:prompted_move_local:${user.id}`, "1");
+                  }
+                  setDismissedMovePrompt(true);
+                  const firstLocal = projects.find((p) => p.storage === "local");
+                  if (firstLocal) {
+                    setModeSwitchTarget({
+                      id: firstLocal.id,
+                      title: firstLocal.title,
+                      mode: "drive",
+                    });
+                  }
+                }}
+              >
+                {t("launcher.promptMoveLocalAction")}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Import Error Banner */}
         {importError && (
@@ -1299,6 +1438,30 @@ export function LauncherContent({ user }: { user: User }) {
                       }}
                       onClick={(e) => e.stopPropagation()}
                     >
+                      {badge.isInteractive && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setModeSwitchTarget({
+                              id: project.id,
+                              title: project.title,
+                              mode: project.storage === "local" ? "drive" : "local",
+                            });
+                          }}
+                          className="btn-subtle"
+                          style={{
+                            blockSize: "var(--control-sm)",
+                            paddingInline: "var(--space-2)",
+                            fontSize: "0.8125rem",
+                          }}
+                          data-testid={`mode-switch-btn-${project.id}`}
+                        >
+                          {project.storage === "local"
+                            ? t("launcher.saveToDrive")
+                            : t("launcher.keepLocal")}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={(e) => handleStartRename(project, e)}
@@ -1417,6 +1580,21 @@ export function LauncherContent({ user }: { user: User }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Mode Switch Modal (Local <-> Drive) */}
+      {modeSwitchTarget && (
+        <ModeSwitchModal
+          projectId={modeSwitchTarget.id}
+          projectTitle={modeSwitchTarget.title}
+          targetMode={modeSwitchTarget.mode}
+          isOpen={true}
+          onClose={() => setModeSwitchTarget(null)}
+          onSuccess={() => {
+            loadRecentProjects();
+            setModeSwitchTarget(null);
+          }}
+        />
       )}
 
       {/* Footer Navigation */}

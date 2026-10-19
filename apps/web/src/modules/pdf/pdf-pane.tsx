@@ -237,30 +237,76 @@ export function PdfPane({
           {t("pdf.dropHint")}
         </p>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            fileInputRef.current?.click();
-          }}
-          data-testid="pdf-select-button"
+        <div
           style={{
-            display: "inline-flex",
-            alignItems: "center",
+            display: "flex",
+            gap: "var(--space-2)",
+            flexWrap: "wrap",
             justifyContent: "center",
-            height: "48px",
-            paddingInline: "var(--space-16)",
-            borderRadius: "var(--radius-sm)",
-            backgroundColor: "var(--brand-primary)",
-            color: "#ffffff",
-            fontWeight: 600,
-            fontSize: "14px",
-            border: "none",
-            cursor: "pointer",
+            alignItems: "center",
           }}
         >
-          {t("pdf.selectFile")}
-        </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
+            data-testid="pdf-select-button"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "48px",
+              paddingInline: "var(--space-16)",
+              borderRadius: "var(--radius-sm)",
+              backgroundColor: "var(--brand-primary)",
+              color: "#ffffff",
+              fontWeight: 600,
+              fontSize: "14px",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            {t("pdf.selectFile")}
+          </button>
+
+          <button
+            type="button"
+            onClick={async (e) => {
+              e.stopPropagation();
+              try {
+                const { openGooglePicker } = await import("@/core/drive/picker");
+                const res = await openGooglePicker({
+                  mimeTypes: "application/pdf",
+                  title: t("picker.addPdfFromDrive"),
+                });
+                if (res && res.blob) {
+                  await addPdfFile(res.blob, res.name);
+                }
+              } catch (pickerErr) {
+                console.warn("[PdfPane] Google Picker error:", pickerErr);
+              }
+            }}
+            data-testid="pdf-drive-button"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "48px",
+              paddingInline: "var(--space-16)",
+              borderRadius: "var(--radius-sm)",
+              backgroundColor: "var(--bg-subtle)",
+              color: "var(--text-main)",
+              fontWeight: 600,
+              fontSize: "14px",
+              border: "1px solid var(--border-card)",
+              cursor: "pointer",
+            }}
+          >
+            {t("picker.addPdfFromDrive")}
+          </button>
+        </div>
 
         {/* Progress bar during streaming SHA-256 computation and loading */}
         {hashingProgress !== null && (

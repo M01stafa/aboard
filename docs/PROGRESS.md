@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 7 — Google Drive |
-| Current task | Task 36 — Handle Conflicts and Drive Errors (completed) |
+| Active phase | 8 — Integration |
+| Current task | Task 37 — Move Projects Between Modes and Add the Google Picker (completed) |
 | Last updated | 2026-10-19 |
-| Next step | Task 37 — Build the Mode-Switching and the Project Picker Flows |
+| Next step | Task 38 — Cross-Tool Integration Actions (Phase 8) |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -31,8 +31,8 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | **4. Board module** | Done (2026-10-17) | Excalidraw pane, files via `putFile`, templates panel | Board with images survives reload |
 | **5. PDF module** | Done (2026-10-18) | Viewer, annotations JSON, page operations, annotated download | Annotations survive reload; annotated download opens with highlights in another viewer |
 | **6. `.alpha` export/import** | In progress | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
-| **7. Google Drive** | In progress | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
-| **8. Integration** | Not started | §8 actions | All four actions work across modes |
+| **7. Google Drive** | Done (2026-10-19) | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
+| **8. Integration** | In progress | §8 actions | All four actions work across modes |
 | **9. Stirling** | Not started | Compose stack, gateway, UI with progress/cancel, results saved into project | OCR and Office→PDF work; Stirling unreachable from the internet |
 | **10. UI redesign** | Not started | Circuit toolbar via `runCommand`, advanced menu toggle, PDF toolbars, unified styling | Every circuit action reachable |
 | **11. Launch prep** | Not started | **§14.12 security checklist signed off**, security headers/CSP, privacy policy, terms, third-party notices, fork source published, Google app published + brand verification, monitoring | Google verification approved; refresh tokens no longer expire after 7 days |
@@ -128,6 +128,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-18 | Task 34: In-memory DriveTokenManager caches Google access tokens with 60-second early refresh via drive-token; emits drive:reconnect-required on 409/404; Path A links provider_refresh_token outside auth listener synchronous body and calls refreshSession() to eliminate tokens from browser storage; Path B uses drive-connect URL redirection and handles ?drive=connected in Settings; get_drive_status RPC response handles both PostgREST table array and object formats. Playwright verified 0 Google tokens in localStorage, sessionStorage, and IndexedDB across both paths. |
 | 2026-10-18 | Task 35: Implemented Drive API client with 401 single-retry, 5-attempt exponential backoff with jitter on 429/5xx, multipart (<5MB) and resumable (>=5MB in 8MiB chunks) uploads; strictly identified folders/files by appProperties; implemented DriveProvider with local IndexedDB buffering and SaveQueue outbox sync (3s idle / 30s continuous); implemented LRU clean-file eviction with 500MB cap; Playwright E2E verified create/reload lifecycle in Drive mode. |
 | 2026-10-19 | Task 36: Board conflicts reconciled via `@excalidraw/excalidraw`'s `reconcileElements` loaded via dynamic client-side `import()`; circuit & annotation conflicts produce timestamped conflict copies in Drive (`<title> (conflict YYYY-MM-DD)`), registered in Dexie `items` and project manifest, and reload remote payload; content-addressed files (SHA-256) never conflict; 403 quota errors keep local SaveQueue running in Dexie and display persistent DriveStatusBanner with `.alpha` export shortcut; 404 missing files recreate from Dexie cache; 401/409 revocation triggers `drive:reconnect-required` and auto-flushes on reconnect. |
+| 2026-10-19 | Task 37: Implemented bidirectional project mode migration (Local <-> Drive) in ProjectService with unpinning/pinning and optional Drive folder trashing; integrated Google Picker API for PDF and .alpha files; added Export to Drive saving to Aboard/Exports/; prompt banner for moving local projects to Drive. |
 
 ## Lessons and corrections
 

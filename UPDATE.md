@@ -1144,3 +1144,33 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 36 · STORE-2, STORE-3, SEC-6 · docs/specs/google-drive.md §10.7–10.10
 **Open:** none (ready for Task 37).
 
+## 2026-10-19 — Task 37: Move Projects Between Modes and Add the Google Picker
+**Request:** Run Task 37 from docs/TASKS.md: allow users to switch projects between Local and Drive modes without losing data, and integrate the Google Picker for importing PDFs and .alpha files directly from Drive (LAUNCH-5, LAUNCH-6, PDF-1, ALPHA-2, ALPHA-7).
+**Changes:**
+- `apps/web/src/core/drive/api.ts` (changed): added `getOrCreateExportsFolder` (`aboardKind: "exports"`), `uploadExportToDrive` (`aboardKind: "export"`), and extended `AboardKind` union.
+- `apps/web/src/core/drive/picker.ts` (created): built framework-free Google Picker client with dynamic `gapi` & `picker` loader, restricted Picker API key from environment, OAuth token injection from `DriveTokenManager`, and `openGooglePicker({ mimeTypes, locale, title })` callback handling.
+- `apps/web/src/core/drive/index.ts` (changed): exported `picker.ts`.
+- `apps/web/src/core/storage/project-service.ts` (changed): implemented bidirectional `moveProject(projectId, toMode, options)` supporting Local → Drive (creating Drive folder, uploading manifest, items, and files with progress callbacks, unpinning local files to cache, updating Supabase index) and Drive → Local (downloading remote files, pinning in Dexie, updating Supabase index, and prompting/executing Drive folder trash via `trashFile`); updated `deleteProject` to move project folder to Drive trash when `storageMode === "drive"`.
+- `apps/web/src/core/alpha/export-dialog.tsx` (changed): added "Export to Google Drive" button (`data-testid="export-drive-btn"`), upload flow to `Aboard/Exports/` via `uploadExportToDrive`, and focus trapping for accessibility.
+- `apps/web/src/modules/pdf/pdf-pane.tsx` (changed): added "Add PDF from Google Drive" button (`data-testid="pdf-drive-button"`) wired to `openGooglePicker` and `addPdfFile`.
+- `apps/web/src/components/mode-switch-modal.tsx` (created): built accessible, responsive modal dialog strictly following DESIGN.md tokens, R5 focus-visible, and 8-point grid, presenting progress bar, cancel, error state, and Drive folder trash confirmation.
+- `apps/web/app/page.tsx` (changed): added "Open .alpha from Google Drive" hero button (`data-testid="open-alpha-drive-btn"`), one-time prompt banner for moving local projects to Drive after connecting, card mode-switch buttons, and `ModeSwitchModal` mount.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): added header mode-switch button (`data-testid="workspace-mode-switch-btn"`) and `ModeSwitchModal` mount.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added full bilingual keys for mode switching, prompt banner, Google Picker, and export to Drive with 100% parity.
+- `apps/web/src/core/drive/picker.test.ts` (created): 3 unit tests verifying Picker script injection, configuration building, and item selection callback.
+- `apps/web/src/core/storage/mode-switch.test.ts` (created): 2 unit tests verifying full bidirectional `moveProject` execution, Dexie pinning/unpinning, and Drive folder trashing.
+- `apps/web/src/core/storage/project-service.test.ts` (changed): updated `moveProject` unit test with mocked `driveTokenManager`.
+- `apps/web/e2e/drive-mode-switch.spec.ts` (created): 3 Playwright E2E tests verifying launcher picker button, PDF pane picker button, and local-to-drive mode switch.
+- `docs/PROGRESS.md` (changed): marked Task 37 complete, marked Phase 7 complete, set Next step to Task 38 (Phase 8), and logged Task 37 decisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 errors, all 8-point grid tokens).
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (266/266 unit tests passed across 34 test files).
+- `pnpm test:e2e`: PASS (21/21 Playwright E2E tests passed in Chromium, including 3 new mode-switch/picker tests).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks across 65 commits, prod audit clean, bundle secret scan clean).
+**Related:** Task 37 · LAUNCH-5, LAUNCH-6, PDF-1, ALPHA-2, ALPHA-7 · docs/specs/storage-layer.md §11.6 · docs/specs/google-drive.md §10.11
+**Open:** none (Phase 7 complete; ready for Phase 8 / Task 38).
+
+

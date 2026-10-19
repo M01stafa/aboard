@@ -8,7 +8,9 @@ export type AboardKind =
   | "circuit"
   | "pdf"
   | "annotations"
-  | "file";
+  | "file"
+  | "exports"
+  | "export";
 
 export interface AboardAppProperties {
   aboardKind: AboardKind;
@@ -567,6 +569,60 @@ export async function getOrCreateProjectFolder(
       aboardProjectId: projectId,
     },
     rootFolderId,
+    tokenManager
+  );
+}
+
+/**
+ * Gets or creates the "Exports" folder under the Aboard root folder in My Drive.
+ * Identified by appProperties: { aboardKind: "exports" }.
+ * Implements docs/specs/google-drive.md §10.7.
+ */
+export async function getOrCreateExportsFolder(
+  rootFolderId: string,
+  tokenManager?: DriveTokenManager
+): Promise<DriveFileMeta> {
+  const query = `'${rootFolderId}' in parents and appProperties has { key='aboardKind' and value='exports' } and trashed = false and mimeType = 'application/vnd.google-apps.folder'`;
+  const files = await findFiles(query, undefined, tokenManager);
+
+  if (files.length > 0) {
+    return files[0];
+  }
+
+  return createFolder(
+    "Exports",
+    {
+      aboardKind: "exports",
+    },
+    rootFolderId,
+    tokenManager
+  );
+}
+
+/**
+ * Uploads an exported .alpha project file to Aboard/Exports/ in the user's Google Drive.
+ * Implements Task 37 / ALPHA-7 and docs/specs/alpha-format.md §12.4.
+ */
+export async function uploadExportToDrive(
+  fileName: string,
+  blob: Blob,
+  onProgress?: (progress: number) => void,
+  tokenManager?: DriveTokenManager
+): Promise<{ id: string; headRevisionId?: string }> {
+  const root = await getOrCreateRootFolder(tokenManager);
+  const exportsFolder = await getOrCreateExportsFolder(root.id, tokenManager);
+
+  return uploadFile(
+    {
+      name: fileName,
+      mimeType: "application/octet-stream",
+      parents: [exportsFolder.id],
+      appProperties: {
+        aboardKind: "export",
+      },
+    },
+    blob,
+    onProgress,
     tokenManager
   );
 }

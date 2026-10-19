@@ -10,6 +10,7 @@ import { CircuitPane } from "@/modules/circuit";
 import { BoardPane } from "@/modules/board";
 import { PdfPane } from "@/modules/pdf";
 import { ExportDialog } from "@/core/alpha/export-dialog";
+import { ModeSwitchModal } from "@/components/mode-switch-modal";
 import { DriveStatusBanner } from "@/components/drive-status-banner";
 import { bus } from "@/core/bus";
 
@@ -104,7 +105,37 @@ export function WorkspaceHost({
   const [isMobile, setIsMobile] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showModeSwitch, setShowModeSwitch] = useState(false);
+  const [projectInfo, setProjectInfo] = useState<{ title: string; storage: "local" | "drive" } | null>(null);
   const previousSplitRef = useRef<SplitMode>("none");
+
+  // Load project storage info for mode switching
+  useEffect(() => {
+    if (!projectId || typeof projectId !== "string") return;
+    const currentId: string = projectId;
+    let cancelled = false;
+    async function loadInfo() {
+      try {
+        const { getDb } = await import("@/core/db");
+        const db = getDb();
+        if (db) {
+          const row = await db.projects.get(currentId);
+          if (row && !cancelled) {
+            setProjectInfo({
+              title: row.title || "Project",
+              storage: (row.storage as "local" | "drive") || "local",
+            });
+          }
+        }
+      } catch {
+        // Fallback
+      }
+    }
+    loadInfo();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   // Track responsive screen width for split view (< 768px breakpoint md)
   useEffect(() => {
@@ -708,6 +739,43 @@ export function WorkspaceHost({
             }}
           />
 
+          {projectId && (
+            <button
+              type="button"
+              onClick={() => setShowModeSwitch(true)}
+              className="ws-tool-btn"
+              title={
+                projectInfo?.storage === "drive"
+                  ? t("modeSwitch.moveToLocal")
+                  : t("modeSwitch.moveToDrive")
+              }
+              aria-label={
+                projectInfo?.storage === "drive"
+                  ? t("modeSwitch.moveToLocal")
+                  : t("modeSwitch.moveToDrive")
+              }
+              data-testid="workspace-mode-switch-btn"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                {projectInfo?.storage === "drive" ? (
+                  <rect width="20" height="14" x="2" y="3" rx="2" />
+                ) : (
+                  <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+                )}
+              </svg>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setShowExportDialog(true)}
@@ -921,6 +989,25 @@ export function WorkspaceHost({
         isOpen={showExportDialog}
         onClose={() => setShowExportDialog(false)}
       />
+
+      {/* Mode Switch Modal (Local <-> Drive) */}
+      {showModeSwitch && projectId && (
+        <ModeSwitchModal
+          projectId={projectId}
+          projectTitle={projectInfo?.title || "Project"}
+          targetMode={projectInfo?.storage === "drive" ? "local" : "drive"}
+          isOpen={showModeSwitch}
+          onClose={() => setShowModeSwitch(false)}
+          onSuccess={() => {
+            setProjectInfo((prev) =>
+              prev
+                ? { ...prev, storage: prev.storage === "drive" ? "local" : "drive" }
+                : null
+            );
+            setShowModeSwitch(false);
+          }}
+        />
+      )}
     </div>
   );
 }

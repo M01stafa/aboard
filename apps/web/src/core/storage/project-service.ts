@@ -533,12 +533,18 @@ export class ProjectService {
   /**
    * Deletes a whole project and all its associated items and files,
    * and notifies the index syncer.
+   * If storageMode is 'drive', moves the project folder to Drive trash.
    */
   async deleteProject(projectId: string, storageMode: "local" | "drive" = "local"): Promise<void> {
     if (this.saveQueue) {
       this.saveQueue.cancelAllForProject(projectId);
     }
-    await this.provider.deleteProject(projectId);
+    if (storageMode === "drive") {
+      const driveProvider = new DriveProvider();
+      await driveProvider.deleteProject(projectId);
+    } else {
+      await this.provider.deleteProject(projectId);
+    }
 
     if (this.indexSyncer) {
       await this.indexSyncer.onProjectDeleted(projectId, storageMode);
@@ -705,21 +711,196 @@ export class ProjectService {
   }
 
   /**
-   * Move project between storage modes (Phase 7 / Task 37 stub).
+   * Moves a project between local storage and Google Drive without losing data.
+   * Implements Task 37 and docs/specs/storage-layer.md §11.6.
    */
   async moveProject(
     projectId: string,
     toMode: "drive" | "local",
-    details?: { localDeviceId?: string; driveFolderId?: string }
-  ): Promise<void> {
-    if (this.indexSyncer) {
-      await this.indexSyncer.onStorageModeChanged(projectId, {
-        storage: toMode,
-        localDeviceId: details?.localDeviceId,
-        driveFolderId: details?.driveFolderId,
-      });
+    options?: {
+      onProgress?: (stage: "items" | "files" | "manifest", current: number, total: number) => void;
+      trashDriveFolder?: boolean;
+      driveFolderId?: string;
+      localDeviceId?: string;
+    }
+  ): Promise<{ driveFolderId?: string }> {
+    if (this.saveQueue) {
+      await this.saveQueue.flushNow();
+    }
+
+    const { getDb } = await import("@/core/db");
+    const db = getDb();
+
+    if (toMode === "drive") {
+      // 1. Ensure Drive token is available
+      const { driveTokenManager } = await import("../drive/tokens");
+      await driveTokenManager.get();
+
+      // 2. Load manifest
+      const manifest = await this.provider.loadManifest(projectId);
+
+      // 3. Resolve DriveProvider and project folder in Drive
+      const driveProvider = new DriveProvider();
+      const folderId =
+        options?.driveFolderId ||
+        (await driveProvider.getProjectFolderId(projectId, manifest.project.title));
+
+      // 4. Upload files
+      if (db) {
+        const localFiles = await db.files.where("projectId").equals(projectId).toArray();
+        for (let i = 0; i < localFiles.length; i++) {
+          const f = localFiles[i];
+          if (f.blob) {
+            await driveProvider.writeFile(projectId, f.key, f.blob, {
+              name: f.key,
+              mime: f.mime || "application/octet-stream",
+            });
+          }
+          options?.onProgress?.("files", i + 1, localFiles.length);
+        }
+
+        // 5. Upload items
+        const localItems = await db.items.where("projectId").equals(projectId).toArray();
+        for (let i = 0; i < localItems.length; i++) {
+          const it = localItems[i];
+          if (it.payload) {
+            await driveProvider.writeItem(
+              projectId,
+              {
+                id: it.id,
+                projectId: it.projectId,
+                kind: it.kind,
+                title: it.title || it.id,
+                updatedAt: it.updatedAt || Date.now(),
+              },
+              it.payload
+            );
+          }
+          options?.onProgress?.("items", i + 1, localItems.length);
+        }
+
+        // 6. Save manifest to Drive
+        manifest.project.updatedAt = new Date().toISOString();
+        await driveProvider.saveManifest(manifest);
+        options?.onProgress?.("manifest", 1, 1);
+
+        // 7. Update local Dexie: unpin files so they become cache, set project storage to 'drive'
+        await db.projects.update(projectId, {
+          storage: "drive",
+          updatedAt: Date.now(),
+        });
+        await db.files.where("projectId").equals(projectId).modify({ pinned: false });
+      }
+
+      // 8. Update Supabase project index
+      if (this.indexSyncer) {
+        await this.indexSyncer.onStorageModeChanged(projectId, {
+          storage: "drive",
+          driveFolderId: folderId,
+        });
+      }
+
+      // 9. Update active provider if this project is currently open
+      if (this.activeProjectId === projectId) {
+        this.setProvider(driveProvider);
+      }
+
+      return { driveFolderId: folderId };
+    } else {
+      // toMode === "local": "Keep only on this device"
+      const driveProvider = new DriveProvider();
+      const manifest = await driveProvider.loadManifest(projectId);
+
+      if (db) {
+        // 1. Download and save all items to local Dexie
+        const items = manifest.items || [];
+        for (let i = 0; i < items.length; i++) {
+          const itemMeta = items[i];
+          const cached = await db.items.get(itemMeta.id);
+          let payload = cached?.payload;
+          if (!payload) {
+            payload = await driveProvider.readItem(projectId, itemMeta.id);
+          }
+          await db.items.put({
+            id: itemMeta.id,
+            projectId,
+            kind: itemMeta.kind,
+            dirty: 0,
+            updatedAt: Date.now(),
+            title: itemMeta.title,
+            payload,
+          });
+          options?.onProgress?.("items", i + 1, items.length);
+        }
+
+        // 2. Download and save all files to local Dexie, marking pinned = true
+        const files = manifest.files || [];
+        for (let i = 0; i < files.length; i++) {
+          const fileMeta = files[i];
+          const cachedFile = await db.files.get([projectId, fileMeta.key]);
+          let blob = cachedFile?.blob;
+          if (!blob) {
+            blob = await driveProvider.readFile(projectId, fileMeta.key);
+          }
+          await db.files.put({
+            projectId,
+            key: fileMeta.key,
+            blob,
+            mime: fileMeta.mime,
+            size: blob.size,
+            sha256: fileMeta.key,
+            lastAccess: Date.now(),
+            pinned: true,
+          });
+          options?.onProgress?.("files", i + 1, files.length);
+        }
+
+        // Ensure all local files for this project are pinned
+        await db.files.where("projectId").equals(projectId).modify({ pinned: true });
+
+        // 3. Update project record in local Dexie
+        manifest.project.updatedAt = new Date().toISOString();
+        await db.projects.put({
+          id: projectId,
+          storage: "local",
+          updatedAt: Date.now(),
+          title: manifest.project.title,
+          manifestJson: JSON.stringify(manifest),
+        });
+      }
+
+      // 4. Update Supabase project index with local device ID
+      const { getDeviceId } = await import("@/core/db/lifecycle");
+      const deviceId = options?.localDeviceId || (await getDeviceId());
+
+      if (this.indexSyncer) {
+        await this.indexSyncer.onStorageModeChanged(projectId, {
+          storage: "local",
+          localDeviceId: deviceId,
+        });
+      }
+
+      // 5. Update active provider if this project is currently open
+      if (this.activeProjectId === projectId) {
+        this.setProvider(new LocalProvider());
+      }
+
+      // 6. Optionally trash the Drive folder if requested
+      if (options?.trashDriveFolder) {
+        try {
+          const folderId = await driveProvider.getProjectFolderId(projectId);
+          const { trashFile } = await import("../drive/api");
+          const { driveTokenManager } = await import("../drive/tokens");
+          await trashFile(folderId, driveTokenManager);
+        } catch (trashErr) {
+          console.warn("[ProjectService.moveProject] Failed to trash Drive folder:", trashErr);
+        }
+      }
+
+      return {};
     }
   }
+
 }
 
 export const projectService = new ProjectService();

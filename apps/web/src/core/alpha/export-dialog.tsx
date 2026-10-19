@@ -24,23 +24,43 @@ export function ExportDialog({
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorHint, setErrorHint] = useState<string | null>(null);
+  const [isExportingDrive, setIsExportingDrive] = useState(false);
+  const [driveSuccess, setDriveSuccess] = useState(false);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const exportBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Close on Escape key
+  // Close on Escape key & trap focus inside dialog (R5)
   useEffect(() => {
     if (!isOpen) return;
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && !isExporting) {
+      if (e.key === "Escape" && !isExporting && !isExportingDrive) {
         onClose();
+        return;
+      }
+
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isExporting, onClose]);
+  }, [isOpen, isExporting, isExportingDrive, onClose]);
 
   // Focus dialog on open
   useEffect(() => {
@@ -55,7 +75,7 @@ export function ExportDialog({
   if (!isOpen) return null;
 
   const handleExport = async () => {
-    if (isExporting) return;
+    if (isExporting || isExportingDrive) return;
     setIsExporting(true);
     setError(null);
     setErrorHint(null);
@@ -83,6 +103,50 @@ export function ExportDialog({
       }
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleExportToDrive = async () => {
+    if (isExporting || isExportingDrive) return;
+    setIsExportingDrive(true);
+    setError(null);
+    setErrorHint(null);
+
+    try {
+      const res = await exportAlpha(projectId, {
+        includePdfs,
+        includeAnnotated,
+        streamToDisk: false,
+        projectService,
+      });
+
+      if (!res.blob) {
+        throw new Error("Export produced no blob");
+      }
+
+      const { uploadExportToDrive } = await import("@/core/drive/api");
+      const { driveTokenManager } = await import("@/core/drive/tokens");
+      await uploadExportToDrive(res.fileName, res.blob, undefined, driveTokenManager);
+      setDriveSuccess(true);
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+    } catch (err: unknown) {
+      if (err instanceof ExportCapExceededError) {
+        const sizeMb = (err.totalBytes / (1024 * 1024)).toFixed(0);
+        const capMb = (err.capBytes / (1024 * 1024)).toFixed(0);
+        setError(t("export.capExceeded", { size: sizeMb, cap: capMb }));
+        setErrorHint(t("export.capExceededHint"));
+      } else {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("quota") || msg.includes("storageQuotaExceeded")) {
+          setError(t("driveErrors.quotaExceeded"));
+        } else {
+          setError(msg);
+        }
+      }
+    } finally {
+      setIsExportingDrive(false);
     }
   };
 
@@ -298,10 +362,40 @@ export function ExportDialog({
           </button>
 
           <button
+            type="button"
+            data-testid="export-drive-btn"
+            disabled={isExporting || isExportingDrive}
+            onClick={handleExportToDrive}
+            style={{
+              height: "32px",
+              paddingInline: "var(--space-2)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-card)",
+              backgroundColor: "var(--bg-subtle)",
+              color: "var(--accent-text)",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              cursor: isExporting || isExportingDrive ? "wait" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "var(--space-1)",
+            }}
+          >
+            <span>☁</span>
+            <span>
+              {driveSuccess
+                ? t("export.exportedToDrive")
+                : isExportingDrive
+                ? t("export.exportingToDrive")
+                : t("export.exportToDrive")}
+            </span>
+          </button>
+
+          <button
             ref={exportBtnRef}
             type="button"
             data-testid="export-submit-btn"
-            disabled={isExporting}
+            disabled={isExporting || isExportingDrive}
             onClick={handleExport}
             style={{
               height: "32px",
