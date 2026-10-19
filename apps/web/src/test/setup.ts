@@ -87,4 +87,43 @@ vi.mock("@excalidraw/excalidraw", () => ({
       });
     }
   ),
+  reconcileElements: vi.fn(
+    (
+      localElements: Array<{ id: string; version?: number; versionNonce?: number }> = [],
+      remoteElements: Array<{ id: string; version?: number; versionNonce?: number }> = [],
+      _localAppState: Record<string, unknown> = {}
+    ) => {
+      const localMap = new Map(localElements.map((el) => [el.id, el]));
+      const result: Array<{ id: string; version?: number; versionNonce?: number }> = [];
+      const added = new Set<string>();
+
+      for (const remote of remoteElements) {
+        if (!added.has(remote.id)) {
+          const local = localMap.get(remote.id);
+          const discardRemote =
+            local &&
+            ((local.version ?? 0) > (remote.version ?? 0) ||
+              ((local.version ?? 0) === (remote.version ?? 0) &&
+                (local.versionNonce ?? 0) < (remote.versionNonce ?? 0)));
+
+          if (local && discardRemote) {
+            result.push(local);
+            added.add(local.id);
+          } else {
+            result.push(remote);
+            added.add(remote.id);
+          }
+        }
+      }
+
+      for (const local of localElements) {
+        if (!added.has(local.id)) {
+          result.push(local);
+          added.add(local.id);
+        }
+      }
+
+      return result;
+    }
+  ),
 }));

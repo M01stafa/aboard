@@ -4,6 +4,8 @@ import { DriveProvider } from "./drive-provider";
 import { DriveTokenManager } from "./tokens";
 import type { AlphaManifest, ItemRecord } from "../storage/types";
 import * as driveApi from "./api";
+import { useDriveStore } from "./drive-store";
+import { bus } from "@/core/bus";
 
 class MockTable<T> {
   public data = new Map<string, T>();
@@ -380,5 +382,328 @@ describe("DriveProvider (drive-provider.ts / STORE-2, STORE-3, STORE-7)", () => 
 
     const outboxCount = await mockDb.outbox.count();
     expect(outboxCount).toBe(0);
+  });
+
+  describe("Conflict Detection & Resolution (Task 36 / §10.9–10.10)", () => {
+    it("detects board conflict via headRevisionId and merges elements via reconcileElements", async () => {
+      vi.spyOn(provider, "getProjectFolderId").mockResolvedValue("folder-123");
+
+      // Setup initial cached board item with revision "rev-device-1"
+      await mockDb.items.put({
+        id: "board-1",
+        projectId: "proj-1",
+        kind: "board",
+        title: "Architecture Diagram",
+        dirty: 1,
+        updatedAt: Date.now(),
+        driveFileId: "drive-board-123",
+        driveRev: "rev-device-1",
+      });
+
+      // Remote file in Drive has different headRevisionId "rev-device-2" (conflict!)
+      vi.spyOn(driveApi, "getFileMeta").mockResolvedValue({
+        id: "drive-board-123",
+        name: "board-1.json",
+        headRevisionId: "rev-device-2",
+        trashed: false,
+      });
+
+      // Remote content: contains rectangle element A (version 1)
+      const remoteBoardData = {
+        elements: [{ id: "rect-a", type: "rectangle", version: 1, versionNonce: 10 }],
+        appState: {},
+      };
+      vi.spyOn(driveApi, "downloadFileText").mockResolvedValue(JSON.stringify(remoteBoardData));
+
+      // Local content: contains new rectangle element B
+      const localBoardData = {
+        elements: [{ id: "rect-b", type: "rectangle", version: 1, versionNonce: 20 }],
+        appState: {},
+      };
+
+      const updateSpy = vi.spyOn(driveApi, "updateFileContent").mockResolvedValue({
+        id: "drive-board-123",
+        headRevisionId: "rev-merged-3",
+      });
+
+      await provider.writeItem(
+        "proj-1",
+        {
+          id: "board-1",
+          projectId: "proj-1",
+          kind: "board",
+          title: "Architecture Diagram",
+          updatedAt: Date.now(),
+        },
+        JSON.stringify(localBoardData)
+      );
+
+      // Verify updateFileContent was called with merged elements (rect-a and rect-b)
+      expect(updateSpy).toHaveBeenCalled();
+      const updatedBlob = updateSpy.mock.calls[0][1] as Blob;
+      const updatedText = await updatedBlob.text();
+      const updatedJson = JSON.parse(updatedText) as { elements: Array<{ id: string }> };
+
+      const elementIds = updatedJson.elements.map((e) => e.id);
+      expect(elementIds).toContain("rect-a");
+      expect(elementIds).toContain("rect-b");
+
+      // Verify Dexie item was updated with merged result, marked clean, and new revision
+      const cached = await mockDb.items.get("board-1");
+      expect(cached?.dirty).toBe(0);
+      expect(cached?.driveRev).toBe("rev-merged-3");
+    });
+
+    it("detects circuit conflict, creates conflict copy in Drive & Dexie & manifest, and loads remote version", async () => {
+      vi.spyOn(provider, "getProjectFolderId").mockResolvedValue("folder-123");
+
+      // Setup initial cached circuit item with revision "rev-circ-1"
+      await mockDb.items.put({
+        id: "circ-1",
+        projectId: "proj-1",
+        kind: "circuit",
+        title: "Filter Circuit",
+        dirty: 1,
+        updatedAt: Date.now(),
+        driveFileId: "drive-circ-123",
+        driveRev: "rev-circ-1",
+      });
+
+      // Existing manifest in Dexie
+      await mockDb.projects.put({
+        id: "proj-1",
+        storage: "drive",
+        updatedAt: Date.now(),
+        title: "Circuits Project",
+        manifestJson: JSON.stringify({
+          ...sampleManifest,
+          project: { ...sampleManifest.project, id: "proj-1" },
+          items: [{ id: "circ-1", kind: "circuit", title: "Filter Circuit", path: "circuits/circ-1.txt" }],
+        }),
+      });
+
+      // Remote Drive file has differing headRevisionId "rev-circ-2"
+      vi.spyOn(driveApi, "getFileMeta").mockResolvedValue({
+        id: "drive-circ-123",
+        name: "circ-1.txt",
+        headRevisionId: "rev-circ-2",
+        trashed: false,
+      });
+
+      const remoteCircuitContent = "$ 1 5.0e-6 10.0 50 (REMOTE EDIT)";
+      vi.spyOn(driveApi, "downloadFileText").mockResolvedValue(remoteCircuitContent);
+
+      const uploadSpy = vi.spyOn(driveApi, "uploadFile").mockResolvedValue({
+        id: "drive-conflict-copy-id",
+        headRevisionId: "rev-conflict-copy-1",
+      });
+
+      const localCircuitContent = "$ 1 5.0e-6 10.0 50 (LOCAL EDIT)";
+      await provider.writeItem(
+        "proj-1",
+        {
+          id: "circ-1",
+          projectId: "proj-1",
+          kind: "circuit",
+          title: "Filter Circuit",
+          updatedAt: Date.now(),
+        },
+        localCircuitContent
+      );
+
+      // 1. Proves local version was uploaded as a conflict copy
+      expect(uploadSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: expect.stringMatching(/\.txt$/),
+          appProperties: expect.objectContaining({
+            aboardKind: "circuit",
+            aboardConflictOf: "circ-1",
+          }),
+        }),
+        expect.any(Blob),
+        undefined,
+        tokenManager
+      );
+
+      // 2. Proves conflict copy is registered in Dexie items store
+      const allItems = await mockDb.items.toArray();
+      const conflictItem = allItems.find((i) => i.id !== "circ-1");
+      expect(conflictItem).toBeDefined();
+      expect(conflictItem?.title).toContain("conflict");
+      expect(conflictItem?.payload).toBe(localCircuitContent);
+      expect(conflictItem?.driveFileId).toBe("drive-conflict-copy-id");
+
+      // 3. Proves project manifest is updated with the conflict item
+      const updatedManifestRow = await mockDb.projects.get("proj-1");
+      const updatedManifest = JSON.parse(updatedManifestRow?.manifestJson || "{}") as AlphaManifest;
+      expect(updatedManifest.items.some((i) => i.id === conflictItem?.id)).toBe(true);
+
+      // 4. Proves active item was updated with remote payload and revision
+      const activeItem = await mockDb.items.get("circ-1");
+      expect(activeItem?.payload).toBe(remoteCircuitContent);
+      expect(activeItem?.driveRev).toBe("rev-circ-2");
+      expect(activeItem?.dirty).toBe(0);
+    });
+  });
+
+  describe("Drive Error Handling & Resilience (Task 36 / §10.10, SEC-6)", () => {
+    beforeEach(() => {
+      useDriveStore.getState().setQuotaExceeded(false);
+      useDriveStore.getState().setReconnectRequired(false);
+    });
+
+    it("handles 403 storageQuotaExceeded by setting quota state, preserving outbox, and not throwing", async () => {
+      vi.spyOn(provider, "getProjectFolderId").mockResolvedValue("folder-123");
+      vi.spyOn(driveApi, "findFiles").mockResolvedValue([]);
+      vi.spyOn(driveApi, "uploadFile").mockRejectedValue(
+        new driveApi.StorageQuotaExceededError("Google Drive quota exceeded")
+      );
+
+      const writePromise = provider.writeItem(
+        "proj-1",
+        {
+          id: "board-quota",
+          projectId: "proj-1",
+          kind: "board",
+          title: "Quota Board",
+          updatedAt: Date.now(),
+        },
+        '{"elements":[]}'
+      );
+
+      // 1. writeItem MUST NOT THROW
+      await expect(writePromise).resolves.not.toThrow();
+
+      // 2. Local Dexie save succeeded
+      const localItem = await mockDb.items.get("board-quota");
+      expect(localItem).toBeDefined();
+      expect(localItem?.payload).toBe('{"elements":[]}');
+      expect(localItem?.dirty).toBe(1);
+
+      // 3. Outbox preserves the unsynced entry
+      const outboxEntry = await mockDb.outbox.where("itemId").equals("board-quota").first();
+      expect(outboxEntry).toBeDefined();
+
+      // 4. Store reflects quotaExceeded: true
+      expect(useDriveStore.getState().quotaExceeded).toBe(true);
+    });
+
+    it("handles 404 missing / trashed file by recreating it in Drive from local Dexie cache", async () => {
+      vi.spyOn(provider, "getProjectFolderId").mockResolvedValue("folder-123");
+
+      await mockDb.items.put({
+        id: "item-deleted-in-drive",
+        projectId: "proj-1",
+        kind: "circuit",
+        title: "Oscillator",
+        dirty: 1,
+        updatedAt: Date.now(),
+        driveFileId: "drive-missing-file-404",
+        driveRev: "rev-old",
+        payload: "circuit oscillator data",
+      });
+
+      // getFileMeta throws 404 (file removed in Drive)
+      vi.spyOn(driveApi, "getFileMeta").mockRejectedValue(
+        new driveApi.DriveApiError(404, "File not found")
+      );
+
+      const recreateSpy = vi.spyOn(driveApi, "uploadFile").mockResolvedValue({
+        id: "recreated-drive-file-id",
+        headRevisionId: "rev-new-recreated",
+      });
+
+      await provider.writeItem(
+        "proj-1",
+        {
+          id: "item-deleted-in-drive",
+          projectId: "proj-1",
+          kind: "circuit",
+          title: "Oscillator",
+          updatedAt: Date.now(),
+        },
+        "circuit oscillator data"
+      );
+
+      // File was recreated via uploadFile
+      expect(recreateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "item-deleted-in-drive.txt",
+          parents: ["folder-123"],
+        }),
+        expect.any(Blob),
+        undefined,
+        tokenManager
+      );
+
+      // Dexie item now points to the recreated file
+      const updatedItem = await mockDb.items.get("item-deleted-in-drive");
+      expect(updatedItem?.driveFileId).toBe("recreated-drive-file-id");
+      expect(updatedItem?.driveRev).toBe("rev-new-recreated");
+      expect(updatedItem?.dirty).toBe(0);
+    });
+
+    it("handles 401 revocation by setting reconnectRequired, preserving local save, and not throwing", async () => {
+      vi.spyOn(provider, "getProjectFolderId").mockResolvedValue("folder-123");
+      vi.spyOn(driveApi, "findFiles").mockResolvedValue([]);
+      vi.spyOn(driveApi, "uploadFile").mockRejectedValue(
+        new driveApi.DriveApiError(401, "Invalid credentials")
+      );
+
+      const writePromise = provider.writeItem(
+        "proj-1",
+        {
+          id: "item-revoked",
+          projectId: "proj-1",
+          kind: "board",
+          title: "Revoked Board",
+          updatedAt: Date.now(),
+        },
+        '{"elements":[]}'
+      );
+
+      await expect(writePromise).resolves.not.toThrow();
+
+      // Local save is intact
+      expect(await mockDb.items.get("item-revoked")).toBeDefined();
+      expect(useDriveStore.getState().reconnectRequired).toBe(true);
+    });
+
+    it("reconnects and flushes pending outbox automatically", async () => {
+      vi.spyOn(provider, "getProjectFolderId").mockResolvedValue("folder-123");
+      vi.spyOn(driveApi, "findFiles").mockResolvedValue([]);
+      const uploadSpy = vi.spyOn(driveApi, "uploadFile").mockResolvedValue({
+        id: "flushed-id",
+        headRevisionId: "rev-flushed",
+      });
+
+      // Put item in Dexie and outbox
+      await mockDb.items.put({
+        id: "pending-reconnect-item",
+        projectId: "proj-1",
+        kind: "board",
+        dirty: 1,
+        title: "Pending Item",
+        updatedAt: Date.now(),
+        payload: '{"elements":["pending"]}',
+      });
+      await mockDb.outbox.put({
+        projectId: "proj-1",
+        itemId: "pending-reconnect-item",
+        payload: '{"elements":["pending"]}',
+        createdAt: Date.now(),
+      });
+
+      // Simulate drive reconnection event
+      useDriveStore.getState().setReconnectRequired(false);
+      bus.emit("drive:connected", { email: "user@example.com" });
+
+      await provider.syncOutbox();
+
+      expect(uploadSpy).toHaveBeenCalled();
+      const updated = await mockDb.items.get("pending-reconnect-item");
+      expect(updated?.dirty).toBe(0);
+      expect(updated?.driveFileId).toBe("flushed-id");
+    });
   });
 });

@@ -1117,5 +1117,30 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (17/17 Playwright E2E tests passed in Chromium, including new drive-provider.spec.ts).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks across 63 commits, prod audit clean, bundle secret scan clean).
 **Related:** Task 35 · STORE-2, STORE-3, STORE-7, STORE-8 · docs/specs/google-drive.md §10.7–10.8 · docs/specs/storage-layer.md §11.2, §11.4
-**Open:** none (ready for Task 36).
+
+## 2026-10-19 — Task 36: Handle Conflicts and Drive Errors
+**Request:** Run Task 36 from docs/TASKS.md: make the system resilient to conflicts and Drive errors (STORE-2, STORE-3, SEC-6); detect conflicts via headRevisionId before updates; reconcile board elements via Excalidraw's official reconcileElements; duplicate circuit and annotation conflicts as timestamped conflict files, register them in Dexie items and project manifest, and load the remote payload; handle 403 storageQuotaExceeded by keeping local Dexie saves active and presenting an unobtrusive banner with .alpha export; handle 404 deleted files by recreating from Dexie cache; handle 401/409 revocation by setting reconnect-required and auto-flushing outbox on reconnect; write comprehensive unit tests and a Playwright E2E test verifying local saving continues and banner appears during quota errors.
+**Changes:**
+- `apps/web/src/core/bus.ts` (changed): added `"drive:quota-exceeded"` and `"drive:open-export-dialog"` events.
+- `apps/web/src/core/drive/drive-store.ts` (changed): added `quotaExceeded`, `setQuotaExceeded`, `setReconnectRequired`, and event listeners for bus events.
+- `apps/web/src/core/drive/drive-provider.ts` (changed): implemented `headRevisionId` conflict detection; integrated `@excalidraw/excalidraw` dynamic `reconcileElements` merge for boards; implemented circuit and annotation conflict handling (uploading local state as timestamped conflict file, registering in Dexie `items` and updating `manifest.items`, and downloading remote state); implemented 404 recreation from Dexie cache; implemented non-throwing 403 quota exceeded error suppression with event emission; auto-flushed outbox on `drive:connected`.
+- `apps/web/src/core/storage/save-queue.ts` (changed): wired event listeners for `drive:reconnect-required` and `drive:connected` to pause/resume Drive syncing without blocking local saves.
+- `apps/web/src/components/drive-status-banner.tsx` (created): built accessible, responsive global status banner strictly following DESIGN.md tokens and 8-point grid, presenting reconnect or .alpha export actions.
+- `apps/web/app/page.tsx` & `apps/web/src/workspace/workspace-host.tsx` (changed): mounted `DriveStatusBanner` in launcher and workspace views.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added bilingual translations for Drive quota exceeded and reconnect warnings.
+- `apps/web/src/test/setup.ts` (changed): added mock implementation for `@excalidraw/excalidraw`'s `reconcileElements` in Node test environment.
+- `apps/web/src/components/drive-status-banner.test.tsx` (created): 5 unit tests for banner rendering and user action triggers.
+- `apps/web/src/core/drive/drive-provider.test.ts` (changed): added 6 unit tests covering board conflict reconciliation, circuit conflict duplication, 403 quota error handling, 404 recreation, 401 revocation, and auto-reconnect flush.
+- `apps/web/e2e/drive-errors.spec.ts` (created): Playwright E2E test verifying 403 quota exceeded error triggers banner, allows local saves, and opens export dialog.
+- `docs/PROGRESS.md` (changed): marked Task 36 complete, set Next step to Task 37, and logged Task 36 decisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 errors).
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
+- `pnpm test`: PASS (262/262 unit tests passed across 32 test files).
+- `pnpm test:e2e`: PASS (18/18 Playwright E2E tests passed in Chromium).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks across 64 commits, prod audit clean, bundle secret scan clean).
+**Related:** Task 36 · STORE-2, STORE-3, SEC-6 · docs/specs/google-drive.md §10.7–10.10
+**Open:** none (ready for Task 37).
 

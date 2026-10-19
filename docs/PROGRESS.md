@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 7 — Google Drive |
-| Current task | Task 35 — Build the Drive API Layer and the Drive Provider (completed) |
-| Last updated | 2026-10-18 |
-| Next step | Task 36 — Handle Conflicts and Drive Errors |
+| Current task | Task 36 — Handle Conflicts and Drive Errors (completed) |
+| Last updated | 2026-10-19 |
+| Next step | Task 37 — Build the Mode-Switching and the Project Picker Flows |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -127,6 +127,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-18 | Task 33: Built and deployed 5 Supabase Edge Functions (drive-connect, drive-callback, drive-link-token, drive-token, drive-disconnect) with exact-origin CORS, rate-limiting, and Zod input validation; derived 32-byte AES-256 keys via SHA-256 from TOKEN_ENC_KEY; confirmed verify_jwt = false for drive-callback only in supabase/config.toml (AUTH-3, SEC-2, SEC-6). |
 | 2026-10-18 | Task 34: In-memory DriveTokenManager caches Google access tokens with 60-second early refresh via drive-token; emits drive:reconnect-required on 409/404; Path A links provider_refresh_token outside auth listener synchronous body and calls refreshSession() to eliminate tokens from browser storage; Path B uses drive-connect URL redirection and handles ?drive=connected in Settings; get_drive_status RPC response handles both PostgREST table array and object formats. Playwright verified 0 Google tokens in localStorage, sessionStorage, and IndexedDB across both paths. |
 | 2026-10-18 | Task 35: Implemented Drive API client with 401 single-retry, 5-attempt exponential backoff with jitter on 429/5xx, multipart (<5MB) and resumable (>=5MB in 8MiB chunks) uploads; strictly identified folders/files by appProperties; implemented DriveProvider with local IndexedDB buffering and SaveQueue outbox sync (3s idle / 30s continuous); implemented LRU clean-file eviction with 500MB cap; Playwright E2E verified create/reload lifecycle in Drive mode. |
+| 2026-10-19 | Task 36: Board conflicts reconciled via `@excalidraw/excalidraw`'s `reconcileElements` loaded via dynamic client-side `import()`; circuit & annotation conflicts produce timestamped conflict copies in Drive (`<title> (conflict YYYY-MM-DD)`), registered in Dexie `items` and project manifest, and reload remote payload; content-addressed files (SHA-256) never conflict; 403 quota errors keep local SaveQueue running in Dexie and display persistent DriveStatusBanner with `.alpha` export shortcut; 404 missing files recreate from Dexie cache; 401/409 revocation triggers `drive:reconnect-required` and auto-flushes on reconnect. |
 
 ## Lessons and corrections
 
@@ -140,4 +141,5 @@ When the owner corrects the same thing twice, or a review finds something the ag
 | 2026-10-18 | In EmbedPDF, scope.getAnnotations() returns a page-keyed object ({ [page: number]: { object: PdfAnnotationObject }[] }), not a flat array. Always normalize with Object.values(res).flat(). | .agents/rules/frontend.md |
 | 2026-10-18 | Declaring an existing workspace peer dependency in package.json is still considered adding a dependency. If a peer plugin (e.g. @embedpdf/plugin-interaction-manager) is needed for batch registration, stop and ask the owner before editing package.json. | AGENTS.md |
 | 2026-10-18 | The spacing token suffix is an 8-point multiplier (--space-1 = 8px, --space-2 = 16px, --space-3 = 24px), not a pixel value. Writing --space-16 produces 128px (8rem), not 16px, pushing modal dialog elements outside the viewport. | .agents/rules/spacing.md |
+| 2026-10-19 | In Next.js App Router, importing from `@excalidraw/excalidraw` directly at the top level of shared modules causes `ReferenceError: window is not defined` during SSR module evaluation when routes load `ProjectService`. Always use dynamic `await import("@excalidraw/excalidraw")` inside client-only execution paths. | .agents/rules/frontend.md |
 

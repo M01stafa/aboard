@@ -15,6 +15,7 @@ export interface DriveStatusState {
   googleEmail: string | null;
   linkedAt: string | null;
   reconnectRequired: boolean;
+  quotaExceeded: boolean;
   loading: boolean;
   error: string | null;
 
@@ -22,6 +23,8 @@ export interface DriveStatusState {
   connect: (returnTo?: string) => Promise<string>;
   disconnect: () => Promise<void>;
   handlePathA: (providerRefreshToken: string) => Promise<void>;
+  setQuotaExceeded: (quotaExceeded: boolean) => void;
+  setReconnectRequired: (reconnectRequired: boolean) => void;
   clearError: () => void;
 }
 
@@ -30,6 +33,12 @@ export const useDriveStore = create<DriveStatusState>((set, get) => {
     bus.on("drive:reconnect-required", () => {
       set({ reconnectRequired: true });
     });
+    bus.on("drive:quota-exceeded", ({ exceeded }) => {
+      set({ quotaExceeded: exceeded });
+    });
+    bus.on("drive:connected", () => {
+      set({ reconnectRequired: false, quotaExceeded: false });
+    });
   }
 
   return {
@@ -37,6 +46,7 @@ export const useDriveStore = create<DriveStatusState>((set, get) => {
     googleEmail: null,
     linkedAt: null,
     reconnectRequired: false,
+    quotaExceeded: false,
     loading: false,
     error: null,
 
@@ -140,6 +150,8 @@ export const useDriveStore = create<DriveStatusState>((set, get) => {
       }
     },
 
+    setQuotaExceeded: (quotaExceeded: boolean) => set({ quotaExceeded }),
+    setReconnectRequired: (reconnectRequired: boolean) => set({ reconnectRequired }),
     clearError: () => set({ error: null }),
   };
 });

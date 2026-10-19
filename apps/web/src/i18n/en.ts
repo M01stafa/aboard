@@ -255,6 +255,13 @@ export const en = {
     waitingConnection: "Waiting for connection",
     reconnectDrive: "Reconnect Drive",
   },
+  driveErrors: {
+    reconnectBanner: "Google Drive access was revoked or expired. Reconnect to resume sync.",
+    reconnectAction: "Reconnect",
+    quotaBanner: "Drive full. Work is saved locally. Export to free space.",
+    exportAction: "Export .alpha",
+    missingItem: "This file was removed from Google Drive.",
+  },
   templates: {
     toggleButton: "Templates",
     panelTitle: "Study Templates",

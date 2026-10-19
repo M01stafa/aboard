@@ -2,6 +2,8 @@ import type { ItemRecord, StorageProvider } from "./types";
 import type { ProjectService } from "./project-service";
 import { getDb, type AboardDatabase } from "@/core/db";
 import { requestPersistenceSilently } from "./persistence";
+import { bus } from "@/core/bus";
+import { useDriveStore } from "@/core/drive/drive-store";
 
 /**
  * The five save status states defined in WS-3 and docs/specs/storage-layer.md §11.4.
@@ -80,6 +82,16 @@ export class SaveQueue {
     // Auto-attach browser hooks in browser environments
     if (typeof window !== "undefined") {
       this.attachBrowserHooks();
+      bus.on("drive:reconnect-required", () => {
+        if (!this.isLocalMode()) {
+          this.setStatus("reconnect-drive");
+        }
+      });
+      bus.on("drive:connected", () => {
+        if (!this.isLocalMode()) {
+          this.setStatus("saved-drive");
+        }
+      });
     }
   }
 
@@ -332,7 +344,14 @@ export class SaveQueue {
         void requestPersistenceSilently();
       }
     } else {
-      this.setStatus("saved-drive");
+      const storeState = typeof window !== "undefined" ? useDriveStore.getState() : null;
+      if (storeState?.reconnectRequired) {
+        this.setStatus("reconnect-drive");
+      } else if (storeState?.quotaExceeded) {
+        this.setStatus("saved-local");
+      } else {
+        this.setStatus("saved-drive");
+      }
     }
   }
 

@@ -1,19 +1,25 @@
 import type { StorageProvider, ItemRecord, AlphaManifest } from "../storage/types";
 import { getDb, type AboardDatabase } from "@/core/db";
+import { bus } from "@/core/bus";
+import type { reconcileElements as ReconcileFn } from "@excalidraw/excalidraw";
 import {
   getOrCreateRootFolder,
   getOrCreateProjectFolder,
   findFiles,
+  getFileMeta,
   uploadFile,
   updateFileContent,
   downloadFileBlob,
   downloadFileText,
   trashFile,
+  DriveApiError,
+  StorageQuotaExceededError,
   type DriveFileMeta,
   type AboardKind,
 } from "./api";
 import { evictLruCacheIfNeeded } from "./cache-eviction";
 import { driveTokenManager, type DriveTokenManager } from "./tokens";
+import { useDriveStore } from "./drive-store";
 
 export interface DriveProviderOptions {
   db?: AboardDatabase;
@@ -23,7 +29,7 @@ export interface DriveProviderOptions {
 /**
  * DriveProvider: backs the StorageProvider interface with Google Drive,
  * using the local Dexie database as buffer, write queue, and cache.
- * Implements docs/specs/google-drive.md §10.7–10.8 and docs/specs/storage-layer.md §11.1–11.4.
+ * Implements docs/specs/google-drive.md §10.7–10.10 and docs/specs/storage-layer.md §11.1–11.4.
  */
 export class DriveProvider implements StorageProvider {
   readonly kind: "drive" = "drive";
@@ -35,6 +41,12 @@ export class DriveProvider implements StorageProvider {
   constructor(options?: DriveProviderOptions) {
     this.customDb = options?.db;
     this.tokenManager = options?.tokenManager ?? driveTokenManager;
+
+    if (typeof window !== "undefined") {
+      bus.on("drive:connected", () => {
+        void this.syncOutbox();
+      });
+    }
   }
 
   private resolveDb(): AboardDatabase {
@@ -280,8 +292,41 @@ export class DriveProvider implements StorageProvider {
       });
     }
 
-    // 3. Upload directly to Drive
-    await this.uploadItemToDrive(projectId, item, payload);
+    // 3. If Drive quota is exceeded or token is revoked, do not attempt upload now.
+    // Local save is already guaranteed in Dexie and queued in outbox.
+    const store = useDriveStore.getState();
+    if (store.quotaExceeded || store.reconnectRequired) {
+      return;
+    }
+
+    // 4. Upload to Drive with resilient error protection (SEC-6 / STORE-3: never fail local save)
+    try {
+      await this.uploadItemToDrive(projectId, item, payload);
+    } catch (err: unknown) {
+      const isQuota =
+        err instanceof StorageQuotaExceededError ||
+        (err instanceof DriveApiError && err.isQuotaExceeded) ||
+        (err instanceof Error &&
+          (err.name === "StorageQuotaExceededError" ||
+            err.message.includes("storageQuotaExceeded") ||
+            err.message.includes("quota")));
+
+      const isAuth =
+        (err instanceof DriveApiError && (err.status === 401 || err.status === 409)) ||
+        (err instanceof Error &&
+          (err.message.includes("401") ||
+            err.message.includes("invalid_grant") ||
+            err.message.includes("reconnect-required")));
+
+      if (isQuota) {
+        store.setQuotaExceeded(true);
+        bus.emit("drive:quota-exceeded", { exceeded: true });
+      } else if (isAuth) {
+        store.setReconnectRequired(true);
+        bus.emit("drive:reconnect-required", { reason: "unauthorized" });
+      }
+      // Error is absorbed here so local canvas/editor never crashes or stops saving.
+    }
   }
 
   private async uploadItemToDrive(
@@ -305,29 +350,201 @@ export class DriveProvider implements StorageProvider {
     const { fileName, mimeType } = this.getItemFileInfo(item);
     const blob = new Blob([payload], { type: mimeType });
 
-    let result: { id: string; headRevisionId?: string };
-
     if (driveFileId) {
-      result = await updateFileContent(driveFileId, blob, this.tokenManager);
-    } else {
-      result = await uploadFile(
-        {
-          name: fileName,
-          mimeType,
-          parents: [folderId],
-          appProperties: {
-            aboardKind: item.kind as AboardKind,
-            aboardProjectId: projectId,
-            aboardItemId: item.id,
+      // Inspect remote file metadata to detect conflicts or external deletion
+      let remoteMeta: DriveFileMeta | null = null;
+      try {
+        remoteMeta = await getFileMeta(
+          driveFileId,
+          "id,headRevisionId,trashed,name",
+          this.tokenManager
+        );
+      } catch (err: unknown) {
+        if (err instanceof DriveApiError && err.status === 404) {
+          remoteMeta = null;
+        } else {
+          throw err;
+        }
+      }
+
+      // Scenario A: File was deleted or moved to trash in Drive -> Recreate from local cache
+      if (!remoteMeta || remoteMeta.trashed) {
+        const recreated = await uploadFile(
+          {
+            name: fileName,
+            mimeType,
+            parents: [folderId],
+            appProperties: {
+              aboardKind: item.kind as AboardKind,
+              aboardProjectId: projectId,
+              aboardItemId: item.id,
+            },
           },
-        },
-        blob,
-        undefined,
-        this.tokenManager
-      );
+          blob,
+          undefined,
+          this.tokenManager
+        );
+
+        await db.items.update(item.id, {
+          dirty: 0,
+          driveFileId: recreated.id,
+          driveRev: recreated.headRevisionId,
+        });
+        await db.outbox.where("itemId").equals(item.id).delete();
+        return;
+      }
+
+      // Scenario B: Conflict Detection
+      const localItem = await db.items.get(item.id);
+      const cachedRev = localItem?.driveRev;
+      const remoteRev = remoteMeta.headRevisionId;
+
+      if (cachedRev && remoteRev && cachedRev !== remoteRev) {
+        // CONFLICT DETECTED!
+        if (item.kind === "board") {
+          // Boards: merge elements with @excalidraw/excalidraw's reconcileElements
+          const remotePayload = await downloadFileText(driveFileId, this.tokenManager);
+          try {
+            const localBoard = JSON.parse(payload) as {
+              elements?: Array<{ id: string; version?: number; versionNonce?: number }>;
+              appState?: Record<string, unknown>;
+              files?: Record<string, unknown>;
+              [key: string]: unknown;
+            };
+            const remoteBoard = JSON.parse(remotePayload) as {
+              elements?: Array<{ id: string; version?: number; versionNonce?: number }>;
+              appState?: Record<string, unknown>;
+              files?: Record<string, unknown>;
+              [key: string]: unknown;
+            };
+
+            const { reconcileElements } = await import("@excalidraw/excalidraw");
+            const mergedElements = reconcileElements(
+              (localBoard.elements || []) as unknown as Parameters<typeof ReconcileFn>[0],
+              (remoteBoard.elements || []) as unknown as Parameters<typeof ReconcileFn>[1],
+              (localBoard.appState || {}) as unknown as Parameters<typeof ReconcileFn>[2]
+            );
+
+            const mergedObj = {
+              ...localBoard,
+              elements: mergedElements,
+              files: { ...(remoteBoard.files || {}), ...(localBoard.files || {}) },
+            };
+            const mergedPayload = JSON.stringify(mergedObj, null, 2);
+            const mergedBlob = new Blob([mergedPayload], { type: "application/json" });
+
+            const updated = await updateFileContent(driveFileId, mergedBlob, this.tokenManager);
+
+            await db.items.update(item.id, {
+              dirty: 0,
+              payload: mergedPayload,
+              driveRev: updated.headRevisionId,
+            });
+            await db.outbox.where("itemId").equals(item.id).delete();
+            return;
+          } catch {
+            // Fall through to normal update if parsing fails
+          }
+        } else if (item.kind === "circuit" || item.kind === "annotations") {
+          // Circuits / Annotations: Keep BOTH versions
+          const dateStr = new Date().toISOString().split("T")[0];
+          const conflictItemId =
+            typeof crypto !== "undefined" && crypto.randomUUID
+              ? crypto.randomUUID()
+              : `conflict-${Date.now()}`;
+          const conflictTitle = `${item.title || item.id} (conflict ${dateStr})`;
+          const ext = item.kind === "circuit" ? "txt" : "json";
+          const conflictFileName = `${conflictItemId}.${ext}`;
+
+          // 1. Upload local payload as a new conflict file in Drive
+          const conflictUpload = await uploadFile(
+            {
+              name: conflictFileName,
+              mimeType,
+              parents: [folderId],
+              appProperties: {
+                aboardKind: item.kind as AboardKind,
+                aboardProjectId: projectId,
+                aboardItemId: conflictItemId,
+                aboardConflictOf: item.id,
+              },
+            },
+            blob,
+            undefined,
+            this.tokenManager
+          );
+
+          // 2. Register conflict copy in Dexie items store so it is visible in the workspace
+          await db.items.put({
+            id: conflictItemId,
+            projectId,
+            kind: item.kind,
+            dirty: 0,
+            updatedAt: Date.now(),
+            title: conflictTitle,
+            payload,
+            driveFileId: conflictUpload.id,
+            driveRev: conflictUpload.headRevisionId,
+          });
+
+          // 3. Register conflict copy in project manifest
+          try {
+            const manifest = await this.loadManifest(projectId);
+            const exists = manifest.items.some((i) => i.id === conflictItemId);
+            if (!exists) {
+              const subfolder = item.kind === "circuit" ? "circuits" : "annotations";
+              manifest.items.push({
+                id: conflictItemId,
+                kind: item.kind,
+                title: conflictTitle,
+                path: `${subfolder}/${conflictFileName}`,
+              });
+              await this.saveManifest(manifest);
+            }
+          } catch {
+            // Non-fatal if manifest update fails
+          }
+
+          // 4. Download remote version into the active item
+          const remotePayload = await downloadFileText(driveFileId, this.tokenManager);
+          await db.items.update(item.id, {
+            dirty: 0,
+            payload: remotePayload,
+            driveRev: remoteRev,
+          });
+          await db.outbox.where("itemId").equals(item.id).delete();
+          return;
+        }
+      }
+
+      // Normal update when no conflict
+      const result = await updateFileContent(driveFileId, blob, this.tokenManager);
+      await db.items.update(item.id, {
+        dirty: 0,
+        driveFileId: result.id,
+        driveRev: result.headRevisionId,
+      });
+      await db.outbox.where("itemId").equals(item.id).delete();
+      return;
     }
 
-    // 4. Update local Dexie: mark clean and clear outbox entry
+    // New item creation
+    const result = await uploadFile(
+      {
+        name: fileName,
+        mimeType,
+        parents: [folderId],
+        appProperties: {
+          aboardKind: item.kind as AboardKind,
+          aboardProjectId: projectId,
+          aboardItemId: item.id,
+        },
+      },
+      blob,
+      undefined,
+      this.tokenManager
+    );
+
     await db.items.update(item.id, {
       dirty: 0,
       driveFileId: result.id,
@@ -524,6 +741,11 @@ export class DriveProvider implements StorageProvider {
    * Invoked by SaveQueue on 3s idle, 30s continuous, or flushNow().
    */
   async syncOutbox(): Promise<void> {
+    const store = useDriveStore.getState();
+    if (store.quotaExceeded || store.reconnectRequired) {
+      return;
+    }
+
     const db = this.resolveDb();
     const outboxEntries = await db.outbox.toArray();
 
@@ -540,7 +762,34 @@ export class DriveProvider implements StorageProvider {
         title: item.title || item.id,
         updatedAt: item.updatedAt || Date.now(),
       };
-      await this.uploadItemToDrive(entry.projectId, storageItem, item.payload);
+      try {
+        await this.uploadItemToDrive(entry.projectId, storageItem, item.payload);
+      } catch (err: unknown) {
+        const isQuota =
+          err instanceof StorageQuotaExceededError ||
+          (err instanceof DriveApiError && err.isQuotaExceeded) ||
+          (err instanceof Error &&
+            (err.name === "StorageQuotaExceededError" ||
+              err.message.includes("storageQuotaExceeded") ||
+              err.message.includes("quota")));
+
+        const isAuth =
+          (err instanceof DriveApiError && (err.status === 401 || err.status === 409)) ||
+          (err instanceof Error &&
+            (err.message.includes("401") ||
+              err.message.includes("invalid_grant") ||
+              err.message.includes("reconnect-required")));
+
+        if (isQuota) {
+          store.setQuotaExceeded(true);
+          bus.emit("drive:quota-exceeded", { exceeded: true });
+          break; // Stop further attempts while quota is full
+        } else if (isAuth) {
+          store.setReconnectRequired(true);
+          bus.emit("drive:reconnect-required", { reason: "unauthorized" });
+          break; // Stop further attempts while revoked/unauthorized
+        }
+      }
     }
   }
 }

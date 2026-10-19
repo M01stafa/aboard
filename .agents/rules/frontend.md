@@ -34,6 +34,7 @@ Specs: `docs/specs/architecture.md` (§3.1 Next.js rules, §6 workspace, §15 th
 - Get the API via the `excalidrawAPI` prop. `initialData` is used once; never feed `onChange` back into component state. Persist from `onChange` through `ProjectService.saveBoard` (debounced by the SaveQueue).
 - Element JSON stores `fileId` only; image bytes go through `ProjectService.putFile`. Images over 4 MB are rejected by Excalidraw: compress (WebP/JPEG) and cap dimensions first.
 - Corners use `roundness` (not `strokeSharpness`). Helpers: `convertToExcalidrawElements`, `exportToBlob`, `exportToSvg`, `restore`, `reconcileElements`.
+- In Next.js App Router, importing from `@excalidraw/excalidraw` at the top level of shared modules causes `ReferenceError: window is not defined` during SSR evaluation. Use dynamic `await import("@excalidraw/excalidraw")` inside client-only execution paths (e.g. `reconcileElements`).
 - `langCode="ar-SA"` for Arabic; `UIOptions` hides Excalidraw's own load/save-to-disk.
 
 ## Circuit — fork of `pfalstad/circuitjs1` (spec §7.2)

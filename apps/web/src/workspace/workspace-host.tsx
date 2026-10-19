@@ -10,6 +10,8 @@ import { CircuitPane } from "@/modules/circuit";
 import { BoardPane } from "@/modules/board";
 import { PdfPane } from "@/modules/pdf";
 import { ExportDialog } from "@/core/alpha/export-dialog";
+import { DriveStatusBanner } from "@/components/drive-status-banner";
+import { bus } from "@/core/bus";
 
 /*
  * Tab Bar & Divider Keyboard Interaction Map
@@ -128,6 +130,14 @@ export function WorkspaceHost({
     checkWidth();
     window.addEventListener("resize", checkWidth);
     return () => window.removeEventListener("resize", checkWidth);
+  }, []);
+
+  useEffect(() => {
+    const handleOpenExport = () => setShowExportDialog(true);
+    bus.on("drive:open-export-dialog", handleOpenExport);
+    return () => {
+      bus.off("drive:open-export-dialog", handleOpenExport);
+    };
   }, []);
 
   // Action: Open a tab or activate if already open
@@ -557,6 +567,9 @@ export function WorkspaceHost({
           cursor: row-resize;
         }
       `}</style>
+
+      {/* Global Drive error / quota banner */}
+      <DriveStatusBanner onExportClick={() => setShowExportDialog(true)} />
 
       {/* Pane Toolbar (48px height per DESIGN.md §4.2) */}
       <header

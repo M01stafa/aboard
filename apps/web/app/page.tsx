@@ -7,6 +7,7 @@ import { AuthGuard } from "./auth-guard";
 import { signOut } from "@/core/supabase";
 import { useI18n } from "@/i18n/provider";
 import { Card } from "@/components/card";
+import { DriveStatusBanner } from "@/components/drive-status-banner";
 import {
   projectService,
   projectIndex,
@@ -286,6 +287,7 @@ export function LauncherContent({ user }: { user: User }) {
         inlineSize: "100%",
       }}
     >
+      <DriveStatusBanner />
       <input
         type="file"
         ref={fileInputRef}

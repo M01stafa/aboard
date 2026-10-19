@@ -257,6 +257,13 @@ export const ar: TranslationDictionary = {
     waitingConnection: "بانتظار الاتصال",
     reconnectDrive: "أعد ربط Drive",
   },
+  driveErrors: {
+    reconnectBanner: "تم إلغاء أو انتهاء صلاحية الوصول إلى Google Drive. أعد الاتصال لاستئناف المزامنة.",
+    reconnectAction: "إعادة الاتصال",
+    quotaBanner: "مساحة Drive ممتلئة. تم حفظ عملك محلياً. صدّر لتحرير مساحة.",
+    exportAction: "تصدير .alpha",
+    missingItem: "تم حذف هذا الملف من Google Drive.",
+  },
   templates: {
     toggleButton: "القوالب",
     panelTitle: "قوالب دراسية",
