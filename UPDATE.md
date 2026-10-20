@@ -1323,5 +1323,15 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** QA Fixes · ALPHA-1, ALPHA-2, ALPHA-5, INT-3, INT-4
 **Open:** none.
 
+## 2026-10-20 — Dev Server Launch
+**Request:** Run the code (start local Next.js development server).
+**Changes:**
+- Dev server started via `pnpm dev` (`next dev`) listening on `http://localhost:3000`.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- Next.js 16.4.0 (Turbopack) ready on `http://localhost:3000` in 666ms.
+**Open:** none (app is live and accessible locally).
+
+
 
 
