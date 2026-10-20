@@ -67,6 +67,10 @@ test.describe("PDF Viewer Module Integration (Task 28 / PDF-1, PDF-2, PDF-7)", (
     const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
     await expect(page1).toBeVisible({ timeout: 10000 });
 
+    // Verify first page text layer rendered for text selection
+    const textLayer = page1.locator('[data-text-layer="true"]');
+    await expect(textLayer).toBeAttached({ timeout: 10000 });
+
     // 6. Navigate to Page 2
     const nextBtn = primaryPane.locator('[data-testid="pdf-next-page"]');
     await expect(nextBtn).toBeEnabled();

@@ -25,17 +25,74 @@ vi.mock("@/integration/board-to-pdf", () => ({
   appendBoardToPdf: (...args: unknown[]) => mockAppendBoardToPdf(...args),
 }));
 
+const mockItem = vi.fn((props: Record<string, unknown>) =>
+  React.createElement("div", { "data-testid": "main-menu-item", ...props })
+);
+
+const MainMenuMock = Object.assign(
+  vi.fn(({ children }: { children?: React.ReactNode }) =>
+    React.createElement("div", { "data-testid": "main-menu" }, children)
+  ),
+  {
+    Item: mockItem,
+    ItemLink: mockItem,
+    ItemCustom: mockItem,
+    Group: vi.fn(({ children }: { children?: React.ReactNode }) =>
+      React.createElement("div", null, children)
+    ),
+    Separator: vi.fn(() => React.createElement("hr")),
+    DefaultItems: {
+      SaveAsImage: vi.fn(() => React.createElement("div", { "data-testid": "menu-save-as-image" })),
+      Export: vi.fn(() => React.createElement("div", { "data-testid": "menu-export" })),
+      SearchMenu: vi.fn(() => React.createElement("div", { "data-testid": "menu-search" })),
+      ClearCanvas: vi.fn(() => React.createElement("div", { "data-testid": "menu-clear-canvas" })),
+      ToggleTheme: vi.fn(() => React.createElement("div", { "data-testid": "menu-toggle-theme" })),
+      ChangeCanvasBackground: vi.fn(() =>
+        React.createElement("div", { "data-testid": "menu-change-canvas-bg" })
+      ),
+      Help: vi.fn(() => React.createElement("div", { "data-testid": "menu-help" })),
+      Socials: vi.fn(() => React.createElement("div", { "data-testid": "menu-socials" })),
+      LoadScene: vi.fn(() => React.createElement("div", { "data-testid": "menu-load-scene" })),
+      SaveToActiveFile: vi.fn(() =>
+        React.createElement("div", { "data-testid": "menu-save-to-active-file" })
+      ),
+    },
+  }
+);
+
+const WelcomeScreenMock = Object.assign(
+  vi.fn(({ children }: { children?: React.ReactNode }) =>
+    React.createElement("div", { "data-testid": "welcome-screen" }, children)
+  ),
+  {
+    Hints: {
+      MenuHint: vi.fn(() => React.createElement("div")),
+      ToolbarHint: vi.fn(() => React.createElement("div")),
+      HelpHint: vi.fn(() => React.createElement("div")),
+    },
+    Center: vi.fn(({ children }: { children?: React.ReactNode }) =>
+      React.createElement("div", null, children)
+    ),
+  }
+);
+
 vi.mock("@excalidraw/excalidraw", () => ({
+  MainMenu: MainMenuMock,
+  WelcomeScreen: WelcomeScreenMock,
   exportToBlob: vi.fn().mockResolvedValue(new Blob(["mock-png"], { type: "image/png" })),
-  Excalidraw: vi.fn((props: Record<string, unknown>) => {
+  Excalidraw: vi.fn((props: Record<string, unknown> & { children?: React.ReactNode }) => {
     lastExcalidrawProps = props;
     if (typeof props.excalidrawAPI === "function") {
       props.excalidrawAPI(mockExcalidrawApi);
     }
-    return React.createElement("div", {
-      "data-testid": "mocked-excalidraw-canvas",
-      className: "excalidraw",
-    });
+    return React.createElement(
+      "div",
+      {
+        "data-testid": "mocked-excalidraw-canvas",
+        className: "excalidraw",
+      },
+      props.children
+    );
   }),
   convertToExcalidrawElements: vi.fn(
     (

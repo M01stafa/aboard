@@ -23,8 +23,10 @@ import { useZoom } from "@embedpdf/plugin-zoom/react";
 import { ThumbnailPluginPackage } from "@embedpdf/plugin-thumbnail";
 import { ThumbnailsPane, ThumbImg } from "@embedpdf/plugin-thumbnail/react";
 import { InteractionManagerPluginPackage } from "@embedpdf/plugin-interaction-manager";
+import { PagePointerProvider } from "@embedpdf/plugin-interaction-manager/react";
 import { SelectionPluginPackage, SelectionLayer } from "@embedpdf/plugin-selection/react";
 import { AnnotationPluginPackage, AnnotationLayer } from "@embedpdf/plugin-annotation/react";
+import { PdfTextLayer } from "./pdf-text-layer";
 import { HistoryPluginPackage } from "@embedpdf/plugin-history";
 import { ExportPluginPackage, useExport } from "@embedpdf/plugin-export/react";
 import type { PdfDocumentObject } from "@embedpdf/models";
@@ -638,8 +640,10 @@ function ViewerInner({
           <Scroller
             documentId={documentId}
             renderPage={(page) => (
-              <div
+              <PagePointerProvider
                 key={page.pageIndex}
+                documentId={documentId}
+                pageIndex={page.pageIndex}
                 data-testid={`pdf-page-${page.pageIndex + 1}`}
                 style={{
                   position: "relative",
@@ -651,6 +655,15 @@ function ViewerInner({
                 <RenderLayer
                   documentId={documentId}
                   pageIndex={page.pageIndex}
+                  style={{
+                    pointerEvents: "none",
+                    userSelect: "none",
+                  }}
+                />
+                <PdfTextLayer
+                  documentId={documentId}
+                  pageIndex={page.pageIndex}
+                  isAnnotating={activeTool !== "select"}
                 />
                 <SelectionLayer
                   documentId={documentId}
@@ -660,7 +673,7 @@ function ViewerInner({
                   documentId={documentId}
                   pageIndex={page.pageIndex}
                 />
-              </div>
+              </PagePointerProvider>
             )}
           />
         </Viewport>

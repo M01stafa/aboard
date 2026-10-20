@@ -216,4 +216,28 @@ test.describe("Board Whiteboard Module Integration (Task 25 / BOARD-1, BOARD-2, 
     expect(postReloadElements.elements[0].type).toBe("rectangle");
     expect(postReloadElements.backgroundColor).toBe("#edeae1");
   });
+
+  test("whiteboard removes third-party external links and branding", async ({ page }) => {
+    await page.goto(`/workspace?p=${projectId}&kind=board`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    const boardPane = page.locator('.pane[data-slot="primary"] [data-testid="pane-board-tab-1"]');
+    await expect(boardPane).toBeVisible();
+
+    // Verify Excalidraw logo is hidden
+    const excalidrawLogo = boardPane.locator(".ExcalidrawLogo");
+    await expect(excalidrawLogo).toBeHidden();
+
+    // Check hamburger main menu trigger
+    const menuBtn = boardPane.locator('button[aria-label="Main menu"]');
+    if (await menuBtn.isVisible()) {
+      await menuBtn.click();
+      // Ensure help, discord, github, twitter items are absent
+      await expect(boardPane.locator('[data-testid="help-menu-item"]')).toBeHidden();
+      await expect(
+        page.locator('a[href*="discord"], a[href*="github.com/excalidraw"], a[href*="twitter.com/excalidraw"]')
+      ).toHaveCount(0);
+    }
+  });
 });
+

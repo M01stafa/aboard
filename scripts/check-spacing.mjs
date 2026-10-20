@@ -18,6 +18,7 @@ const ignoredFiles = new Set([
   path.normalize(path.join(rootDir, "apps/web/src/modules/board/templates.ts")),
   // Exclude rendered PDF pages per .agents/rules/spacing.md §1
   path.normalize(path.join(rootDir, "apps/web/src/modules/pdf/pdf-viewer.tsx")),
+  path.normalize(path.join(rootDir, "apps/web/src/modules/pdf/pdf-text-layer.tsx")),
   path.normalize(path.join(rootDir, "apps/web/src/test/setup.ts")),
 ]);
 

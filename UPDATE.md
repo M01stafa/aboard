@@ -1252,3 +1252,27 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (23/23 Playwright tests passed in 45.9s).
 **Related:** Bug Fixes (Phase 8 QA) · BOARD-1, BOARD-2, BOARD-5, SEC-7
 **Open:** none (ready to resume manual MVP review).
+
+## 2026-10-20 — Manual MVP Review: Whiteboard Branding & PDF Text Layer Fixes
+**Request:** Fix two QA issues: (1) Remove Excalidraw third-party branding, documentation, GitHub, Discord, and Twitter links so the whiteboard feels like a native Aboard product; (2) Fix PDF viewer flat image rendering to support selectable text layer and reliable drawing/annotation tool gestures.
+**Changes:**
+- `apps/web/src/modules/board/excalidraw-board.tsx` (created): native Excalidraw wrapper configuring sanitized `MainMenu` (retaining essential board actions: `SaveAsImage`, `Export`, `SearchMenu`, `ClearCanvas`, `ToggleTheme`, `ChangeCanvasBackground` while eliminating `Help`, `Socials`, `LoadScene`, `SaveToActiveFile`) and custom `WelcomeScreen` suppressing upstream logos and hints.
+- `apps/web/src/modules/board/board-pane.tsx` (changed): loaded `ExcalidrawBoard` via client dynamic import, added scoped CSS hiding remaining third-party branding classes, and added canvas fingerprinting probe guard for privacy browsers.
+- `apps/web/src/modules/pdf/pdf-text-layer.tsx` (created): rendered transparent selectable text layer (`data-text-layer="true"`) querying `engine.getPageTextRuns` (with fallback to `engine.getPageGeometry`) to position text spans over canvas, switching `pointerEvents` and `userSelect` based on `isAnnotating`.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): wrapped rendered pages in `PagePointerProvider` enabling DOM pointer gesture handling for annotations and selections, added `PdfTextLayer`, and set `pointerEvents: "none"` on `RenderLayer` image.
+- `scripts/check-spacing.mjs` (changed): added `pdf-text-layer.tsx` to `ignoredFiles` per `.agents/rules/spacing.md §1` (rendered PDF page coordinates exemption).
+- `apps/web/src/test/setup.ts` & `apps/web/src/modules/board/board-pane.test.tsx` (changed): added `MainMenu` and `WelcomeScreen` mocks and passed children through `Excalidraw` mock.
+- `apps/web/src/modules/board/excalidraw-board.test.tsx` (created): unit tests verifying menu items sanitization and branding removal.
+- `apps/web/src/modules/pdf/pdf-text-layer.test.tsx` (created): unit tests verifying `PdfTextLayer` rendering, text coordinates, and annotation state pointer switching.
+- `apps/web/e2e/board-module.spec.ts` (changed): added Playwright E2E test verifying whiteboard menu has no third-party links or Excalidraw branding.
+- `apps/web/e2e/pdf-module.spec.ts` (changed): added Playwright E2E test assertion verifying `data-text-layer="true"` is attached to rendered PDF page.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (tsc --noEmit 0 errors).
+- `pnpm test`: PASS (298/298 unit tests passed across 40 test files).
+- `pnpm test:e2e`: PASS (24/24 Playwright tests passed in 47.5s).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks, dependency audit clean, bundle secret scan clean).
+**Related:** QA Fixes · BOARD-1, BOARD-4, PDF-1, PDF-2, PDF-3, PDF-4
+**Open:** none.
+
