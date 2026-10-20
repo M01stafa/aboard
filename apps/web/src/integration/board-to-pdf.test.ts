@@ -103,4 +103,56 @@ describe("board-to-pdf", () => {
       "Doc.pdf"
     );
   });
+
+  it("overlays board image on current page of existing PDF without increasing page count", async () => {
+    // Create an initial PDF with 2 pages
+    const existingDoc = await PDFDocument.create();
+    existingDoc.addPage([200, 200]);
+    existingDoc.addPage([200, 200]);
+    const existingBytes = await existingDoc.save();
+    const existingBlob = new Blob([existingBytes], { type: "application/pdf" });
+
+    const pngBlob = getTinyPngBlob();
+    const mockPutFile = vi.fn().mockResolvedValue({ key: "overlaid-pdf-hash" });
+    const mockSavePdf = vi.fn().mockResolvedValue(undefined);
+    const mockOpenProject = vi.fn().mockResolvedValue({
+      items: [{ id: "pdf-item-1", kind: "pdf", title: "Doc.pdf" }],
+    });
+    const mockReadItem = vi.fn().mockResolvedValue(
+      JSON.stringify({
+        type: "alpha-pdf",
+        version: 1,
+        fileKey: "existing-file-key",
+        name: "Doc.pdf",
+        lastPage: 2,
+      })
+    );
+    const mockGetFile = vi.fn().mockResolvedValue(existingBlob);
+
+    const mockPs = {
+      openProject: mockOpenProject,
+      readItem: mockReadItem,
+      getFile: mockGetFile,
+      putFile: mockPutFile,
+      savePdf: mockSavePdf,
+    } as unknown as ProjectService;
+
+    const result = await appendBoardToPdf({
+      projectId: "proj-1",
+      targetPdfItemId: "pdf-item-1",
+      imageBlob: pngBlob,
+      mode: "overlay",
+      projectServiceOverride: mockPs,
+    });
+
+    expect(result.targetPdfItemId).toBe("pdf-item-1");
+    expect(result.pageCount).toBe(2); // Page count unchanged on overlay
+    expect(mockPutFile).toHaveBeenCalledTimes(1);
+    expect(mockSavePdf).toHaveBeenCalledWith(
+      "proj-1",
+      "pdf-item-1",
+      expect.stringContaining(`"lastPage":2`),
+      "Doc.pdf"
+    );
+  });
 });

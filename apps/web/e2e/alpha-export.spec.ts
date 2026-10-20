@@ -26,6 +26,79 @@ test.describe(".alpha Project Export (Task 31 / ALPHA-1, ALPHA-5, ALPHA-6, ALPHA
     await page.goto(`/workspace?p=${projectId}&kind=board`);
     await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
 
+    // 2b. Wait for Excalidraw to mount and API to attach
+    await page.waitForFunction(() => {
+      const win = window as unknown as {
+        __aboard_boardApi?: Record<
+          string,
+          {
+            updateScene?: unknown;
+            getSceneElements?: () => unknown[];
+            refresh?: unknown;
+          }
+        >;
+      };
+      const api = win.__aboard_boardApi?.["tab-1"];
+      return (
+        api !== undefined &&
+        typeof api.updateScene === "function" &&
+        typeof api.refresh === "function"
+      );
+    }, { timeout: 25000 });
+
+    const testElements = [
+      {
+        id: "rect-e2e-export",
+        type: "rectangle",
+        x: 120,
+        y: 140,
+        width: 220,
+        height: 120,
+        strokeColor: "#1e1e1e",
+        backgroundColor: "#e03131",
+        fillStyle: "solid",
+        strokeWidth: 2,
+        roughness: 1,
+        opacity: 100,
+        isDeleted: false,
+      },
+    ];
+
+    await page.evaluate(
+      async ({ elements, projId }) => {
+        const win = window as unknown as {
+          __aboard_boardApi?: Record<
+            string,
+            {
+              updateScene: (scene: { elements: unknown[]; appState?: Record<string, unknown> }) => void;
+            }
+          >;
+          __aboard_projectService?: {
+            saveBoard: (p: string, item: string, payload: string, title?: string) => Promise<void>;
+          };
+          __aboard_saveQueue?: {
+            flushNow: () => Promise<void>;
+          };
+        };
+        const api = win.__aboard_boardApi?.["tab-1"];
+        if (api) {
+          api.updateScene({ elements, appState: { viewBackgroundColor: "#ffffff" } });
+        }
+        if (win.__aboard_projectService) {
+          await win.__aboard_projectService.saveBoard(
+            projId,
+            "item-1",
+            JSON.stringify({ elements, appState: { viewBackgroundColor: "#ffffff" } }),
+            "Whiteboard 1"
+          );
+        }
+        if (win.__aboard_saveQueue) {
+          await win.__aboard_saveQueue.flushNow();
+        }
+      },
+      { elements: testElements, projId: projectId }
+    );
+
     // 3. Click the Export button in the top navigation bar
     const exportBtn = page.locator('[data-testid="workspace-export-btn"]');
     await expect(exportBtn).toBeVisible({ timeout: 10000 });
@@ -71,7 +144,8 @@ test.describe(".alpha Project Export (Task 31 / ALPHA-1, ALPHA-5, ALPHA-6, ALPHA
     const zipReader = new ZipReader(new BlobReader(zipBlob));
     const entries = await zipReader.getEntries();
 
-    expect(entries.length).toBeGreaterThanOrEqual(2);
+    // Assert entries include mimetype, manifest.json, and board payload
+    expect(entries.length).toBeGreaterThanOrEqual(3);
 
     // Assertion 1: First entry MUST be "mimetype"
     const firstEntry = entries[0];
@@ -97,6 +171,24 @@ test.describe(".alpha Project Export (Task 31 / ALPHA-1, ALPHA-5, ALPHA-6, ALPHA
     expect(manifest.formatVersion).toBe(1);
     expect(manifest.app.name).toBe("Aboard");
     expect(manifest.project).toBeDefined();
+    expect(manifest.items).toBeDefined();
+    expect(manifest.items.length).toBeGreaterThanOrEqual(1);
+
+    // Assertion 3: Board entry exists, is not empty, and contains the saved drawing elements
+    const boardItem = manifest.items.find((it: { kind: string }) => it.kind === "board");
+    expect(boardItem).toBeDefined();
+
+    const boardEntry = entries.find((e) => e.filename === boardItem.path);
+    expect(boardEntry).toBeDefined();
+    expect(boardEntry!.uncompressedSize).toBeGreaterThan(0);
+
+    const boardText = await (boardEntry as { getData: (writer: TextWriter) => Promise<string> }).getData(
+      new TextWriter()
+    );
+    const boardData = JSON.parse(boardText);
+    expect(boardData.elements).toBeDefined();
+    expect(boardData.elements.length).toBeGreaterThan(0);
+    expect(boardData.elements[0].id).toBe("rect-e2e-export");
 
     await zipReader.close();
   });

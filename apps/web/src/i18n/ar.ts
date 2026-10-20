@@ -274,6 +274,9 @@ export const ar: TranslationDictionary = {
     sendToPdfError: "فشل إلحاق اللوحة بمستند PDF",
     noPdfInProject: "لا يوجد مستند PDF في المشروع",
     emptyBoard: "اللوحة فارغة",
+    sendAsNewPage: "إضافة كصفحة جديدة",
+    overlayOnCurrentPage: "تراكب على الصفحة الحالية",
+    overlaidOnPdfSuccess: "تم وضع اللوحة فوق صفحة PDF",
   },
   legal: {
     privacyTitle: "سياسة الخصوصية",

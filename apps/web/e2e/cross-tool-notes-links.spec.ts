@@ -213,6 +213,11 @@ test.describe("Cross-Tool Integration: Board to PDF and Selection to Note (Task 
 
     await sendToPdfBtn.click();
 
+    // Select "Add as New Page" from the Send to PDF dropdown menu
+    const appendBtn = secondaryPane.locator('[data-testid="send-to-pdf-append"]');
+    await expect(appendBtn).toBeVisible();
+    await appendBtn.click();
+
     // Verify success toast appears
     const toastNotice = secondaryPane.locator('[data-testid="board-toast-notice"]');
     await expect(toastNotice).toBeVisible({ timeout: 15000 });

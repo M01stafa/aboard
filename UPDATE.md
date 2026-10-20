@@ -1298,4 +1298,30 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** QA Fixes · WS-1, WS-2, CIRC-1, CIRC-2, INT-2
 **Open:** none.
 
+## 2026-10-20 — Manual MVP Review: Fix Empty .alpha Export and Add Board-to-PDF Overlay Option
+**Request:** Resolve two QA issues: (1) Fix critical data safety bug where exporting a project to an `.alpha` container and re-importing resulted in an empty project (synchronize Dexie items into manifest on save/collect, flush SaveQueue before export, clone streaming chunks, and restore tabs from manifest.items); (2) Add Board-to-PDF dropdown in the whiteboard toolbar offering "Add as New Page" (existing behavior) and "Overlay on Current Page" (new behavior scaling and centering whiteboard capture onto target page via `@cantoo/pdf-lib` without changing page count).
+**Changes:**
+- `apps/web/src/core/storage/project-service.ts` (changed): added `ensureItemInManifest` helper to automatically register documents in `manifest.items` on `saveBoard`, `saveCircuit`, and `savePdf`; updated `collect()` to query Dexie `db.items` directly, ensure default item if empty, provide sensible fallback payloads, and persist synchronized `completeManifest`.
+- `apps/web/src/core/alpha/export.ts` (changed): safely cloned streaming chunks (`new Uint8Array(chunk)`) in `openSink` to prevent buffer reuse or detachment issues in stream sinks.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): restored workspace `layout.tabs` and `tabBarOrder` from `manifest.items` on mount when opening a project (`projectId`), mapped item IDs to tabs properly (`item-1` -> `tab-1`), updated `handleCreateNewTab` to immediately register items in `ProjectService`, and wired `mode: event.mode || "append"` to `appendBoardToPdf`.
+- `apps/web/src/core/bus.ts` (changed): updated `AppEvents["board:to-pdf"]` payload interface to accept `mode?: "append" | "overlay"`.
+- `apps/web/src/integration/board-to-pdf.ts` (changed): implemented `mode === "overlay"` in `appendBoardToPdf`, embedding the board capture image via `@cantoo/pdf-lib`, scaling to fit within target page dimensions preserving aspect ratio, drawing centered on current page, saving new immutable version via `putFile`, and notifying via bus events.
+- `apps/web/src/modules/board/board-pane.tsx` (changed): replaced direct "Send to PDF" button with accessible dropdown menu offering "Add as New Page" (`send-to-pdf-append`) and "Overlay on Current Page" (`send-to-pdf-overlay`) with click-outside and Escape key dismissal, `aria-haspopup="menu"`, and DESIGN.md R1 tokens.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added localized strings for `sendAsNewPage`, `overlayOnCurrentPage`, and `overlaidOnPdfSuccess` with 100% key parity.
+- `apps/web/src/integration/board-to-pdf.test.ts` (changed): added unit test asserting overlay mode keeps PDF page count unchanged and updates descriptor.
+- `apps/web/src/modules/board/board-pane.test.tsx` (changed): updated unit tests to verify menu toggle, append callback, and overlay callback.
+- `apps/web/e2e/alpha-export.spec.ts` (changed): updated E2E test to wait for Excalidraw board API, draw test element, trigger export, parse downloaded ZIP entries via `@zip.js/zip.js`, and assert non-empty `manifest.json`, `manifest.items.length >= 1`, board JSON entry with `uncompressedSize > 0`, and elements parsed from ZIP match drawn element.
+- `apps/web/e2e/cross-tool-notes-links.spec.ts` (changed): updated interaction to click `send-to-pdf-append` from the Send to PDF dropdown menu.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 violations, all 8-point tokens).
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (tsc --noEmit 0 errors).
+- `pnpm test`: PASS (304/304 unit tests passed across 41 test files).
+- `pnpm test:e2e`: PASS (24/24 Playwright tests passed in 47.7s).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks across 71 commits, prod audit clean, bundle secret scan clean).
+**Related:** QA Fixes · ALPHA-1, ALPHA-2, ALPHA-5, INT-3, INT-4
+**Open:** none.
+
+
 

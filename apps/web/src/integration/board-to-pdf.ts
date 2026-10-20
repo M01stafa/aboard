@@ -8,6 +8,8 @@ export interface AppendBoardToPdfOptions {
   projectId: string;
   targetPdfItemId?: string;
   imageBlob: Blob;
+  mode?: "append" | "overlay";
+  targetPage?: number;
   projectServiceOverride?: ProjectService;
 }
 
@@ -18,15 +20,15 @@ export interface AppendBoardToPdfResult {
 }
 
 /**
- * Appends a whiteboard canvas image as a new page in a target PDF document (INT-3).
- * If target PDF exists, loads existing bytes, embeds image, appends page matching image
- * dimensions, and saves as a new version with content-addressed SHA-256 hash.
+ * Appends a whiteboard canvas image as a new page or overlays it on the current page in a target PDF (INT-3).
+ * If target PDF exists, loads existing bytes, embeds image, and either appends a new page or overlays
+ * on the current page appropriately scaled, then saves as a new version with content-addressed SHA-256 hash.
  * If no PDF exists in project, creates a new PDF document.
  */
 export async function appendBoardToPdf(
   options: AppendBoardToPdfOptions
 ): Promise<AppendBoardToPdfResult> {
-  const { projectId, imageBlob, projectServiceOverride } = options;
+  const { projectId, imageBlob, projectServiceOverride, mode = "append" } = options;
   let targetPdfItemId = options.targetPdfItemId;
   const ps = projectServiceOverride ?? defaultProjectService;
 
@@ -75,21 +77,49 @@ export async function appendBoardToPdf(
     pdfDoc = await PDFDocument.create();
   }
 
-  // 3. Embed image into PDF matching dimensions
+  // 3. Embed image into PDF
   const imageBytes = await imageBlob.arrayBuffer();
   const embeddedImage =
     imageBlob.type === "image/jpeg" || imageBlob.type === "image/jpg"
       ? await pdfDoc.embedJpg(imageBytes)
       : await pdfDoc.embedPng(imageBytes);
 
-  const { width, height } = embeddedImage.scale(1);
-  const newPage = pdfDoc.addPage([width, height]);
-  newPage.drawImage(embeddedImage, {
-    x: 0,
-    y: 0,
-    width,
-    height,
-  });
+  let targetPageNum = 1;
+
+  if (mode === "overlay" && pdfDoc.getPageCount() > 0) {
+    const totalPages = pdfDoc.getPageCount();
+    targetPageNum = options.targetPage ?? payload.lastPage ?? 1;
+    if (targetPageNum < 1) targetPageNum = 1;
+    if (targetPageNum > totalPages) targetPageNum = totalPages;
+
+    const page = pdfDoc.getPage(targetPageNum - 1);
+    const { width: pageWidth, height: pageHeight } = page.getSize();
+
+    // Scale appropriately to fit on the current page while preserving aspect ratio
+    const scale = Math.min(pageWidth / embeddedImage.width, pageHeight / embeddedImage.height, 1);
+    const drawWidth = embeddedImage.width * scale;
+    const drawHeight = embeddedImage.height * scale;
+    const x = (pageWidth - drawWidth) / 2;
+    const y = (pageHeight - drawHeight) / 2;
+
+    page.drawImage(embeddedImage, {
+      x,
+      y,
+      width: drawWidth,
+      height: drawHeight,
+    });
+  } else {
+    // Append as a new page
+    const { width, height } = embeddedImage.scale(1);
+    const newPage = pdfDoc.addPage([width, height]);
+    newPage.drawImage(embeddedImage, {
+      x: 0,
+      y: 0,
+      width,
+      height,
+    });
+    targetPageNum = pdfDoc.getPageCount();
+  }
 
   const pageCount = pdfDoc.getPageCount();
 
@@ -111,7 +141,7 @@ export async function appendBoardToPdf(
   const updatedPayload: PdfItemPayload = {
     ...payload,
     fileKey: newHash,
-    lastPage: pageCount,
+    lastPage: targetPageNum,
   };
 
   await ps.savePdf(
@@ -121,13 +151,13 @@ export async function appendBoardToPdf(
     docName
   );
 
-  // Notify any open viewer to refresh/navigate to the appended page
+  // Notify any open viewer to refresh/navigate to the updated page
   bus.emit("pdf:item-updated", {
     itemId: resolvedTargetPdfItemId,
   });
   bus.emit("pdf:navigate-page", {
     itemId: resolvedTargetPdfItemId,
-    page: pageCount,
+    page: targetPageNum,
   });
 
   return {

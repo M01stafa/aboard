@@ -129,7 +129,7 @@ async function openSink(
   const chunks: Uint8Array[] = [];
   const writable = new WritableStream<Uint8Array>({
     write(chunk) {
-      chunks.push(chunk);
+      chunks.push(new Uint8Array(chunk));
     },
   });
 

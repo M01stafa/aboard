@@ -21,7 +21,7 @@ import {
 } from "@/integration/board-insertion";
 import { formatAlphaLink, parseAlphaLink } from "@/integration/alpha-link";
 import { appendBoardToPdf } from "@/integration/board-to-pdf";
-import { projectService as defaultProjectService } from "@/core/storage";
+import { projectService as defaultProjectService, type AlphaManifest } from "@/core/storage";
 
 /*
  * Tab Bar & Divider Keyboard Interaction Map
@@ -159,6 +159,52 @@ export function WorkspaceHost({
               title: row.title || "Project",
               storage: (row.storage as "local" | "drive") || "local",
             });
+
+            if (row.manifestJson && (!initialLayout || !initialLayout.tabs || initialLayout.tabs.length === 0)) {
+              try {
+                const manifest = JSON.parse(row.manifestJson) as AlphaManifest;
+                if (manifest && Array.isArray(manifest.items) && manifest.items.length > 0) {
+                  const restoredTabs: Tab[] = manifest.items.map((item: AlphaManifest["items"][number]) => {
+                    const tabId = item.id.startsWith("tab-")
+                      ? item.id
+                      : item.id.startsWith("item-")
+                      ? `tab-${item.id.slice(5)}`
+                      : `tab-${item.id}`;
+                    return {
+                      id: tabId,
+                      kind: item.kind === "annotations" ? "board" : item.kind,
+                      itemId: item.id,
+                      title: item.title || (item.kind === "circuit" ? "Circuit" : item.kind === "pdf" ? "PDF" : "Whiteboard"),
+                      isIframe: item.kind === "circuit",
+                    };
+                  });
+
+                  setLayout((current) => {
+                    const isDefault =
+                      current.tabs.length === 3 &&
+                      current.tabs[0]?.id === "tab-1" &&
+                      current.tabs[1]?.id === "tab-2" &&
+                      current.tabs[2]?.id === "tab-3";
+                    if (isDefault) {
+                      const primaryId = restoredTabs[0]?.id ?? null;
+                      const secondaryId = restoredTabs[1]?.id ?? null;
+                      const split = (manifest.layout?.split as SplitMode) || "none";
+                      return {
+                        tabs: restoredTabs,
+                        tabBarOrder: restoredTabs.map((t) => t.id),
+                        primary: primaryId,
+                        secondary: split !== "none" ? secondaryId : null,
+                        split,
+                        ratio: current.ratio,
+                      };
+                    }
+                    return current;
+                  });
+                }
+              } catch {
+                // ignore
+              }
+            }
           }
         }
       } catch {
@@ -169,7 +215,7 @@ export function WorkspaceHost({
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [initialLayout, projectId]);
 
   // Track responsive screen width for split view (< 768px breakpoint md)
   useEffect(() => {
@@ -656,9 +702,10 @@ export function WorkspaceHost({
           projectId: projectId || "default",
           targetPdfItemId,
           imageBlob: event.image,
+          mode: event.mode || "append",
         });
       } catch (err) {
-        console.error("[WorkspaceHost] Failed to append board to PDF:", err);
+        console.error("[WorkspaceHost] Failed to send board to PDF:", err);
       }
     };
 
@@ -824,10 +871,26 @@ export function WorkspaceHost({
         title,
       };
 
+      if (kind === "board") {
+        defaultProjectService.saveBoard(
+          projectId || "default",
+          itemId,
+          JSON.stringify({ type: "alpha-board", version: 1, elements: [] }),
+          title
+        );
+      } else if (kind === "circuit") {
+        defaultProjectService.saveCircuit(
+          projectId || "default",
+          itemId,
+          "$ 1 0.000005 10.2 50 5 43\n",
+          title
+        );
+      }
+
       openTab(newTab);
       setIsAddMenuOpen(false);
     },
-    [layout.tabs, openTab, t]
+    [layout.tabs, openTab, projectId, t]
   );
 
   // Tab bar keyboard navigation

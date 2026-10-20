@@ -170,6 +170,54 @@ export class ProjectService {
   }
 
   /**
+   * Helper to ensure an item is registered in the project manifest.
+   */
+  private async ensureItemInManifest(
+    projectId: string,
+    itemId: string,
+    kind: ItemKind,
+    title?: string,
+    fileKey?: string
+  ): Promise<void> {
+    try {
+      const manifest = await this.provider.loadManifest(projectId);
+      const exists = manifest.items.some((i) => i.id === itemId);
+      if (!exists) {
+        const ext = kind === "circuit" ? "txt" : "json";
+        const folder =
+          kind === "board"
+            ? "boards"
+            : kind === "circuit"
+            ? "circuits"
+            : kind === "pdf"
+            ? "pdfs"
+            : "annotations";
+        const itemPath = `${folder}/${itemId}.${ext}`;
+        if (kind === "pdf") {
+          manifest.items.push({
+            id: itemId,
+            kind: "pdf",
+            title: title || "PDF Document",
+            path: itemPath,
+            fileKey: fileKey || "",
+          });
+        } else {
+          manifest.items.push({
+            id: itemId,
+            kind: kind as "board" | "circuit" | "annotations",
+            title: title || (kind === "circuit" ? "Circuit" : "Whiteboard"),
+            path: itemPath,
+          });
+        }
+        manifest.project.updatedAt = new Date().toISOString();
+        await this.provider.saveManifest(manifest);
+      }
+    } catch {
+      // Manifest update is non-fatal
+    }
+  }
+
+  /**
    * Saves a whiteboard item (Excalidraw elements & state JSON).
    * Routes through SaveQueue for ~500 ms debouncing and coalescing when queue is attached.
    */
@@ -191,6 +239,7 @@ export class ProjectService {
     } else {
       await this.provider.writeItem(projectId, item, payload);
     }
+    await this.ensureItemInManifest(projectId, itemId, "board", title);
   }
 
   /**
@@ -215,6 +264,7 @@ export class ProjectService {
     } else {
       await this.provider.writeItem(projectId, item, payload);
     }
+    await this.ensureItemInManifest(projectId, itemId, "circuit", title);
   }
 
   /**
@@ -320,6 +370,13 @@ export class ProjectService {
     } else {
       await this.provider.writeItem(projectId, item, payload);
     }
+    let fileKey = "";
+    try {
+      fileKey = (JSON.parse(payload) as { fileKey?: string })?.fileKey || "";
+    } catch {
+      // ignore
+    }
+    await this.ensureItemInManifest(projectId, itemId, "pdf", title, fileKey);
   }
 
   /**
@@ -609,10 +666,69 @@ export class ProjectService {
 
     // 1. Collect all registered items and their text payloads
     const updatedItems = [...manifest.items];
+
+    // Ensure all items present in local database for this project are included
+    try {
+      const { getDb } = await import("@/core/db");
+      const db = getDb();
+      if (db) {
+        const storedItems = await db.items.where("projectId").equals(projectId).toArray();
+        for (const item of storedItems) {
+          if (!updatedItems.some((i) => i.id === item.id)) {
+            const ext = item.kind === "circuit" ? "txt" : "json";
+            const folder =
+              item.kind === "board"
+                ? "boards"
+                : item.kind === "circuit"
+                ? "circuits"
+                : item.kind === "pdf"
+                ? "pdfs"
+                : "annotations";
+            const itemPath = `${folder}/${item.id}.${ext}`;
+            if (item.kind === "pdf") {
+              updatedItems.push({
+                id: item.id,
+                kind: "pdf",
+                title: item.title || "PDF Document",
+                path: itemPath,
+                fileKey: (item as unknown as { fileKey?: string }).fileKey || "",
+              });
+            } else {
+              updatedItems.push({
+                id: item.id,
+                kind: item.kind as "board" | "circuit" | "annotations",
+                title: item.title || (item.kind === "circuit" ? "Circuit" : "Whiteboard"),
+                path: itemPath,
+              });
+            }
+          }
+        }
+      }
+    } catch {
+      // Non-fatal if db unavailable
+    }
+
+    if (updatedItems.length === 0) {
+      // Default to initial whiteboard item so project archive is never empty
+      updatedItems.push({
+        id: "item-1",
+        kind: "board",
+        title: "Whiteboard 1",
+        path: "boards/item-1.json",
+      });
+    }
+
     for (let i = 0; i < updatedItems.length; i++) {
       const it = updatedItems[i];
       try {
-        const text = await this.readItem(projectId, it.id);
+        let text = await this.readItem(projectId, it.id).catch(() => "");
+        if (!text || text.trim().length === 0) {
+          if (it.kind === "board") {
+            text = JSON.stringify({ type: "alpha-board", version: 1, elements: [] });
+          } else if (it.kind === "circuit") {
+            text = "$ 1 0.000005 10.2 50 5 43\n";
+          }
+        }
         textEntries.push({ path: it.path, text });
         totalBytes += new TextEncoder().encode(text).length;
 
@@ -681,6 +797,12 @@ export class ProjectService {
       items: updatedItems,
       files: manifestFiles,
     };
+
+    try {
+      await this.provider.saveManifest(completeManifest);
+    } catch {
+      // Non-fatal
+    }
 
     return {
       manifest: completeManifest,

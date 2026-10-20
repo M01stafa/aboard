@@ -27,6 +27,7 @@ export type AppEvents = {
   "board:to-pdf": {
     boardItemId: string;
     image: Blob;
+    mode?: "append" | "overlay";
     targetPdfItemId?: string;
     sourceTabId?: string;
   };

@@ -272,6 +272,9 @@ export const en = {
     sendToPdfError: "Failed to append board to PDF",
     noPdfInProject: "No PDF in project",
     emptyBoard: "Whiteboard is empty",
+    sendAsNewPage: "Add as New Page",
+    overlayOnCurrentPage: "Overlay on Current Page",
+    overlaidOnPdfSuccess: "Board overlaid on PDF",
   },
   legal: {
     privacyTitle: "Privacy Policy",

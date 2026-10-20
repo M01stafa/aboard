@@ -602,7 +602,7 @@ describe("BoardPane Component (Task 25 / BOARD-1, BOARD-2, BOARD-4)", () => {
     });
   });
 
-  it("renders Send to PDF button and triggers board:to-pdf event (INT-3)", async () => {
+  it("renders Send to PDF menu and triggers board:to-pdf with append mode (INT-3)", async () => {
     const tab = { id: "tab-board-pdf", kind: "board" as const, itemId: "item-b-pdf", title: "Board PDF" };
     vi.spyOn(projectService, "readItem").mockResolvedValue(
       JSON.stringify({
@@ -636,11 +636,76 @@ describe("BoardPane Component (Task 25 / BOARD-1, BOARD-2, BOARD-4)", () => {
       await Promise.resolve();
     });
 
+    const appendBtn = container.querySelector(
+      '[data-testid="send-to-pdf-append"]'
+    ) as HTMLButtonElement | null;
+    expect(appendBtn).toBeTruthy();
+
+    await act(async () => {
+      appendBtn?.click();
+      await Promise.resolve();
+    });
+
     expect(emitSpy).toHaveBeenCalledWith(
       "board:to-pdf",
       expect.objectContaining({
         boardItemId: "item-b-pdf",
         sourceTabId: "tab-board-pdf",
+        mode: "append",
+        image: expect.any(Blob),
+      })
+    );
+  });
+
+  it("triggers board:to-pdf with overlay mode when Overlay option is selected", async () => {
+    const tab = { id: "tab-board-pdf-2", kind: "board" as const, itemId: "item-b-pdf-2", title: "Board PDF" };
+    vi.spyOn(projectService, "readItem").mockResolvedValue(
+      JSON.stringify({
+        elements: [{ id: "shape-1", isDeleted: false, type: "rectangle" }],
+        appState: {},
+      })
+    );
+
+    mockExcalidrawApi.getSceneElements = vi.fn().mockReturnValue([
+      { id: "shape-1", isDeleted: false, type: "rectangle" },
+    ]);
+
+    const emitSpy = vi.spyOn(bus, "emit");
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <BoardPane projectId="proj-1" tab={tab} visible={true} />
+        </I18nProvider>
+      );
+      await Promise.resolve();
+    });
+
+    const sendToPdfBtn = container.querySelector(
+      '[data-testid="board-send-to-pdf-btn"]'
+    ) as HTMLButtonElement | null;
+
+    await act(async () => {
+      sendToPdfBtn?.click();
+      await Promise.resolve();
+    });
+
+    const overlayBtn = container.querySelector(
+      '[data-testid="send-to-pdf-overlay"]'
+    ) as HTMLButtonElement | null;
+    expect(overlayBtn).toBeTruthy();
+
+    await act(async () => {
+      overlayBtn?.click();
+      await Promise.resolve();
+    });
+
+    expect(emitSpy).toHaveBeenCalledWith(
+      "board:to-pdf",
+      expect.objectContaining({
+        boardItemId: "item-b-pdf-2",
+        sourceTabId: "tab-board-pdf-2",
+        mode: "overlay",
         image: expect.any(Blob),
       })
     );

@@ -159,6 +159,31 @@ export function BoardPane({
     visibleRef.current = visible;
   }, [visible]);
 
+  // Dropdown menu state for Send to PDF options
+  const [isPdfMenuOpen, setIsPdfMenuOpen] = useState(false);
+  const pdfMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close PDF menu on outside click or Escape key
+  useEffect(() => {
+    if (!isPdfMenuOpen) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      if (pdfMenuRef.current && !pdfMenuRef.current.contains(e.target as Node)) {
+        setIsPdfMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsPdfMenuOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isPdfMenuOpen]);
+
   // 1. Call api.refresh() whenever the pane becomes visible (tab switch per §6.2)
   useEffect(() => {
     if (visible && excalidrawApiRef.current) {
@@ -290,50 +315,59 @@ export function BoardPane({
     };
   }, []);
 
-  const handleSendToPdf = useCallback(async () => {
-    const api = excalidrawApiRef.current;
-    if (!api) return;
+  const handleSendToPdf = useCallback(
+    async (mode: "append" | "overlay" = "append") => {
+      setIsPdfMenuOpen(false);
+      const api = excalidrawApiRef.current;
+      if (!api) return;
 
-    const elements = api.getSceneElements?.() || [];
-    const nonDeleted = elements.filter((el) => !el.isDeleted);
-    if (nonDeleted.length === 0) {
-      showToast(t("board.emptyBoard"));
-      return;
-    }
+      const elements = api.getSceneElements?.() || [];
+      const nonDeleted = elements.filter((el) => !el.isDeleted);
+      if (nonDeleted.length === 0) {
+        showToast(t("board.emptyBoard"));
+        return;
+      }
 
-    setIsSendingToPdf(true);
-    try {
-      const appState = api.getAppState?.() || {};
-      const files = api.getFiles?.() || null;
-      const { exportToBlob } = await import("@excalidraw/excalidraw");
+      setIsSendingToPdf(true);
+      try {
+        const appState = api.getAppState?.() || {};
+        const files = api.getFiles?.() || null;
+        const { exportToBlob } = await import("@excalidraw/excalidraw");
 
-      // Export using high-quality clean background configuration
-      const imageBlob = await exportToBlob({
-        elements: nonDeleted,
-        appState: {
-          ...appState,
-          exportWithDarkMode: false,
-          exportBackground: true,
-        },
-        files,
-        mimeType: "image/png",
-        exportPadding: 10,
-      });
+        // Export using high-quality clean background configuration
+        const imageBlob = await exportToBlob({
+          elements: nonDeleted,
+          appState: {
+            ...appState,
+            exportWithDarkMode: false,
+            exportBackground: true,
+          },
+          files,
+          mimeType: "image/png",
+          exportPadding: 10,
+        });
 
-      bus.emit("board:to-pdf", {
-        boardItemId: tab.itemId,
-        image: imageBlob,
-        sourceTabId: tab.id,
-      });
+        bus.emit("board:to-pdf", {
+          boardItemId: tab.itemId,
+          image: imageBlob,
+          mode,
+          sourceTabId: tab.id,
+        });
 
-      showToast(t("board.sentToPdfSuccess"));
-    } catch (err) {
-      console.error("[BoardPane] Failed to append board to PDF:", err);
-      showToast(t("board.sendToPdfError"));
-    } finally {
-      setIsSendingToPdf(false);
-    }
-  }, [tab.itemId, tab.id, showToast, t]);
+        showToast(
+          mode === "overlay"
+            ? t("board.overlaidOnPdfSuccess")
+            : t("board.sentToPdfSuccess")
+        );
+      } catch (err) {
+        console.error("[BoardPane] Failed to send board to PDF:", err);
+        showToast(t("board.sendToPdfError"));
+      } finally {
+        setIsSendingToPdf(false);
+      }
+    },
+    [tab.itemId, tab.id, showToast, t]
+  );
 
   // Black-box persistence: push changes to saveBoard without triggering React re-renders
   const handleChange = useCallback(
@@ -377,6 +411,13 @@ export function BoardPane({
             .aboard-board-pane .help-icon { display: none !important; }
             .aboard-board-pane .ExcalidrawLogo { display: none !important; }
             .aboard-board-pane [data-testid="help-menu-item"] { display: none !important; }
+            .send-to-pdf-item:hover {
+              background-color: var(--bg-subtle) !important;
+            }
+            .send-to-pdf-item:focus-visible {
+              outline: 2px solid var(--accent-text) !important;
+              outline-offset: -2px !important;
+            }
           `}</style>
           <ExcalidrawBoard
             excalidrawAPI={handleApi as unknown as (api: unknown) => void}
@@ -398,55 +439,137 @@ export function BoardPane({
             langCode={langCode}
             UIOptions={UI_OPTIONS}
           />
-          <button
-            type="button"
-            data-testid="board-send-to-pdf-btn"
-            onClick={handleSendToPdf}
-            disabled={isSendingToPdf}
-            title={t("board.sendToPdf")}
+          <div
+            ref={pdfMenuRef}
             style={{
               position: "absolute",
               insetBlockStart: "var(--space-2)",
               insetInlineEnd: "calc(var(--space-2) + var(--space-16))",
               zIndex: 10,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              paddingBlock: "var(--space-1)",
-              paddingInline: "var(--space-2)",
-              backgroundColor: "var(--bg-surface)",
-              color: "var(--text-main)",
-              border: "1px solid var(--border-card)",
-              borderRadius: "var(--radius-md)",
-              boxShadow: "var(--shadow-1)",
-              fontSize: "0.875rem",
-              fontWeight: "var(--weight-medium)",
-              cursor: isSendingToPdf ? "wait" : "pointer",
-              transition:
-                "background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard)",
             }}
           >
-            <svg
-              width={16}
-              height={16}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+            <button
+              type="button"
+              data-testid="board-send-to-pdf-btn"
+              onClick={() => setIsPdfMenuOpen((prev) => !prev)}
+              disabled={isSendingToPdf}
+              aria-haspopup="menu"
+              aria-expanded={isPdfMenuOpen}
+              title={t("board.sendToPdf")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                paddingBlock: "var(--space-1)",
+                paddingInline: "var(--space-2)",
+                backgroundColor: "var(--bg-surface)",
+                color: "var(--text-main)",
+                border: "1px solid var(--border-card)",
+                borderRadius: "var(--radius-md)",
+                boxShadow: "var(--shadow-1)",
+                fontSize: "0.875rem",
+                fontWeight: "var(--weight-medium)",
+                cursor: isSendingToPdf ? "wait" : "pointer",
+                transition:
+                  "background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard)",
+              }}
             >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-              <polyline points="10 9 9 9 8 9" />
-            </svg>
-            <span>
-              {isSendingToPdf ? t("board.sendingToPdf") : t("board.sendToPdf")}
-            </span>
-          </button>
+              <svg
+                width={16}
+                height={16}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+              <span>
+                {isSendingToPdf ? t("board.sendingToPdf") : t("board.sendToPdf")}
+              </span>
+              <span style={{ fontSize: "0.75rem", marginInlineStart: "var(--space-1)" }}>▾</span>
+            </button>
+
+            {isPdfMenuOpen && (
+              <div
+                role="menu"
+                data-testid="send-to-pdf-menu"
+                style={{
+                  position: "absolute",
+                  insetBlockStart: "calc(100% + var(--space-1))",
+                  insetInlineEnd: 0,
+                  minWidth: "calc(var(--space-16) * 3)",
+                  backgroundColor: "var(--bg-surface)",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: "var(--radius-md)",
+                  boxShadow: "var(--shadow-2)",
+                  paddingBlock: "var(--space-1)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 0,
+                  zIndex: 20,
+                }}
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="send-to-pdf-append"
+                  className="send-to-pdf-item"
+                  onClick={() => handleSendToPdf("append")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-1)",
+                    width: "100%",
+                    paddingBlock: "var(--space-1)",
+                    paddingInline: "var(--space-2)",
+                    backgroundColor: "transparent",
+                    color: "var(--text-main)",
+                    border: "none",
+                    textAlign: "start",
+                    fontSize: "0.875rem",
+                    cursor: "pointer",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <span>📄</span>
+                  <span>{t("board.sendAsNewPage")}</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="send-to-pdf-overlay"
+                  className="send-to-pdf-item"
+                  onClick={() => handleSendToPdf("overlay")}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-1)",
+                    width: "100%",
+                    paddingBlock: "var(--space-1)",
+                    paddingInline: "var(--space-2)",
+                    backgroundColor: "transparent",
+                    color: "var(--text-main)",
+                    border: "none",
+                    textAlign: "start",
+                    fontSize: "0.875rem",
+                    cursor: "pointer",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <span>🖼</span>
+                  <span>{t("board.overlayOnCurrentPage")}</span>
+                </button>
+              </div>
+            )}
+          </div>
           <TemplatesPanel getApi={getApi} />
           {toastMessage && (
             <div
