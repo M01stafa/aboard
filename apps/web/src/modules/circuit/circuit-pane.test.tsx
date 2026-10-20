@@ -76,7 +76,7 @@ describe("CircuitPane Component (Task 24 / CIRC-1, CIRC-2, CIRC-3, CIRC-4)", () 
 
     // Required parameters per spec §7.2
     expect(src).toContain("/circuit/circuitjs.html");
-    expect(src).toContain("hideMenu=true");
+    expect(src).toContain("hideMenu=false");
     expect(src).toContain("hideSidebar=false");
     expect(src).toContain("hideInfoBox=false");
     expect(src).toContain("whiteBackground=true"); // light theme default

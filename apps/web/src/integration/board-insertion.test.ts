@@ -144,7 +144,7 @@ describe("board-insertion", () => {
       const el = scenePayload.elements[0];
       expect(el.width).toBe(500);
       expect(el.height).toBe(400);
-      expect(el.locked).toBe(true);
+      expect(el.locked).toBe(false);
     });
   });
 

@@ -207,6 +207,10 @@ export const ar: TranslationDictionary = {
     boardTabTitle: "سبورة {n}",
     pdfTabTitle: "PDF {n}",
     circuitTabTitle: "دائرة {n}",
+    newWhiteboard: "سبورة بيضاء جديدة",
+    newPdf: "ملف PDF جديد",
+    newCircuit: "دائرة إلكترونية جديدة",
+    newTabMenu: "قائمة تبويب جديد",
   },
   circuit: {
     pauseWhenHidden: "إيقاف عند الإخفاء",

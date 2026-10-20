@@ -118,6 +118,31 @@ export function WorkspaceHost({
   const [projectInfo, setProjectInfo] = useState<{ title: string; storage: "local" | "drive" } | null>(null);
   const previousSplitRef = useRef<SplitMode>("none");
 
+  // New tab dropdown menu state & ref
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
+  const addMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close add tab menu on outside click or Escape key
+  useEffect(() => {
+    if (!isAddMenuOpen) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+        setIsAddMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsAddMenuOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isAddMenuOpen]);
+
   // Load project storage info for mode switching
   useEffect(() => {
     if (!projectId || typeof projectId !== "string") return;
@@ -778,17 +803,32 @@ export function WorkspaceHost({
     });
   }, []);
 
-  // Action: Add new placeholder tab
-  const handleAddNewTab = useCallback(() => {
-    const nextIdx = layout.tabs.length + 1;
-    const newTabObj: Tab = {
-      id: `tab-${Date.now()}`,
-      kind: nextIdx % 3 === 1 ? "board" : nextIdx % 3 === 2 ? "pdf" : "circuit",
-      itemId: `item-${Date.now()}`,
-      title: `${t("workspace.title")} ${nextIdx}`,
-    };
-    openTab(newTabObj);
-  }, [layout.tabs.length, openTab, t]);
+  // Action: Add new tab from menu options (New Whiteboard, New PDF, New Circuit)
+  const handleCreateNewTab = useCallback(
+    (kind: ModuleKind) => {
+      const existingOfKind = layout.tabs.filter((t) => t.kind === kind).length;
+      const count = existingOfKind + 1;
+      const id = `tab-${Date.now()}`;
+      const itemId = `item-${Date.now()}`;
+      const title =
+        kind === "board"
+          ? t("workspace.boardTabTitle", { n: `${count}` })
+          : kind === "pdf"
+          ? t("workspace.pdfTabTitle", { n: `${count}` })
+          : t("workspace.circuitTabTitle", { n: `${count}` });
+
+      const newTab: Tab = {
+        id,
+        kind,
+        itemId,
+        title,
+      };
+
+      openTab(newTab);
+      setIsAddMenuOpen(false);
+    },
+    [layout.tabs, openTab, t]
+  );
 
   // Tab bar keyboard navigation
   const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
@@ -1077,6 +1117,32 @@ export function WorkspaceHost({
         .ws-tool-btn:focus-visible {
           outline: 2px solid var(--focus-ring);
           outline-offset: 2px;
+        }
+        .ws-menu-item {
+          inline-size: 100%;
+          height: var(--control-sm);
+          padding-inline: var(--space-2);
+          border: 0;
+          border-radius: var(--radius-sm);
+          background: transparent;
+          color: var(--text-main);
+          font-family: var(--font-sans);
+          font-size: 0.8125rem;
+          font-weight: var(--weight-medium);
+          display: inline-flex;
+          align-items: center;
+          gap: var(--space-2);
+          cursor: pointer;
+          box-sizing: border-box;
+          text-align: start;
+          transition: background-color var(--motion-fast) var(--ease-standard);
+        }
+        .ws-menu-item:hover {
+          background-color: var(--bg-subtle);
+        }
+        .ws-menu-item:focus-visible {
+          outline: 2px solid var(--focus-ring);
+          outline-offset: -2px;
         }
         .drag-shield {
           position: fixed;
@@ -1371,17 +1437,76 @@ export function WorkspaceHost({
           })}
         </div>
 
-        <button
-          type="button"
-          onClick={handleAddNewTab}
-          className="ws-tool-btn"
-          title={t("workspace.newTab")}
-          aria-label={t("workspace.newTab")}
-          data-testid="add-tab-btn"
-          style={{ flexShrink: 0 }}
-        >
-          +
-        </button>
+        <div ref={addMenuRef} style={{ position: "relative", flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setIsAddMenuOpen((prev) => !prev)}
+            className="ws-tool-btn"
+            title={t("workspace.newTab")}
+            aria-label={t("workspace.newTab")}
+            aria-haspopup="menu"
+            aria-expanded={isAddMenuOpen}
+            data-testid="add-tab-btn"
+          >
+            +
+          </button>
+
+          {isAddMenuOpen && (
+            <div
+              role="menu"
+              aria-label={t("workspace.newTabMenu")}
+              data-testid="add-tab-menu"
+              style={{
+                position: "absolute",
+                top: "calc(100% + var(--space-1))",
+                insetInlineEnd: 0,
+                zIndex: 100,
+                minInlineSize: "calc(var(--space-16) + var(--space-8))",
+                backgroundColor: "var(--bg-surface)",
+                border: "1px solid var(--border-card)",
+                borderRadius: "var(--radius-md)",
+                boxShadow: "var(--shadow-card)",
+                paddingBlock: "var(--space-1)",
+                paddingInline: "var(--space-1)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-1)",
+                boxSizing: "border-box",
+              }}
+            >
+              <button
+                type="button"
+                role="menuitem"
+                data-testid="add-tab-board"
+                onClick={() => handleCreateNewTab("board")}
+                className="ws-menu-item"
+              >
+                <span>📝</span>
+                <span>{t("workspace.newWhiteboard")}</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                data-testid="add-tab-pdf"
+                onClick={() => handleCreateNewTab("pdf")}
+                className="ws-menu-item"
+              >
+                <span>📄</span>
+                <span>{t("workspace.newPdf")}</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                data-testid="add-tab-circuit"
+                onClick={() => handleCreateNewTab("circuit")}
+                className="ws-menu-item"
+              >
+                <span>⚡</span>
+                <span>{t("workspace.newCircuit")}</span>
+              </button>
+            </div>
+          )}
+        </div>
       </nav>
 
       {/* Workspace Grid with Stable DOM Panes and CSS Grid Placement */}

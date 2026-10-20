@@ -208,7 +208,7 @@ export async function insertCircuitSvgIntoBoard({
     mimeType: "image/svg+xml",
     width,
     height,
-    locked: true,
+    locked: false,
     projectServiceOverride,
     apiOverride,
   });

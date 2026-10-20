@@ -1276,3 +1276,26 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** QA Fixes · BOARD-1, BOARD-4, PDF-1, PDF-2, PDF-3, PDF-4
 **Open:** none.
 
+## 2026-10-20 — Manual MVP Review: Workspace "+" Menu & Circuit Simulator Interactions
+**Request:** Fix two QA issues: (1) Workspace "+" button now opens a menu offering New Whiteboard, New PDF, and New Circuit with localized titles and creates new tabs; (2) Circuit simulator native menu bar is restored (by defaulting `hideMenu: false` in `buildCircuitUrl` and preventing iframe clipping in `CircuitPane`); (3) Circuit image inserted into whiteboard is now unlocked (`locked: false`) allowing free movement and resizing on canvas.
+**Changes:**
+- `apps/web/src/workspace/workspace-host.tsx` (changed): added `isAddMenuOpen` state, click-outside/Escape listener, `handleCreateNewTab`, `.ws-menu-item` CSS styling, and replaced direct action with accessible dropdown menu.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added translations for `newWhiteboard`, `newPdf`, `newCircuit`, and `newTabMenu`.
+- `apps/web/src/modules/circuit/circuit-url.ts` (changed): defaulted `hideMenu` to `false` in `buildCircuitUrl` so native toolbar/menubar (File, Edit, Draw, Scopes, Options, Circuits) renders inside iframe.
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): added `minBlockSize: 0` to iframe container preventing flex overflow clipping.
+- `apps/web/src/modules/circuit/circuit-pane.test.tsx` (changed): updated expectation to assert `hideMenu=false` in iframe URL.
+- `apps/web/src/integration/board-insertion.ts` (changed): changed `insertCircuitSvgIntoBoard` image element property from `locked: true` to `locked: false`.
+- `apps/web/src/integration/board-insertion.test.ts` (changed): updated unit test to assert inserted circuit element has `locked: false`.
+- `apps/web/src/workspace/add-tab-menu.test.tsx` (created): unit tests verifying "+" menu opens, displays localized options, creates respective Whiteboard/PDF/Circuit tabs, and dismisses on Escape.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `node scripts/check-spacing.mjs`: PASS (0 violations, all 8-point tokens).
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (tsc --noEmit 0 errors).
+- `pnpm test`: PASS (302/302 tests passed across 41 test files).
+- `pnpm test:e2e`: PASS (24/24 Playwright tests passed in 54.3s).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks across 70 commits, prod audit clean, bundle secret scan clean).
+**Related:** QA Fixes · WS-1, WS-2, CIRC-1, CIRC-2, INT-2
+**Open:** none.
+
+

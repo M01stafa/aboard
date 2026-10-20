@@ -205,6 +205,10 @@ export const en = {
     boardTabTitle: "Whiteboard {n}",
     pdfTabTitle: "PDF {n}",
     circuitTabTitle: "Circuit {n}",
+    newWhiteboard: "New Whiteboard",
+    newPdf: "New PDF",
+    newCircuit: "New Circuit",
+    newTabMenu: "New tab menu",
   },
   circuit: {
     pauseWhenHidden: "Pause when hidden",

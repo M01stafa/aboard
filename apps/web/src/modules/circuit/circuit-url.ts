@@ -12,7 +12,7 @@ import type { CircuitUrlOptions } from "./types";
 export function buildCircuitUrl(options: CircuitUrlOptions = {}): string {
   const isLight = options.theme !== "dark";
   const lang = options.lang === "ar" ? "ar" : "en";
-  const hideMenu = options.hideMenu ?? true;
+  const hideMenu = options.hideMenu ?? false;
   const hideSidebar = options.hideSidebar ?? false;
   const hideInfoBox = options.hideInfoBox ?? false;
   const running = options.running ?? true;

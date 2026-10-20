@@ -378,7 +378,7 @@ export function CircuitPane({
       </div>
 
       {/* Same-origin Iframe (fills the pane) */}
-      <div style={{ flex: 1, inlineSize: "100%", position: "relative" }}>
+      <div style={{ flex: 1, inlineSize: "100%", position: "relative", minBlockSize: 0 }}>
         <iframe
           ref={iframeRef}
           src={iframeSrc}
