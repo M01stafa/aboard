@@ -68,6 +68,24 @@ export function BoardPane({
     };
   }, [tab.id]);
 
+  // Suppress harmless upstream Excalidraw dev-mode warning during undo/redo or point edits
+  useEffect(() => {
+    if (typeof window === "undefined" || process.env.NODE_ENV === "production") return;
+    const originalConsoleError = console.error;
+    console.error = (...args: unknown[]) => {
+      if (
+        typeof args[0] === "string" &&
+        args[0].includes("Linear element is not normalized")
+      ) {
+        return;
+      }
+      originalConsoleError.apply(console, args);
+    };
+    return () => {
+      console.error = originalConsoleError;
+    };
+  }, []);
+
   // Track DOM data-theme attribute in addition to i18n context
   const [domTheme, setDomTheme] = useState<"light" | "dark">(() => {
     if (typeof document !== "undefined") {

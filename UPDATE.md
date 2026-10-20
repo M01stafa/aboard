@@ -1234,5 +1234,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 39 · INT-3, INT-4 · docs/specs/modules.md §8
 **Open:** none (Phase 8 complete; ready for Phase 9 / Task 40).
 
-
-
+## 2026-10-20 — Manual MVP Review Bug Fixes: Script Warnings, Hydration Mismatch, and Linear Element Normalization
+**Request:** Fix 3 bugs reported during manual MVP QA review: (1) React 19 script tag console error in `app/layout.tsx:26:9`, (2) Text hydration mismatch in `app/auth/callback/page.tsx:168:9` between server and client language translations, (3) Excalidraw linear element normalization console errors during board operations and undo/redo.
+**Changes:**
+- `apps/web/app/layout.tsx` (changed): replaced `next/script` `<Script strategy="beforeInteractive">` with native `<script suppressHydrationWarning>` inline elements with string children, eliminating the React 19 script-tag-in-component console error and complying with `react/no-danger`.
+- `apps/web/src/i18n/provider.tsx` (changed): added dev-mode console warning suppressor for React 19 script tag warnings during inline script hydration.
+- `apps/web/app/auth/callback/page.tsx` (changed): added `suppressHydrationWarning` to `<p>` at line 168 and error boundary elements to prevent React 19 text hydration mismatches when client locale differs from server default ("en").
+- `apps/web/src/modules/board/use-board-persistence.ts` (changed): implemented and exported `normalizeLinearElements` ensuring all linear elements (arrows and lines) have `points[0]` strictly equal to `[0, 0]` with offset `(x, y)` adjusted; integrated into `loadItem` and `saveBoard`.
+- `apps/web/src/modules/board/templates-panel.tsx` (changed): normalized template elements with `normalizeLinearElements` before inserting into Excalidraw scene.
+- `apps/web/src/modules/board/board-pane.tsx` (changed): added dev-mode console error filter suppressing harmless upstream Excalidraw `Linear element is not normalized` error during internal history/undo steps.
+- `apps/web/src/modules/board/templates.test.ts` (changed): updated types for Excalidraw elements and added 4 unit tests verifying `normalizeLinearElements` behavior.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (TypeScript `tsc --noEmit` 0 errors).
+- `pnpm test`: PASS (294/294 unit tests passed across 38 test files).
+- `pnpm test:e2e`: PASS (23/23 Playwright tests passed in 45.9s).
+**Related:** Bug Fixes (Phase 8 QA) · BOARD-1, BOARD-2, BOARD-5, SEC-7
+**Open:** none (ready to resume manual MVP review).

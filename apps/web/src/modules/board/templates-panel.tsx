@@ -4,6 +4,7 @@ import React, { useCallback, useState } from "react";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import { useI18n } from "@/i18n/provider";
 import { STUDY_TEMPLATES, type TemplateDefinition } from "./templates";
+import { normalizeLinearElements } from "./use-board-persistence";
 
 interface TemplatesPanelProps {
   getApi: () => ExcalidrawImperativeAPI | null;
@@ -63,9 +64,11 @@ export function TemplatesPanel({ getApi }: TemplatesPanelProps) {
           "@excalidraw/excalidraw"
         );
 
-        const newElements = convertToExcalidrawElements(skeletons, {
-          regenerateIds: true,
-        });
+        const newElements = normalizeLinearElements(
+          convertToExcalidrawElements(skeletons, {
+            regenerateIds: true,
+          })
+        );
 
         const currentElements = api.getSceneElements?.() || [];
         const selectedElementIds: Record<string, true> = {};

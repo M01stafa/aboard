@@ -91,6 +91,7 @@ export default function AuthCallbackPage() {
           }}
         >
           <h1
+            suppressHydrationWarning
             style={{
               marginBlockStart: "0",
               marginBlockEnd: "var(--space-2)",
@@ -102,6 +103,7 @@ export default function AuthCallbackPage() {
             {t("auth.callbackFailedTitle")}
           </h1>
           <p
+            suppressHydrationWarning
             style={{
               marginBlockStart: "0",
               marginBlockEnd: "var(--space-4)",
@@ -114,6 +116,7 @@ export default function AuthCallbackPage() {
           </p>
           <Link
             href="/login"
+            suppressHydrationWarning
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -166,6 +169,7 @@ export default function AuthCallbackPage() {
           }}
         />
         <p
+          suppressHydrationWarning
           style={{
             marginBlockStart: "var(--space-2)",
             marginBlockEnd: "0",

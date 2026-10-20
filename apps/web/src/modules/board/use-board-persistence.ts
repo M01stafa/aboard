@@ -34,6 +34,47 @@ export interface UseBoardPersistenceResult {
 }
 
 /**
+ * Ensures all linear elements (arrows and lines) have normalized coordinates where
+ * points[0] is strictly [0, 0]. In Excalidraw, if points[0] is not [0, 0], LinearElementEditor
+ * logs 'Linear element is not normalized'. This normalizes points and adjusts (x, y) origin.
+ */
+export function normalizeLinearElements<T>(elements: readonly T[]): T[] {
+  if (!Array.isArray(elements)) return [];
+  return elements.map((element) => {
+    if (
+      element &&
+      typeof element === "object" &&
+      "type" in element &&
+      (element.type === "arrow" || element.type === "line") &&
+      "points" in element &&
+      Array.isArray(element.points) &&
+      element.points.length > 0
+    ) {
+      const firstPoint = element.points[0];
+      if (Array.isArray(firstPoint) && (firstPoint[0] !== 0 || firstPoint[1] !== 0)) {
+        const ox = Number(firstPoint[0]) || 0;
+        const oy = Number(firstPoint[1]) || 0;
+        const currentX = "x" in element && typeof element.x === "number" ? element.x : 0;
+        const currentY = "y" in element && typeof element.y === "number" ? element.y : 0;
+        const newPoints = element.points.map((p: unknown) => {
+          if (Array.isArray(p) && p.length >= 2) {
+            return [(Number(p[0]) || 0) - ox, (Number(p[1]) || 0) - oy];
+          }
+          return p;
+        });
+        return {
+          ...element,
+          x: currentX + ox,
+          y: currentY + oy,
+          points: newPoints,
+        };
+      }
+    }
+    return element;
+  });
+}
+
+/**
  * Hook managing asynchronous loading and debounced saving of whiteboard scenes,
  * including content-addressed binary image storage.
  * Satisfies BOARD-1, BOARD-2, BOARD-3, and Task 26 specification:
@@ -73,7 +114,8 @@ export function useBoardPersistence({
         const raw = await ps.readItem(projectId, itemId);
         if (raw && isSubscribed) {
           const parsed = JSON.parse(raw);
-          const elements = Array.isArray(parsed?.elements) ? parsed.elements : [];
+          const rawElements = Array.isArray(parsed?.elements) ? parsed.elements : [];
+          const elements = normalizeLinearElements(rawElements);
           const appState = pickPersistedAppState(parsed?.appState);
           const storedFileMap: Record<string, string> =
             parsed?.files && typeof parsed.files === "object" ? parsed.files : {};
@@ -195,7 +237,8 @@ export function useBoardPersistence({
       }
 
       // 2. Identify active image file IDs currently referenced in scene elements
-      const activeFileIds = extractImageFileIds(elements);
+      const normalizedElements = normalizeLinearElements(elements);
+      const activeFileIds = extractImageFileIds(normalizedElements);
       const fileMap: Record<string, string> = {};
       for (const fId of activeFileIds) {
         const contentKey = persistedFilesMapRef.current[fId] || fId;
@@ -207,7 +250,7 @@ export function useBoardPersistence({
       // 3. Save lightweight board payload (NO dataURLs or raw base64)
       const pickedState = pickPersistedAppState(appState);
       const payload = JSON.stringify({
-        elements,
+        elements: normalizedElements,
         appState: pickedState,
         files: fileMap,
       });

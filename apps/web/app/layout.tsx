@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import "@/core/env";
 import "@/theme/tokens.css";
 import { fontClassNames } from "@/theme/fonts";
@@ -23,7 +22,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <Script id="theme-lang-init" strategy="beforeInteractive">
+        <script id="theme-lang-init" suppressHydrationWarning>
           {`
             (function() {
               try {
@@ -49,10 +48,10 @@ export default function RootLayout({
               } catch (e) {}
             })();
           `}
-        </Script>
-        <Script id="excalidraw-asset-path" strategy="beforeInteractive">
+        </script>
+        <script id="excalidraw-asset-path" suppressHydrationWarning>
           {`window.EXCALIDRAW_ASSET_PATH = "/";`}
-        </Script>
+        </script>
       </head>
       <body>
         <I18nProvider>

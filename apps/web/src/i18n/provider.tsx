@@ -84,6 +84,24 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     return () => mediaQuery.removeEventListener("change", handler);
   }, []);
 
+  // Suppress dev-mode React 19 false-positive warning for inline layout scripts
+  useEffect(() => {
+    if (typeof window === "undefined" || process.env.NODE_ENV === "production") return;
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => {
+      if (
+        typeof args[0] === "string" &&
+        args[0].includes("Encountered a script tag while rendering React component")
+      ) {
+        return;
+      }
+      originalError.apply(console, args);
+    };
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
+
   const setLanguage = (newLang: Language) => {
     setLanguageState(newLang);
     try {

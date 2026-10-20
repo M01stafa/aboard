@@ -4,6 +4,7 @@ import {
   STUDY_TEMPLATES,
   type TemplateId,
 } from "./templates";
+import { normalizeLinearElements } from "./use-board-persistence";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -59,6 +60,10 @@ describe("Study Templates Suite (Task 27 / BOARD-5)", () => {
         expect(el.type).toBeDefined();
         expect(typeof el.x).toBe("number");
         expect(typeof el.y).toBe("number");
+        if (el.type === "arrow" || el.type === "line") {
+          const linearEl = el as unknown as { type: string; points: readonly (readonly [number, number])[]; x: number; y: number };
+          expect(linearEl.points[0]).toEqual([0, 0]);
+        }
       }
     });
 
@@ -76,6 +81,13 @@ describe("Study Templates Suite (Task 27 / BOARD-5)", () => {
       });
 
       expect(elements.length).toBeGreaterThan(0);
+
+      for (const el of elements) {
+        if (el.type === "arrow" || el.type === "line") {
+          const linearEl = el as unknown as { points: readonly (readonly [number, number])[] };
+          expect(linearEl.points[0]).toEqual([0, 0]);
+        }
+      }
 
       // Verify at least one element or label contains Arabic characters
       const arabicRegex = /[\u0600-\u06FF]/;
@@ -142,5 +154,69 @@ describe("Study Templates Suite (Task 27 / BOARD-5)", () => {
 
     expect(updatedScene).toHaveLength(currentScene.length + newElements.length);
     expect(updatedScene[0].id).toBe("existing-user-rect");
+  });
+
+  describe("Linear element normalization (Task 26 / Excalidraw normalization)", () => {
+    it("normalizes linear elements with non-zero start points to [0, 0] and offsets x/y", () => {
+      const unnormalizedArrow = {
+        id: "arrow-1",
+        type: "arrow",
+        x: 100,
+        y: 200,
+        points: [
+          [20, 30],
+          [100, 150],
+        ],
+      };
+
+      const [normalized] = normalizeLinearElements([unnormalizedArrow]);
+      expect(normalized.x).toBe(120);
+      expect(normalized.y).toBe(230);
+      expect(normalized.points).toEqual([
+        [0, 0],
+        [80, 120],
+      ]);
+    });
+
+    it("leaves already-normalized linear elements untouched", () => {
+      const normalizedLine = {
+        id: "line-1",
+        type: "line",
+        x: 50,
+        y: 60,
+        points: [
+          [0, 0],
+          [100, 0],
+        ],
+      };
+
+      const [result] = normalizeLinearElements([normalizedLine]);
+      expect(result.x).toBe(50);
+      expect(result.y).toBe(60);
+      expect(result.points).toEqual([
+        [0, 0],
+        [100, 0],
+      ]);
+    });
+
+    it("does not mutate non-linear elements", () => {
+      const rect = {
+        id: "rect-1",
+        type: "rectangle",
+        x: 10,
+        y: 20,
+        width: 100,
+        height: 50,
+      };
+
+      const [result] = normalizeLinearElements([rect]);
+      expect(result).toEqual(rect);
+    });
+
+    it("handles empty or non-array inputs safely", () => {
+      expect(normalizeLinearElements([])).toEqual([]);
+      // @ts-expect-error test runtime resilience with undefined
+      expect(normalizeLinearElements(undefined)).toEqual([]);
+    });
   });
 });
