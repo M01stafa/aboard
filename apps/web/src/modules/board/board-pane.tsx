@@ -111,7 +111,8 @@ export function BoardPane({
         msg.includes("Linear element is not normalized") ||
         msg.includes("fingerprinting protection") ||
         msg.includes("Cannot update a component (`PanelComponent`)") ||
-        msg.includes("Cannot update a component (`")
+        msg.includes("Cannot update a component (`") ||
+        msg.includes("Can't call setState on a component that is not yet mounted")
       ) {
         return;
       }

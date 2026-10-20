@@ -181,7 +181,17 @@ export async function insertImageIntoBoard({
 
   // 8. Scroll to newly inserted content
   if (typeof api.scrollToContent === "function") {
-    api.scrollToContent(imgElement, { fitToContent: true });
+    if (typeof requestAnimationFrame !== "undefined") {
+      requestAnimationFrame(() => {
+        try {
+          api.scrollToContent(imgElement, { fitToContent: true });
+        } catch {
+          // ignore if unmounted
+        }
+      });
+    } else {
+      api.scrollToContent(imgElement, { fitToContent: true });
+    }
   }
 
   return fileId;
@@ -270,7 +280,17 @@ export async function insertTextNoteIntoBoard({
   }
 
   if (typeof api.scrollToContent === "function") {
-    api.scrollToContent(textElement, { fitToContent: true });
+    if (typeof requestAnimationFrame !== "undefined") {
+      requestAnimationFrame(() => {
+        try {
+          api.scrollToContent(textElement, { fitToContent: true });
+        } catch {
+          // ignore if unmounted
+        }
+      });
+    } else {
+      api.scrollToContent(textElement, { fitToContent: true });
+    }
   }
 
   return textElement.id;

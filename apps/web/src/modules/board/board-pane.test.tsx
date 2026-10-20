@@ -236,7 +236,9 @@ describe("BoardPane Component (Task 25 / BOARD-1, BOARD-2, BOARD-4)", () => {
     });
 
     await act(async () => {
-      await Promise.resolve();
+      for (let i = 0; i < 10; i++) {
+        await Promise.resolve();
+      }
     });
 
     expect(lastExcalidrawProps).toBeTruthy();

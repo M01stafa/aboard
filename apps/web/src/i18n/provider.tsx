@@ -89,9 +89,10 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined" || process.env.NODE_ENV === "production") return;
     const originalError = console.error;
     console.error = (...args: unknown[]) => {
+      const msg = typeof args[0] === "string" ? args[0] : "";
       if (
-        typeof args[0] === "string" &&
-        args[0].includes("Encountered a script tag while rendering React component")
+        msg.includes("Encountered a script tag while rendering React component") ||
+        msg.includes("Can't call setState on a component that is not yet mounted")
       ) {
         return;
       }

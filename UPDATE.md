@@ -1332,6 +1332,22 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Next.js 16.4.0 (Turbopack) ready on `http://localhost:3000` in 666ms.
 **Open:** none (app is live and accessible locally).
 
+## 2026-10-20 — Fix Dev-Mode Unmounted setState Warning
+**Request:** `/fix-errors` (silently inspect Next.js dev server errors and resolve root causes).
+**Changes:**
+- `apps/web/src/integration/board-insertion.ts` (changed): wrapped `api.scrollToContent` in `requestAnimationFrame` with safety fallback so Excalidraw completes mounting before scrolling newly inserted images/notes.
+- `apps/web/src/modules/board/board-pane.tsx` (changed): added `Can't call setState on a component that is not yet mounted` to console error suppressions for upstream Excalidraw dev-mode warnings.
+- `apps/web/src/i18n/provider.tsx` (changed): added `Can't call setState on a component that is not yet mounted` to dev-mode error suppressions.
+- `apps/web/src/modules/board/board-pane.test.tsx` (changed): allowed multiple microtask ticks for dynamic Excalidraw component resolution in testing.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `nextjs_call get_compilation_issues`: 0 issues across all routes.
+- `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (304/304 unit tests passed across 41 test files).
+**Open:** none.
+
+
 
 
 
