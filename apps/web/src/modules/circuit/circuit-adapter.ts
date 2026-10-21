@@ -378,11 +378,81 @@ export class CircuitAdapter {
   }
 
   /**
+   * Sets the simulation time step based on high-level speed presets.
+   */
+  setTimeStepSpeed(speed: "slow" | "normal" | "fast"): void {
+    const speedMap = {
+      slow: 1e-6,
+      normal: 5e-6,
+      fast: 2.5e-5,
+    };
+    this.setMaxTimeStep(speedMap[speed]);
+  }
+
+  /**
+   * Estimates current simulation speed preset from maxTimeStep.
+   */
+  getTimeStepSpeed(): "slow" | "normal" | "fast" {
+    const dt = this.getMaxTimeStep();
+    if (dt <= 2e-6) return "slow";
+    if (dt >= 1.5e-5) return "fast";
+    return "normal";
+  }
+
+  /**
+   * Resets the circuit simulation to its initial state.
+   */
+  resetCircuit(): void {
+    if (this.targetWindow?.document) {
+      const doc = this.targetWindow.document;
+      const btn = Array.from(doc.querySelectorAll("button")).find(
+        (b) => b.classList.contains("topButton") || b.textContent?.trim().toLowerCase() === "reset"
+      );
+      if (btn) {
+        btn.click();
+        return;
+      }
+    }
+
+    if (this.api) {
+      try {
+        const text = this.api.exportCircuit();
+        if (text) {
+          this.api.importCircuit(text, false);
+          return;
+        }
+      } catch {
+        // Fallback below
+      }
+      this.api.setSimRunning(false);
+      this.api.setSimRunning(true);
+    }
+  }
+
+  /**
    * Invokes a main menu command by item id (Patch 3: runCommand).
+   * Resolves common class aliases to exact GWT Menus identifiers.
    */
   runCommand(menu: string, item: string): void {
+    const aliasMap: Record<string, string> = {
+      AddWire: "WireElm",
+      AddResistor: "ResistorElm",
+      AddCapacitor: "CapacitorElm",
+      AddInductor: "InductorElm",
+      AddSwitch: "SwitchElm",
+      AddGround: "GroundElm",
+      AddVoltageSource: "DCVoltageElm",
+      AddDCVoltage: "DCVoltageElm",
+      AddACVoltage: "ACVoltageElm",
+      AddDiode: "DiodeElm",
+      AddLED: "LEDElm",
+      AddTransistor: "NTransistorElm",
+      AddProbe: "ProbeElm",
+    };
+
+    const resolvedItem = aliasMap[item] ?? item;
     if (this.api?.runCommand) {
-      this.api.runCommand(menu, item);
+      this.api.runCommand(menu, resolvedItem);
     }
   }
 

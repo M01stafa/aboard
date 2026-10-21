@@ -163,6 +163,33 @@ describe("CircuitAdapter (Task 24 / CIRC-1, CIRC-4)", () => {
     adapter.runCommand("main", "ResistorElm");
     expect(mockApi.runCommand).toHaveBeenCalledWith("main", "ResistorElm");
 
+    // Test alias resolution (Task 42)
+    adapter.runCommand("main", "AddResistor");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "ResistorElm");
+
+    adapter.runCommand("main", "AddCapacitor");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "CapacitorElm");
+
     expect(adapter.getCircuitAsPNG()).toBe("data:image/png;base64,mockpng");
+  });
+
+  it("handles time step speed presets and resetCircuit (Task 42)", () => {
+    const adapter = new CircuitAdapter();
+    const mockApi = createMockCircuitApi();
+    adapter.attach({ CircuitJS1: mockApi } as unknown as Window);
+
+    adapter.setTimeStepSpeed("slow");
+    expect(mockApi.setMaxTimeStep).toHaveBeenCalledWith(1e-6);
+
+    adapter.setTimeStepSpeed("normal");
+    expect(mockApi.setMaxTimeStep).toHaveBeenCalledWith(5e-6);
+
+    adapter.setTimeStepSpeed("fast");
+    expect(mockApi.setMaxTimeStep).toHaveBeenCalledWith(2.5e-5);
+
+    // resetCircuit re-imports current circuit to reset simulation
+    adapter.resetCircuit();
+    expect(mockApi.exportCircuit).toHaveBeenCalled();
+    expect(mockApi.importCircuit).toHaveBeenCalled();
   });
 });

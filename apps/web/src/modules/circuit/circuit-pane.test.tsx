@@ -74,15 +74,44 @@ describe("CircuitPane Component (Task 24 / CIRC-1, CIRC-2, CIRC-3, CIRC-4)", () 
     expect(iframe).toBeTruthy();
     const src = iframe?.getAttribute("src") || "";
 
-    // Required parameters per spec §7.2
+    // Required parameters per spec §7.2 (custom toolbar replaces native menu by default in Task 42)
     expect(src).toContain("/circuit/circuitjs.html");
-    expect(src).toContain("hideMenu=false");
+    expect(src).toContain("hideMenu=true");
     expect(src).toContain("hideSidebar=false");
     expect(src).toContain("hideInfoBox=false");
     expect(src).toContain("whiteBackground=true"); // light theme default
     expect(src).toContain("selectColor=%234F9ED5"); // tech blue
     expect(src).toContain("running=true");
     expect(src).toContain("editable=true");
+
+    // Custom toolbar is rendered by default
+    expect(container.querySelector('[data-testid="circuit-toolbar"]')).not.toBeNull();
+
+    // Click Advanced Menu toggle button
+    const advancedBtn = container.querySelector('[data-testid="circuit-advanced-toggle-btn"]') as HTMLButtonElement;
+    expect(advancedBtn).not.toBeNull();
+
+    await act(async () => {
+      advancedBtn.click();
+    });
+
+    // After toggling advanced menu: custom toolbar is hidden and iframe has hideMenu=false
+    expect(container.querySelector('[data-testid="circuit-toolbar"]')).toBeNull();
+    const advancedSrc = iframe?.getAttribute("src") || "";
+    expect(advancedSrc).toContain("hideMenu=false");
+
+    // Click again to exit advanced menu
+    const returnBtn = container.querySelector('[data-testid="circuit-advanced-toggle-btn"]') as HTMLButtonElement;
+    expect(returnBtn).not.toBeNull();
+
+    await act(async () => {
+      returnBtn.click();
+    });
+
+    // Custom toolbar is restored and iframe has hideMenu=true
+    expect(container.querySelector('[data-testid="circuit-toolbar"]')).not.toBeNull();
+    const restoredSrc = iframe?.getAttribute("src") || "";
+    expect(restoredSrc).toContain("hideMenu=true");
   });
 
   it("attaches adapter on iframe load and auto-saves on analyze event", async () => {

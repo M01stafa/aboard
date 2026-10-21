@@ -7,6 +7,7 @@ import { projectService } from "@/core/storage";
 import { bus } from "@/core/bus";
 import { CircuitAdapter } from "./circuit-adapter";
 import { buildCircuitUrl } from "./circuit-url";
+import { CircuitToolbar, type CircuitSpeed } from "./circuit-toolbar";
 
 export interface CircuitPaneProps {
   projectId: string;
@@ -79,9 +80,14 @@ export function CircuitPane({
   // Track if simulation was running before being paused by hidden state
   const wasRunningBeforeHiddenRef = useRef<boolean>(false);
 
-  // Track simulation state for UI indicator badge
+  // Track simulation state for UI indicator badge and toolbar
   const [isSimRunning, setIsSimRunning] = useState<boolean>(true);
   const [isExportingToBoard, setIsExportingToBoard] = useState<boolean>(false);
+
+  // Circuit Toolbar state (Task 42)
+  const [isAdvancedMenu, setIsAdvancedMenu] = useState<boolean>(false);
+  const [speed, setSpeed] = useState<CircuitSpeed>("normal");
+  const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
 
   const handleSendToBoard = useCallback(async () => {
     setIsExportingToBoard(true);
@@ -99,16 +105,16 @@ export function CircuitPane({
     }
   }, [adapter, tab.itemId, tab.id]);
 
-  // Preserve circuit text during theme reload
+  // Preserve circuit text during theme reload or advanced menu toggle
   const preservedCircuitRef = useRef<string | null>(null);
 
   // Track previous theme to trigger reload on changes
   const prevThemeRef = useRef(resolvedTheme);
   const prevLangRef = useRef(language);
 
-  // Iframe URL state based on current theme and language
+  // Iframe URL state based on current theme, language, and advanced menu toggle
   const [iframeSrc, setIframeSrc] = useState(() => {
-    return buildCircuitUrl({ theme: resolvedTheme, lang: language });
+    return buildCircuitUrl({ theme: resolvedTheme, lang: language, hideMenu: true });
   });
 
   // Keep visible and pauseWhenHidden in refs for onReady callback
@@ -235,9 +241,66 @@ export function CircuitPane({
       initialLoadDoneRef.current = false;
 
       // Reload iframe with new URL parameters
-      setIframeSrc(buildCircuitUrl({ theme: resolvedTheme, lang: language }));
+      setIframeSrc(buildCircuitUrl({ theme: resolvedTheme, lang: language, hideMenu: !isAdvancedMenu }));
     }
-  }, [resolvedTheme, language, adapter, projectId, tab.itemId, tab.title]);
+  }, [resolvedTheme, language, isAdvancedMenu, adapter, projectId, tab.itemId, tab.title]);
+
+  // Toolbar Actions (Task 42)
+  const handleToggleRun = useCallback(() => {
+    const next = !isSimRunning;
+    adapter.setSimRunning(next);
+    setIsSimRunning(next);
+  }, [adapter, isSimRunning]);
+
+  const handleReset = useCallback(() => {
+    adapter.resetCircuit();
+    setIsSimRunning(true);
+  }, [adapter]);
+
+  const handleSelectComponent = useCallback(
+    (className: string) => {
+      adapter.runCommand("main", className);
+      setSelectedComponent(className);
+    },
+    [adapter]
+  );
+
+  const handleChangeSpeed = useCallback(
+    (newSpeed: CircuitSpeed) => {
+      setSpeed(newSpeed);
+      adapter.setTimeStepSpeed(newSpeed);
+    },
+    [adapter]
+  );
+
+  const handleToggleAdvancedMenu = useCallback(() => {
+    const nextAdvanced = !isAdvancedMenu;
+
+    // 1. Export current circuit before reload to preserve user changes
+    if (adapter.isAttached()) {
+      try {
+        const currentCircuit = adapter.exportCircuit();
+        if (currentCircuit) {
+          preservedCircuitRef.current = currentCircuit;
+          projectService.saveCircuit(projectId, tab.itemId, currentCircuit, tab.title);
+        }
+      } catch (err) {
+        console.error("Failed to export circuit before toggling advanced menu:", err);
+      }
+    }
+
+    initialLoadDoneRef.current = false;
+    setIsAdvancedMenu(nextAdvanced);
+
+    // 2. Reload iframe with native menu visible (hideMenu: false) or hidden (hideMenu: true)
+    setIframeSrc(
+      buildCircuitUrl({
+        theme: resolvedTheme,
+        lang: language,
+        hideMenu: !nextAdvanced,
+      })
+    );
+  }, [adapter, isAdvancedMenu, resolvedTheme, language, projectId, tab.itemId, tab.title]);
 
   // Handle "pause when hidden" option upon visibility changes (CIRC-4)
   useEffect(() => {
@@ -326,6 +389,32 @@ export function CircuitPane({
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          {isAdvancedMenu && (
+            <button
+              type="button"
+              data-testid="circuit-advanced-toggle-btn"
+              onClick={handleToggleAdvancedMenu}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                height: "var(--control-sm)",
+                paddingInline: "var(--space-2)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border-card)",
+                backgroundColor: "var(--bg-surface)",
+                color: "var(--text-main)",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+              title={t("circuit.returnToCustom")}
+            >
+              <span>⚙️</span>
+              <span>{t("circuit.returnToCustom")}</span>
+            </button>
+          )}
+
           <button
             type="button"
             data-testid="circuit-send-to-board-btn"
@@ -376,6 +465,21 @@ export function CircuitPane({
           </label>
         </div>
       </div>
+
+      {/* Custom React Toolbar (visible when native menu is hidden) */}
+      {!isAdvancedMenu && (
+        <CircuitToolbar
+          adapter={adapter}
+          isSimRunning={isSimRunning}
+          onToggleRun={handleToggleRun}
+          onReset={handleReset}
+          onSelectComponent={handleSelectComponent}
+          selectedComponent={selectedComponent}
+          speed={speed}
+          onChangeSpeed={handleChangeSpeed}
+          onToggleAdvancedMenu={handleToggleAdvancedMenu}
+        />
+      )}
 
       {/* Same-origin Iframe (fills the pane) */}
       <div style={{ flex: 1, inlineSize: "100%", position: "relative", minBlockSize: 0 }}>

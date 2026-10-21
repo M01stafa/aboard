@@ -1401,6 +1401,30 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 41 · PDFX-1, PDFX-2, PDFX-3, PDFX-5, SEC-8, §7.4
 **Open:** none (ready for Task 42).
 
+## 2026-10-21 — Task 42: Build the Custom Circuit Toolbar
+**Request:** Run Task 42 from docs/TASKS.md (Phase 10: UI Redesign): clean up Docker containers/volumes/images created in Task 40 via `docker compose down -v --rmi all` in `services/`; build the custom React toolbar component in `apps/web/src/modules/circuit/circuit-toolbar.tsx` connected to `CircuitAdapter` and iframe; implement Run/Pause toggle, Reset, Speed dropdown (Slow 1µs, Normal 5µs, Fast 25µs), Component Palette mega-menu (Wire, Resistor, Capacitor, Inductor, Switch, Ground, DC Voltage, AC Voltage, Diode, LED, NPN Transistor, Probe, Select) invoking `runCommand("main", "<ClassName>")` with GWT class aliases; implement Advanced Menu toggle with export/reload/import cycle preserving circuit state; style with DESIGN.md tokens and 8-point grid; add bilingual Arabic and English i18n keys; write unit and E2E tests, run checks, update docs, and commit/push.
+**Changes:**
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added 100% synchronized bilingual keys for circuit toolbar controls, speed presets, palette categories, component names, active tool badge, advanced menu toggle, and return button.
+- `apps/web/src/modules/circuit/circuit-adapter.ts` (changed): added `setTimeStepSpeed`, `getTimeStepSpeed`, and `resetCircuit`; added class name alias resolution in `runCommand("main", ...)` mapping aliases like `AddResistor` to `ResistorElm`.
+- `apps/web/src/modules/circuit/circuit-adapter.test.ts` (changed): added unit tests for timestep speed presets, reset command, and class alias mapping in `runCommand`.
+- `apps/web/src/modules/circuit/circuit-toolbar.tsx` (created): built native-feeling React toolbar adhering to DESIGN.md tokens, 8-point grid spacing, :focus-visible (R5), and max 1 gold CTA (R7); includes Run/Pause toggle with icon, Reset button, Speed dropdown, Component Palette mega-menu with custom SVG schematic icons grouped by category, active tool indicator, and Advanced Menu toggle.
+- `apps/web/src/modules/circuit/circuit-toolbar.test.tsx` (created): 7 unit tests verifying toolbar rendering, run/pause toggle, reset trigger, speed selection, component selection, active tool badge, and advanced menu toggle.
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): integrated `CircuitToolbar`; default `hideMenu: !isAdvancedMenu` (`hideMenu: true` when custom toolbar is active); implemented `onToggleAdvancedMenu` triggering circuit export, iframe reload with `hideMenu: false`, and circuit import; added header return button to switch back to custom toolbar with state preservation; updated theme reload to retain `hideMenu` state.
+- `apps/web/src/modules/circuit/circuit-pane.test.tsx` (changed): updated tests for custom toolbar presence, hideMenu query parameter, and advanced menu mode switching.
+- `apps/web/e2e/circuit-toolbar.spec.ts` (created): Playwright E2E test verifying Run/Pause simulation toggle, Reset action, Speed dropdown change, Component Palette selection ("Resistor"), and full Advanced Menu toggle cycle (hide toolbar -> reload iframe with native menu -> click return -> restore toolbar).
+- `docs/PROGRESS.md` (changed): marked Task 42 complete, transitioned Phase 10 to In progress, updated decisions log, and set next step to Task 43.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- Docker cleanup (`services/`): PASS (stopped & removed containers, networks, volumes, and images).
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (326/326 unit tests passing across 43 test files).
+- `pnpm test:e2e`: PASS (26/26 Playwright E2E tests passing).
+- `pnpm ci:security`: PASS (Gitleaks clean across 76 commits, prod audit clean, bundle scan clean).
+**Related:** Task 42 · CIRC-5, R1, R5, R7, §7.2
+**Open:** none (ready for Task 43).
+
+
 
 
 
