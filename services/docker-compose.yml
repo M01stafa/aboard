@@ -1,0 +1,62 @@
+# Docker Compose Stack for Stirling-PDF & API Gateway (Task 40 / Phase 9)
+# Designed for Oracle Cloud Free Tier (ARM64 / Ampere) and local development (AMD64 / ARM64).
+# Stirling runs exclusively on an internal network with zero published ports (SEC-8).
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+    depends_on:
+      - gateway
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "8787"
+      STIRLING_URL: http://stirling:8080
+      SUPABASE_URL: ${SUPABASE_URL:-https://fmlpkcbpoziwkjuxuyaf.supabase.co}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-50}
+    networks:
+      - edge
+      - internal
+    depends_on:
+      - stirling
+
+  stirling:
+    image: stirlingtools/stirling-pdf:0.44.0
+    restart: unless-stopped
+    environment:
+      SECURITY_ENABLELOGIN: "false" # safe only because it is unreachable from outside (SEC-8)
+      SYSTEM_MAXFILESIZE: "50"
+      INSTALL_BOOK_AND_ADVANCED_HTML_OPS: "false"
+    volumes:
+      - ./stirling/configs:/configs
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    networks:
+      - internal # Notice: No "ports:" published. Unreachable from the internet.
+
+networks:
+  edge:
+    driver: bridge
+  internal:
+    internal: true
+
+volumes:
+  caddy_data:
+  caddy_config:

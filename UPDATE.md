@@ -1345,7 +1345,39 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm lint`: PASS (ESLint 0 errors, check-spacing 0 errors).
 - `pnpm typecheck`: PASS (0 errors).
 - `pnpm test`: PASS (304/304 unit tests passed across 41 test files).
-**Open:** none.
+
+## 2026-10-21 — Task 40: Deploy Stirling-PDF and the Gateway (Local Stack + Oracle Cloud Prep)
+**Request:** Run Task 40 from docs/TASKS.md: build Node 22 + Hono API Gateway in `services/gateway`, verify Supabase JWTs via remote JWKS, map allow-listed tools (`ocr`, `compress`, `office-to-pdf`), check file magic bytes (`%PDF`, `PK\x03\x04`, OLE2), enforce per-user limits (50 MB max size, 1 concurrent job, 10 req/min rate limit), stream bodies, strict CORS, nosniff, build Docker Compose stack with pinned multi-arch Stirling-PDF (`v0.44.0`, 4G limit, internal network with 0 published ports), Caddy reverse proxy on ports 80/443, update `NEXT_PUBLIC_PDF_API_URL` and CSP `connect-src`, write unit tests, verify locally via Docker Compose, and write `services/DEPLOY.md` for Oracle Cloud Free Tier ARM64.
+**Changes:**
+- `services/gateway/` (created): built Hono microservice with Node 22, TypeScript, `@hono/node-server`, `jose`, `@supabase/supabase-js`, and Vitest.
+  - `src/tools.ts`: strict allow-list mapping `ocr`, `compress`, and `office-to-pdf` to Stirling endpoints; rejects unknown tools with 400.
+  - `src/magic-bytes.ts`: file header inspection for `%PDF`, `PK\x03\x04` (DOCX), OLE2 Compound Document (`\xd0\xcf\x11\xe0`), RTF, and images; rejects mismatched payloads with 400.
+  - `src/limits.ts`: in-memory per-user manager enforcing max file size (50 MB), concurrency limit (1 active operation per user), and rate limit (10 operations per minute) returning 429.
+  - `src/auth.ts`: Supabase JWT verification using `jose.createRemoteJWKSet` against `auth/v1/.well-known/jwks.json` with asymmetric signature validation.
+  - `src/app.ts`: Hono app handling `/health`, `/pdf/health`, `/pdf/:tool`, and `/:tool` with streaming request/response pipes, strict CORS, `nosniff`, and structured JSON logging without payload/filename leakage.
+  - `src/gateway.test.ts`: 12 comprehensive unit tests asserting 401 invalid token, 400 unknown tool, 400 bad magic bytes, 429 rate and concurrency limit, and 200 health check.
+  - `Dockerfile` & `.dockerignore`: multi-stage Alpine build with multi-arch `linux/arm64` and `linux/amd64` compatibility and `wget` healthcheck.
+- `services/docker-compose.yml` (created): multi-container stack orchestrating `caddy:2`, `stirlingtools/stirling-pdf:0.44.0` (pinned, 4G memory limit, on internal network with 0 published ports), and `gateway:8787`.
+- `services/Caddyfile` (created): reverse proxy forwarding `/pdf/*` to `gateway:8787` with automatic HTTPS or HTTP for local testing.
+- `services/DEPLOY.md` (created): production guide for Oracle Cloud Free Tier (`VM.Standard.A1.Flex` ARM Ampere), OCI VCN Security List ingress (TCP 80/443), OS-level iptables/firewalld commands, environment file configuration, and Docker Compose deployment.
+- `apps/web/next.config.ts` (changed): added `pdfApiOrigin` from `NEXT_PUBLIC_PDF_API_URL` to CSP `connect-src`.
+- `apps/web/.env.example` & `.env.example` (changed): added `NEXT_PUBLIC_PDF_API_URL=http://localhost/pdf`.
+- `pnpm-workspace.yaml` (changed): added `"services/*"` package pattern.
+- `docs/PROGRESS.md` (changed): marked Task 40 completed, updated V13 and V16 in VERIFY log, transitioned Phase 9 to In progress, and set next step to Task 41.
+- `UPDATE.md` (changed): appended Task 40 entry.
+**Checks:**
+- `pnpm --filter pdf-gateway build`: PASS (clean `tsc` compilation to `dist/`).
+- `pnpm --filter pdf-gateway test`: PASS (12/12 unit tests passing).
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (304/304 unit tests passing across 41 test files).
+- `pnpm ci:security`: PASS (Gitleaks clean across 74 commits, prod audit clean, bundle scan clean).
+- Local Docker testing (`docker compose up -d --build`): PASS.
+  - All 3 containers running: `services-caddy-1` (Up, 80/443), `services-gateway-1` (Up, healthy), `services-stirling-1` (Up, internal 8080 only).
+  - Health check: `curl.exe -i http://localhost/pdf/health` returned HTTP 200 OK with allowed tools `["ocr","compress","office-to-pdf"]`.
+  - Auth protection: `curl.exe -i -X POST http://localhost/pdf/compress` returned HTTP 401 Unauthorized.
+**Related:** Task 40 · PDFX-4, SEC-8, §7.4, §13
+**Open:** none (ready for Task 41).
 
 
 

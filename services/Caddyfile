@@ -1,0 +1,24 @@
+# Caddy reverse proxy for Aboard PDF Gateway (Task 40 / §13)
+# If DOMAIN environment variable is set (e.g. api.aboard.example), Caddy automatically
+# manages TLS via Let's Encrypt / ZeroSSL on port 443.
+# For local testing, defaults to :80 without requiring TLS certificates.
+
+{$DOMAIN::80} {
+  encode zstd gzip
+
+  request_body {
+    max_size 55MB
+  }
+
+  handle /pdf/* {
+    reverse_proxy gateway:8787
+  }
+
+  handle /health {
+    reverse_proxy gateway:8787
+  }
+
+  handle {
+    respond "Aboard Gateway: Not Found" 404
+  }
+}

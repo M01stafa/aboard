@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 8 — Integration (completed) |
-| Current task | Task 39 — Board to PDF and Selection to Note (completed) |
-| Last updated | 2026-10-19 |
-| Next step | Task 40 — Stirling-PDF Docker Compose Stack & PDF Gateway Service (Phase 9) |
+| Active phase | 9 — Stirling (In progress) |
+| Current task | Task 40 — Stirling-PDF Docker Compose Stack & PDF Gateway Service (completed) |
+| Last updated | 2026-10-21 |
+| Next step | Task 41 — Stirling Client in the PDF Module (Phase 9) |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -33,7 +33,7 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | **6. `.alpha` export/import** | In progress | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
 | **7. Google Drive** | Done (2026-10-19) | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
 | **8. Integration** | Done (2026-10-19) | §8 actions | All four actions work across modes |
-| **9. Stirling** | Not started | Compose stack, gateway, UI with progress/cancel, results saved into project | OCR and Office→PDF work; Stirling unreachable from the internet |
+| **9. Stirling** | In progress | Compose stack, gateway, UI with progress/cancel, results saved into project | OCR and Office→PDF work; Stirling unreachable from the internet |
 | **10. UI redesign** | Not started | Circuit toolbar via `runCommand`, advanced menu toggle, PDF toolbars, unified styling | Every circuit action reachable |
 | **11. Launch prep** | Not started | **§14.12 security checklist signed off**, security headers/CSP, privacy policy, terms, third-party notices, fork source published, Google app published + brand verification, monitoring | Google verification approved; refresh tokens no longer expire after 7 days |
 
@@ -60,10 +60,10 @@ Status values: `Open` · `Confirmed` · `Changed (spec updated)`
 | V10 | Drive "Open with" integration requirements | google-drive.md §10.11 | Later | Open | |
 | V11 | `.alpha` download keeps its extension on iOS Safari | alpha-format.md §12.1 | 0 (S5) | Changed (spec updated) | In-memory path built; physical iPhone Safari checks deferred by owner to Task 31/32; spec updated / 2026-10-13 |
 | V12 | pgTAP: inserting minimal rows into `auth.users` works in the local stack | security.md §14.3 | 1 | Confirmed | Confirmed in Task 13: minimal rows into auth.users (id, email) trigger profile creation; all 17 pgTAP assertions pass / 2026-10-14 |
-| V13 | Gateway JWT verification: JWKS vs legacy JWT secret | security.md §14.4, setup-and-deploy.md §13 | 9 | Open | |
+| V13 | Gateway JWT verification: JWKS vs legacy JWT secret | security.md §14.4, setup-and-deploy.md §13 | 9 | Confirmed | Confirmed in Task 40: Remote JWKS (`auth/v1/.well-known/jwks.json`) via `jose.createRemoteJWKSet` verifies asymmetric RS256/ES256 Supabase JWTs without shared secrets / 2026-10-21 |
 | V14 | CSP needs of Picker, Supabase and GWT; `headers()` precedence; COOP with Google popups | security.md §14.5 | 0 (S1/S4) | Changed (spec updated) | Confirmed in Spikes S1, S2, S4: CSP directives for Excalidraw, GWT `/circuit/`, EmbedPDF, Google; COOP verified; spec updated / 2026-10-13 |
 | V15 | Supabase Auth: refresh-token rotation/reuse detection default; leaked-password protection availability | security.md §14.7 | 1 | Open | |
-| V16 | Stirling setting name to disable unneeded endpoints | security.md §14.8 | 9 | Open | |
+| V16 | Stirling setting name to disable unneeded endpoints | security.md §14.8 | 9 | Confirmed | Confirmed in Task 40: Stirling is isolated on Docker internal network with zero published ports; gateway enforces strict tool allow-list (`ocr`, `compress`, `office-to-pdf`) / 2026-10-21 |
 | V17 | Supabase API key rotation procedure | security.md §14.10 | 11 | Open | |
 | V18 | JDK version for the CircuitJS fork build (GWT 2.8.2) | setup-and-deploy.md §5.2 | 0 (S2) | Changed (spec updated) | Confirmed in Spike S2: OpenJDK 11 builds GWT 2.8.2 cleanly with Gradle 8.7; JDK 17 not required; spec updated / 2026-10-13 |
 | V19 | Current `zod` major version | setup-and-deploy.md §5.6 | 1 | Open | |
@@ -131,6 +131,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-19 | Task 37: Implemented bidirectional project mode migration (Local <-> Drive) in ProjectService with unpinning/pinning and optional Drive folder trashing; integrated Google Picker API for PDF and .alpha files; added Export to Drive saving to Aboard/Exports/; prompt banner for moving local projects to Drive. |
 | 2026-10-19 | Task 38: Built typed event bus in core/bus.ts using mitt; implemented target board selection across all 4 priorities (explicit -> visible split board -> MRU -> new board); implemented PDF Page to Board (INT-1) rendering WebP at scale 2 with annotations, compressing >4MB, saving via putFile, and inserting locked image element into Excalidraw; implemented Circuit to Board (INT-2) converting SVG string to binary image/svg+xml Blob (SEC-7 zero DOM injection) and inserting into board; built boardRegistry to track active imperative APIs; verified with 12 unit tests and Playwright split-view reload persistence test. |
 | 2026-10-19 | Task 39: Board to PDF (INT-3) exports image via Excalidraw exportToBlob and appends as page to target PDF via @cantoo/pdf-lib, emitting pdf:item-updated and pdf:navigate-page with new content-addressed SHA-256 hash; Selection to Note (INT-4) detects PDF text selection and inserts text note into target board linked by internal alpha://pdf/<itemId>#page=<n>; workspace intercepts alpha:// links to switch tabs and scroll to page while preserving standard https:// links; board elements with alpha:// survive .alpha export/import; PdfPane renders toast notifications across viewer remounts. Phase 8 completed. |
+| 2026-10-21 | Task 40: Deployed Stirling-PDF (pinned v0.44.0, ARM64/AMD64 compatible) on internal network with 0 published ports; built Hono API Gateway with remote JWKS verification, strict tool allow-list (ocr, compress, office-to-pdf), magic bytes check (%PDF, PK, OLE2), in-memory user limits (50MB, 1 concurrent, 10/min), streaming bodies, and Caddy reverse proxy on ports 80/443; wrote DEPLOY.md for Oracle Cloud Free Tier (VM.Standard.A1.Flex) |
 
 ## Lessons and corrections
 

@@ -25,3 +25,7 @@ supabase/.branches/
 *.tsbuildinfo
 test-results/
 
+# Stirling runtime configs
+services/stirling/configs/*
+!services/stirling/configs/.gitkeep
+
