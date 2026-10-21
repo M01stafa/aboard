@@ -301,4 +301,78 @@ describe("PdfToolbar Annotation Controls (Task 29 / PDF-3, PDF-4)", () => {
     });
     expect(onDeletePage).toHaveBeenCalledTimes(1);
   });
+
+  it("renders Online Tools dropdown and triggers onRunOnlineTool for ocr, compress, and office-to-pdf", () => {
+    const onRunOnlineTool = vi.fn();
+
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <PdfToolbar
+            {...defaultProps}
+            onRunOnlineTool={onRunOnlineTool}
+            isProcessingOnlineTool={false}
+          />
+        </I18nProvider>
+      );
+    });
+
+    const toolsBtn = container.querySelector('[data-testid="pdf-online-tools-menu"]') as HTMLButtonElement;
+    expect(toolsBtn).not.toBeNull();
+    expect(container.querySelector('[data-testid="pdf-online-tools-dropdown"]')).toBeNull();
+
+    // Open dropdown
+    act(() => {
+      toolsBtn.click();
+    });
+    expect(container.querySelector('[data-testid="pdf-online-tools-dropdown"]')).not.toBeNull();
+
+    // Check OCR
+    const ocrBtn = container.querySelector('[data-testid="pdf-tool-ocr-btn"]') as HTMLButtonElement;
+    expect(ocrBtn).not.toBeNull();
+    act(() => {
+      ocrBtn.click();
+    });
+    expect(onRunOnlineTool).toHaveBeenCalledWith("ocr");
+    expect(container.querySelector('[data-testid="pdf-online-tools-dropdown"]')).toBeNull();
+
+    // Reopen and check Compress
+    act(() => {
+      toolsBtn.click();
+    });
+    const compressBtn = container.querySelector('[data-testid="pdf-tool-compress-btn"]') as HTMLButtonElement;
+    expect(compressBtn).not.toBeNull();
+    act(() => {
+      compressBtn.click();
+    });
+    expect(onRunOnlineTool).toHaveBeenCalledWith("compress");
+
+    // Reopen and check Office to PDF
+    act(() => {
+      toolsBtn.click();
+    });
+    const officeBtn = container.querySelector('[data-testid="pdf-tool-office-btn"]') as HTMLButtonElement;
+    expect(officeBtn).not.toBeNull();
+    act(() => {
+      officeBtn.click();
+    });
+    expect(onRunOnlineTool).toHaveBeenCalledWith("office-to-pdf");
+  });
+
+  it("disables Online Tools menu button when isProcessingOnlineTool is true", () => {
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <PdfToolbar
+            {...defaultProps}
+            onRunOnlineTool={vi.fn()}
+            isProcessingOnlineTool={true}
+          />
+        </I18nProvider>
+      );
+    });
+
+    const toolsBtn = container.querySelector('[data-testid="pdf-online-tools-menu"]') as HTMLButtonElement;
+    expect(toolsBtn.disabled).toBe(true);
+  });
 });

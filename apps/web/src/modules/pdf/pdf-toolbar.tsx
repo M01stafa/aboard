@@ -37,6 +37,9 @@ export interface PdfToolbarProps {
   // Cross-Tool Integration (INT-1)
   onSendToBoard?: () => void;
   isSendingToBoard?: boolean;
+  // Online Tools (Task 41 / PDFX-1..5)
+  onRunOnlineTool?: (tool: "ocr" | "compress" | "office-to-pdf") => void;
+  isProcessingOnlineTool?: boolean;
 }
 
 export function PdfToolbar({
@@ -68,12 +71,16 @@ export function PdfToolbar({
   isOperatingPage = false,
   onSendToBoard,
   isSendingToBoard = false,
+  onRunOnlineTool,
+  isProcessingOnlineTool = false,
 }: PdfToolbarProps) {
   const { t } = useI18n();
   const stampInputRef = useRef<HTMLInputElement>(null);
   const imagePageInputRef = useRef<HTMLInputElement>(null);
   const [showPageMenu, setShowPageMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
+  const toolsMenuRef = useRef<HTMLDivElement>(null);
 
   const handleStampClick = () => {
     onSelectTool?.("stamp");
@@ -124,6 +131,30 @@ export function PdfToolbar({
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [showPageMenu]);
+
+  // Close online tools dropdown on click outside or escape key
+  useEffect(() => {
+    if (!showToolsMenu) return;
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (toolsMenuRef.current && !toolsMenuRef.current.contains(e.target as Node)) {
+        setShowToolsMenu(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowToolsMenu(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showToolsMenu]);
 
   const getToolButtonStyle = (tool: AnnotationToolType): React.CSSProperties => {
     const isActive = activeTool === tool;
@@ -613,6 +644,148 @@ export function PdfToolbar({
                 }}
               >
                 {t("pdf.deletePage")}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Online Tools Dropdown Menu (Task 41 / PDFX-1..5) */}
+        <div ref={toolsMenuRef} style={{ position: "relative" }}>
+          <button
+            type="button"
+            onClick={() => setShowToolsMenu((prev) => !prev)}
+            aria-haspopup="true"
+            aria-expanded={showToolsMenu}
+            data-testid="pdf-online-tools-menu"
+            disabled={isProcessingOnlineTool}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "32px",
+              paddingInline: "var(--space-8)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-input)",
+              backgroundColor: showToolsMenu ? "var(--bg-elevated)" : "var(--bg-subtle)",
+              color: "var(--text-main)",
+              cursor: isProcessingOnlineTool ? "wait" : "pointer",
+              fontSize: "14px",
+              fontWeight: 500,
+              gap: "var(--space-8)",
+            }}
+          >
+            <span>⚡</span>
+            <span>{t("pdf.toolsMenu")}</span>
+            <span style={{ fontSize: "10px" }}>▼</span>
+          </button>
+
+          {showToolsMenu && (
+            <div
+              data-testid="pdf-online-tools-dropdown"
+              style={{
+                position: "absolute",
+                top: "calc(100% + var(--space-8))",
+                right: 0,
+                backgroundColor: "var(--bg-surface)",
+                border: "1px solid var(--border-input)",
+                borderRadius: "var(--radius-md)",
+                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
+                zIndex: 100,
+                minWidth: "var(--space-24)",
+                padding: "var(--space-8)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-8)",
+              }}
+            >
+              {/* OCR */}
+              <button
+                type="button"
+                data-testid="pdf-tool-ocr-btn"
+                onClick={() => {
+                  setShowToolsMenu(false);
+                  onRunOnlineTool?.("ocr");
+                }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  padding: "var(--space-8)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  backgroundColor: "var(--bg-subtle)",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  textAlign: "start",
+                  gap: "var(--space-8)",
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>{t("pdf.toolOcr")}</span>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  {t("pdf.toolOcrDesc")}
+                </span>
+              </button>
+
+              {/* Compress */}
+              <button
+                type="button"
+                data-testid="pdf-tool-compress-btn"
+                onClick={() => {
+                  setShowToolsMenu(false);
+                  onRunOnlineTool?.("compress");
+                }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  padding: "var(--space-8)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  backgroundColor: "var(--bg-subtle)",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  textAlign: "start",
+                  gap: "var(--space-8)",
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>{t("pdf.toolCompress")}</span>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  {t("pdf.toolCompressDesc")}
+                </span>
+              </button>
+
+              {/* Office to PDF */}
+              <button
+                type="button"
+                data-testid="pdf-tool-office-btn"
+                onClick={() => {
+                  setShowToolsMenu(false);
+                  onRunOnlineTool?.("office-to-pdf");
+                }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  padding: "var(--space-8)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  backgroundColor: "var(--bg-subtle)",
+                  color: "var(--text-main)",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  textAlign: "start",
+                  gap: "var(--space-8)",
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>{t("pdf.toolOfficeToPdf")}</span>
+                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  {t("pdf.toolOfficeToPdfDesc")}
+                </span>
               </button>
             </div>
           )}

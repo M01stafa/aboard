@@ -1379,6 +1379,29 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 40 · PDFX-4, SEC-8, §7.4, §13
 **Open:** none (ready for Task 41).
 
+## 2026-10-21 — Task 41: Build the Online PDF Tools Interface
+**Request:** Run Task 41 from docs/TASKS.md: build the Stirling-PDF client in `apps/web/src/core/stirling.ts`, connect to the Gateway via `NEXT_PUBLIC_PDF_API_URL`, pass the user's Supabase JWT in `Authorization: Bearer`, support cancellation via `AbortController`, track upload and processing progress, build the "Online Tools" dropdown menu in the PDF toolbar (`ocr`, `compress`, `office-to-pdf`), implement the one-time server processing notice dialog (`PDFX-5`) with `localStorage` persistence, display processing modal with progress bar and cancel button, compute SHA-256 hash and persist output via `ProjectService.putFile`, handle errors (401, 413, 429), add Arabic and English i18n translations, write unit tests for `stirling.ts` and `pdf-toolbar.tsx`, write a Playwright E2E test, and verify with CI commands.
+**Changes:**
+- `apps/web/src/core/stirling.ts` (created): built client library supporting JWT retrieval, URL resolution against `NEXT_PUBLIC_PDF_API_URL`, XHR-based upload progress tracking (`upload.onprogress`), AbortSignal cancellation, and strict error classification (`StirlingApiError`).
+- `apps/web/src/core/stirling.test.ts` (created): 12 comprehensive unit tests asserting notice storage functions, URL resolution, tool validation, progress reporting, error handling (401, 413, 429), and request abortion.
+- `apps/web/src/modules/pdf/pdf-tools-dialogs.tsx` (created): built `PdfToolsNoticeModal` (one-time warning per PDFX-5) and `PdfProcessingModal` (animated progress bar and cancel button) adhering to design tokens and the 8-point grid.
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): added "Online Tools" dropdown menu (`pdf-online-tools-menu`, `pdf-tool-ocr-btn`, `pdf-tool-compress-btn`, `pdf-tool-office-btn`) with disabled state during active processing and click-outside/escape dismissal.
+- `apps/web/src/modules/pdf/pdf-toolbar.test.tsx` (changed): added unit tests verifying online tools menu rendering, click dispatching, and disabled state during processing.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): wired online tools handler, notice check/dialog, hidden file picker for Office documents, progress/cancellation state, SHA-256 saving via `onSaveRestructuredPdf`, and localized success/error toasts.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added 100% synchronized bilingual keys for online tools menu, tools, one-time notice, stages, cancel button, success toasts, and error messages.
+- `apps/web/e2e/pdf-online-tools.spec.ts` (created): Playwright E2E test verifying opening a PDF, clicking Compress, displaying one-time notice modal (`PDFX-5`), accepting notice, persisting accepted flag in `localStorage`, mocking Gateway compress response, showing processing modal, and verifying file save toast.
+- `docs/PROGRESS.md` (changed): marked Task 41 and Phase 9 complete, set next step to Task 42.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (318/318 unit tests passing across 42 test files).
+- `pnpm test:e2e`: PASS (25/25 Playwright E2E tests passing).
+- `pnpm ci:security`: PASS (Gitleaks clean across 75 commits, prod audit clean, bundle scan clean).
+**Related:** Task 41 · PDFX-1, PDFX-2, PDFX-3, PDFX-5, SEC-8, §7.4
+**Open:** none (ready for Task 42).
+
+
 
 
 

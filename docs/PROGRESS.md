@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 9 — Stirling (In progress) |
-| Current task | Task 40 — Stirling-PDF Docker Compose Stack & PDF Gateway Service (completed) |
+| Active phase | 9 — Stirling (Done 2026-10-21) |
+| Current task | Task 41 — Build the Online PDF Tools Interface (completed) |
 | Last updated | 2026-10-21 |
-| Next step | Task 41 — Stirling Client in the PDF Module (Phase 9) |
+| Next step | Task 42 — Build the Custom Circuit Toolbar (Phase 10) |
 | Blockers | None (carried open items tracked below) |
 
 ## Phases
@@ -33,7 +33,7 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | **6. `.alpha` export/import** | In progress | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
 | **7. Google Drive** | Done (2026-10-19) | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
 | **8. Integration** | Done (2026-10-19) | §8 actions | All four actions work across modes |
-| **9. Stirling** | In progress | Compose stack, gateway, UI with progress/cancel, results saved into project | OCR and Office→PDF work; Stirling unreachable from the internet |
+| **9. Stirling** | Done (2026-10-21) | Compose stack, gateway, UI with progress/cancel, results saved into project | OCR and Office→PDF work; Stirling unreachable from the internet |
 | **10. UI redesign** | Not started | Circuit toolbar via `runCommand`, advanced menu toggle, PDF toolbars, unified styling | Every circuit action reachable |
 | **11. Launch prep** | Not started | **§14.12 security checklist signed off**, security headers/CSP, privacy policy, terms, third-party notices, fork source published, Google app published + brand verification, monitoring | Google verification approved; refresh tokens no longer expire after 7 days |
 

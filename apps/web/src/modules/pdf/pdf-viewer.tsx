@@ -42,6 +42,15 @@ import {
   insertImagePage,
   burnAnnotationsWithPdfLib,
 } from "./page-operations";
+import {
+  executeStirlingTool,
+  hasAcceptedPdfToolsNotice,
+  markPdfToolsNoticeAccepted,
+  StirlingApiError,
+  type StirlingProgress,
+  type StirlingTool,
+} from "@/core/stirling";
+import { PdfToolsNoticeModal, PdfProcessingModal } from "./pdf-tools-dialogs";
 
 export interface PdfViewerProps {
   documentId: string;
@@ -54,7 +63,7 @@ export interface PdfViewerProps {
   tabId?: string;
   itemId?: string;
   projectServiceOverride?: ProjectService;
-  onSaveRestructuredPdf?: (newBlob: Blob) => Promise<void>;
+  onSaveRestructuredPdf?: (newBlob: Blob, name?: string) => Promise<void>;
   onShowToast?: (message: string) => void;
 }
 
@@ -82,7 +91,7 @@ interface ViewerInnerProps {
   tabId?: string;
   itemId?: string;
   projectServiceOverride?: ProjectService;
-  onSaveRestructuredPdf?: (newBlob: Blob) => Promise<void>;
+  onSaveRestructuredPdf?: (newBlob: Blob, name?: string) => Promise<void>;
   onShowToast: (message: string) => void;
 }
 
@@ -116,6 +125,128 @@ function ViewerInner({
   const [selectionPos, setSelectionPos] = useState<{ top: number; left: number } | null>(null);
   const [isSendingSelection, setIsSendingSelection] = useState(false);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
+
+  // Online Tools (Task 41 / PDFX-1..5)
+  const [showNoticeModal, setShowNoticeModal] = useState(false);
+  const [pendingTool, setPendingTool] = useState<StirlingTool | null>(null);
+  const [processingTool, setProcessingTool] = useState<StirlingTool | null>(null);
+  const [processingProgress, setProcessingProgress] = useState<StirlingProgress | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const officeInputRef = useRef<HTMLInputElement>(null);
+
+  const runTool = async (tool: StirlingTool, fileToProcess: File | Blob, fileDocName?: string) => {
+    setProcessingTool(tool);
+    setProcessingProgress({ stage: "uploading", percent: 0, loadedBytes: 0, totalBytes: fileToProcess.size });
+    setIsCancelling(false);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      const resultBlob = await executeStirlingTool({
+        tool,
+        file: fileToProcess,
+        fileName: fileDocName,
+        signal: controller.signal,
+        onProgress: (p) => setProcessingProgress(p),
+      });
+
+      const original = fileDocName || documentTitle || "document.pdf";
+      const base = original.replace(/\.[^/.]+$/, "");
+      let resultName = `${base}.pdf`;
+      if (tool === "ocr") {
+        resultName = `${base} (OCR).pdf`;
+      } else if (tool === "compress") {
+        resultName = `${base} (compressed).pdf`;
+      } else if (tool === "office-to-pdf") {
+        resultName = `${base}.pdf`;
+      }
+
+      await onSaveRestructuredPdf?.(resultBlob, resultName);
+
+      if (tool === "ocr") {
+        onShowToast(t("pdf.ocrSuccess"));
+      } else if (tool === "compress") {
+        onShowToast(t("pdf.compressSuccess"));
+      } else if (tool === "office-to-pdf") {
+        onShowToast(t("pdf.officeToPdfSuccess"));
+      }
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        onShowToast(t("pdf.cancelledNotice"));
+      } else if (err instanceof StirlingApiError) {
+        if (err.status === 401) {
+          onShowToast(t("pdf.errorUnauthorized"));
+        } else if (err.status === 413) {
+          onShowToast(t("pdf.errorPayloadTooLarge"));
+        } else if (err.status === 429) {
+          onShowToast(t("pdf.errorRateLimited"));
+        } else {
+          onShowToast(err.message || t("pdf.errorGeneric"));
+        }
+      } else {
+        const msg = err instanceof Error ? err.message : String(err);
+        onShowToast(msg || t("pdf.errorGeneric"));
+      }
+    } finally {
+      setProcessingTool(null);
+      setProcessingProgress(null);
+      setIsCancelling(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleRunOnlineTool = (tool: StirlingTool) => {
+    if (!hasAcceptedPdfToolsNotice()) {
+      setPendingTool(tool);
+      setShowNoticeModal(true);
+      return;
+    }
+
+    if (tool === "office-to-pdf") {
+      officeInputRef.current?.click();
+      return;
+    }
+
+    runTool(tool, blob, documentTitle || "document.pdf");
+  };
+
+  const handleAcceptNotice = () => {
+    markPdfToolsNoticeAccepted();
+    setShowNoticeModal(false);
+    const tool = pendingTool;
+    setPendingTool(null);
+    if (!tool) return;
+
+    if (tool === "office-to-pdf") {
+      officeInputRef.current?.click();
+      return;
+    }
+
+    runTool(tool, blob, documentTitle || "document.pdf");
+  };
+
+  const handleCancelNotice = () => {
+    setShowNoticeModal(false);
+    setPendingTool(null);
+  };
+
+  const handleCancelProcessing = () => {
+    if (abortControllerRef.current) {
+      setIsCancelling(true);
+      abortControllerRef.current.abort();
+    }
+  };
+
+  const handleOfficeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      runTool("office-to-pdf", file, file.name);
+    }
+    if (officeInputRef.current) {
+      officeInputRef.current.value = "";
+    }
+  };
 
   const handleSendToBoard = async () => {
     if (!renderCapability) {
@@ -559,6 +690,8 @@ function ViewerInner({
         isOperatingPage={isOperatingPage}
         onSendToBoard={handleSendToBoard}
         isSendingToBoard={isSendingToBoard}
+        onRunOnlineTool={handleRunOnlineTool}
+        isProcessingOnlineTool={Boolean(processingTool)}
       />
 
       <div
@@ -678,6 +811,29 @@ function ViewerInner({
           />
         </Viewport>
       </div>
+
+      <input
+        ref={officeInputRef}
+        type="file"
+        accept=".doc,.docx,.ppt,.pptx,.xls,.xlsx,.rtf,.txt"
+        onChange={handleOfficeFileChange}
+        style={{ display: "none" }}
+        data-testid="pdf-office-file-input"
+      />
+
+      <PdfToolsNoticeModal
+        open={showNoticeModal}
+        onAccept={handleAcceptNotice}
+        onCancel={handleCancelNotice}
+      />
+
+      <PdfProcessingModal
+        active={Boolean(processingTool)}
+        tool={processingTool}
+        progress={processingProgress}
+        onCancel={handleCancelProcessing}
+        isCancelling={isCancelling}
+      />
     </div>
   );
 }
