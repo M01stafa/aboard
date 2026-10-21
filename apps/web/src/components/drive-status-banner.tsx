@@ -110,8 +110,8 @@ export function DriveStatusBanner({ onExportClick }: DriveStatusBannerProps) {
               fontSize: "0.8125rem",
               fontWeight: 500,
               borderRadius: "var(--radius-sm)",
-              backgroundColor: "var(--accent-primary)",
-              color: "#ffffff",
+              backgroundColor: "var(--btn-primary-bg)",
+              color: "var(--btn-primary-text)",
               border: "none",
               cursor: "pointer",
             }}
@@ -134,8 +134,8 @@ export function DriveStatusBanner({ onExportClick }: DriveStatusBannerProps) {
               fontSize: "0.8125rem",
               fontWeight: 500,
               borderRadius: "var(--radius-sm)",
-              backgroundColor: "var(--gold-500)",
-              color: "#ffffff",
+              backgroundColor: "var(--btn-gold-bg)",
+              color: "var(--btn-gold-text)",
               border: "none",
               cursor: "pointer",
             }}

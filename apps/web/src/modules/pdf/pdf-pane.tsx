@@ -177,22 +177,22 @@ export function PdfPane({
             data-testid="pdf-restructure-toast"
             style={{
               position: "absolute",
-              bottom: "var(--space-16)",
-              left: "50%",
+              bottom: "var(--space-2)",
+              insetInlineStart: "50%",
               transform: "translateX(-50%)",
-              backgroundColor: "var(--slate-900, #0f172a)",
-              color: "#ffffff",
+              backgroundColor: "var(--bg-surface)",
+              color: "var(--text-main)",
               border: "1px solid var(--border-card)",
               borderRadius: "var(--radius-md)",
-              padding: "var(--space-8) var(--space-16)",
-              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.3)",
+              padding: "var(--space-1) var(--space-2)",
+              boxShadow: "var(--shadow-3)",
               zIndex: 1000,
               display: "flex",
               alignItems: "center",
-              gap: "var(--space-8)",
+              gap: "var(--space-1)",
               fontSize: "14px",
               fontWeight: 500,
-              maxWidth: "calc(var(--space-16) * 4)",
+              maxWidth: "calc(var(--space-8) * 4)",
               boxSizing: "border-box",
             }}
           >
@@ -206,9 +206,9 @@ export function PdfPane({
               style={{
                 border: "none",
                 background: "transparent",
-                color: "#ffffff",
+                color: "var(--text-muted)",
                 cursor: "pointer",
-                padding: "0 var(--space-8)",
+                paddingInline: "var(--space-1)",
                 fontSize: "16px",
               }}
             >
@@ -321,11 +321,11 @@ export function PdfPane({
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              height: "48px",
-              paddingInline: "var(--space-16)",
+              height: "var(--control-lg)",
+              paddingInline: "var(--space-2)",
               borderRadius: "var(--radius-sm)",
-              backgroundColor: "var(--brand-primary)",
-              color: "#ffffff",
+              backgroundColor: "var(--btn-primary-bg)",
+              color: "var(--btn-primary-text)",
               fontWeight: 600,
               fontSize: "14px",
               border: "none",
@@ -357,8 +357,8 @@ export function PdfPane({
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              height: "48px",
-              paddingInline: "var(--space-16)",
+              height: "var(--control-lg)",
+              paddingInline: "var(--space-2)",
               borderRadius: "var(--radius-sm)",
               backgroundColor: "var(--bg-subtle)",
               color: "var(--text-main)",
@@ -377,12 +377,12 @@ export function PdfPane({
           <div
             data-testid="pdf-hashing-progress"
             style={{
-              marginTop: "var(--space-24)",
+              marginTop: "var(--space-3)",
               width: "100%",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: "var(--space-8)",
+              gap: "var(--space-1)",
             }}
           >
             <div
@@ -400,7 +400,7 @@ export function PdfPane({
                   height: "100%",
                   width: "100%",
                   transform: `scaleX(${hashingProgress})`,
-                  transformOrigin: "left",
+                  transformOrigin: "inline-start",
                   backgroundColor: "var(--accent-text)",
                   transition: "transform 100ms ease",
                 }}
@@ -425,9 +425,9 @@ export function PdfPane({
           <p
             data-testid="pdf-error-notice"
             style={{
-              marginTop: "var(--space-16)",
+              marginTop: "var(--space-2)",
               fontSize: "13px",
-              color: "var(--danger-text, #ef4444)",
+              color: "var(--danger-text)",
             }}
           >
             {error}
@@ -444,11 +444,11 @@ export function PdfPane({
           style={{
             position: "fixed",
             inset: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
+            backgroundColor: "var(--overlay-backdrop)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "var(--space-16)",
+            padding: "var(--space-2)",
             zIndex: 9999,
           }}
         >
@@ -457,13 +457,13 @@ export function PdfPane({
               backgroundColor: "var(--bg-surface)",
               border: "1px solid var(--border-card)",
               borderRadius: "var(--radius-md)",
-              padding: "var(--space-24)",
-              maxWidth: "320px",
+              padding: "var(--space-3)",
+              maxWidth: "calc(var(--space-8) * 5)",
               width: "100%",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+              boxShadow: "var(--shadow-3)",
               display: "flex",
               flexDirection: "column",
-              gap: "var(--space-16)",
+              gap: "var(--space-2)",
             }}
           >
             <h4
@@ -494,8 +494,8 @@ export function PdfPane({
               style={{
                 display: "flex",
                 justifyContent: "flex-end",
-                gap: "var(--space-8)",
-                marginTop: "var(--space-8)",
+                gap: "var(--space-1)",
+                marginTop: "var(--space-1)",
               }}
             >
               <button
@@ -503,10 +503,10 @@ export function PdfPane({
                 onClick={handleCancelLargeFile}
                 data-testid="pdf-cancel-large-file"
                 style={{
-                  height: "32px",
-                  paddingInline: "var(--space-16)",
+                  height: "var(--control-sm)",
+                  paddingInline: "var(--space-2)",
                   borderRadius: "var(--radius-sm)",
-                  border: "1px solid var(--border-input)",
+                  border: "1px solid var(--border-card)",
                   backgroundColor: "var(--bg-subtle)",
                   color: "var(--text-main)",
                   fontWeight: 500,
@@ -522,12 +522,12 @@ export function PdfPane({
                 onClick={handleConfirmLargeFile}
                 data-testid="pdf-confirm-large-file"
                 style={{
-                  height: "32px",
-                  paddingInline: "var(--space-16)",
+                  height: "var(--control-sm)",
+                  paddingInline: "var(--space-2)",
                   borderRadius: "var(--radius-sm)",
                   border: "none",
-                  backgroundColor: "var(--brand-primary)",
-                  color: "#ffffff",
+                  backgroundColor: "var(--btn-primary-bg)",
+                  color: "var(--btn-primary-text)",
                   fontWeight: 600,
                   fontSize: "14px",
                   cursor: "pointer",

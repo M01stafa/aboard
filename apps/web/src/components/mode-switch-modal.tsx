@@ -260,8 +260,8 @@ export function ModeSwitchModal({
                   paddingInline: "var(--space-3)",
                   borderRadius: "var(--radius-sm)",
                   border: "none",
-                  backgroundColor: "var(--brand-danger, #ef4444)",
-                  color: "#ffffff",
+                  backgroundColor: "var(--danger-fill)",
+                  color: "var(--btn-primary-text)",
                   fontSize: "0.875rem",
                   fontWeight: 600,
                   cursor: "pointer",
@@ -317,7 +317,7 @@ export function ModeSwitchModal({
                       height: "100%",
                       backgroundColor: "var(--accent-text)",
                       transform: `scaleX(${progressPercent / 100})`,
-                      transformOrigin: "left",
+                      transformOrigin: "inline-start",
                       transition: "transform 200ms ease",
                     }}
                   />
@@ -335,10 +335,10 @@ export function ModeSwitchModal({
                 data-testid="mode-switch-error"
                 style={{
                   padding: "var(--space-1) var(--space-2)",
-                  backgroundColor: "rgba(239, 68, 68, 0.1)",
-                  border: "1px solid var(--brand-danger, #ef4444)",
+                  backgroundColor: "var(--danger-bg)",
+                  border: "1px solid var(--danger-fill)",
                   borderRadius: "var(--radius-sm)",
-                  color: "var(--brand-danger, #ef4444)",
+                  color: "var(--danger-text)",
                   fontSize: "0.875rem",
                 }}
               >
@@ -364,7 +364,7 @@ export function ModeSwitchModal({
                   height: "var(--control-sm)",
                   paddingInline: "var(--space-2)",
                   borderRadius: "var(--radius-sm)",
-                  border: "1px solid var(--border-input)",
+                  border: "1px solid var(--border-card)",
                   backgroundColor: "var(--bg-subtle)",
                   color: "var(--text-main)",
                   fontSize: "0.875rem",
@@ -385,8 +385,8 @@ export function ModeSwitchModal({
                   paddingInline: "var(--space-3)",
                   borderRadius: "var(--radius-sm)",
                   border: "1px solid var(--border-card)",
-                  background: "var(--btn-gold-bg, var(--gradient-accent))",
-                  color: "var(--btn-gold-text, #1e293b)",
+                  background: "var(--btn-gold-bg)",
+                  color: "var(--btn-gold-text)",
                   fontSize: "0.875rem",
                   fontWeight: 600,
                   cursor: stage === "running" ? "wait" : "pointer",

@@ -35,13 +35,13 @@ export function PdfToolsNoticeModal({ open, onAccept, onCancel }: PdfToolsNotice
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.6)",
+        backgroundColor: "var(--overlay-backdrop)",
         backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         zIndex: 9999,
-        padding: "var(--space-16)",
+        padding: "var(--space-2)",
         boxSizing: "border-box",
       }}
       onClick={(e) => {
@@ -55,18 +55,19 @@ export function PdfToolsNoticeModal({ open, onAccept, onCancel }: PdfToolsNotice
           backgroundColor: "var(--bg-surface)",
           border: "1px solid var(--border-card)",
           borderRadius: "var(--radius-lg)",
-          padding: "var(--space-24)",
-          maxWidth: "calc(var(--space-32) * 15)",
+          padding: "var(--space-3)",
+          maxWidth: "calc(var(--space-8) * 6)",
           width: "100%",
-          boxShadow: "0 16px 32px rgba(0, 0, 0, 0.3)",
+          boxShadow: "var(--shadow-3)",
           boxSizing: "border-box",
           display: "flex",
           flexDirection: "column",
-          gap: "var(--space-16)",
+          gap: "var(--space-2)",
+          fontFamily: "var(--font-sans)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-8)" }}>
-          <span style={{ fontSize: "24px" }}>🔒</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+          <span style={{ fontSize: "20px" }}>🔒</span>
           <h3
             id="pdf-tools-notice-title"
             style={{
@@ -96,8 +97,8 @@ export function PdfToolsNoticeModal({ open, onAccept, onCancel }: PdfToolsNotice
             display: "flex",
             justifyContent: "flex-end",
             alignItems: "center",
-            gap: "var(--space-8)",
-            marginTop: "var(--space-8)",
+            gap: "var(--space-1)",
+            marginTop: "var(--space-1)",
           }}
         >
           <button
@@ -105,15 +106,17 @@ export function PdfToolsNoticeModal({ open, onAccept, onCancel }: PdfToolsNotice
             data-testid="pdf-tools-notice-cancel-btn"
             onClick={onCancel}
             style={{
-              height: "32px",
-              paddingInline: "var(--space-16)",
+              height: "var(--control-sm)",
+              paddingInline: "var(--space-2)",
               borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-input)",
+              border: "1px solid var(--border-card)",
               backgroundColor: "var(--bg-subtle)",
               color: "var(--text-main)",
               cursor: "pointer",
-              fontSize: "14px",
+              fontSize: "13px",
               fontWeight: 500,
+              fontFamily: "var(--font-sans)",
+              transition: "background-color 150ms ease",
             }}
           >
             {t("pdf.toolsNoticeCancel")}
@@ -123,15 +126,17 @@ export function PdfToolsNoticeModal({ open, onAccept, onCancel }: PdfToolsNotice
             data-testid="pdf-tools-notice-accept-btn"
             onClick={onAccept}
             style={{
-              height: "32px",
-              paddingInline: "var(--space-16)",
+              height: "var(--control-sm)",
+              paddingInline: "var(--space-2)",
               borderRadius: "var(--radius-sm)",
               border: "none",
-              backgroundColor: "var(--accent-primary, #3b82f6)",
-              color: "#ffffff",
+              backgroundColor: "var(--btn-primary-bg)",
+              color: "var(--btn-primary-text)",
               cursor: "pointer",
-              fontSize: "14px",
+              fontSize: "13px",
               fontWeight: 600,
+              fontFamily: "var(--font-sans)",
+              transition: "background-color 150ms ease",
             }}
           >
             {t("pdf.toolsNoticeAccept")}
@@ -159,43 +164,53 @@ export function PdfProcessingModal({
 }: PdfProcessingModalProps) {
   const { t } = useI18n();
 
+  useEffect(() => {
+    if (!active) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isCancelling) {
+        onCancel();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [active, onCancel, isCancelling]);
+
   if (!active || !tool) return null;
 
+  const toolName =
+    tool === "ocr"
+      ? t("pdf.toolOcr")
+      : tool === "compress"
+      ? t("pdf.toolCompress")
+      : t("pdf.toolOfficeToPdf");
+
+  const stageLabel =
+    progress?.stage === "uploading"
+      ? t("pdf.stageUploading")
+      : progress?.stage === "processing"
+      ? t("pdf.stageProcessing")
+      : progress?.stage === "downloading"
+      ? t("pdf.stageDownloading")
+      : t("pdf.stageProcessing");
+
   const percent = progress?.percent ?? 0;
-  const stage = progress?.stage ?? "uploading";
-
-  let stageLabel = t("pdf.stageUploading");
-  if (stage === "processing") {
-    stageLabel = t("pdf.stageProcessing");
-  } else if (stage === "downloading") {
-    stageLabel = t("pdf.stageDownloading");
-  }
-
-  let toolName = "";
-  if (tool === "ocr") {
-    toolName = t("pdf.toolOcr");
-  } else if (tool === "compress") {
-    toolName = t("pdf.toolCompress");
-  } else if (tool === "office-to-pdf") {
-    toolName = t("pdf.toolOfficeToPdf");
-  }
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={t("pdf.processingTitle")}
+      aria-label={`${toolName} ${stageLabel}`}
       data-testid="pdf-processing-modal"
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        backdropFilter: "blur(3px)",
+        backgroundColor: "var(--overlay-backdrop)",
+        backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         zIndex: 9999,
-        padding: "var(--space-16)",
+        padding: "var(--space-2)",
         boxSizing: "border-box",
       }}
     >
@@ -204,17 +219,18 @@ export function PdfProcessingModal({
           backgroundColor: "var(--bg-surface)",
           border: "1px solid var(--border-card)",
           borderRadius: "var(--radius-lg)",
-          padding: "var(--space-24)",
-          maxWidth: "calc(var(--space-32) * 12 + var(--space-16))",
+          padding: "var(--space-3)",
+          maxWidth: "calc(var(--space-8) * 5)",
           width: "100%",
-          boxShadow: "0 16px 32px rgba(0, 0, 0, 0.3)",
+          boxShadow: "var(--shadow-3)",
           boxSizing: "border-box",
           display: "flex",
           flexDirection: "column",
-          gap: "var(--space-16)",
+          gap: "var(--space-2)",
+          fontFamily: "var(--font-sans)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-8)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
           <span style={{ fontSize: "20px" }}>⚡</span>
           <div>
             <h4
@@ -242,7 +258,7 @@ export function PdfProcessingModal({
         <div
           style={{
             width: "100%",
-            height: "var(--space-8)",
+            height: "var(--space-1)",
             backgroundColor: "var(--bg-subtle)",
             borderRadius: "var(--radius-sm)",
             overflow: "hidden",
@@ -258,7 +274,7 @@ export function PdfProcessingModal({
             style={{
               width: "100%",
               height: "100%",
-              backgroundColor: "var(--accent-primary, #3b82f6)",
+              backgroundColor: "var(--btn-primary-bg)",
               transformOrigin: "inline-start",
               transform: `scaleX(${Math.max(0, Math.min(100, percent)) / 100})`,
               transition: "transform 200ms ease",
@@ -279,6 +295,7 @@ export function PdfProcessingModal({
               fontSize: "12px",
               fontWeight: 500,
               color: "var(--text-muted)",
+              fontVariantNumeric: "tabular-nums",
             }}
           >
             {percent}%
@@ -290,16 +307,18 @@ export function PdfProcessingModal({
             disabled={isCancelling}
             onClick={onCancel}
             style={{
-              height: "32px",
-              paddingInline: "var(--space-16)",
+              height: "var(--control-sm)",
+              paddingInline: "var(--space-2)",
               borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-input)",
+              border: "1px solid var(--border-card)",
               backgroundColor: "var(--bg-subtle)",
               color: "var(--text-main)",
               cursor: isCancelling ? "wait" : "pointer",
               opacity: isCancelling ? 0.6 : 1,
-              fontSize: "14px",
+              fontSize: "13px",
               fontWeight: 500,
+              fontFamily: "var(--font-sans)",
+              transition: "background-color 150ms ease",
             }}
           >
             {isCancelling ? t("pdf.cancellingProcessing") : t("pdf.cancelProcessing")}

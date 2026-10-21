@@ -314,10 +314,10 @@ export function ExportDialog({
             data-testid="export-error"
             style={{
               padding: "var(--space-1) var(--space-2)",
-              backgroundColor: "rgba(239, 68, 68, 0.1)",
-              border: "1px solid var(--brand-danger, #ef4444)",
+              backgroundColor: "var(--danger-bg)",
+              border: "1px solid var(--danger-fill)",
               borderRadius: "var(--radius-sm)",
-              color: "var(--brand-danger, #ef4444)",
+              color: "var(--danger-text)",
               fontSize: "0.875rem",
               display: "flex",
               flexDirection: "column",
@@ -347,10 +347,10 @@ export function ExportDialog({
             disabled={isExporting}
             onClick={onClose}
             style={{
-              height: "32px",
+              height: "var(--control-sm)",
               paddingInline: "var(--space-2)",
               borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-input)",
+              border: "1px solid var(--border-card)",
               backgroundColor: "var(--bg-subtle)",
               color: "var(--text-main)",
               fontSize: "0.875rem",
@@ -367,7 +367,7 @@ export function ExportDialog({
             disabled={isExporting || isExportingDrive}
             onClick={handleExportToDrive}
             style={{
-              height: "32px",
+              height: "var(--control-sm)",
               paddingInline: "var(--space-2)",
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--border-card)",
@@ -398,12 +398,12 @@ export function ExportDialog({
             disabled={isExporting || isExportingDrive}
             onClick={handleExport}
             style={{
-              height: "32px",
+              height: "var(--control-sm)",
               paddingInline: "var(--space-2)",
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--border-card)",
-              background: "var(--btn-gold-bg, var(--gradient-accent))",
-              color: "var(--btn-gold-text, #1e293b)",
+              background: "var(--btn-gold-bg)",
+              color: "var(--btn-gold-text)",
               fontSize: "0.875rem",
               fontWeight: 600,
               cursor: isExporting ? "wait" : "pointer",

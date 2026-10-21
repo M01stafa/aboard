@@ -941,9 +941,9 @@ export function PdfViewer({
           alignItems: "center",
           justifyContent: "center",
           height: "100%",
-          padding: "var(--space-24)",
-          color: "var(--danger-text, #ef4444)",
-          gap: "var(--space-8)",
+          padding: "var(--space-3)",
+          color: "var(--danger-text)",
+          gap: "var(--space-1)",
         }}
       >
         <p style={{ fontWeight: 600 }}>{t("pdf.loadError")}</p>
@@ -1029,22 +1029,22 @@ export function PdfViewer({
           data-testid="pdf-restructure-toast"
           style={{
             position: "absolute",
-            bottom: "var(--space-16)",
-            left: "50%",
+            bottom: "var(--space-2)",
+            insetInlineStart: "50%",
             transform: "translateX(-50%)",
-            backgroundColor: "var(--slate-900, #0f172a)",
-            color: "#ffffff",
+            backgroundColor: "var(--bg-surface)",
+            color: "var(--text-main)",
             border: "1px solid var(--border-card)",
             borderRadius: "var(--radius-md)",
-            padding: "var(--space-8) var(--space-16)",
-            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.3)",
+            padding: "var(--space-1) var(--space-2)",
+            boxShadow: "var(--shadow-3)",
             zIndex: 1000,
             display: "flex",
             alignItems: "center",
-            gap: "var(--space-8)",
+            gap: "var(--space-1)",
             fontSize: "14px",
             fontWeight: 500,
-            maxWidth: "calc(var(--space-16) * 4)",
+            maxWidth: "calc(var(--space-8) * 4)",
             boxSizing: "border-box",
           }}
         >
@@ -1058,9 +1058,9 @@ export function PdfViewer({
             style={{
               border: "none",
               background: "transparent",
-              color: "#ffffff",
+              color: "var(--text-muted)",
               cursor: "pointer",
-              padding: "0 var(--space-8)",
+              paddingInline: "var(--space-1)",
               fontSize: "16px",
             }}
           >

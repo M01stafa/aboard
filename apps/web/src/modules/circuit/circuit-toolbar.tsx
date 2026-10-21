@@ -276,12 +276,12 @@ export function CircuitToolbar({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: "var(--space-8)",
-        padding: "var(--space-8) var(--space-16)",
+        gap: "var(--space-1)",
+        padding: "var(--space-1) var(--space-2)",
         backgroundColor: "var(--bg-surface)",
         borderBottom: "1px solid var(--border-card)",
         boxSizing: "border-box",
-        minHeight: "var(--control-md)",
+        height: "var(--space-6)",
         position: "relative",
         zIndex: 20,
       }}
@@ -291,7 +291,7 @@ export function CircuitToolbar({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "var(--space-8)",
+          gap: "var(--space-1)",
           flexWrap: "wrap",
         }}
       >
@@ -305,15 +305,15 @@ export function CircuitToolbar({
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: "var(--space-8)",
+            gap: "var(--space-1)",
             height: "var(--control-sm)",
-            paddingInline: "var(--space-16)",
+            paddingInline: "var(--space-2)",
             borderRadius: "var(--radius-sm)",
             border: isSimRunning
               ? "1px solid var(--border-card)"
-              : "1px solid var(--accent-primary, #3b82f6)",
+              : "1px solid var(--accent-text)",
             backgroundColor: isSimRunning ? "var(--bg-subtle)" : "var(--bg-surface)",
-            color: isSimRunning ? "var(--text-main)" : "var(--accent-primary, #3b82f6)",
+            color: isSimRunning ? "var(--text-main)" : "var(--accent-text)",
             fontSize: "13px",
             fontWeight: 600,
             cursor: "pointer",
@@ -343,9 +343,9 @@ export function CircuitToolbar({
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: "var(--space-8)",
+            gap: "var(--space-1)",
             height: "var(--control-sm)",
-            paddingInline: "var(--space-12)",
+            paddingInline: "var(--space-1)",
             borderRadius: "var(--radius-sm)",
             border: "1px solid var(--border-card)",
             backgroundColor: "var(--bg-surface)",
@@ -378,9 +378,9 @@ export function CircuitToolbar({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "var(--space-8)",
+              gap: "var(--space-1)",
               height: "var(--control-sm)",
-              paddingInline: "var(--space-12)",
+              paddingInline: "var(--space-1)",
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--border-card)",
               backgroundColor: isSpeedOpen ? "var(--bg-subtle)" : "var(--bg-surface)",
@@ -404,18 +404,18 @@ export function CircuitToolbar({
               data-testid="circuit-speed-menu"
               style={{
                 position: "absolute",
-                top: "calc(100% + var(--space-8))",
+                top: "calc(100% + var(--space-1))",
                 insetInlineStart: 0,
                 backgroundColor: "var(--bg-surface)",
                 border: "1px solid var(--border-card)",
-                borderRadius: "var(--radius-md)",
-                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)",
-                padding: "var(--space-8)",
-                minWidth: "calc(var(--space-32) * 4)",
+                borderRadius: "var(--radius-sm)",
+                boxShadow: "var(--shadow-3)",
+                padding: "var(--space-1)",
+                minWidth: "calc(var(--space-8) * 2)",
                 zIndex: 100,
                 display: "flex",
                 flexDirection: "column",
-                gap: "var(--space-4)",
+                gap: "var(--space-1)",
               }}
             >
               {(["slow", "normal", "fast"] as const).map((s) => (
@@ -431,11 +431,11 @@ export function CircuitToolbar({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "var(--space-8) var(--space-12)",
+                    padding: "var(--space-1)",
                     borderRadius: "var(--radius-sm)",
                     border: "none",
                     backgroundColor: speed === s ? "var(--bg-subtle)" : "transparent",
-                    color: speed === s ? "var(--accent-primary, #3b82f6)" : "var(--text-main)",
+                    color: speed === s ? "var(--accent-text)" : "var(--text-main)",
                     fontWeight: speed === s ? 600 : 400,
                     fontSize: "13px",
                     cursor: "pointer",
@@ -466,9 +466,9 @@ export function CircuitToolbar({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "var(--space-8)",
+              gap: "var(--space-1)",
               height: "var(--control-sm)",
-              paddingInline: "var(--space-12)",
+              paddingInline: "var(--space-1)",
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--border-card)",
               backgroundColor: isPaletteOpen ? "var(--bg-subtle)" : "var(--bg-surface)",
@@ -500,18 +500,18 @@ export function CircuitToolbar({
               data-testid="circuit-palette-dropdown"
               style={{
                 position: "absolute",
-                top: "calc(100% + var(--space-8))",
+                top: "calc(100% + var(--space-1))",
                 insetInlineStart: 0,
                 backgroundColor: "var(--bg-surface)",
                 border: "1px solid var(--border-card)",
-                borderRadius: "var(--radius-md)",
-                boxShadow: "0 12px 32px rgba(0, 0, 0, 0.25)",
-                padding: "var(--space-16)",
-                width: "calc(var(--space-32) * 11)",
+                borderRadius: "var(--radius-sm)",
+                boxShadow: "var(--shadow-3)",
+                padding: "var(--space-2)",
+                width: "calc(var(--space-8) * 5)",
                 zIndex: 100,
                 display: "flex",
                 flexDirection: "column",
-                gap: "var(--space-16)",
+                gap: "var(--space-2)",
                 boxSizing: "border-box",
               }}
             >
@@ -524,7 +524,7 @@ export function CircuitToolbar({
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
                     color: "var(--text-muted)",
-                    marginBottom: "var(--space-8)",
+                    marginBottom: "var(--space-1)",
                   }}
                 >
                   {t("circuit.catBasic")}
@@ -533,7 +533,7 @@ export function CircuitToolbar({
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(2, 1fr)",
-                    gap: "var(--space-8)",
+                    gap: "var(--space-1)",
                   }}
                 >
                   {CIRCUIT_COMPONENTS.filter((c) => c.category === "basic").map((item) => (
@@ -548,11 +548,11 @@ export function CircuitToolbar({
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "var(--space-8)",
-                        padding: "var(--space-8) var(--space-12)",
+                        gap: "var(--space-1)",
+                        padding: "var(--space-1)",
                         borderRadius: "var(--radius-sm)",
                         border: selectedComponent === item.className
-                          ? "1px solid var(--accent-primary, #3b82f6)"
+                          ? "1px solid var(--accent-text)"
                           : "1px solid var(--border-card)",
                         backgroundColor: selectedComponent === item.className
                           ? "var(--bg-subtle)"
@@ -564,7 +564,7 @@ export function CircuitToolbar({
                         textAlign: "start",
                       }}
                     >
-                      <span style={{ color: "var(--accent-primary, #3b82f6)", display: "flex" }}>
+                      <span style={{ color: "var(--accent-text)", display: "flex" }}>
                         {item.iconSvg}
                       </span>
                       <span>{t(item.labelKey)}</span>
@@ -582,7 +582,7 @@ export function CircuitToolbar({
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
                     color: "var(--text-muted)",
-                    marginBottom: "var(--space-8)",
+                    marginBottom: "var(--space-1)",
                   }}
                 >
                   {t("circuit.catSources")}
@@ -591,7 +591,7 @@ export function CircuitToolbar({
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(2, 1fr)",
-                    gap: "var(--space-8)",
+                    gap: "var(--space-1)",
                   }}
                 >
                   {CIRCUIT_COMPONENTS.filter((c) => c.category === "sources").map((item) => (
@@ -606,11 +606,11 @@ export function CircuitToolbar({
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "var(--space-8)",
-                        padding: "var(--space-8) var(--space-12)",
+                        gap: "var(--space-1)",
+                        padding: "var(--space-1)",
                         borderRadius: "var(--radius-sm)",
                         border: selectedComponent === item.className
-                          ? "1px solid var(--accent-primary, #3b82f6)"
+                          ? "1px solid var(--accent-text)"
                           : "1px solid var(--border-card)",
                         backgroundColor: selectedComponent === item.className
                           ? "var(--bg-subtle)"
@@ -622,7 +622,7 @@ export function CircuitToolbar({
                         textAlign: "start",
                       }}
                     >
-                      <span style={{ color: "var(--accent-primary, #3b82f6)", display: "flex" }}>
+                      <span style={{ color: "var(--accent-text)", display: "flex" }}>
                         {item.iconSvg}
                       </span>
                       <span>{t(item.labelKey)}</span>
@@ -640,7 +640,7 @@ export function CircuitToolbar({
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
                     color: "var(--text-muted)",
-                    marginBottom: "var(--space-8)",
+                    marginBottom: "var(--space-1)",
                   }}
                 >
                   {t("circuit.catSemiconductors")}
@@ -649,7 +649,7 @@ export function CircuitToolbar({
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(2, 1fr)",
-                    gap: "var(--space-8)",
+                    gap: "var(--space-1)",
                   }}
                 >
                   {CIRCUIT_COMPONENTS.filter((c) => c.category === "semiconductors").map((item) => (
@@ -664,11 +664,11 @@ export function CircuitToolbar({
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "var(--space-8)",
-                        padding: "var(--space-8) var(--space-12)",
+                        gap: "var(--space-1)",
+                        padding: "var(--space-1)",
                         borderRadius: "var(--radius-sm)",
                         border: selectedComponent === item.className
-                          ? "1px solid var(--accent-primary, #3b82f6)"
+                          ? "1px solid var(--accent-text)"
                           : "1px solid var(--border-card)",
                         backgroundColor: selectedComponent === item.className
                           ? "var(--bg-subtle)"
@@ -680,7 +680,7 @@ export function CircuitToolbar({
                         textAlign: "start",
                       }}
                     >
-                      <span style={{ color: "var(--accent-primary, #3b82f6)", display: "flex" }}>
+                      <span style={{ color: "var(--accent-text)", display: "flex" }}>
                         {item.iconSvg}
                       </span>
                       <span>{t(item.labelKey)}</span>
@@ -698,7 +698,7 @@ export function CircuitToolbar({
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
                     color: "var(--text-muted)",
-                    marginBottom: "var(--space-8)",
+                    marginBottom: "var(--space-1)",
                   }}
                 >
                   {t("circuit.catOutputs")}
@@ -707,7 +707,7 @@ export function CircuitToolbar({
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(2, 1fr)",
-                    gap: "var(--space-8)",
+                    gap: "var(--space-1)",
                   }}
                 >
                   {CIRCUIT_COMPONENTS.filter((c) => c.category === "outputs").map((item) => (
@@ -722,11 +722,11 @@ export function CircuitToolbar({
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "var(--space-8)",
-                        padding: "var(--space-8) var(--space-12)",
+                        gap: "var(--space-1)",
+                        padding: "var(--space-1)",
                         borderRadius: "var(--radius-sm)",
                         border: selectedComponent === item.className
-                          ? "1px solid var(--accent-primary, #3b82f6)"
+                          ? "1px solid var(--accent-text)"
                           : "1px solid var(--border-card)",
                         backgroundColor: selectedComponent === item.className
                           ? "var(--bg-subtle)"
@@ -738,7 +738,7 @@ export function CircuitToolbar({
                         textAlign: "start",
                       }}
                     >
-                      <span style={{ color: "var(--accent-primary, #3b82f6)", display: "flex" }}>
+                      <span style={{ color: "var(--accent-text)", display: "flex" }}>
                         {item.iconSvg}
                       </span>
                       <span>{t(item.labelKey)}</span>
@@ -757,8 +757,8 @@ export function CircuitToolbar({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "var(--space-8)",
-              padding: "0 var(--space-8)",
+              gap: "var(--space-1)",
+              paddingInline: "var(--space-1)",
               height: "var(--control-sm)",
               borderRadius: "var(--radius-sm)",
               backgroundColor: "var(--bg-subtle)",
@@ -776,7 +776,7 @@ export function CircuitToolbar({
       </div>
 
       {/* Secondary / Advanced Toggle Group */}
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-8)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
         <button
           type="button"
           data-testid="circuit-advanced-toggle-btn"
@@ -786,9 +786,9 @@ export function CircuitToolbar({
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: "var(--space-8)",
+            gap: "var(--space-1)",
             height: "var(--control-sm)",
-            paddingInline: "var(--space-12)",
+            paddingInline: "var(--space-1)",
             borderRadius: "var(--radius-sm)",
             border: "1px solid var(--border-card)",
             backgroundColor: "var(--bg-surface)",

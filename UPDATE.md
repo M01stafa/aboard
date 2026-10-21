@@ -1424,6 +1424,29 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 42 · CIRC-5, R1, R5, R7, §7.2
 **Open:** none (ready for Task 43).
 
+## 2026-10-21 — Task 43: Redesign the PDF Toolbars and Unify the Interface
+**Request:** Run Task 43 from docs/TASKS.md (Final task of Phase 10: UI Redesign): redesign the PDF viewer toolbars into a single, cohesive, native-feeling UI matching the Circuit toolbar and Board pane; unify all interface chrome (app shell, PDF, circuit toolbar, dialogs, banners) by eliminating hard-coded colors, raw spacing, and non-token sizes in favor of DESIGN.md tokens (R1); ensure 100% compliance with the 8-point grid spacing system; audit accessibility (WCAG 2.2 AA contrast, :focus-visible R5, aria-labels on all icon buttons); verify RTL/LTR and Light/Dark theme rendering; run full test suite, update docs, commit and push.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): completely redesigned toolbar into 3 clean visual groups (Navigation & View with tabular numbers and thumbnails toggle, Annotation Tools & History pill controls with bespoke SVG stroke icons and undo/redo, Document Actions & Popovers for Page Operations and Online Tools); implemented logical positioning (`inset-inline-end: 0`) for RTL/LTR safety; added `:focus-visible` styling (R5); preserved all 30+ `data-testid` attributes.
+- `apps/web/src/modules/pdf/pdf-tools-dialogs.tsx` (changed): replaced hardcoded overlays and shadows with `var(--overlay-backdrop)` and `var(--shadow-3)`; aligned padding to `--space-3` (24px) and `--space-2` (16px); updated progress stages to match `StirlingProgress` (`uploading`, `processing`, `downloading`) and corrected `pdf.cancellingProcessing`.
+- `apps/web/src/modules/pdf/pdf-pane.tsx` & `pdf-viewer.tsx` (changed): replaced hardcoded colors and slate toasts with `var(--bg-surface)`, `var(--text-main)`, `var(--text-muted)`, `var(--shadow-3)`, and logical `insetInlineStart`.
+- `apps/web/src/modules/circuit/circuit-toolbar.tsx` (changed): replaced `var(--accent-primary, #3b82f6)` with `var(--accent-text)`; corrected spacing token usage to 8-point multipliers (`--space-1` = 8px, `--space-2` = 16px); set toolbar height to `var(--space-6)` (48px).
+- `apps/web/src/core/alpha/export-dialog.tsx` (changed): replaced hardcoded red/gold with `var(--danger-bg)`, `var(--danger-fill)`, `var(--danger-text)`, `var(--btn-gold-bg)`, `var(--btn-gold-text)`.
+- `apps/web/src/components/mode-switch-modal.tsx` (changed): replaced hardcoded red with `var(--danger-fill)` and `var(--btn-primary-text)`.
+- `apps/web/src/components/drive-status-banner.tsx` (changed): replaced hardcoded colors with `var(--btn-primary-bg)` and `var(--btn-gold-bg)`.
+- `apps/web/src/modules/board/board-pane.tsx` (changed): replaced hardcoded slate/white with `var(--bg-surface)` and `var(--text-main)`, and set `insetInlineStart: "50%"`.
+- `docs/PROGRESS.md` (changed): marked Task 43 and Phase 10 complete, updated decisions log, set next step to Task 44.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- Spacing check (`scripts/check-spacing.mjs`): PASS (100% 8-point grid compliance).
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (326/326 unit tests passing across 43 test files).
+- `pnpm test:e2e`: PASS (26/26 Playwright E2E tests passing).
+- `pnpm ci:security`: PASS (Gitleaks clean across 77 commits, prod audit clean, bundle scan clean).
+**Related:** Task 43 · R1, R5, R10, A8, §6.2, §7.3, §15
+**Open:** none (Phase 10 complete; ready for Phase 11 / Task 44).
+
 
 
 
