@@ -30,7 +30,7 @@
     "@embedpdf/plugin-viewport": "2.15.1",
     "@embedpdf/plugin-zoom": "2.15.1",
     "@excalidraw/excalidraw": "0.18.1",
-    "@supabase/supabase-js": "2.117.3",
+    "@supabase/supabase-js": "2.118.0",
     "@zip.js/zip.js": "2.23.0",
     "dexie": "4.4.1",
     "hash-wasm": "4.12.0",
