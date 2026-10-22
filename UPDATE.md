@@ -1447,6 +1447,33 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Task 43 · R1, R5, R10, A8, §6.2, §7.3, §15
 **Open:** none (Phase 10 complete; ready for Phase 11 / Task 44).
 
+## 2026-10-22 — Run Full Server Stack
+**Request:** Run the full server.
+**Changes:**
+- Started Next.js development server on `http://localhost:3000` via Turbopack.
+- Started Docker services stack (`services/docker-compose.yml`): Caddy reverse proxy on port 80/443, Hono API Gateway on `http://localhost/pdf`, and isolated Stirling-PDF 0.44.0 on internal network.
+- Verified local Supabase development stack running on port 54321 / 54322 / 54323.
+**Checks:**
+- `curl http://localhost/pdf/health`: HTTP 200 OK (`{"status":"ok","service":"aboard-pdf-gateway"}`).
+- `curl http://localhost:3000`: HTTP 200 OK (Aboard web app served).
+**Related:** Dev Environment · §5, §7.4
+**Open:** none.
+
+## 2026-10-22 — Fix Login Email & OTP Input Styling
+**Request:** Fix the visual bug on the login page where email input field had no visible border/background; reported missing Tailwind v4 dependency per Missing Information Rule; owner approved fixing the input visual bug directly using native Vanilla CSS tokens.
+**Changes:**
+- `apps/web/app/login/page.tsx` (changed): replaced undefined CSS variables (`var(--surface-sunken)`, `var(--border-subtle)`, `var(--shadow-md)`) with valid DESIGN.md tokens: `var(--input-bg)` for input background, `var(--border-input)` for email and OTP input borders, `var(--border-card)` for card and divider borders, and `var(--shadow-2)` for card elevation; set email input placeholder to `name@example.com`.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (326/326 unit tests passing across 43 test files).
+- `pnpm test:e2e`: PASS (26/26 Playwright E2E tests passing).
+- `pnpm ci:security`: PASS (Gitleaks clean across 88 commits, prod audit clean, bundle scan clean).
+**Related:** R1, AUTH-1, DESIGN.md §2.1.0
+**Open:** none.
+
+
+
 
 
 

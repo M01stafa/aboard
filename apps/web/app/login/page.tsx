@@ -241,10 +241,10 @@ export default function LoginPage() {
           width: "100%",
           maxWidth: "48ch",
           backgroundColor: "var(--bg-surface)",
-          border: "1px solid var(--border-subtle)",
+          border: "1px solid var(--border-card)",
           borderRadius: "var(--radius-md)",
           padding: "var(--space-6)",
-          boxShadow: "var(--shadow-md)",
+          boxShadow: "var(--shadow-2)",
         }}
       >
         <div style={{ marginBlockEnd: "var(--space-6)", textAlign: "center" }}>
@@ -302,7 +302,7 @@ export default function LoginPage() {
             paddingInline: "var(--space-4)",
             backgroundColor: "var(--bg-subtle)",
             color: "var(--text-main)",
-            border: "1px solid var(--border-subtle)",
+            border: "1px solid var(--border-card)",
             borderRadius: "var(--radius-sm)",
             fontWeight: "var(--weight-semibold)",
             fontSize: "0.9375rem",
@@ -345,7 +345,7 @@ export default function LoginPage() {
             style={{
               flex: 1,
               height: "1px",
-              backgroundColor: "var(--border-subtle)",
+              backgroundColor: "var(--border-card)",
             }}
           />
           <span
@@ -362,7 +362,7 @@ export default function LoginPage() {
             style={{
               flex: 1,
               height: "1px",
-              backgroundColor: "var(--border-subtle)",
+              backgroundColor: "var(--border-card)",
             }}
           />
         </div>
@@ -388,14 +388,14 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={t("auth.emailPlaceholder")}
+                placeholder="name@example.com"
                 style={{
                   width: "100%",
                   height: "var(--control-md)",
                   paddingInline: "var(--space-3)",
-                  backgroundColor: "var(--surface-sunken)",
+                  backgroundColor: "var(--input-bg)",
                   color: "var(--text-main)",
-                  border: "1px solid var(--border-subtle)",
+                  border: "1px solid var(--border-input)",
                   borderRadius: "var(--radius-sm)",
                   fontSize: "0.9375rem",
                   boxSizing: "border-box",
@@ -523,9 +523,9 @@ export default function LoginPage() {
                   width: "100%",
                   height: "var(--control-md)",
                   paddingInline: "var(--space-3)",
-                  backgroundColor: "var(--surface-sunken)",
+                  backgroundColor: "var(--input-bg)",
                   color: "var(--text-main)",
-                  border: "1px solid var(--border-subtle)",
+                  border: "1px solid var(--border-input)",
                   borderRadius: "var(--radius-sm)",
                   fontSize: "1.25rem",
                   letterSpacing: "0.25em",
