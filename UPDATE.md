@@ -1472,6 +1472,23 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** R1, AUTH-1, DESIGN.md §2.1.0
 **Open:** none.
 
+## 2026-10-22 — Integrate Aboard Logo Assets and Center Launcher Layout
+**Request:** Integrate existing Aboard logo from `./Logo` folder, copy assets to `apps/web/public/`, update header with `<Image>` component, configure Next.js favicon, and center Workspace Launcher title, subtitle, and action buttons.
+**Changes:**
+- `apps/web/public/` (created): copied `Alpha_logo.png` (`logo.png`, `Alpha_logo.png`), `Alpha_logo_WB.png` (`logo-wb.png`, `Alpha_logo_WB.png`), `Alpha_logo.svg` (`logo.svg`, `Alpha_logo.svg`), and generated `favicon.ico`.
+- `apps/web/app/` (created): added `icon.png`, `icon.svg`, and `favicon.ico` for Next.js App Router metadata conventions.
+- `apps/web/app/layout.tsx` (changed): added `icons` metadata linking `/icon.png`, `/logo.png`, and `/favicon.ico`.
+- `apps/web/app/page.tsx` (changed): replaced generic text "α" logo in top header bar with Next.js `<Image src="/logo.png" ... />`; centered the Hero title, subtitle, and "Open .alpha" / "Open .alpha from Google Drive" action buttons symmetrically with flexbox and 8-point grid tokens (`--space-1`, `--space-2`, `--space-3`, `--space-6`).
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (326/326 unit tests passing across 43 test files).
+- `pnpm test:e2e`: PASS (26/26 Playwright E2E tests passing).
+- `pnpm ci:security`: PASS (Gitleaks clean across 89 commits, prod audit clean, bundle scan clean).
+**Related:** LAUNCH-1, DESIGN.md R1, §15
+**Open:** none.
+
+
 
 
 

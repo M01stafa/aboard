@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "./auth-guard";
 import { signOut } from "@/core/supabase";
@@ -635,23 +636,19 @@ export function LauncherContent({ user }: { user: User }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-          <div
+          <Image
+            src="/logo.png"
+            alt={t("common.appName")}
+            width={32}
+            height={32}
+            priority
             style={{
               inlineSize: "32px",
               blockSize: "32px",
               borderRadius: "var(--radius-sm)",
-              background: "var(--gradient-accent)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--btn-gold-text)",
-              fontWeight: "var(--weight-bold)",
-              fontSize: "1rem",
-              boxSizing: "border-box",
+              objectFit: "contain",
             }}
-          >
-            α
-          </div>
+          />
           <span
             style={{
               fontSize: "1.25rem",
@@ -717,15 +714,21 @@ export function LauncherContent({ user }: { user: User }) {
         style={{
           display: "flex",
           flexDirection: "column",
+          alignItems: "center",
+          textAlign: "center",
           gap: "var(--space-3)",
+          inlineSize: "100%",
         }}
       >
         <div
           style={{
             display: "flex",
             flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
             gap: "var(--space-1)",
             maxInlineSize: "65ch",
+            marginInline: "auto",
           }}
         >
           <h1
@@ -735,6 +738,7 @@ export function LauncherContent({ user }: { user: User }) {
               lineHeight: "2.5rem",
               fontWeight: "var(--weight-bold)",
               color: "var(--text-main)",
+              textAlign: "center",
             }}
           >
             {t("launcher.pageTitle")}
@@ -745,6 +749,7 @@ export function LauncherContent({ user }: { user: User }) {
               fontSize: "1rem",
               lineHeight: "1.5rem",
               color: "var(--text-muted)",
+              textAlign: "center",
             }}
           >
             {t("launcher.tagline")}
@@ -756,9 +761,10 @@ export function LauncherContent({ user }: { user: User }) {
           style={{
             display: "flex",
             alignItems: "center",
+            justifyContent: "center",
             flexWrap: "wrap",
             gap: "var(--space-2)",
-            marginBlockStart: "var(--space-1)",
+            inlineSize: "100%",
           }}
         >
           <button
@@ -828,9 +834,12 @@ export function LauncherContent({ user }: { user: User }) {
               gap: "var(--space-2)",
               boxShadow: "var(--shadow-1)",
               marginBlockStart: "var(--space-1)",
+              inlineSize: "100%",
+              maxInlineSize: "72ch",
+              marginInline: "auto",
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)", maxWidth: "60ch" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)", maxWidth: "60ch", textAlign: "start" }}>
               <span style={{ fontWeight: "var(--weight-semibold)", color: "var(--text-main)" }}>
                 {t("launcher.promptMoveLocalTitle")}
               </span>
@@ -899,6 +908,9 @@ export function LauncherContent({ user }: { user: User }) {
               alignItems: "center",
               justifyContent: "space-between",
               gap: "var(--space-2)",
+              inlineSize: "100%",
+              maxInlineSize: "72ch",
+              marginInline: "auto",
             }}
           >
             <span>{importError}</span>
@@ -939,6 +951,9 @@ export function LauncherContent({ user }: { user: User }) {
               lineHeight: "1.25rem",
               boxSizing: "border-box",
               marginBlockStart: "var(--space-1)",
+              inlineSize: "100%",
+              maxInlineSize: "72ch",
+              marginInline: "auto",
             }}
           >
             {driveNotice}

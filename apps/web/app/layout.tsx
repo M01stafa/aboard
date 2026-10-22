@@ -7,6 +7,14 @@ import { I18nProvider } from "@/i18n/provider";
 export const metadata: Metadata = {
   title: "Aboard",
   description: "Whiteboard, PDF annotator, and circuit simulator for students",
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/logo.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({
