@@ -1560,5 +1560,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** WORKSPACE-1, WORKSPACE-2, DESIGN.md R1
 **Open:** none.
 
-
-
+## 2026-10-24 — Fix Project State Persistence, Annotation Loss, and Duplicate Tabs on Re-entry
+**Request:** Fix critical data loss bug and duplicate tabs on workspace re-entry: prevent duplicate tabs when re-opening projects from launcher, enforce unique tool rule during layout restoration and filter out non-workspace items like annotations; prevent premature mounting of tool editors before layout and item loading completes; flush pending debounce timers and SaveQueue outbox before navigating to launcher; write Playwright E2E test; run local checks and commit locally without pushing to GitHub.
+**Changes:**
+- `apps/web/src/core/bus.ts` (changed): added `workspace:flush` event to `AppEvents` to signal immediate flushing of in-flight debounce timers across all active tool panes.
+- `apps/web/src/core/storage/project-service.ts` (changed): added `saveLayout(projectId, layout)` method to persist active tab IDs and split configuration directly to `AlphaManifest.layout`.
+- `apps/web/src/modules/board/use-board-persistence.ts` (changed): added `hasLoadedElementsRef` guard in `saveBoard` to prevent Excalidraw's initial mount-time `onChange([])` event from overwriting non-empty loaded elements before initial manifest load finishes.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts` (changed): implemented `flushAnnotations` callback; registered `bus.on("workspace:flush")` listener to trigger immediate annotation export; updated unmount effect to flush pending annotations immediately rather than dropping in-flight changes.
+- `apps/web/app/workspace/page.tsx` (changed): provided `onNavigateHome` callback calling `router.push("/")` to gracefully handle workspace exit.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): introduced `isRestoringLayout` state blocking pane rendering until manifest restoration completes; updated `loadInfo` to filter out non-tab items (`annotations`), enforce unique tool rule deduplicating tabs by `kind`, and restore saved `manifest.layout?.tabs` order; added `persistLayout` to sync manifest layout on tab changes; added `handleLeaveWorkspace` to emit `workspace:flush`, save layout, and flush `SaveQueue` directly to IndexedDB on home navigation and unmount.
+- `apps/web/e2e/project-persistence.spec.ts` (created): added comprehensive Playwright E2E test verifying project creation, whiteboard drawing, PDF annotation, return to launcher, re-open project, strict tab deduplication (exactly 1 Whiteboard, 1 PDF, 0 duplicate Circuits), and persistence of drawings and annotations.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (328/328 unit tests passing across 43 test files).
+- `pnpm test:e2e`: PASS (27/27 Playwright E2E tests passing, including project-persistence.spec.ts).
+**Related:** WORKSPACE-1, WORKSPACE-2, BOARD-2, PDF-3, PDF-4, STORE-1
+**Open:** none.

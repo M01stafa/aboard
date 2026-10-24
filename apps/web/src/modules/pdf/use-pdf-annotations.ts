@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { bus } from "@/core/bus";
 import { projectService as defaultProjectService, type ProjectService } from "@/core/storage";
 import {
   useAnnotation,
@@ -58,6 +59,28 @@ export function usePdfAnnotations({
   const hasRestoredRef = useRef(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Immediate flush function to guarantee annotations are saved without waiting for debounce
+  const flushAnnotations = useCallback(async () => {
+    if (isRestoringRef.current || !annotationScope) return;
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    try {
+      const items = await new Promise<AnnotationTransferItem[]>((resolve, reject) => {
+        const task = annotationScope.exportAnnotations();
+        task.wait(resolve, (err) => reject(new Error(String(err))));
+      });
+
+      const serialized = await serializeAnnotations(projectId, hashKey, items, ps);
+      await ps.saveAnnotations(projectId, hashKey, serialized);
+    } catch (err) {
+      console.error("[usePdfAnnotations] Flush annotations failed:", err);
+    }
+  }, [annotationScope, projectId, hashKey, ps]);
+
   // Debounced save through ProjectService & SaveQueue (coalesces rapid drawing strokes)
   const triggerDebouncedSave = useCallback(() => {
     if (isRestoringRef.current || !annotationScope) return;
@@ -66,22 +89,10 @@ export function usePdfAnnotations({
       clearTimeout(debounceTimerRef.current);
     }
 
-    debounceTimerRef.current = setTimeout(async () => {
-      try {
-        if (!annotationScope) return;
-
-        const items = await new Promise<AnnotationTransferItem[]>((resolve, reject) => {
-          const task = annotationScope.exportAnnotations();
-          task.wait(resolve, (err) => reject(new Error(String(err))));
-        });
-
-        const serialized = await serializeAnnotations(projectId, hashKey, items, ps);
-        await ps.saveAnnotations(projectId, hashKey, serialized);
-      } catch (err) {
-        console.error("[usePdfAnnotations] Debounced save failed:", err);
-      }
+    debounceTimerRef.current = setTimeout(() => {
+      void flushAnnotations();
     }, 400);
-  }, [annotationScope, projectId, hashKey, ps]);
+  }, [annotationScope, flushAnnotations]);
 
   // Initial restoration on document load: loads clean JSON and restores stamps via getFile
   useEffect(() => {
@@ -156,14 +167,27 @@ export function usePdfAnnotations({
     };
   }, [historyScope, triggerDebouncedSave]);
 
-  // Cleanup pending timer on unmount
+  // Flush pending annotations on workspace:flush event (e.g. user navigating back to launcher)
+  useEffect(() => {
+    const handleWorkspaceFlush = () => {
+      void flushAnnotations();
+    };
+    bus.on("workspace:flush", handleWorkspaceFlush);
+    return () => {
+      bus.off("workspace:flush", handleWorkspaceFlush);
+    };
+  }, [flushAnnotations]);
+
+  // Cleanup or flush pending timer on unmount
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+        void flushAnnotations();
       }
     };
-  }, []);
+  }, [flushAnnotations]);
 
   const handleSelectTool = useCallback(
     (tool: AnnotationToolType) => {

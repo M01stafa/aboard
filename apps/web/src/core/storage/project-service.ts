@@ -103,6 +103,26 @@ export class ProjectService {
   }
 
   /**
+   * Persists the workspace layout (active tab item IDs and split mode) to the project manifest.
+   */
+  async saveLayout(
+    projectId: string,
+    layout: { tabs: string[]; split?: "none" | "vertical" | "horizontal" }
+  ): Promise<void> {
+    try {
+      const manifest = await this.provider.loadManifest(projectId);
+      manifest.layout = {
+        tabs: layout.tabs,
+        split: layout.split || "none",
+      };
+      manifest.project.updatedAt = new Date().toISOString();
+      await this.provider.saveManifest(manifest);
+    } catch {
+      // Manifest layout save is non-fatal
+    }
+  }
+
+  /**
    * Creates a new project with an initial AlphaManifest and notifies the index syncer.
    */
   async createProject(

@@ -1,17 +1,24 @@
 "use client";
 
 import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthGuard } from "../auth-guard";
 import { WorkspaceHost } from "@/workspace/workspace-host";
 import type { ModuleKind } from "@/workspace/types";
 
 function WorkspaceContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("p");
   const kindParam = searchParams.get("kind") as ModuleKind | null;
 
-  return <WorkspaceHost projectId={projectId} initialKind={kindParam} />;
+  return (
+    <WorkspaceHost
+      projectId={projectId}
+      initialKind={kindParam}
+      onNavigateHome={() => router.push("/")}
+    />
+  );
 }
 
 export default function WorkspacePage() {

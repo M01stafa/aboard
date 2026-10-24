@@ -49,6 +49,7 @@ export interface WorkspaceHostProps {
   onPaneMount?: (tabId: string, token: string) => void;
   // For Vitest testing: allows injecting layout directly or test controls
   initialLayout?: Partial<LayoutState>;
+  onNavigateHome?: () => void;
 }
 
 export function WorkspaceHost({
@@ -56,6 +57,7 @@ export function WorkspaceHost({
   initialKind,
   onPaneMount,
   initialLayout,
+  onNavigateHome,
 }: WorkspaceHostProps) {
   const { t, dir } = useI18n();
   const gridRef = useRef<HTMLDivElement>(null);
@@ -131,12 +133,68 @@ export function WorkspaceHost({
     };
   });
 
+  const [isRestoringLayout, setIsRestoringLayout] = useState(() => {
+    return Boolean(
+      projectId &&
+        projectId !== "demo" &&
+        (!initialLayout?.tabs || initialLayout.tabs.length === 0)
+    );
+  });
+
   const [isMobile, setIsMobile] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showModeSwitch, setShowModeSwitch] = useState(false);
   const [projectInfo, setProjectInfo] = useState<{ title: string; storage: "local" | "drive" } | null>(null);
   const previousSplitRef = useRef<SplitMode>("none");
+
+  // Track layout in ref for event bus handlers and navigation flushes
+  const layoutRef = useRef(layout);
+  useEffect(() => {
+    layoutRef.current = layout;
+  }, [layout]);
+
+  // Persists the current layout (active tab item IDs and split) to the project manifest
+  const persistLayout = useCallback(
+    (nextLayout: LayoutState) => {
+      if (projectId && projectId !== "demo") {
+        void defaultProjectService.saveLayout(projectId, {
+          tabs: nextLayout.tabs.map((t) => t.itemId),
+          split: nextLayout.split,
+        });
+      }
+    },
+    [projectId]
+  );
+
+  // Flushes in-flight debounced saves across all tool panes and commits SaveQueue to IndexedDB
+  const handleLeaveWorkspace = useCallback(async () => {
+    try {
+      // 1. Tell all panes to flush any in-memory pending debounces immediately
+      bus.emit("workspace:flush", {});
+      await new Promise((r) => setTimeout(r, 50));
+
+      // 2. Persist current layout to manifest
+      if (projectId && projectId !== "demo") {
+        await defaultProjectService.saveLayout(projectId, {
+          tabs: layoutRef.current.tabs.map((t) => t.itemId),
+          split: layoutRef.current.split,
+        });
+      }
+
+      // 3. Flush SaveQueue directly to IndexedDB
+      await defaultProjectService.flushNow();
+    } catch {
+      // Non-fatal if database is closed or in test environment
+    }
+  }, [projectId]);
+
+  // Unmount lifecycle: ensure SaveQueue is flushed when navigating away
+  useEffect(() => {
+    return () => {
+      void handleLeaveWorkspace();
+    };
+  }, [handleLeaveWorkspace]);
 
   // Track tool presence and split eligibility
   const hasBoard = layout.tabs.some((t) => t.kind === "board");
@@ -171,11 +229,12 @@ export function WorkspaceHost({
     };
   }, [isAddMenuOpen]);
 
-  // Load project storage info for mode switching
+  // Load project storage info for mode switching and restore tabs
   useEffect(() => {
     if (!projectId || typeof projectId !== "string") return;
     const currentId: string = projectId;
     let cancelled = false;
+
     async function loadInfo() {
       try {
         const { getDb } = await import("@/core/db");
@@ -188,44 +247,82 @@ export function WorkspaceHost({
               storage: (row.storage as "local" | "drive") || "local",
             });
 
-            if (row.manifestJson && (!initialLayout || !initialLayout.tabs || initialLayout.tabs.length === 0)) {
+            if (row.manifestJson && (!initialLayout?.tabs || initialLayout.tabs.length === 0)) {
               try {
                 const manifest = JSON.parse(row.manifestJson) as AlphaManifest;
-                if (manifest && Array.isArray(manifest.items) && manifest.items.length > 0) {
-                  const restoredTabs: Tab[] = manifest.items.map((item: AlphaManifest["items"][number]) => {
+                if (manifest && Array.isArray(manifest.items)) {
+                  // Filter out non-workspace items like annotations
+                  const validItems = manifest.items.filter(
+                    (item) => item.kind === "board" || item.kind === "pdf" || item.kind === "circuit"
+                  );
+
+                  // STRICT UNIQUE TOOL RULE: Only one board, one pdf, one circuit
+                  const seenKinds = new Set<ModuleKind>();
+                  const restoredTabs: Tab[] = [];
+
+                  // If manifest.layout?.tabs exists, prioritize matching items in stored order
+                  const preferredOrder: typeof validItems = [];
+                  if (manifest.layout?.tabs && Array.isArray(manifest.layout.tabs)) {
+                    for (const targetId of manifest.layout.tabs) {
+                      const found = validItems.find(
+                        (i) => i.id === targetId || `tab-${i.id.replace(/^item-/, "")}` === targetId
+                      );
+                      if (found && !preferredOrder.includes(found)) {
+                        preferredOrder.push(found);
+                      }
+                    }
+                  }
+
+                  // Add any remaining items from manifest not yet in preferredOrder
+                  for (const it of validItems) {
+                    if (!preferredOrder.includes(it)) {
+                      preferredOrder.push(it);
+                    }
+                  }
+
+                  for (const item of preferredOrder) {
+                    const kind = item.kind as ModuleKind;
+                    if (seenKinds.has(kind)) continue;
+                    seenKinds.add(kind);
+
                     const tabId = item.id.startsWith("tab-")
                       ? item.id
                       : item.id.startsWith("item-")
                       ? `tab-${item.id.slice(5)}`
                       : `tab-${item.id}`;
-                    return {
-                      id: tabId,
-                      kind: item.kind === "annotations" ? "board" : item.kind,
-                      itemId: item.id,
-                      title: item.title || (item.kind === "circuit" ? "Circuit" : item.kind === "pdf" ? "PDF" : "Whiteboard"),
-                      isIframe: item.kind === "circuit",
-                    };
-                  });
 
-                  setLayout((current) => {
-                    const isDefault =
-                      current.tabs.length === 1 &&
-                      current.tabs[0]?.id === "tab-1";
-                    if (isDefault) {
-                      const primaryId = restoredTabs[0]?.id ?? null;
-                      const secondaryId = restoredTabs[1]?.id ?? null;
-                      const split = (manifest.layout?.split as SplitMode) || "none";
-                      return {
-                        tabs: restoredTabs,
-                        tabBarOrder: restoredTabs.map((t) => t.id),
-                        primary: primaryId,
-                        secondary: split !== "none" ? secondaryId : null,
-                        split,
-                        ratio: current.ratio,
-                      };
+                    restoredTabs.push({
+                      id: tabId,
+                      kind,
+                      itemId: item.id,
+                      title:
+                        item.title ||
+                        (kind === "circuit"
+                          ? t("workspace.circuitTabTitle", { n: "1" })
+                          : kind === "pdf"
+                          ? t("workspace.pdfTabTitle", { n: "1" })
+                          : t("workspace.boardTabTitle", { n: "1" })),
+                      isIframe: kind === "circuit",
+                    });
+                  }
+
+                  if (restoredTabs.length > 0) {
+                    const primaryId = restoredTabs[0]?.id ?? null;
+                    const secondaryId = restoredTabs[1]?.id ?? null;
+                    let split = (manifest.layout?.split as SplitMode) || "none";
+                    if (restoredTabs.length < 2 || split === "none") {
+                      split = "none";
                     }
-                    return current;
-                  });
+
+                    setLayout({
+                      tabs: restoredTabs,
+                      tabBarOrder: restoredTabs.map((t) => t.id),
+                      primary: primaryId,
+                      secondary: split !== "none" ? secondaryId : null,
+                      split,
+                      ratio: 0.5,
+                    });
+                  }
                 }
               } catch {
                 // ignore
@@ -235,13 +332,19 @@ export function WorkspaceHost({
         }
       } catch {
         // Fallback
+      } finally {
+        if (!cancelled) {
+          setIsRestoringLayout(false);
+        }
       }
     }
+
     loadInfo();
+
     return () => {
       cancelled = true;
     };
-  }, [initialLayout, projectId]);
+  }, [initialLayout, projectId, t]);
 
   // Track responsive screen width for split view (< 768px breakpoint md)
   useEffect(() => {
@@ -277,11 +380,6 @@ export function WorkspaceHost({
     };
   }, []);
 
-  // Track layout in ref for event bus handlers
-  const layoutRef = useRef(layout);
-  useEffect(() => {
-    layoutRef.current = layout;
-  }, [layout]);
 
   // Track most recently used board tabs
   const mruBoardTabsRef = useRef<string[]>([]);
@@ -755,21 +853,26 @@ export function WorkspaceHost({
   }, [handleNavigateAlpha, projectId, t]);
 
   // Action: Open a tab or activate if already open
-  const openTab = useCallback((tab: Tab) => {
-    setLayout((prev) => {
-      const exists = prev.tabs.some((t) => t.id === tab.id);
-      if (exists) {
-        return { ...prev, primary: tab.id };
-      }
-      // Stable DOM order: append to tabs, append to tabBarOrder
-      return {
-        ...prev,
-        tabs: [...prev.tabs, tab],
-        tabBarOrder: [...prev.tabBarOrder, tab.id],
-        primary: tab.id,
-      };
-    });
-  }, []);
+  const openTab = useCallback(
+    (tab: Tab) => {
+      setLayout((prev) => {
+        const exists = prev.tabs.some((t) => t.id === tab.id);
+        if (exists) {
+          return { ...prev, primary: tab.id };
+        }
+        // Stable DOM order: append to tabs, append to tabBarOrder
+        const next = {
+          ...prev,
+          tabs: [...prev.tabs, tab],
+          tabBarOrder: [...prev.tabBarOrder, tab.id],
+          primary: tab.id,
+        };
+        persistLayout(next);
+        return next;
+      });
+    },
+    [persistLayout]
+  );
 
   // Action: Activate tab in primary slot
   const activateTab = useCallback((tabId: string) => {
@@ -792,41 +895,46 @@ export function WorkspaceHost({
   }, []);
 
   // Action: Close tab
-  const closeTab = useCallback((tabId: string) => {
-    mruBoardTabsRef.current = mruBoardTabsRef.current.filter((id) => id !== tabId);
-    setLayout((prev) => {
-      if (prev.tabs.length <= 1) return prev; // Keep at least one tab
+  const closeTab = useCallback(
+    (tabId: string) => {
+      mruBoardTabsRef.current = mruBoardTabsRef.current.filter((id) => id !== tabId);
+      setLayout((prev) => {
+        if (prev.tabs.length <= 1) return prev; // Keep at least one tab
 
-      const nextTabs = prev.tabs.filter((t) => t.id !== tabId);
-      const nextTabBarOrder = prev.tabBarOrder.filter((id) => id !== tabId);
+        const nextTabs = prev.tabs.filter((t) => t.id !== tabId);
+        const nextTabBarOrder = prev.tabBarOrder.filter((id) => id !== tabId);
 
-      let nextPrimary = prev.primary;
-      let nextSecondary = prev.secondary;
-      let nextSplit = prev.split;
+        let nextPrimary = prev.primary;
+        let nextSecondary = prev.secondary;
+        let nextSplit = prev.split;
 
-      if (prev.primary === tabId) {
-        if (prev.split !== "none" && prev.secondary && prev.secondary !== tabId) {
-          nextPrimary = prev.secondary;
+        if (prev.primary === tabId) {
+          if (prev.split !== "none" && prev.secondary && prev.secondary !== tabId) {
+            nextPrimary = prev.secondary;
+            nextSecondary = null;
+            nextSplit = "none";
+          } else {
+            nextPrimary = nextTabBarOrder[0] || null;
+          }
+        } else if (prev.secondary === tabId) {
           nextSecondary = null;
           nextSplit = "none";
-        } else {
-          nextPrimary = nextTabBarOrder[0] || null;
         }
-      } else if (prev.secondary === tabId) {
-        nextSecondary = null;
-        nextSplit = "none";
-      }
 
-      return {
-        ...prev,
-        tabs: nextTabs,
-        tabBarOrder: nextTabBarOrder,
-        primary: nextPrimary,
-        secondary: nextSecondary,
-        split: nextSplit,
-      };
-    });
-  }, []);
+        const next = {
+          ...prev,
+          tabs: nextTabs,
+          tabBarOrder: nextTabBarOrder,
+          primary: nextPrimary,
+          secondary: nextSecondary,
+          split: nextSplit,
+        };
+        persistLayout(next);
+        return next;
+      });
+    },
+    [persistLayout]
+  );
 
   // Action: Toggle split mode
   const setSplit = useCallback(
@@ -834,7 +942,9 @@ export function WorkspaceHost({
       if (mode !== "none" && (isMobile || layout.tabs.length < 2)) return;
       setLayout((prev) => {
         if (mode === "none") {
-          return { ...prev, split: "none" };
+          const next = { ...prev, split: "none" as SplitMode };
+          persistLayout(next);
+          return next;
         }
         if (prev.tabs.length < 2) {
           return prev;
@@ -845,14 +955,16 @@ export function WorkspaceHost({
           const alternate = prev.tabBarOrder.find((id) => id !== prev.primary);
           nextSecondary = alternate || null;
         }
-        return {
+        const next = {
           ...prev,
           split: mode,
           secondary: nextSecondary,
         };
+        persistLayout(next);
+        return next;
       });
     },
-    [isMobile, layout.tabs.length]
+    [isMobile, layout.tabs.length, persistLayout]
   );
 
   // Action: Swap panes
@@ -1279,6 +1391,15 @@ export function WorkspaceHost({
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
           <Link
             href="/"
+            onClick={async (e) => {
+              if (onNavigateHome) {
+                e.preventDefault();
+                await handleLeaveWorkspace();
+                onNavigateHome();
+              } else {
+                await handleLeaveWorkspace();
+              }
+            }}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -1488,7 +1609,8 @@ export function WorkspaceHost({
             overflowY: "hidden",
           }}
         >
-          {layout.tabBarOrder.map((tabId, idx) => {
+          {!isRestoringLayout &&
+            layout.tabBarOrder.map((tabId, idx) => {
             const tab = layout.tabs.find((t) => t.id === tabId);
             if (!tab) return null;
             const isPrimary = layout.primary === tabId;
@@ -1636,95 +1758,113 @@ export function WorkspaceHost({
       </nav>
 
       {/* Workspace Grid with Stable DOM Panes and CSS Grid Placement */}
-      <div
-        ref={gridRef}
-        className="ws-grid"
-        data-split={layout.split}
-        data-testid="ws-grid"
-        style={
-          {
-            "--ratio": layout.ratio,
-          } as React.CSSProperties
-        }
-      >
-        {/*
-          MANDATORY ARCHITECTURE RULE §6.2:
-          Render every tab in stable layout.tabs DOM order.
-          Never re-key, never re-parent. Only data-slot changes.
-        */}
-        {layout.tabs.map((tab) => {
-          const slot = slotOf(layout, tab.id);
-          return (
-            <section
-              key={tab.id}
-              className="pane"
-              data-slot={slot}
-              data-tab-id={tab.id}
-              data-testid={`pane-slot-${tab.id}`}
-              style={{
-                backgroundColor: "var(--bg-surface)",
-                boxSizing: "border-box",
-              }}
-            >
-              {tab.isIframe ? (
-                <IframePlaceholder
-                  tab={tab}
-                  visible={slot !== "hidden"}
-                  onMount={onPaneMount}
-                />
-              ) : tab.kind === "circuit" ? (
-                <CircuitPane
-                  projectId={projectId || "demo"}
-                  tab={tab}
-                  visible={slot !== "hidden"}
-                  onMount={onPaneMount}
-                />
-              ) : tab.kind === "board" ? (
-                <BoardPane
-                  projectId={projectId || "demo"}
-                  tab={tab}
-                  visible={slot !== "hidden"}
-                  hasPdfTab={hasPdf}
-                  onMount={onPaneMount}
-                />
-              ) : tab.kind === "pdf" ? (
-                <PdfPane
-                  projectId={projectId || "demo"}
-                  tab={tab}
-                  visible={slot !== "hidden"}
-                  hasBoardTab={hasBoard}
-                  onMount={onPaneMount}
-                />
-              ) : (
-                <StaticPlaceholder
-                  tab={tab}
-                  visible={slot !== "hidden"}
-                  onMount={onPaneMount}
-                />
-              )}
-            </section>
-          );
-        })}
+      {isRestoringLayout ? (
+        <div
+          data-testid="workspace-restoring-layout"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flex: 1,
+            blockSize: "calc(100% - var(--control-lg) * 2)",
+            color: "var(--text-muted)",
+            fontSize: "14px",
+            fontFamily: "var(--font-sans)",
+          }}
+        >
+          {t("common.loading")}
+        </div>
+      ) : (
+        <div
+          ref={gridRef}
+          className="ws-grid"
+          data-split={layout.split}
+          data-testid="ws-grid"
+          style={
+            {
+              "--ratio": layout.ratio,
+            } as React.CSSProperties
+          }
+        >
+          {/*
+            MANDATORY ARCHITECTURE RULE §6.2:
+            Render every tab in stable layout.tabs DOM order.
+            Never re-key, never re-parent. Only data-slot changes.
+          */}
+          {layout.tabs.map((tab) => {
+            const slot = slotOf(layout, tab.id);
+            return (
+              <section
+                key={tab.id}
+                className="pane"
+                data-slot={slot}
+                data-tab-id={tab.id}
+                data-testid={`pane-slot-${tab.id}`}
+                style={{
+                  backgroundColor: "var(--bg-surface)",
+                  boxSizing: "border-box",
+                }}
+              >
+                {tab.isIframe ? (
+                  <IframePlaceholder
+                    tab={tab}
+                    visible={slot !== "hidden"}
+                    onMount={onPaneMount}
+                  />
+                ) : tab.kind === "circuit" ? (
+                  <CircuitPane
+                    projectId={projectId || "demo"}
+                    tab={tab}
+                    visible={slot !== "hidden"}
+                    onMount={onPaneMount}
+                  />
+                ) : tab.kind === "board" ? (
+                  <BoardPane
+                    projectId={projectId || "demo"}
+                    tab={tab}
+                    visible={slot !== "hidden"}
+                    hasPdfTab={hasPdf}
+                    onMount={onPaneMount}
+                  />
+                ) : tab.kind === "pdf" ? (
+                  <PdfPane
+                    projectId={projectId || "demo"}
+                    tab={tab}
+                    visible={slot !== "hidden"}
+                    hasBoardTab={hasBoard}
+                    onMount={onPaneMount}
+                  />
+                ) : (
+                  <StaticPlaceholder
+                    tab={tab}
+                    visible={slot !== "hidden"}
+                    onMount={onPaneMount}
+                  />
+                )}
+              </section>
+            );
+          })}
 
-        {/* Draggable Divider (8px hit area, 2px visible line) */}
-        {layout.split !== "none" && (
-          <div
-            role="separator"
-            tabIndex={0}
-            className="ws-divider"
-            data-split={layout.split}
-            data-dragging={dragging}
-            data-testid="ws-divider"
-            aria-label={t("workspace.dividerAriaLabel")}
-            aria-valuenow={Math.round(layout.ratio * 100)}
-            onPointerDown={handleDividerPointerDown}
-            onKeyDown={handleDividerKeyDown}
-          />
-        )}
+          {/* Draggable Divider (8px hit area, 2px visible line) */}
+          {layout.split !== "none" && (
+            <div
+              role="separator"
+              tabIndex={0}
+              className="ws-divider"
+              data-split={layout.split}
+              data-dragging={dragging}
+              data-testid="ws-divider"
+              aria-label={t("workspace.dividerAriaLabel")}
+              aria-valuenow={Math.round(layout.ratio * 100)}
+              onPointerDown={handleDividerPointerDown}
+              onKeyDown={handleDividerKeyDown}
+            />
+          )}
 
-        {/* Transparent Full-Screen Drag Shield so Iframes cannot swallow pointer events */}
-        {dragging && <div className="drag-shield" data-testid="drag-shield" />}
-      </div>
+          {/* Transparent Full-Screen Drag Shield so Iframes cannot swallow pointer events */}
+          {dragging && <div className="drag-shield" data-testid="drag-shield" />}
+        </div>
+      )}
 
       {/* Export .alpha dialog (Task 31 / ALPHA-6) */}
       <ExportDialog

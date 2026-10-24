@@ -106,6 +106,14 @@ export function useBoardPersistence({
     titleRef.current = title;
   }, [title]);
 
+  // Track if non-empty elements were loaded from DB to prevent Excalidraw mount event from wiping them
+  const hasLoadedElementsRef = useRef(false);
+  useEffect(() => {
+    if (initialData?.elements && initialData.elements.length > 0) {
+      hasLoadedElementsRef.current = true;
+    }
+  }, [initialData]);
+
   useEffect(() => {
     let isSubscribed = true;
 
@@ -183,6 +191,14 @@ export function useBoardPersistence({
       appState: Record<string, unknown>,
       files?: Record<string, unknown>
     ): Promise<void> => {
+      // Guard against premature initial onChange events from Excalidraw wiping non-empty loaded elements
+      if (hasLoadedElementsRef.current && (!elements || elements.length === 0)) {
+        return;
+      }
+      if (elements && elements.length > 0) {
+        hasLoadedElementsRef.current = true;
+      }
+
       // 1. Process and persist newly added or changed files from Excalidraw
       if (files && typeof files === "object") {
         const fileEntries = Object.entries(files);

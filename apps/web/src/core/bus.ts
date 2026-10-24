@@ -57,6 +57,7 @@ export type AppEvents = {
   "drive:disconnected": Record<string, never>;
   "drive:quota-exceeded": { exceeded: boolean };
   "drive:open-export-dialog": Record<string, never>;
+  "workspace:flush": Record<string, never>;
 };
 
 export const bus = mitt<AppEvents>();
