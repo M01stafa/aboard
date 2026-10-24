@@ -1527,3 +1527,22 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** WORKSPACE-1, WORKSPACE-2, BOARD-4, PDF-4, DESIGN.md R1
 **Open:** none.
 
+## 2026-10-24 — Security Upgrade to Next.js 16.4.3, Node.js 22 LTS, and Framework Dependencies
+**Request:** Run Next.js security upgrade to resolve published security advisory prompt (`next upgrade --agent=security`), update Node.js requirement to v22 LTS (`>=22.0.0`), update core framework dependencies (`next@16.4.3`, `react@19.3.1`, `react-dom@19.3.1`, `eslint-config-next@16.4.3`), set `experimental.agentUpgrade` to `"security"` in `next.config.ts`, verify all checks and dev server, and commit locally without pushing to GitHub.
+**Changes:**
+- `package.json` (changed): added `"engines": { "node": ">=22.0.0" }`.
+- `apps/web/package.json` (changed): added `"engines": { "node": ">=22.0.0" }`, updated `next` to `16.4.3`, `react` to `19.3.1`, `react-dom` to `19.3.1`, and `eslint-config-next` to `16.4.3`.
+- `apps/web/next.config.ts` (changed): added `experimental: { agentUpgrade: "security" }`.
+- `pnpm-lock.yaml` & `pnpm-workspace.yaml` (changed): updated locked dependencies for Next.js 16.4.3 and React 19.3.1.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (327/327 unit tests passing across 43 test files).
+- `pnpm test:e2e`: PASS (26/26 Playwright E2E tests passing).
+- `pnpm ci:security`: PASS (Gitleaks clean across 92 commits, prod audit clean, bundle scan clean).
+- `pnpm dev`: PASS (Next.js 16.4.3 starts with zero advisory prompts or security warnings in 407ms).
+**Related:** SEC-5, SEC-10, Task 16, Task 46
+**Open:** none.
+
+

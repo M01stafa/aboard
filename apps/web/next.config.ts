@@ -94,6 +94,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@excalidraw/excalidraw"],
   agentRules: false,
+  experimental: {
+    agentUpgrade: "security",
+  },
   async headers() {
     return [
       // General app pages (mutually exclusive with /circuit/ via negative lookahead)

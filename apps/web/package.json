@@ -2,6 +2,9 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "prebuild": "node ../../scripts/copy-excalidraw-fonts.mjs && node ../../scripts/copy-pdfium-wasm.mjs",
@@ -35,9 +38,9 @@
     "dexie": "4.4.1",
     "hash-wasm": "4.12.0",
     "mitt": "3.0.1",
-    "next": "16.4.0",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "next": "16.4.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "zod": "3.24.2",
     "zustand": "5.0.3"
   },
@@ -47,7 +50,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.4.0",
+    "eslint-config-next": "16.4.3",
     "eslint-plugin-no-unsanitized": "4.1.5",
     "eslint-plugin-react": "7.37.5",
     "happy-dom": "21.0.1",
