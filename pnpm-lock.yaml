@@ -173,10 +173,10 @@ importers:
         version: 2.11.1(html-entities@2.6.0)
       '@embedpdf/core':
         specifier: 2.15.1
-        version: 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+        version: 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/engines':
         specifier: 2.15.1
-        version: 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+        version: 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models':
         specifier: 2.15.1
         version: 2.15.1
@@ -185,40 +185,40 @@ importers:
         version: 2.15.1
       '@embedpdf/plugin-annotation':
         specifier: 2.15.1
-        version: 2.15.1(db290378e9836571206384f8bf6e2935)
+        version: 2.15.1(4614f025a206c07ddc190e9564646378)
       '@embedpdf/plugin-export':
         specifier: 2.15.1
-        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/plugin-history':
         specifier: 2.15.1
-        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/plugin-interaction-manager':
         specifier: 2.15.1
-        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/plugin-render':
         specifier: 2.15.1
-        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/plugin-scroll':
         specifier: 2.15.1
-        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-viewport@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-viewport@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/plugin-search':
         specifier: 2.15.1
-        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/plugin-selection':
         specifier: 2.15.1
-        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-interaction-manager@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-interaction-manager@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/plugin-thumbnail':
         specifier: 2.15.1
-        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-render@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-render@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/plugin-viewport':
         specifier: 2.15.1
-        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+        version: 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/plugin-zoom':
         specifier: 2.15.1
-        version: 2.15.1(2616a0bc7665532a8245e89049a092b8)
+        version: 2.15.1(903982dd459fb59287f7e50cf5204bd9)
       '@excalidraw/excalidraw':
         specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
       '@supabase/supabase-js':
         specifier: 2.117.3
         version: 2.117.3
@@ -236,19 +236,19 @@ importers:
         version: 3.0.1
       next:
         specifier: 16.4.0
-        version: 16.4.0(@babel/core@7.29.7(supports-color@7.2.0))(@playwright/test@1.64.0)(@types/node@22.13.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 16.4.0(@babel/core@7.29.7(supports-color@7.2.0))(@playwright/test@1.64.0)(@types/node@22.13.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
       react:
-        specifier: 19.3.0
-        version: 19.3.0
+        specifier: 19.3.1
+        version: 19.3.1
       react-dom:
         specifier: 19.3.0
-        version: 19.3.0(react@19.3.0)
+        version: 19.3.0(react@19.3.1)
       zod:
         specifier: 3.24.2
         version: 3.24.2
       zustand:
         specifier: 5.0.3
-        version: 5.0.3(@types/react@19.3.0)(react@19.3.0)(use-sync-external-store@1.7.0(react@19.3.0))
+        version: 5.0.3(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))
     devDependencies:
       '@playwright/test':
         specifier: 1.64.0
@@ -3281,8 +3281,8 @@ packages:
       '@types/react':
         optional: true
 
-  react@19.3.0:
-    resolution: {integrity: sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog==}
+  react@19.3.1:
+    resolution: {integrity: sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==}
     engines: {node: '>=0.10.0'}
 
   readdirp@3.6.0:
@@ -3961,17 +3961,17 @@ snapshots:
 
   '@chevrotain/utils@11.0.3': {}
 
-  '@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
+  '@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
-      '@embedpdf/engines': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/engines': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models': 2.15.1
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@embedpdf/engines@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
+  '@embedpdf/engines@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
       '@embedpdf/fonts-arabic': 1.0.0
       '@embedpdf/fonts-hebrew': 1.0.0
@@ -3983,8 +3983,8 @@ snapshots:
       '@embedpdf/models': 2.15.1
       '@embedpdf/pdfium': 2.15.1
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
@@ -4006,132 +4006,132 @@ snapshots:
 
   '@embedpdf/pdfium@2.15.1': {}
 
-  '@embedpdf/plugin-annotation@2.15.1(db290378e9836571206384f8bf6e2935)':
+  '@embedpdf/plugin-annotation@2.15.1(4614f025a206c07ddc190e9564646378)':
     dependencies:
-      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models': 2.15.1
-      '@embedpdf/plugin-history': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
-      '@embedpdf/plugin-interaction-manager': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
-      '@embedpdf/plugin-scroll': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-viewport@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
-      '@embedpdf/plugin-selection': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-interaction-manager@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
-      '@embedpdf/utils': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/plugin-history': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/plugin-interaction-manager': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/plugin-scroll': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-viewport@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/plugin-selection': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-interaction-manager@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/utils': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@embedpdf/plugin-export@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
+  '@embedpdf/plugin-export@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
-      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models': 2.15.1
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@embedpdf/plugin-history@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
+  '@embedpdf/plugin-history@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
-      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models': 2.15.1
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@embedpdf/plugin-interaction-manager@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
+  '@embedpdf/plugin-interaction-manager@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
-      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models': 2.15.1
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@embedpdf/plugin-render@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
+  '@embedpdf/plugin-render@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
-      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models': 2.15.1
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@embedpdf/plugin-scroll@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-viewport@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
+  '@embedpdf/plugin-scroll@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-viewport@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
-      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models': 2.15.1
-      '@embedpdf/plugin-viewport': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/plugin-viewport': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@embedpdf/plugin-search@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
+  '@embedpdf/plugin-search@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
-      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models': 2.15.1
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@embedpdf/plugin-selection@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-interaction-manager@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
+  '@embedpdf/plugin-selection@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-interaction-manager@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
-      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models': 2.15.1
-      '@embedpdf/plugin-interaction-manager': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
-      '@embedpdf/utils': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/plugin-interaction-manager': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/utils': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@embedpdf/plugin-thumbnail@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-render@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
+  '@embedpdf/plugin-thumbnail@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-render@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
-      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models': 2.15.1
-      '@embedpdf/plugin-render': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/plugin-render': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@embedpdf/plugin-viewport@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
+  '@embedpdf/plugin-viewport@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
-      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models': 2.15.1
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@embedpdf/plugin-zoom@2.15.1(2616a0bc7665532a8245e89049a092b8)':
+  '@embedpdf/plugin-zoom@2.15.1(903982dd459fb59287f7e50cf5204bd9)':
     dependencies:
-      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/core': 2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       '@embedpdf/models': 2.15.1
-      '@embedpdf/plugin-scroll': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-viewport@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
-      '@embedpdf/plugin-viewport': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/plugin-scroll': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(@embedpdf/plugin-viewport@2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
+      '@embedpdf/plugin-viewport': 2.15.1(@embedpdf/core@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3)))(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
-  '@embedpdf/utils@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
+  '@embedpdf/utils@2.15.1(preact@10.29.8)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)(svelte@5.57.2(@typescript-eslint/types@8.71.1))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
       preact: 10.29.8
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       svelte: 5.57.2(@typescript-eslint/types@8.71.1)
       vue: 3.5.43(typescript@5.9.3)
 
@@ -4207,14 +4207,14 @@ snapshots:
       '@eslint/core': 0.17.0
       levn: 0.4.1
 
-  '@excalidraw/excalidraw@0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@excalidraw/excalidraw@0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@braintree/sanitize-url': 6.0.2
       '@excalidraw/laser-pointer': 1.3.1
       '@excalidraw/mermaid-to-excalidraw': 2.2.2
       '@excalidraw/random-username': 1.1.0
-      '@radix-ui/react-popover': 1.1.6(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-tabs': 1.0.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@radix-ui/react-popover': 1.1.6(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-tabs': 1.0.2(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
       browser-fs-access: 0.29.1
       canvas-roundrect-polyfill: 0.0.1
       clsx: 1.1.1
@@ -4223,8 +4223,8 @@ snapshots:
       fractional-indexing: 3.2.0
       fuzzy: 0.1.3
       image-blob-reduce: 3.0.1
-      jotai: 2.11.0(@types/react@19.3.0)(react@19.3.0)
-      jotai-scope: 0.7.2(jotai@2.11.0(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+      jotai: 2.11.0(@types/react@19.3.0)(react@19.3.1)
+      jotai-scope: 0.7.2(jotai@2.11.0(@types/react@19.3.0)(react@19.3.1))(react@19.3.1)
       lodash.debounce: 4.0.8
       lodash.throttle: 4.1.1
       nanoid: 3.3.3
@@ -4237,11 +4237,11 @@ snapshots:
       png-chunks-extract: 1.0.0
       points-on-curve: 1.0.1
       pwacompat: 2.0.17
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
       roughjs: 4.6.4
       sass: 1.51.0
-      tunnel-rat: 0.1.2(@types/react@19.3.0)(react@19.3.0)
+      tunnel-rat: 0.1.2(@types/react@19.3.0)(react@19.3.1)
     transitivePeerDependencies:
       - '@types/react'
       - '@types/react-dom'
@@ -4269,11 +4269,11 @@ snapshots:
       '@floating-ui/core': 1.8.0
       '@floating-ui/utils': 0.2.12
 
-  '@floating-ui/react-dom@2.1.9(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@floating-ui/react-dom@2.1.9(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@floating-ui/dom': 1.8.0
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
 
   '@floating-ui/utils@0.2.12': {}
 
@@ -4505,275 +4505,275 @@ snapshots:
 
   '@radix-ui/primitive@1.1.1': {}
 
-  '@radix-ui/react-arrow@1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-arrow@1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
     optionalDependencies:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
-  '@radix-ui/react-collection@1.0.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-collection@1.0.1(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
-      '@radix-ui/react-compose-refs': 1.0.0(react@19.3.0)
-      '@radix-ui/react-context': 1.0.0(react@19.3.0)
-      '@radix-ui/react-primitive': 1.0.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-slot': 1.0.1(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      '@radix-ui/react-compose-refs': 1.0.0(react@19.3.1)
+      '@radix-ui/react-context': 1.0.0(react@19.3.1)
+      '@radix-ui/react-primitive': 1.0.1(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-slot': 1.0.1(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
 
-  '@radix-ui/react-compose-refs@1.0.0(react@19.3.0)':
+  '@radix-ui/react-compose-refs@1.0.0(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
-      react: 19.3.0
+      react: 19.3.1
 
-  '@radix-ui/react-compose-refs@1.1.1(@types/react@19.3.0)(react@19.3.0)':
+  '@radix-ui/react-compose-refs@1.1.1(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      react: 19.3.0
+      react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@radix-ui/react-context@1.0.0(react@19.3.0)':
+  '@radix-ui/react-context@1.0.0(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
-      react: 19.3.0
+      react: 19.3.1
 
-  '@radix-ui/react-context@1.1.1(@types/react@19.3.0)(react@19.3.0)':
+  '@radix-ui/react-context@1.1.1(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      react: 19.3.0
+      react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@radix-ui/react-direction@1.0.0(react@19.3.0)':
+  '@radix-ui/react-direction@1.0.0(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
-      react: 19.3.0
+      react: 19.3.1
 
-  '@radix-ui/react-dismissable-layer@1.1.5(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-dismissable-layer@1.1.5(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@radix-ui/primitive': 1.1.1
-      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-use-escape-keydown': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-use-escape-keydown': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
     optionalDependencies:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
-  '@radix-ui/react-focus-guards@1.1.1(@types/react@19.3.0)(react@19.3.0)':
+  '@radix-ui/react-focus-guards@1.1.1(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      react: 19.3.0
+      react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@radix-ui/react-focus-scope@1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-focus-scope@1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
     optionalDependencies:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
-  '@radix-ui/react-id@1.0.0(react@19.3.0)':
+  '@radix-ui/react-id@1.0.0(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
-      '@radix-ui/react-use-layout-effect': 1.0.0(react@19.3.0)
-      react: 19.3.0
+      '@radix-ui/react-use-layout-effect': 1.0.0(react@19.3.1)
+      react: 19.3.1
 
-  '@radix-ui/react-id@1.1.0(@types/react@19.3.0)(react@19.3.0)':
+  '@radix-ui/react-id@1.1.0(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      react: 19.3.0
+      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@radix-ui/react-popover@1.1.6(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-popover@1.1.6(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@radix-ui/primitive': 1.1.1
-      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-context': 1.1.1(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-dismissable-layer': 1.1.5(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-focus-guards': 1.1.1(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-focus-scope': 1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-id': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-popper': 1.2.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-portal': 1.1.4(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-presence': 1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-slot': 1.1.2(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-use-controllable-state': 1.1.0(@types/react@19.3.0)(react@19.3.0)
+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-context': 1.1.1(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-dismissable-layer': 1.1.5(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-focus-guards': 1.1.1(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-focus-scope': 1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-id': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-popper': 1.2.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-portal': 1.1.4(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-presence': 1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-slot': 1.1.2(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-use-controllable-state': 1.1.0(@types/react@19.3.0)(react@19.3.1)
       aria-hidden: 1.2.6
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
-      react-remove-scroll: 2.7.2(@types/react@19.3.0)(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
+      react-remove-scroll: 2.7.2(@types/react@19.3.0)(react@19.3.1)
     optionalDependencies:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
-  '@radix-ui/react-popper@1.2.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-popper@1.2.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@floating-ui/react-dom': 2.1.9(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-arrow': 1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-context': 1.1.1(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-use-rect': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-use-size': 1.1.0(@types/react@19.3.0)(react@19.3.0)
+      '@floating-ui/react-dom': 2.1.9(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-arrow': 1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-context': 1.1.1(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-use-rect': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-use-size': 1.1.0(@types/react@19.3.0)(react@19.3.1)
       '@radix-ui/rect': 1.1.0
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
     optionalDependencies:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
-  '@radix-ui/react-portal@1.1.4(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-portal@1.1.4(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
     optionalDependencies:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
-  '@radix-ui/react-presence@1.0.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-presence@1.0.0(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
-      '@radix-ui/react-compose-refs': 1.0.0(react@19.3.0)
-      '@radix-ui/react-use-layout-effect': 1.0.0(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      '@radix-ui/react-compose-refs': 1.0.0(react@19.3.1)
+      '@radix-ui/react-use-layout-effect': 1.0.0(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
 
-  '@radix-ui/react-presence@1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-presence@1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.3.0)
-      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.3.1)
+      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
     optionalDependencies:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
-  '@radix-ui/react-primitive@1.0.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-primitive@1.0.1(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
-      '@radix-ui/react-slot': 1.0.1(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      '@radix-ui/react-slot': 1.0.1(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
 
-  '@radix-ui/react-primitive@2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-primitive@2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@radix-ui/react-slot': 1.1.2(@types/react@19.3.0)(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      '@radix-ui/react-slot': 1.1.2(@types/react@19.3.0)(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
     optionalDependencies:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
-  '@radix-ui/react-roving-focus@1.0.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-roving-focus@1.0.2(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
       '@radix-ui/primitive': 1.0.0
-      '@radix-ui/react-collection': 1.0.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-compose-refs': 1.0.0(react@19.3.0)
-      '@radix-ui/react-context': 1.0.0(react@19.3.0)
-      '@radix-ui/react-direction': 1.0.0(react@19.3.0)
-      '@radix-ui/react-id': 1.0.0(react@19.3.0)
-      '@radix-ui/react-primitive': 1.0.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-use-callback-ref': 1.0.0(react@19.3.0)
-      '@radix-ui/react-use-controllable-state': 1.0.0(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      '@radix-ui/react-collection': 1.0.1(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-compose-refs': 1.0.0(react@19.3.1)
+      '@radix-ui/react-context': 1.0.0(react@19.3.1)
+      '@radix-ui/react-direction': 1.0.0(react@19.3.1)
+      '@radix-ui/react-id': 1.0.0(react@19.3.1)
+      '@radix-ui/react-primitive': 1.0.1(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-use-callback-ref': 1.0.0(react@19.3.1)
+      '@radix-ui/react-use-controllable-state': 1.0.0(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
 
-  '@radix-ui/react-slot@1.0.1(react@19.3.0)':
+  '@radix-ui/react-slot@1.0.1(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
-      '@radix-ui/react-compose-refs': 1.0.0(react@19.3.0)
-      react: 19.3.0
+      '@radix-ui/react-compose-refs': 1.0.0(react@19.3.1)
+      react: 19.3.1
 
-  '@radix-ui/react-slot@1.1.2(@types/react@19.3.0)(react@19.3.0)':
+  '@radix-ui/react-slot@1.1.2(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.3.0)
-      react: 19.3.0
+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.3.1)
+      react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@radix-ui/react-tabs@1.0.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@radix-ui/react-tabs@1.0.2(react-dom@19.3.0(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
       '@radix-ui/primitive': 1.0.0
-      '@radix-ui/react-context': 1.0.0(react@19.3.0)
-      '@radix-ui/react-direction': 1.0.0(react@19.3.0)
-      '@radix-ui/react-id': 1.0.0(react@19.3.0)
-      '@radix-ui/react-presence': 1.0.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-primitive': 1.0.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-roving-focus': 1.0.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@radix-ui/react-use-controllable-state': 1.0.0(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
+      '@radix-ui/react-context': 1.0.0(react@19.3.1)
+      '@radix-ui/react-direction': 1.0.0(react@19.3.1)
+      '@radix-ui/react-id': 1.0.0(react@19.3.1)
+      '@radix-ui/react-presence': 1.0.0(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-primitive': 1.0.1(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-roving-focus': 1.0.2(react-dom@19.3.0(react@19.3.1))(react@19.3.1)
+      '@radix-ui/react-use-controllable-state': 1.0.0(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
 
-  '@radix-ui/react-use-callback-ref@1.0.0(react@19.3.0)':
+  '@radix-ui/react-use-callback-ref@1.0.0(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
-      react: 19.3.0
+      react: 19.3.1
 
-  '@radix-ui/react-use-callback-ref@1.1.0(@types/react@19.3.0)(react@19.3.0)':
+  '@radix-ui/react-use-callback-ref@1.1.0(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      react: 19.3.0
+      react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@radix-ui/react-use-controllable-state@1.0.0(react@19.3.0)':
+  '@radix-ui/react-use-controllable-state@1.0.0(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
-      '@radix-ui/react-use-callback-ref': 1.0.0(react@19.3.0)
-      react: 19.3.0
+      '@radix-ui/react-use-callback-ref': 1.0.0(react@19.3.1)
+      react: 19.3.1
 
-  '@radix-ui/react-use-controllable-state@1.1.0(@types/react@19.3.0)(react@19.3.0)':
+  '@radix-ui/react-use-controllable-state@1.1.0(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      react: 19.3.0
+      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@radix-ui/react-use-escape-keydown@1.1.0(@types/react@19.3.0)(react@19.3.0)':
+  '@radix-ui/react-use-escape-keydown@1.1.0(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      react: 19.3.0
+      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@radix-ui/react-use-layout-effect@1.0.0(react@19.3.0)':
+  '@radix-ui/react-use-layout-effect@1.0.0(react@19.3.1)':
     dependencies:
       '@babel/runtime': 7.29.10
-      react: 19.3.0
+      react: 19.3.1
 
-  '@radix-ui/react-use-layout-effect@1.1.0(@types/react@19.3.0)(react@19.3.0)':
+  '@radix-ui/react-use-layout-effect@1.1.0(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      react: 19.3.0
+      react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@radix-ui/react-use-rect@1.1.0(@types/react@19.3.0)(react@19.3.0)':
+  '@radix-ui/react-use-rect@1.1.0(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
       '@radix-ui/rect': 1.1.0
-      react: 19.3.0
+      react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@radix-ui/react-use-size@1.1.0(@types/react@19.3.0)(react@19.3.0)':
+  '@radix-ui/react-use-size@1.1.0(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.3.0)
-      react: 19.3.0
+      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.3.1)
+      react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
 
@@ -6470,15 +6470,15 @@ snapshots:
 
   jose@6.2.12: {}
 
-  jotai-scope@0.7.2(jotai@2.11.0(@types/react@19.3.0)(react@19.3.0))(react@19.3.0):
+  jotai-scope@0.7.2(jotai@2.11.0(@types/react@19.3.0)(react@19.3.1))(react@19.3.1):
     dependencies:
-      jotai: 2.11.0(@types/react@19.3.0)(react@19.3.0)
-      react: 19.3.0
+      jotai: 2.11.0(@types/react@19.3.0)(react@19.3.1)
+      react: 19.3.1
 
-  jotai@2.11.0(@types/react@19.3.0)(react@19.3.0):
+  jotai@2.11.0(@types/react@19.3.0)(react@19.3.1):
     optionalDependencies:
       '@types/react': 19.3.0
-      react: 19.3.0
+      react: 19.3.1
 
   js-tokens@4.0.0: {}
 
@@ -6686,16 +6686,16 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next@16.4.0(@babel/core@7.29.7(supports-color@7.2.0))(@playwright/test@1.64.0)(@types/node@22.13.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+  next@16.4.0(@babel/core@7.29.7(supports-color@7.2.0))(@playwright/test@1.64.0)(@types/node@22.13.0)(react-dom@19.3.0(react@19.3.1))(react@19.3.1):
     dependencies:
       '@next/env': 16.4.0
       '@swc/helpers': 0.5.23
       baseline-browser-mapping: 2.11.28
       caniuse-lite: 1.0.30001815
       postcss: 8.5.23
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
-      styled-jsx: 5.1.6(@babel/core@7.29.7(supports-color@7.2.0))(react@19.3.0)
+      react: 19.3.1
+      react-dom: 19.3.0(react@19.3.1)
+      styled-jsx: 5.1.6(@babel/core@7.29.7(supports-color@7.2.0))(react@19.3.1)
     optionalDependencies:
       '@next/swc-darwin-arm64': 16.4.0
       '@next/swc-darwin-x64': 16.4.0
@@ -6885,41 +6885,41 @@ snapshots:
 
   queue-microtask@1.2.3: {}
 
-  react-dom@19.3.0(react@19.3.0):
+  react-dom@19.3.0(react@19.3.1):
     dependencies:
-      react: 19.3.0
+      react: 19.3.1
       scheduler: 0.28.0
 
   react-is@16.13.1: {}
 
-  react-remove-scroll-bar@2.3.8(@types/react@19.3.0)(react@19.3.0):
+  react-remove-scroll-bar@2.3.8(@types/react@19.3.0)(react@19.3.1):
     dependencies:
-      react: 19.3.0
-      react-style-singleton: 2.2.3(@types/react@19.3.0)(react@19.3.0)
+      react: 19.3.1
+      react-style-singleton: 2.2.3(@types/react@19.3.0)(react@19.3.1)
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  react-remove-scroll@2.7.2(@types/react@19.3.0)(react@19.3.0):
+  react-remove-scroll@2.7.2(@types/react@19.3.0)(react@19.3.1):
     dependencies:
-      react: 19.3.0
-      react-remove-scroll-bar: 2.3.8(@types/react@19.3.0)(react@19.3.0)
-      react-style-singleton: 2.2.3(@types/react@19.3.0)(react@19.3.0)
+      react: 19.3.1
+      react-remove-scroll-bar: 2.3.8(@types/react@19.3.0)(react@19.3.1)
+      react-style-singleton: 2.2.3(@types/react@19.3.0)(react@19.3.1)
       tslib: 2.8.1
-      use-callback-ref: 1.3.3(@types/react@19.3.0)(react@19.3.0)
-      use-sidecar: 1.1.3(@types/react@19.3.0)(react@19.3.0)
+      use-callback-ref: 1.3.3(@types/react@19.3.0)(react@19.3.1)
+      use-sidecar: 1.1.3(@types/react@19.3.0)(react@19.3.1)
     optionalDependencies:
       '@types/react': 19.3.0
 
-  react-style-singleton@2.2.3(@types/react@19.3.0)(react@19.3.0):
+  react-style-singleton@2.2.3(@types/react@19.3.0)(react@19.3.1):
     dependencies:
       get-nonce: 1.0.1
-      react: 19.3.0
+      react: 19.3.1
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  react@19.3.0: {}
+  react@19.3.1: {}
 
   readdirp@3.6.0:
     dependencies:
@@ -7196,10 +7196,10 @@ snapshots:
 
   strip-json-comments@3.1.1: {}
 
-  styled-jsx@5.1.6(@babel/core@7.29.7(supports-color@7.2.0))(react@19.3.0):
+  styled-jsx@5.1.6(@babel/core@7.29.7(supports-color@7.2.0))(react@19.3.1):
     dependencies:
       client-only: 0.0.1
-      react: 19.3.0
+      react: 19.3.1
     optionalDependencies:
       '@babel/core': 7.29.7(supports-color@7.2.0)
 
@@ -7259,9 +7259,9 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tunnel-rat@0.1.2(@types/react@19.3.0)(react@19.3.0):
+  tunnel-rat@0.1.2(@types/react@19.3.0)(react@19.3.1):
     dependencies:
-      zustand: 4.5.7(@types/react@19.3.0)(react@19.3.0)
+      zustand: 4.5.7(@types/react@19.3.0)(react@19.3.1)
     transitivePeerDependencies:
       - '@types/react'
       - immer
@@ -7362,24 +7362,24 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  use-callback-ref@1.3.3(@types/react@19.3.0)(react@19.3.0):
+  use-callback-ref@1.3.3(@types/react@19.3.0)(react@19.3.1):
     dependencies:
-      react: 19.3.0
+      react: 19.3.1
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  use-sidecar@1.1.3(@types/react@19.3.0)(react@19.3.0):
+  use-sidecar@1.1.3(@types/react@19.3.0)(react@19.3.1):
     dependencies:
       detect-node-es: 1.1.0
-      react: 19.3.0
+      react: 19.3.1
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.3.0
 
-  use-sync-external-store@1.7.0(react@19.3.0):
+  use-sync-external-store@1.7.0(react@19.3.1):
     dependencies:
-      react: 19.3.0
+      react: 19.3.1
 
   uuid@14.0.3: {}
 
@@ -7512,15 +7512,15 @@ snapshots:
 
   zod@4.6.6: {}
 
-  zustand@4.5.7(@types/react@19.3.0)(react@19.3.0):
+  zustand@4.5.7(@types/react@19.3.0)(react@19.3.1):
     dependencies:
-      use-sync-external-store: 1.7.0(react@19.3.0)
+      use-sync-external-store: 1.7.0(react@19.3.1)
     optionalDependencies:
       '@types/react': 19.3.0
-      react: 19.3.0
+      react: 19.3.1
 
-  zustand@5.0.3(@types/react@19.3.0)(react@19.3.0)(use-sync-external-store@1.7.0(react@19.3.0)):
+  zustand@5.0.3(@types/react@19.3.0)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1)):
     optionalDependencies:
       '@types/react': 19.3.0
-      react: 19.3.0
-      use-sync-external-store: 1.7.0(react@19.3.0)
+      react: 19.3.1
+      use-sync-external-store: 1.7.0(react@19.3.1)
