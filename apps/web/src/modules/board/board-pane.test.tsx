@@ -235,23 +235,31 @@ describe("BoardPane Component (Task 25 / BOARD-1, BOARD-2, BOARD-4)", () => {
       );
     });
 
-    await act(async () => {
-      for (let i = 0; i < 10; i++) {
-        await Promise.resolve();
-      }
-    });
+    for (let i = 0; i < 50; i++) {
+      if (lastExcalidrawProps) break;
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 10));
+      });
+    }
 
     expect(lastExcalidrawProps).toBeTruthy();
     expect(lastExcalidrawProps?.langCode).toBe("en");
     expect(lastExcalidrawProps?.theme).toBe("light");
 
-    // Verify UIOptions hides load and saveToActiveFile (app manages files)
+    // Verify UIOptions hides load, saveToActiveFile, export, and saveAsImage (app manages files)
     const uiOpts = lastExcalidrawProps?.UIOptions as {
-      canvasActions: { loadScene: boolean; saveToActiveFile: boolean };
+      canvasActions: {
+        loadScene: boolean;
+        saveToActiveFile: boolean;
+        export: false | unknown;
+        saveAsImage: boolean;
+      };
     };
     expect(uiOpts).toBeDefined();
     expect(uiOpts.canvasActions.loadScene).toBe(false);
     expect(uiOpts.canvasActions.saveToActiveFile).toBe(false);
+    expect(uiOpts.canvasActions.export).toBe(false);
+    expect(uiOpts.canvasActions.saveAsImage).toBe(false);
   });
 
   it("calls excalidrawAPI.refresh() when visible changes to true (tab switch per §6.2)", async () => {

@@ -29,13 +29,15 @@ describe("ExcalidrawBoard Native Branding & Menu Sanitization", () => {
       root.render(<ExcalidrawBoard />);
     });
 
-    // Native essential actions should exist
-    expect(container.querySelector('[data-testid="menu-save-as-image"]')).toBeTruthy();
-    expect(container.querySelector('[data-testid="menu-export"]')).toBeTruthy();
-    expect(container.querySelector('[data-testid="menu-search"]')).toBeTruthy();
+    // Native essential Aboard-approved actions should exist
     expect(container.querySelector('[data-testid="menu-clear-canvas"]')).toBeTruthy();
     expect(container.querySelector('[data-testid="menu-toggle-theme"]')).toBeTruthy();
     expect(container.querySelector('[data-testid="menu-change-canvas-bg"]')).toBeTruthy();
+
+    // Native Excalidraw export/save/search actions must NOT exist
+    expect(container.querySelector('[data-testid="menu-save-as-image"]')).toBeNull();
+    expect(container.querySelector('[data-testid="menu-export"]')).toBeNull();
+    expect(container.querySelector('[data-testid="menu-search"]')).toBeNull();
 
     // Third-party external links and unwanted items must NOT exist
     expect(container.querySelector('[data-testid="menu-help"]')).toBeNull();

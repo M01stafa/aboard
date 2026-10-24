@@ -1248,22 +1248,19 @@ export function WorkspaceHost({
               fontWeight: "var(--weight-semibold)",
             }}
           >
-            <span
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt={t("common.appName")}
+              width={24}
+              height={24}
               style={{
                 inlineSize: "24px",
                 blockSize: "24px",
                 borderRadius: "var(--radius-sm)",
-                background: "var(--gradient-accent)",
-                color: "var(--btn-gold-text)",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "0.75rem",
-                fontWeight: "var(--weight-bold)",
+                objectFit: "contain",
               }}
-            >
-              α
-            </span>
+            />
             <span>{t("common.appName")}</span>
           </Link>
 

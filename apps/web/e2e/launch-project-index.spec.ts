@@ -155,7 +155,7 @@ test.describe("Project Index & Recent Projects List (Task 22 / LAUNCH-2, LAUNCH-
     await deleteBtn.click();
 
     // Confirmation dialog appears
-    const confirmDialog = page.locator('[role="dialog"]');
+    const confirmDialog = page.locator('[role="dialog"]:not([data-nextjs-dialog])');
     await expect(confirmDialog).toBeVisible();
 
     const confirmDeleteBtn = page.locator('[data-testid="confirm-delete-btn"]');

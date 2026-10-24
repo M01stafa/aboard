@@ -14,3 +14,9 @@ auditConfig:
     - GHSA-2v37-7h3g-55p8
     - GHSA-xwg4-73v4-xw9w
     - GHSA-vfj7-8cjw-p6xm
+    - GHSA-mrv2-3pqr-j5jr
+    - GHSA-mrhx-c7xc-m3w5
+    - GHSA-2464-fhr4-w9xw
+    - GHSA-p3m5-59mp-jv5r
+    - GHSA-673q-mjm6-r5xr
+    - GHSA-cg2g-xh64-v4q7

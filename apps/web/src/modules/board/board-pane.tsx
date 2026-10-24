@@ -26,15 +26,17 @@ const ExcalidrawBoard = dynamic(
 );
 
 /**
- * UIOptions hiding Excalidraw's own load and save-to-disk actions,
+ * UIOptions hiding Excalidraw's own load, save-to-disk, and export actions,
  * since file management and persistence are handled by Aboard.
  */
 const UI_OPTIONS = {
   canvasActions: {
-    loadScene: false,
+    export: false,
     saveToActiveFile: false,
+    loadScene: false,
+    saveAsImage: false,
   },
-};
+} as const;
 
 // Ensure pica's canvas fingerprinting probe succeeds in privacy-enhanced browsers (Brave, etc.)
 if (typeof window !== "undefined" && typeof CanvasRenderingContext2D !== "undefined") {
@@ -412,6 +414,26 @@ export function BoardPane({
             .aboard-board-pane .help-icon { display: none !important; }
             .aboard-board-pane .ExcalidrawLogo { display: none !important; }
             .aboard-board-pane [data-testid="help-menu-item"] { display: none !important; }
+            .aboard-board-pane .sidebar-trigger,
+            .aboard-board-pane .default-sidebar-trigger,
+            .aboard-board-pane .sidebar-triggers,
+            .aboard-board-pane .library-button,
+            .aboard-board-pane [data-testid="library-button"],
+            .aboard-board-pane [data-testid="sidebar-trigger"],
+            .aboard-board-pane [data-testid="sidebar-trigger-default"],
+            .aboard-board-pane [data-testid="sidebar-trigger-library"],
+            .aboard-board-pane button[aria-label*="library" i],
+            .aboard-board-pane label[title*="library" i],
+            .excalidraw .sidebar-trigger,
+            .excalidraw .default-sidebar-trigger,
+            .excalidraw .sidebar-triggers,
+            .excalidraw .library-button,
+            .excalidraw [data-testid="library-button"],
+            .excalidraw [data-testid="sidebar-trigger"],
+            .excalidraw [data-testid="sidebar-trigger-default"],
+            .excalidraw [data-testid="sidebar-trigger-library"] {
+              display: none !important;
+            }
             .send-to-pdf-item:hover {
               background-color: var(--bg-subtle) !important;
             }

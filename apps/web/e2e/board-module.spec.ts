@@ -221,12 +221,21 @@ test.describe("Board Whiteboard Module Integration (Task 25 / BOARD-1, BOARD-2, 
     await page.goto(`/workspace?p=${projectId}&kind=board`);
     await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
 
+    // Verify workspace header logo uses real image
+    await expect(page.locator('a[href="/"] img[src="/logo.png"]')).toBeVisible();
+
     const boardPane = page.locator('.pane[data-slot="primary"] [data-testid="pane-board-tab-1"]');
     await expect(boardPane).toBeVisible();
 
     // Verify Excalidraw logo is hidden
     const excalidrawLogo = boardPane.locator(".ExcalidrawLogo");
     await expect(excalidrawLogo).toBeHidden();
+
+    // Verify Excalidraw native library/templates button is hidden
+    const libraryTrigger = boardPane.locator(
+      ".sidebar-trigger, .default-sidebar-trigger, .library-button, [data-testid=\"library-button\"], [data-testid=\"sidebar-trigger\"]"
+    );
+    await expect(libraryTrigger).toBeHidden();
 
     // Check hamburger main menu trigger
     const menuBtn = boardPane.locator('button[aria-label="Main menu"]');
@@ -236,6 +245,10 @@ test.describe("Board Whiteboard Module Integration (Task 25 / BOARD-1, BOARD-2, 
       await expect(boardPane.locator('[data-testid="help-menu-item"]')).toBeHidden();
       await expect(
         page.locator('a[href*="discord"], a[href*="github.com/excalidraw"], a[href*="twitter.com/excalidraw"]')
+      ).toHaveCount(0);
+      // Ensure native Save to... and Export image... are absent
+      await expect(
+        page.locator('[data-testid="menu-item-export-image"], [data-testid="menu-item-save-as"], [data-testid="menu-save-as-image"], [data-testid="menu-export"]')
       ).toHaveCount(0);
     }
   });

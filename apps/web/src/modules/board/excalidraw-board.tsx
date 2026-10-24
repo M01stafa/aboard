@@ -13,9 +13,6 @@ export function ExcalidrawBoard(props: ExcalidrawProps) {
   return (
     <Excalidraw {...props}>
       <MainMenu>
-        <MainMenu.DefaultItems.SaveAsImage />
-        <MainMenu.DefaultItems.Export />
-        <MainMenu.DefaultItems.SearchMenu />
         <MainMenu.DefaultItems.ClearCanvas />
         <MainMenu.Separator />
         <MainMenu.DefaultItems.ToggleTheme />

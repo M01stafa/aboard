@@ -1488,12 +1488,20 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** LAUNCH-1, DESIGN.md R1, §15
 **Open:** none.
 
-
-
-
-
-
-
-
-
-
+## 2026-10-24 — Remove Excalidraw Native UI and Display Logo in Workspace Header
+**Request:** Replace generic "α" text placeholder in workspace header (`workspace-host.tsx`) with real logo image from `apps/web/public/logo.png`; hide Excalidraw native library/templates button via CSS and configure Excalidraw `UIOptions` with `canvasActions: { export: false, saveToActiveFile: false, loadScene: false, saveAsImage: false }`; sanitize Excalidraw main menu to show only Aboard-approved actions (`ClearCanvas`, `ToggleTheme`, `ChangeCanvasBackground`) and hide native "Save to..." and "Export image..." actions; verify all unit and E2E tests pass.
+**Changes:**
+- `apps/web/src/workspace/workspace-host.tsx` (changed): replaced generic "α" span placeholder in workspace header brand link with real logo `<img src="/logo.png" alt={t("common.appName")} width={24} height={24} ... />`.
+- `apps/web/src/modules/board/board-pane.tsx` (changed): updated `UI_OPTIONS` to disable `export`, `saveToActiveFile`, `loadScene`, and `saveAsImage`; added scoped CSS rules hiding Excalidraw native library/templates button (`.sidebar-trigger`, `.default-sidebar-trigger`, `.sidebar-triggers`, `.library-button`, `[data-testid="library-button"]`, `[data-testid="sidebar-trigger"]`).
+- `apps/web/src/modules/board/excalidraw-board.tsx` (changed): sanitized `MainMenu` by removing `<MainMenu.DefaultItems.SaveAsImage />`, `<MainMenu.DefaultItems.Export />`, and `<MainMenu.DefaultItems.SearchMenu />`, retaining only Aboard-approved actions (`ClearCanvas`, `ToggleTheme`, `ChangeCanvasBackground`).
+- `apps/web/src/modules/board/excalidraw-board.test.tsx` (changed): updated unit tests to verify that `menu-save-as-image`, `menu-export`, and `menu-search` are null while approved actions remain truthy.
+- `apps/web/e2e/board-module.spec.ts` (changed): extended branding test to verify workspace header logo image is visible, library/sidebar trigger is hidden, and native export/save menu items are absent.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (326/326 unit tests passing across 43 test files).
+- `pnpm test:e2e`: PASS (26/26 Playwright E2E tests passing).
+- `pnpm ci:security`: PASS (Gitleaks clean, prod audit clean, bundle scan clean).
+**Related:** BOARD-1, BOARD-2, BOARD-4, SEC-7, DESIGN.md R1
+**Open:** none.
