@@ -37,6 +37,7 @@ export interface PdfToolbarProps {
   // Cross-Tool Integration (INT-1)
   onSendToBoard?: () => void;
   isSendingToBoard?: boolean;
+  hasBoardTab?: boolean;
   // Online Tools (Task 41 / PDFX-1..5)
   onRunOnlineTool?: (tool: "ocr" | "compress" | "office-to-pdf") => void;
   isProcessingOnlineTool?: boolean;
@@ -71,6 +72,7 @@ export function PdfToolbar({
   isOperatingPage = false,
   onSendToBoard,
   isSendingToBoard = false,
+  hasBoardTab = true,
   onRunOnlineTool,
   isProcessingOnlineTool = false,
 }: PdfToolbarProps) {
@@ -1118,10 +1120,13 @@ export function PdfToolbar({
         {/* Send to Board Button (INT-1) */}
         <button
           type="button"
-          onClick={onSendToBoard}
-          disabled={isSendingToBoard}
+          onClick={() => {
+            if (!hasBoardTab || isSendingToBoard) return;
+            onSendToBoard?.();
+          }}
+          disabled={!hasBoardTab || isSendingToBoard}
           aria-label={t("pdf.sendToBoard")}
-          title={t("pdf.sendToBoard")}
+          title={!hasBoardTab ? t("pdf.sendToBoardNoBoardOpen") : t("pdf.sendToBoard")}
           data-testid="pdf-send-to-board-btn"
           style={{
             display: "inline-flex",
@@ -1133,12 +1138,13 @@ export function PdfToolbar({
             border: "1px solid var(--border-card)",
             backgroundColor: "var(--bg-surface)",
             color: "var(--text-main)",
-            cursor: isSendingToBoard ? "wait" : "pointer",
+            cursor: (!hasBoardTab || isSendingToBoard) ? (!hasBoardTab ? "not-allowed" : "wait") : "pointer",
+            opacity: !hasBoardTab ? 0.45 : 1,
             fontSize: "13px",
             fontWeight: 500,
             gap: "var(--space-1)",
             fontFamily: "var(--font-sans)",
-            transition: "background-color 150ms ease",
+            transition: "background-color 150ms ease, opacity 150ms ease",
           }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

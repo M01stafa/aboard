@@ -1505,3 +1505,25 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm ci:security`: PASS (Gitleaks clean, prod audit clean, bundle scan clean).
 **Related:** BOARD-1, BOARD-2, BOARD-4, SEC-7, DESIGN.md R1
 **Open:** none.
+
+## 2026-10-24 — Fix Multi-Tab Launcher Bug, Implement Unique Tool Rule in Plus Menu, and Add Contextual Button States
+**Request:** Fix multi-tab launcher bug so launching or creating a project opens exactly one tab; implement "+" dropdown menu with unique tool rule (max one Board, one PDF, and one Circuit per project; disable existing tools in "+" menu and focus existing tab on selection); enforce contextual disabled states for Split View (disabled when < 2 tabs open), Send to PDF on Board toolbar (disabled when no PDF tab open), and Send to Board on PDF toolbar (disabled when no Board tab open), with localized tooltips. Commit locally without pushing to GitHub.
+**Changes:**
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added translation keys for `workspace.splitRequiresTwoTabs`, `workspace.toolAlreadyOpen`, `board.sendToPdfNoPdfOpen`, and `pdf.sendToBoardNoBoardOpen`.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): updated `defaultTabs` to open exactly 1 initial tab for the launched tool; updated `isDefault` in manifest loader; computed `hasBoard`, `hasPdf`, `hasCircuit`, and `canSplit`; disabled split view and swap buttons when `tabs.length < 2` with tooltip; added unique tool enforcement to `handleCreateNewTab` focusing existing tab if already present; disabled open tools in `add-tab-menu` with tooltip and disabled styling; passed `hasPdfTab` to `<BoardPane>` and `hasBoardTab` to `<PdfPane>`.
+- `apps/web/src/modules/board/types.ts` & `board-pane.tsx` (changed): added `hasPdfTab` prop; disabled `board-send-to-pdf-btn` when `!hasPdfTab || isSendingToPdf` with tooltip, visual opacity, and click guard.
+- `apps/web/src/modules/pdf/types.ts`, `pdf-pane.tsx`, `pdf-viewer.tsx`, & `pdf-toolbar.tsx` (changed): added `hasBoardTab` prop; disabled `pdf-send-to-board-btn` and `pdf-selection-to-board-btn` when `hasBoardTab === false` with tooltip, visual opacity, and click guard.
+- `apps/web/src/workspace/add-tab-menu.test.tsx` (changed): added unit tests for unique tool rule in "+" menu, focusing existing tabs, and contextual split button disabled states.
+- `apps/web/e2e/launch-project-index.spec.ts` (changed): added E2E assertions for single tab launcher initialization, "+" menu item disabling, and split view & send-to-pdf disabled states.
+- `apps/web/e2e/pdf-module.spec.ts` (changed): added E2E assertion verifying `pdf-send-to-board-btn` is disabled with tooltip when no Board tab is open.
+- `apps/web/e2e/cross-tool-integration.spec.ts`, `apps/web/e2e/cross-tool-notes-links.spec.ts`, `apps/web/e2e/board-module.spec.ts`, `apps/web/e2e/circuit-module.spec.ts` (changed): adapted E2E tests to explicitly open a second tab via "+" menu before testing split view or tab switching, reflecting single-tab initialization.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (327/327 unit tests passing across 43 test files).
+- `pnpm test:e2e`: PASS (26/26 Playwright E2E tests passing).
+- `pnpm ci:security`: PASS (Gitleaks clean, prod audit clean, bundle scan clean).
+**Related:** WORKSPACE-1, WORKSPACE-2, BOARD-4, PDF-4, DESIGN.md R1
+**Open:** none.
+

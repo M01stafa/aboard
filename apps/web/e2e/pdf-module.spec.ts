@@ -59,6 +59,11 @@ test.describe("PDF Viewer Module Integration (Task 28 / PDF-1, PDF-2, PDF-7)", (
     const toolbar = primaryPane.locator('[data-testid="pdf-toolbar"]');
     await expect(toolbar).toBeVisible();
 
+    // Verify contextual state: Send to Board button is disabled because no Board tab is open
+    const sendToBoardBtn = primaryPane.locator('[data-testid="pdf-send-to-board-btn"]');
+    await expect(sendToBoardBtn).toBeDisabled();
+    await expect(sendToBoardBtn).toHaveAttribute("title", /Open a whiteboard tab to send page/i);
+
     const pageDisplay = primaryPane.locator('[data-testid="pdf-page-display"]');
     await expect(pageDisplay).toContainText("1");
     await expect(pageDisplay).toContainText("3");

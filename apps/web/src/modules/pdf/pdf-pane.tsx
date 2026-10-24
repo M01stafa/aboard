@@ -17,6 +17,7 @@ export function PdfPane({
   projectId,
   tab,
   visible,
+  hasBoardTab = true,
   onMount,
   projectServiceOverride,
 }: PdfPaneProps) {
@@ -167,6 +168,7 @@ export function PdfPane({
           projectServiceOverride={projectServiceOverride}
           onSaveRestructuredPdf={addPdfFile}
           onShowToast={showToast}
+          hasBoardTab={hasBoardTab}
         />
 
         {/* Warning toast notification (PDF-6) */}

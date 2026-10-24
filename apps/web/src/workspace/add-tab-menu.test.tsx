@@ -8,7 +8,7 @@ import { I18nProvider } from "@/i18n/provider";
 // @ts-expect-error React testing flag
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-describe("Workspace '+' New Tab Menu", () => {
+describe("Workspace '+' New Tab Menu & Unique Tool Rule", () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -25,7 +25,7 @@ describe("Workspace '+' New Tab Menu", () => {
     container.remove();
   });
 
-  it("opens menu with New Whiteboard, New PDF, New Circuit on clicking '+' button", async () => {
+  it("opens menu with New Whiteboard, New PDF, New Circuit on clicking '+' button and disables already open tools", async () => {
     await act(async () => {
       root.render(
         <I18nProvider>
@@ -61,15 +61,20 @@ describe("Workspace '+' New Tab Menu", () => {
 
     expect(boardOpt).toBeTruthy();
     expect(boardOpt.textContent).toContain("Whiteboard");
+    // Board is already open -> disabled
+    expect(boardOpt.disabled).toBe(true);
+    expect(boardOpt.title).toBeTruthy();
 
     expect(pdfOpt).toBeTruthy();
     expect(pdfOpt.textContent).toContain("PDF");
+    expect(pdfOpt.disabled).toBe(false);
 
     expect(circuitOpt).toBeTruthy();
     expect(circuitOpt.textContent).toContain("Circuit");
+    expect(circuitOpt.disabled).toBe(false);
   });
 
-  it("creates a new whiteboard tab when New Whiteboard is clicked", async () => {
+  it("focuses existing tab instead of creating duplicate if an already open tool is selected", async () => {
     await act(async () => {
       root.render(
         <I18nProvider>
@@ -91,23 +96,28 @@ describe("Workspace '+' New Tab Menu", () => {
     });
 
     const boardOpt = container.querySelector('[data-testid="add-tab-board"]') as HTMLButtonElement;
-    await act(async () => {
-      boardOpt.click();
-    });
+    expect(boardOpt.disabled).toBe(true);
 
-    // Menu closes after selection
-    expect(container.querySelector('[data-testid="add-tab-menu"]')).toBeNull();
+    // When the button's click handler is invoked (e.g. programmatic or accessibility action)
+    const reactPropsKey = Object.keys(boardOpt).find((k) => k.startsWith("__reactProps"));
+    if (reactPropsKey) {
+      await act(async () => {
+        // @ts-expect-error accessing internal props
+        boardOpt[reactPropsKey]?.onClick?.({ preventDefault: () => {}, stopPropagation: () => {} });
+      });
+      // Menu closes
+      expect(container.querySelector('[data-testid="add-tab-menu"]')).toBeNull();
+    }
 
-    // Tab bar now contains 2 tabs
-    const tabButtons = container.querySelectorAll('.ws-tab-btn');
-    expect(tabButtons.length).toBe(2);
+    // Tab bar still contains exactly 1 tab (no duplicate created)
+    const tabButtons = container.querySelectorAll(".ws-tab-btn");
+    expect(tabButtons.length).toBe(1);
 
-    // The newly created tab is selected and has Whiteboard title
     const activeTab = container.querySelector('.ws-tab-btn[data-active="true"]');
-    expect(activeTab?.textContent).toContain("Whiteboard");
+    expect(activeTab?.textContent).toContain("Board 1");
   });
 
-  it("creates a new circuit tab when New Circuit is clicked", async () => {
+  it("creates a new circuit tab when New Circuit is clicked and disables both board and circuit afterwards", async () => {
     await act(async () => {
       root.render(
         <I18nProvider>
@@ -137,12 +147,65 @@ describe("Workspace '+' New Tab Menu", () => {
     expect(container.querySelector('[data-testid="add-tab-menu"]')).toBeNull();
 
     // Tab bar now contains 2 tabs
-    const tabButtons = container.querySelectorAll('.ws-tab-btn');
+    const tabButtons = container.querySelectorAll(".ws-tab-btn");
     expect(tabButtons.length).toBe(2);
 
     // The newly created tab is active and has Circuit title
     const activeTab = container.querySelector('.ws-tab-btn[data-active="true"]');
     expect(activeTab?.textContent).toContain("Circuit");
+
+    // Open '+' menu again to verify both Whiteboard and Circuit options are now disabled
+    await act(async () => {
+      addBtn.click();
+    });
+    const boardOptAfter = container.querySelector('[data-testid="add-tab-board"]') as HTMLButtonElement;
+    const circuitOptAfter = container.querySelector('[data-testid="add-tab-circuit"]') as HTMLButtonElement;
+    const pdfOptAfter = container.querySelector('[data-testid="add-tab-pdf"]') as HTMLButtonElement;
+
+    expect(boardOptAfter.disabled).toBe(true);
+    expect(circuitOptAfter.disabled).toBe(true);
+    expect(pdfOptAfter.disabled).toBe(false);
+  });
+
+  it("disables split view buttons when tabs < 2 and enables when tabs >= 2", async () => {
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <WorkspaceHost
+            projectId="test-proj"
+            initialLayout={{
+              tabs: [{ id: "tab-1", kind: "board", itemId: "item-1", title: "Board 1" }],
+              tabBarOrder: ["tab-1"],
+              primary: "tab-1",
+            }}
+          />
+        </I18nProvider>
+      );
+    });
+
+    const splitVerticalBtn = container.querySelector('[data-testid="split-vertical-btn"]') as HTMLButtonElement;
+    const splitHorizontalBtn = container.querySelector('[data-testid="split-horizontal-btn"]') as HTMLButtonElement;
+    const swapPanesBtn = container.querySelector('[data-testid="swap-panes-btn"]') as HTMLButtonElement;
+
+    expect(splitVerticalBtn.disabled).toBe(true);
+    expect(splitVerticalBtn.title).toContain("Open another tool to split view");
+    expect(splitHorizontalBtn.disabled).toBe(true);
+    expect(splitHorizontalBtn.title).toContain("Open another tool to split view");
+    expect(swapPanesBtn.disabled).toBe(true);
+
+    // Add a second tab (PDF)
+    const addBtn = container.querySelector('[data-testid="add-tab-btn"]') as HTMLButtonElement;
+    await act(async () => {
+      addBtn.click();
+    });
+    const pdfOpt = container.querySelector('[data-testid="add-tab-pdf"]') as HTMLButtonElement;
+    await act(async () => {
+      pdfOpt.click();
+    });
+
+    // Now with 2 tabs, vertical and horizontal split buttons are enabled
+    expect(splitVerticalBtn.disabled).toBe(false);
+    expect(splitHorizontalBtn.disabled).toBe(false);
   });
 
   it("closes menu when Escape key is pressed", async () => {

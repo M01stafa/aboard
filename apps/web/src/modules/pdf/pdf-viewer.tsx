@@ -65,6 +65,7 @@ export interface PdfViewerProps {
   projectServiceOverride?: ProjectService;
   onSaveRestructuredPdf?: (newBlob: Blob, name?: string) => Promise<void>;
   onShowToast?: (message: string) => void;
+  hasBoardTab?: boolean;
 }
 
 const plugins = [
@@ -93,6 +94,7 @@ interface ViewerInnerProps {
   projectServiceOverride?: ProjectService;
   onSaveRestructuredPdf?: (newBlob: Blob, name?: string) => Promise<void>;
   onShowToast: (message: string) => void;
+  hasBoardTab?: boolean;
 }
 
 function ViewerInner({
@@ -108,6 +110,7 @@ function ViewerInner({
   projectServiceOverride,
   onSaveRestructuredPdf,
   onShowToast,
+  hasBoardTab = true,
 }: ViewerInnerProps) {
   const { t } = useI18n();
   const ps = projectServiceOverride ?? defaultProjectService;
@@ -633,8 +636,12 @@ function ViewerInner({
         <button
           type="button"
           data-testid="pdf-selection-to-board-btn"
-          onClick={handleSendSelectionToBoard}
-          disabled={isSendingSelection}
+          onClick={() => {
+            if (!hasBoardTab || isSendingSelection) return;
+            handleSendSelectionToBoard();
+          }}
+          disabled={!hasBoardTab || isSendingSelection}
+          title={!hasBoardTab ? t("pdf.sendToBoardNoBoardOpen") : t("pdf.selectionSendToBoard")}
           style={{
             position: "absolute",
             top: `${selectionPos.top}px`,
@@ -651,9 +658,10 @@ function ViewerInner({
             boxShadow: "var(--shadow-2)",
             fontSize: "0.8125rem",
             fontWeight: "var(--weight-medium)",
-            cursor: isSendingSelection ? "wait" : "pointer",
+            cursor: (!hasBoardTab || isSendingSelection) ? (!hasBoardTab ? "not-allowed" : "wait") : "pointer",
+            opacity: !hasBoardTab ? 0.45 : 1,
             userSelect: "none",
-            transition: "transform var(--motion-fast) var(--ease-standard)",
+            transition: "transform var(--motion-fast) var(--ease-standard), opacity var(--motion-fast) var(--ease-standard)",
           }}
         >
           <span>📝</span>
@@ -690,6 +698,7 @@ function ViewerInner({
         isOperatingPage={isOperatingPage}
         onSendToBoard={handleSendToBoard}
         isSendingToBoard={isSendingToBoard}
+        hasBoardTab={hasBoardTab}
         onRunOnlineTool={handleRunOnlineTool}
         isProcessingOnlineTool={Boolean(processingTool)}
       />
@@ -851,6 +860,7 @@ export function PdfViewer({
   projectServiceOverride,
   onSaveRestructuredPdf,
   onShowToast,
+  hasBoardTab = true,
 }: PdfViewerProps) {
   const { t } = useI18n();
 
@@ -1003,6 +1013,7 @@ export function PdfViewer({
             projectServiceOverride={projectServiceOverride}
             onSaveRestructuredPdf={onSaveRestructuredPdf}
             onShowToast={showToast}
+            hasBoardTab={hasBoardTab}
           />
         ) : (
           <div

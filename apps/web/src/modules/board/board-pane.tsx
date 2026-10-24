@@ -75,6 +75,7 @@ export function BoardPane({
   projectId,
   tab,
   visible,
+  hasPdfTab = true,
   onMount,
   onApiReady,
 }: BoardPaneProps) {
@@ -474,11 +475,14 @@ export function BoardPane({
             <button
               type="button"
               data-testid="board-send-to-pdf-btn"
-              onClick={() => setIsPdfMenuOpen((prev) => !prev)}
-              disabled={isSendingToPdf}
+              onClick={() => {
+                if (!hasPdfTab || isSendingToPdf) return;
+                setIsPdfMenuOpen((prev) => !prev);
+              }}
+              disabled={!hasPdfTab || isSendingToPdf}
               aria-haspopup="menu"
               aria-expanded={isPdfMenuOpen}
-              title={t("board.sendToPdf")}
+              title={!hasPdfTab ? t("board.sendToPdfNoPdfOpen") : t("board.sendToPdf")}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -492,9 +496,10 @@ export function BoardPane({
                 boxShadow: "var(--shadow-1)",
                 fontSize: "0.875rem",
                 fontWeight: "var(--weight-medium)",
-                cursor: isSendingToPdf ? "wait" : "pointer",
+                cursor: (!hasPdfTab || isSendingToPdf) ? (!hasPdfTab ? "not-allowed" : "wait") : "pointer",
+                opacity: !hasPdfTab ? 0.45 : 1,
                 transition:
-                  "background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard)",
+                  "background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), opacity var(--motion-fast) var(--ease-standard)",
               }}
             >
               <svg

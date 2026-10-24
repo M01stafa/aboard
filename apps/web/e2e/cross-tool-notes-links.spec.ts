@@ -63,18 +63,16 @@ test.describe("Cross-Tool Integration: Board to PDF and Selection to Note (Task 
     await page.goto(`/workspace?p=${projectId}&kind=board`);
     await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
 
-    // 3. Set up vertical split view
+    // 3. Add a PDF tab via '+' menu
+    const addTabBtn = page.locator('[data-testid="add-tab-btn"]');
+    await addTabBtn.click();
+    await page.locator('[data-testid="add-tab-pdf"]').click();
+    await expect(page.locator(".ws-tab-btn")).toHaveCount(2);
+
+    // 4. Set up vertical split view (PDF is primary, Board tab-1 is secondary)
     const splitVerticalBtn = page.locator('[data-testid="split-vertical-btn"]');
     await expect(splitVerticalBtn).toBeVisible();
     await splitVerticalBtn.click();
-
-    // Swap panes so secondary becomes primary
-    const swapPanesBtn = page.locator('[data-testid="swap-panes-btn"]');
-    await swapPanesBtn.click();
-
-    // Open/activate PDF tab in primary slot (tab-3) while board stays in secondary (tab-1)
-    const tab3Btn = page.locator('[data-testid="tab-btn-tab-3"]');
-    await tab3Btn.click();
 
     const primaryPane = page.locator('.pane[data-slot="primary"]');
     const secondaryPane = page.locator('.pane[data-slot="secondary"]');

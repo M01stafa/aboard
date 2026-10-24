@@ -92,10 +92,11 @@ test.describe("Circuit Simulator Module Integration (Task 24 / CIRC-1, CIRC-2, C
     expect(circuitInitial).toContain("1000");
 
     // 2. Tab Switch Test:
-    // Switch to tab-2
-    const tab2Btn = page.locator('[data-testid="tab-btn-tab-2"]');
-    await expect(tab2Btn).toBeVisible();
-    await tab2Btn.click();
+    // Create a whiteboard tab via '+' menu
+    const addTabBtn = page.locator('[data-testid="add-tab-btn"]');
+    await addTabBtn.click();
+    await page.locator('[data-testid="add-tab-board"]').click();
+    await expect(page.locator(".ws-tab-btn")).toHaveCount(2);
 
     // Verify tab-1 pane is now hidden
     const hiddenPane = page.locator('.pane[data-slot="hidden"] [data-testid="pane-circuit-tab-1"]');

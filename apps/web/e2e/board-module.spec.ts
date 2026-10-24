@@ -122,10 +122,11 @@ test.describe("Board Whiteboard Module Integration (Task 25 / BOARD-1, BOARD-2, 
     expect(initialElementsCount).toBeGreaterThanOrEqual(1);
 
     // 2. Tab Switch Test:
-    // Switch to tab-2 (circuit)
-    const tab2Btn = page.locator('[data-testid="tab-btn-tab-2"]');
-    await expect(tab2Btn).toBeVisible();
-    await tab2Btn.click();
+    // Create a new circuit tab via '+' menu
+    const addTabBtn = page.locator('[data-testid="add-tab-btn"]');
+    await addTabBtn.click();
+    await page.locator('[data-testid="add-tab-circuit"]').click();
+    await expect(page.locator(".ws-tab-btn")).toHaveCount(2);
 
     // Verify tab-1 pane is now hidden with visibility:hidden (slot="hidden")
     const hiddenPane = page.locator('.pane[data-slot="hidden"] [data-testid="pane-board-tab-1"]');

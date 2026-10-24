@@ -74,38 +74,58 @@ export function WorkspaceHost({
       };
     }
 
+    if (projectId === "demo" && !initialKind) {
+      const demoTabs: Tab[] = [
+        {
+          id: "tab-1",
+          kind: "board",
+          itemId: "item-1",
+          title: t("workspace.boardTabTitle", { n: "1" }),
+        },
+        {
+          id: "tab-2",
+          kind: "circuit",
+          itemId: "item-2",
+          title: t("workspace.iframePlaceholderTitle"),
+          isIframe: true,
+        },
+        {
+          id: "tab-3",
+          kind: "pdf",
+          itemId: "item-3",
+          title: t("workspace.pdfTabTitle", { n: "2" }),
+        },
+      ];
+      return {
+        tabs: demoTabs,
+        tabBarOrder: demoTabs.map((t) => t.id),
+        primary: "tab-1",
+        secondary: "tab-2",
+        split: "none",
+        ratio: 0.5,
+      };
+    }
+
+    const initialKindToUse = initialKind || "board";
     const defaultTabs: Tab[] = [
       {
         id: "tab-1",
-        kind: initialKind || "board",
+        kind: initialKindToUse,
         itemId: "item-1",
         title:
-          initialKind === "circuit"
+          initialKindToUse === "circuit"
             ? t("workspace.circuitTabTitle", { n: "1" })
-            : initialKind === "pdf"
+            : initialKindToUse === "pdf"
             ? t("workspace.pdfTabTitle", { n: "1" })
             : t("workspace.boardTabTitle", { n: "1" }),
-      },
-      {
-        id: "tab-2",
-        kind: "circuit",
-        itemId: "item-2",
-        title: t("workspace.iframePlaceholderTitle"),
-        isIframe: true,
-      },
-      {
-        id: "tab-3",
-        kind: "pdf",
-        itemId: "item-3",
-        title: t("workspace.pdfTabTitle", { n: "2" }),
       },
     ];
 
     return {
       tabs: defaultTabs,
-      tabBarOrder: defaultTabs.map((t) => t.id),
+      tabBarOrder: ["tab-1"],
       primary: "tab-1",
-      secondary: "tab-2",
+      secondary: null,
       split: "none",
       ratio: 0.5,
     };
@@ -117,6 +137,12 @@ export function WorkspaceHost({
   const [showModeSwitch, setShowModeSwitch] = useState(false);
   const [projectInfo, setProjectInfo] = useState<{ title: string; storage: "local" | "drive" } | null>(null);
   const previousSplitRef = useRef<SplitMode>("none");
+
+  // Track tool presence and split eligibility
+  const hasBoard = layout.tabs.some((t) => t.kind === "board");
+  const hasPdf = layout.tabs.some((t) => t.kind === "pdf");
+  const hasCircuit = layout.tabs.some((t) => t.kind === "circuit");
+  const canSplit = layout.tabs.length >= 2;
 
   // New tab dropdown menu state & ref
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
@@ -181,10 +207,8 @@ export function WorkspaceHost({
 
                   setLayout((current) => {
                     const isDefault =
-                      current.tabs.length === 3 &&
-                      current.tabs[0]?.id === "tab-1" &&
-                      current.tabs[1]?.id === "tab-2" &&
-                      current.tabs[2]?.id === "tab-3";
+                      current.tabs.length === 1 &&
+                      current.tabs[0]?.id === "tab-1";
                     if (isDefault) {
                       const primaryId = restoredTabs[0]?.id ?? null;
                       const secondaryId = restoredTabs[1]?.id ?? null;
@@ -805,10 +829,13 @@ export function WorkspaceHost({
   // Action: Toggle split mode
   const setSplit = useCallback(
     (mode: SplitMode) => {
-      if (isMobile && mode !== "none") return;
+      if (mode !== "none" && (isMobile || layout.tabs.length < 2)) return;
       setLayout((prev) => {
         if (mode === "none") {
           return { ...prev, split: "none" };
+        }
+        if (prev.tabs.length < 2) {
+          return prev;
         }
         // If enabling split and secondary is not set or same as primary, pick another tab
         let nextSecondary = prev.secondary;
@@ -823,13 +850,13 @@ export function WorkspaceHost({
         };
       });
     },
-    [isMobile]
+    [isMobile, layout.tabs.length]
   );
 
   // Action: Swap panes
   const swapPanes = useCallback(() => {
     setLayout((prev) => {
-      if (prev.split === "none" || !prev.secondary || !prev.primary) return prev;
+      if (prev.split === "none" || !prev.secondary || !prev.primary || prev.tabs.length < 2) return prev;
       return {
         ...prev,
         primary: prev.secondary,
@@ -853,6 +880,14 @@ export function WorkspaceHost({
   // Action: Add new tab from menu options (New Whiteboard, New PDF, New Circuit)
   const handleCreateNewTab = useCallback(
     (kind: ModuleKind) => {
+      // Unique tool rule: a project can only have ONE Board, ONE PDF, and ONE Circuit open at a time
+      const existingTab = layout.tabs.find((t) => t.kind === kind);
+      if (existingTab) {
+        activateTab(existingTab.id);
+        setIsAddMenuOpen(false);
+        return;
+      }
+
       const existingOfKind = layout.tabs.filter((t) => t.kind === kind).length;
       const count = existingOfKind + 1;
       const id = `tab-${Date.now()}`;
@@ -890,7 +925,7 @@ export function WorkspaceHost({
       openTab(newTab);
       setIsAddMenuOpen(false);
     },
-    [layout.tabs, openTab, projectId, t]
+    [activateTab, layout.tabs, openTab, projectId, t]
   );
 
   // Tab bar keyboard navigation
@@ -1200,8 +1235,12 @@ export function WorkspaceHost({
           text-align: start;
           transition: background-color var(--motion-fast) var(--ease-standard);
         }
-        .ws-menu-item:hover {
+        .ws-menu-item:hover:not(:disabled) {
           background-color: var(--bg-subtle);
+        }
+        .ws-menu-item:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
         }
         .ws-menu-item:focus-visible {
           outline: 2px solid var(--focus-ring);
@@ -1302,9 +1341,9 @@ export function WorkspaceHost({
           <button
             type="button"
             onClick={() => setSplit("vertical")}
-            disabled={isMobile || layout.split === "vertical"}
+            disabled={isMobile || !canSplit || layout.split === "vertical"}
             className="ws-tool-btn"
-            title={isMobile ? t("workspace.splitDisabledMobile") : t("workspace.verticalSplit")}
+            title={isMobile ? t("workspace.splitDisabledMobile") : !canSplit ? t("workspace.splitRequiresTwoTabs") : t("workspace.verticalSplit")}
             aria-label={t("workspace.verticalSplit")}
             data-testid="split-vertical-btn"
           >
@@ -1317,9 +1356,9 @@ export function WorkspaceHost({
           <button
             type="button"
             onClick={() => setSplit("horizontal")}
-            disabled={isMobile || layout.split === "horizontal"}
+            disabled={isMobile || !canSplit || layout.split === "horizontal"}
             className="ws-tool-btn"
-            title={isMobile ? t("workspace.splitDisabledMobile") : t("workspace.horizontalSplit")}
+            title={isMobile ? t("workspace.splitDisabledMobile") : !canSplit ? t("workspace.splitRequiresTwoTabs") : t("workspace.horizontalSplit")}
             aria-label={t("workspace.horizontalSplit")}
             data-testid="split-horizontal-btn"
           >
@@ -1332,7 +1371,7 @@ export function WorkspaceHost({
           <button
             type="button"
             onClick={swapPanes}
-            disabled={layout.split === "none"}
+            disabled={!canSplit || layout.split === "none"}
             className="ws-tool-btn"
             title={t("workspace.swapPanes")}
             aria-label={t("workspace.swapPanes")}
@@ -1539,6 +1578,8 @@ export function WorkspaceHost({
                 role="menuitem"
                 data-testid="add-tab-board"
                 onClick={() => handleCreateNewTab("board")}
+                disabled={hasBoard}
+                title={hasBoard ? t("workspace.toolAlreadyOpen") : undefined}
                 className="ws-menu-item"
               >
                 <span>📝</span>
@@ -1549,6 +1590,8 @@ export function WorkspaceHost({
                 role="menuitem"
                 data-testid="add-tab-pdf"
                 onClick={() => handleCreateNewTab("pdf")}
+                disabled={hasPdf}
+                title={hasPdf ? t("workspace.toolAlreadyOpen") : undefined}
                 className="ws-menu-item"
               >
                 <span>📄</span>
@@ -1559,6 +1602,8 @@ export function WorkspaceHost({
                 role="menuitem"
                 data-testid="add-tab-circuit"
                 onClick={() => handleCreateNewTab("circuit")}
+                disabled={hasCircuit}
+                title={hasCircuit ? t("workspace.toolAlreadyOpen") : undefined}
                 className="ws-menu-item"
               >
                 <span>⚡</span>
@@ -1618,6 +1663,7 @@ export function WorkspaceHost({
                   projectId={projectId || "demo"}
                   tab={tab}
                   visible={slot !== "hidden"}
+                  hasPdfTab={hasPdf}
                   onMount={onPaneMount}
                 />
               ) : tab.kind === "pdf" ? (
@@ -1625,6 +1671,7 @@ export function WorkspaceHost({
                   projectId={projectId || "demo"}
                   tab={tab}
                   visible={slot !== "hidden"}
+                  hasBoardTab={hasBoard}
                   onMount={onPaneMount}
                 />
               ) : (

@@ -27,6 +27,7 @@ export interface BoardPaneProps {
   projectId: string;
   tab: Tab;
   visible: boolean;
+  hasPdfTab?: boolean;
   onMount?: (tabId: string, token: string) => void;
   onApiReady?: (api: unknown) => void;
 }
