@@ -71,6 +71,61 @@ export function CircuitPane({
   const [adapter] = useState(() => new CircuitAdapter());
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Helper to trigger GWT resize calculations and canvas dimension updates
+  const dispatchResize = useCallback(() => {
+    try {
+      const cw = iframeRef.current?.contentWindow;
+      if (cw) {
+        cw.dispatchEvent(new Event("resize"));
+      }
+    } catch {
+      // Non-fatal if cross-origin or in teardown
+    }
+  }, []);
+
+  // ResizeObserver on the iframe container to trigger canvas resize on layout changes / split view
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return;
+
+    let rafId: number | null = null;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          if (rafId) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(() => {
+            dispatchResize();
+          });
+        }
+      }
+    });
+
+    observer.observe(container);
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
+  }, [dispatchResize]);
+
+  // When pane becomes visible (tab switch or split view toggle), dispatch resize to update canvas dimensions
+  useEffect(() => {
+    if (visible) {
+      dispatchResize();
+      const rafId = requestAnimationFrame(() => {
+        dispatchResize();
+      });
+      const timer = setTimeout(() => {
+        dispatchResize();
+      }, 50);
+      return () => {
+        cancelAnimationFrame(rafId);
+        clearTimeout(timer);
+      };
+    }
+  }, [visible, dispatchResize]);
 
   // Per-tab "pause when hidden" option: default ON on mobile, OFF on desktop per CIRC-4
   const [pauseWhenHidden, setPauseWhenHidden] = useState<boolean>(() => {
@@ -139,7 +194,10 @@ export function CircuitPane({
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
     adapter.attach(iframe.contentWindow);
-  }, [adapter]);
+    requestAnimationFrame(() => {
+      dispatchResize();
+    });
+  }, [adapter, dispatchResize]);
 
   // Track if initial circuit restoration is complete
   const initialLoadDoneRef = useRef(false);
@@ -149,6 +207,9 @@ export function CircuitPane({
     // 1. When the simulator is ready: sync running state and pause-when-hidden
     const unsubscribeReady = adapter.onReady((api) => {
       setIsSimRunning(api.isRunning());
+      requestAnimationFrame(() => {
+        dispatchResize();
+      });
 
       // If initially hidden and pause-when-hidden is enabled, pause simulation
       if (!visibleRef.current && pauseWhenHiddenRef.current) {
@@ -213,7 +274,7 @@ export function CircuitPane({
       unsubscribeAnalyze();
       unsubscribeUpdate();
     };
-  }, [adapter, projectId, tab.itemId, tab.title]);
+  }, [adapter, projectId, tab.itemId, tab.title, dispatchResize]);
 
   // Handle Theme and Language Changes (CIRC-3)
   useEffect(() => {
@@ -325,12 +386,25 @@ export function CircuitPane({
     }
   }, [visible, pauseWhenHidden, adapter]);
 
-  // Clean up adapter on unmount
+  // Clean up adapter and iframe on unmount to properly destroy instance
   useEffect(() => {
+    const iframe = iframeRef.current;
+    if (iframe && (!iframe.src || iframe.src.endsWith("about:blank"))) {
+      iframe.src = iframeSrc;
+    }
     return () => {
       adapter.detach();
+      if (iframe) {
+        try {
+          const sim = (iframe.contentWindow as unknown as { CircuitJS1?: { setSimRunning?: (run: boolean) => void } })?.CircuitJS1;
+          sim?.setSimRunning?.(false);
+          iframe.src = "about:blank";
+        } catch {
+          // Non-fatal cleanup
+        }
+      }
     };
-  }, [adapter]);
+  }, [adapter, iframeSrc]);
 
   return (
     <div
@@ -482,7 +556,20 @@ export function CircuitPane({
       )}
 
       {/* Same-origin Iframe (fills the pane) */}
-      <div style={{ flex: 1, inlineSize: "100%", position: "relative", minBlockSize: 0 }}>
+      <div
+        ref={containerRef}
+        data-testid="circuit-iframe-container"
+        style={{
+          flex: 1,
+          width: "100%",
+          height: "100%",
+          inlineSize: "100%",
+          blockSize: "100%",
+          position: "relative",
+          minHeight: 0,
+          minBlockSize: 0,
+        }}
+      >
         <iframe
           ref={iframeRef}
           src={iframeSrc}
@@ -490,6 +577,8 @@ export function CircuitPane({
           data-testid="circuit-iframe"
           onLoad={handleIframeLoad}
           style={{
+            width: "100%",
+            height: "100%",
             inlineSize: "100%",
             blockSize: "100%",
             border: "none",

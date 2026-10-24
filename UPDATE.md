@@ -1577,4 +1577,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (328/328 unit tests passing across 43 test files).
 - `pnpm test:e2e`: PASS (27/27 Playwright E2E tests passing, including project-persistence.spec.ts).
 **Related:** WORKSPACE-1, WORKSPACE-2, BOARD-2, PDF-3, PDF-4, STORE-1
+
+## 2026-10-24 — Remove E2E Keep-Alive Placeholder and Fix Circuit Canvas Rendering
+**Request:** Remove E2E keep-alive test placeholder leaking into production and fix blank (0x0) circuit canvas rendering in multi-tab or split-view layout; ensure production app always loads real `circuitjs.html`; use `ResizeObserver` on iframe container in `circuit-pane.tsx` and dispatch `resize` event to iframe's `contentWindow` on split toggle and tab switch; ensure container and iframe have `width: 100%; height: 100%; flex: 1`; make iframe lifecycle and unmount cleanup Strict-Mode resilient; update E2E tests to verify real circuit loads and placeholder is removed; run checks and commit locally without pushing to GitHub.
+**Changes:**
+- `apps/web/src/workspace/workspace-host.tsx` (changed): removed `IframePlaceholder` import; updated `demoTabs` to use real circuit tab title; removed `isIframe: kind === "circuit"` from `loadInfo`; updated pane render loop so `tab.kind === "circuit"` unconditionally renders `<CircuitPane>` and never falls back to placeholder.
+- `apps/web/src/workspace/placeholders.tsx` (changed): removed deprecated `IframePlaceholder` component.
+- `apps/web/public/iframe-test/index.html` (deleted): removed test placeholder HTML page containing "Aboard Keep-Alive Verification" and counter.
+- `apps/web/src/workspace/mount-counter.test.tsx` (changed): removed `isIframe: true` from test layout, verifying `CircuitPane` onMount lifecycle.
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): added `containerRef` and `ResizeObserver` on the iframe container; implemented `dispatchResize` helper to dispatch native `resize` event to `iframeRef.current.contentWindow` when container dimensions change or tab visibility toggles; updated `onReady` and `handleIframeLoad` to dispatch resize; ensured container and iframe have `width: 100%; height: 100%; flex: 1; minHeight: 0`; added Strict-Mode resilient unmount cleanup that stops simulation and detaches adapter, resetting src if remounted.
+- `apps/web/e2e/workspace-no-reload.spec.ts` (changed): updated E2E test to load real `circuitjs.html`, assert placeholder badge and counter are 0, wait for `CircuitJS1` simulator, verify canvas bounding box has width > 0 and height > 0 in both single and split views, and assert keep-alive DOM stability across split toggles, swaps, and tab switches.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (328/328 unit tests passing across 43 test files).
+- `pnpm test:e2e`: PASS (27/27 Playwright E2E tests passing, including workspace-no-reload.spec.ts).
+**Related:** CIRC-1, CIRC-2, CIRC-5, WS-1, WS-2
 **Open:** none.

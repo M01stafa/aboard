@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/i18n/provider";
 import { slotOf, type LayoutState, type ModuleKind, type SplitMode, type Tab } from "./types";
-import { IframePlaceholder, StaticPlaceholder } from "./placeholders";
+import { StaticPlaceholder } from "./placeholders";
 import { SaveStatusIndicator } from "./save-status";
 import { CircuitPane } from "@/modules/circuit";
 import { BoardPane } from "@/modules/board";
@@ -88,8 +88,7 @@ export function WorkspaceHost({
           id: "tab-2",
           kind: "circuit",
           itemId: "item-2",
-          title: t("workspace.iframePlaceholderTitle"),
-          isIframe: true,
+          title: t("workspace.circuitTabTitle", { n: "1" }),
         },
         {
           id: "tab-3",
@@ -302,7 +301,6 @@ export function WorkspaceHost({
                           : kind === "pdf"
                           ? t("workspace.pdfTabTitle", { n: "1" })
                           : t("workspace.boardTabTitle", { n: "1" })),
-                      isIframe: kind === "circuit",
                     });
                   }
 
@@ -1805,13 +1803,7 @@ export function WorkspaceHost({
                   boxSizing: "border-box",
                 }}
               >
-                {tab.isIframe ? (
-                  <IframePlaceholder
-                    tab={tab}
-                    visible={slot !== "hidden"}
-                    onMount={onPaneMount}
-                  />
-                ) : tab.kind === "circuit" ? (
+                {tab.kind === "circuit" ? (
                   <CircuitPane
                     projectId={projectId || "demo"}
                     tab={tab}

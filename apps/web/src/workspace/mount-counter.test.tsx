@@ -55,7 +55,6 @@ describe("WorkspaceHost Mount Counter & DOM Stability (Task 18)", () => {
                   kind: "circuit",
                   itemId: "item-2",
                   title: "Circuit 1",
-                  isIframe: true,
                 },
                 { id: "tab-3", kind: "pdf", itemId: "item-3", title: "Document 1" },
               ],
