@@ -118,29 +118,41 @@ test.describe("Project Index & Recent Projects List (Task 22 / LAUNCH-2, LAUNCH-
     await expect(page.locator(".ws-tab-btn")).toHaveCount(1);
     await expect(page.locator(".ws-tab-btn")).toHaveText(/Whiteboard 1/i);
 
-    // Assert '+' menu disables open tools (Unique tool rule)
+    // Assert '+' menu opens and disables open tools (Unique tool rule)
     const addTabBtn = page.locator('[data-testid="add-tab-btn"]');
     await addTabBtn.click();
     const addTabMenu = page.locator('[data-testid="add-tab-menu"]');
     await expect(addTabMenu).toBeVisible();
     await expect(page.locator('[data-testid="add-tab-board"]')).toBeDisabled();
-    await expect(page.locator('[data-testid="add-tab-pdf"]')).toBeEnabled();
+
+    // Assert "New PDF" option is visible and clickable, and clicking it opens a PDF tab
+    const addPdfBtn = page.locator('[data-testid="add-tab-pdf"]');
+    await expect(addPdfBtn).toBeVisible();
+    await expect(addPdfBtn).toBeEnabled();
+    await addPdfBtn.click();
+    await expect(addTabMenu).not.toBeVisible();
+    await expect(page.locator(".ws-tab-btn")).toHaveCount(2);
+
+    // Verify clicking '+' again and clicking outside closes menu
+    await addTabBtn.click();
+    await expect(addTabMenu).toBeVisible();
+    await expect(page.locator('[data-testid="add-tab-board"]')).toBeDisabled();
+    await expect(page.locator('[data-testid="add-tab-pdf"]')).toBeDisabled();
     await expect(page.locator('[data-testid="add-tab-circuit"]')).toBeEnabled();
-    await page.keyboard.press("Escape");
+    // Click outside on the header bar
+    await page.locator("header").first().click();
     await expect(addTabMenu).not.toBeVisible();
 
-    // Assert Contextual States when prerequisite tabs are missing
-    // Split view buttons disabled when layout.tabs.length < 2
+    // Now with 2 tabs (Whiteboard + PDF):
+    // Split view buttons are enabled
     const splitVerticalBtn = page.locator('[data-testid="split-vertical-btn"]');
     const splitHorizontalBtn = page.locator('[data-testid="split-horizontal-btn"]');
-    await expect(splitVerticalBtn).toBeDisabled();
-    await expect(splitHorizontalBtn).toBeDisabled();
-    await expect(splitVerticalBtn).toHaveAttribute("title", /Open another tool to split view/i);
+    await expect(splitVerticalBtn).toBeEnabled();
+    await expect(splitHorizontalBtn).toBeEnabled();
 
-    // Board toolbar Send to PDF button disabled when no PDF tab is open
+    // Board toolbar Send to PDF button is enabled because a PDF tab is open
     const sendToPdfBtn = page.locator('[data-testid="board-send-to-pdf-btn"]');
-    await expect(sendToPdfBtn).toBeDisabled();
-    await expect(sendToPdfBtn).toHaveAttribute("title", /Open a PDF tab to send board/i);
+    await expect(sendToPdfBtn).toBeEnabled();
 
     // 5. Navigate back to launcher / reload
     await page.goto("/");

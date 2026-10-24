@@ -1545,4 +1545,20 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** SEC-5, SEC-10, Task 16, Task 46
 **Open:** none.
 
+## 2026-10-24 — Fix Unresponsive Plus Button and Clipped Dropdown Menu in Tab Bar
+**Request:** Fix unresponsive "+" button in workspace tab bar where clicking did not display the dropdown menu; debug click handlers, check for overlays / z-index / pointer-events issues; ensure dropdown menu displays on screen, closes on outside click, and satisfies unique tool rule; add strict E2E test; run local checks and commit locally without pushing to GitHub.
+**Changes:**
+- `apps/web/src/workspace/workspace-host.tsx` (changed): identified root cause where `<nav>` had `overflowX: "auto"` which CSS specification forced to `overflow-y: auto`, clipping the absolute dropdown menu below the 48px boundary of `<nav>` and rendering a vertical scrollbar inside `<nav>` instead of floating over the active pane; removed `overflowX: "auto"` from `<nav>` and added `position: "relative"` with `zIndex: 30`; moved `overflowX: "auto"` to `<div role="tablist">` (`flex: 1`, `minInlineSize: 0`, `overflowY: "hidden"`); gave `<div ref={addMenuRef}>` `position: "relative"`, `flexShrink: 0`, and `zIndex: 40`; ensured `pointerEvents: "auto"` and explicit pointer styling on `add-tab-btn` and `add-tab-menu`; extended click outside listener to support both `mousedown` and `touchstart`.
+- `apps/web/src/workspace/add-tab-menu.test.tsx` (changed): added unit test verifying menu closes when clicking outside on the document body.
+- `apps/web/e2e/launch-project-index.spec.ts` (changed): added strict E2E assertions clicking `+` button, verifying dropdown menu visibility, clicking "New PDF" option, verifying PDF tab opens, clicking `+` again, and clicking outside on the header to close the menu.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (328/328 unit tests passing across 43 test files).
+- `pnpm test:e2e`: PASS (26/26 Playwright E2E tests passing).
+**Related:** WORKSPACE-1, WORKSPACE-2, DESIGN.md R1
+**Open:** none.
+
+
 

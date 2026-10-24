@@ -235,4 +235,33 @@ describe("Workspace '+' New Tab Menu & Unique Tool Rule", () => {
     });
     expect(container.querySelector('[data-testid="add-tab-menu"]')).toBeNull();
   });
+
+  it("closes menu when clicking outside", async () => {
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <WorkspaceHost
+            projectId="test-proj"
+            initialLayout={{
+              tabs: [{ id: "tab-1", kind: "board", itemId: "item-1", title: "Board 1" }],
+              tabBarOrder: ["tab-1"],
+              primary: "tab-1",
+            }}
+          />
+        </I18nProvider>
+      );
+    });
+
+    const addBtn = container.querySelector('[data-testid="add-tab-btn"]') as HTMLButtonElement;
+    await act(async () => {
+      addBtn.click();
+    });
+    expect(container.querySelector('[data-testid="add-tab-menu"]')).toBeTruthy();
+
+    // Click outside on document body
+    await act(async () => {
+      window.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    });
+    expect(container.querySelector('[data-testid="add-tab-menu"]')).toBeNull();
+  });
 });

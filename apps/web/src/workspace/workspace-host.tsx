@@ -151,7 +151,7 @@ export function WorkspaceHost({
   // Close add tab menu on outside click or Escape key
   useEffect(() => {
     if (!isAddMenuOpen) return;
-    const handlePointerDown = (e: MouseEvent) => {
+    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
       if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
         setIsAddMenuOpen(false);
       }
@@ -162,9 +162,11 @@ export function WorkspaceHost({
       }
     };
     window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("touchstart", handlePointerDown);
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("touchstart", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isAddMenuOpen]);
@@ -1470,10 +1472,22 @@ export function WorkspaceHost({
           justifyContent: "space-between",
           paddingInline: "var(--space-2)",
           boxSizing: "border-box",
-          overflowX: "auto",
+          position: "relative",
+          zIndex: 30,
         }}
       >
-        <div role="tablist" style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+        <div
+          role="tablist"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-1)",
+            flex: 1,
+            minInlineSize: 0,
+            overflowX: "auto",
+            overflowY: "hidden",
+          }}
+        >
           {layout.tabBarOrder.map((tabId, idx) => {
             const tab = layout.tabs.find((t) => t.id === tabId);
             if (!tab) return null;
@@ -1536,7 +1550,7 @@ export function WorkspaceHost({
           })}
         </div>
 
-        <div ref={addMenuRef} style={{ position: "relative", flexShrink: 0 }}>
+        <div ref={addMenuRef} style={{ position: "relative", flexShrink: 0, zIndex: 40 }}>
           <button
             type="button"
             onClick={() => setIsAddMenuOpen((prev) => !prev)}
@@ -1546,6 +1560,12 @@ export function WorkspaceHost({
             aria-haspopup="menu"
             aria-expanded={isAddMenuOpen}
             data-testid="add-tab-btn"
+            style={{
+              cursor: "pointer",
+              pointerEvents: "auto",
+              position: "relative",
+              zIndex: 1,
+            }}
           >
             +
           </button>
@@ -1571,6 +1591,7 @@ export function WorkspaceHost({
                 flexDirection: "column",
                 gap: "var(--space-1)",
                 boxSizing: "border-box",
+                pointerEvents: "auto",
               }}
             >
               <button
