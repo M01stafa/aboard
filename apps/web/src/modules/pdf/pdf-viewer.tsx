@@ -34,6 +34,7 @@ import { projectService as defaultProjectService, type ProjectService } from "@/
 import { computeBlobSha256 } from "@/core/storage/sha256";
 import { useI18n } from "@/i18n/provider";
 import { PdfToolbar } from "./pdf-toolbar";
+import { PdfFloatingToolbar } from "./pdf-floating-toolbar";
 import { usePdfAnnotations } from "./use-pdf-annotations";
 import {
   rotatePage,
@@ -673,21 +674,10 @@ function ViewerInner({
         documentTitle={documentTitle}
         currentPage={displayPage || scrollState.currentPage || 1}
         totalPages={scrollState.totalPages || 1}
-        zoomLevel={zoomState.currentZoomLevel || 1.0}
         showThumbnails={showThumbnails}
         onToggleThumbnails={() => setShowThumbnails((prev) => !prev)}
         onPrevPage={handlePrevPage}
         onNextPage={handleNextPage}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onResetZoom={handleResetZoom}
-        activeTool={activeTool}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onSelectTool={handleSelectTool}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        onAddStamp={handleAddStamp}
         onDownloadAnnotated={handleDownloadAnnotated}
         isDownloading={isDownloading}
         onRotatePage={handleRotatePage}
@@ -777,48 +767,78 @@ function ViewerInner({
           </aside>
         )}
 
-        {/* Viewport with Canvas Render, Selection, and Annotation Layers */}
-        <Viewport documentId={documentId} style={{ flex: 1, height: "100%" }}>
-          <Scroller
-            documentId={documentId}
-            renderPage={(page) => (
-              <PagePointerProvider
-                key={page.pageIndex}
-                documentId={documentId}
-                pageIndex={page.pageIndex}
-                data-testid={`pdf-page-${page.pageIndex + 1}`}
-                style={{
-                  position: "relative",
-                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
-                  backgroundColor: "#ffffff",
-                  boxSizing: "border-box",
-                }}
-              >
-                <RenderLayer
-                  documentId={documentId}
-                  pageIndex={page.pageIndex}
-                  style={{
-                    pointerEvents: "none",
-                    userSelect: "none",
-                  }}
-                />
-                <PdfTextLayer
-                  documentId={documentId}
-                  pageIndex={page.pageIndex}
-                  isAnnotating={activeTool !== "select"}
-                />
-                <SelectionLayer
-                  documentId={documentId}
-                  pageIndex={page.pageIndex}
-                />
-                <AnnotationLayer
-                  documentId={documentId}
-                  pageIndex={page.pageIndex}
-                />
-              </PagePointerProvider>
-            )}
+        {/* Canvas container hosting floating vertical toolbar and Viewport */}
+        <div
+          style={{
+            position: "relative",
+            flex: 1,
+            height: "100%",
+            minWidth: 0,
+            overflow: "hidden",
+          }}
+        >
+          {/* Floating Vertical Toolbar (PDF Annotation & Zoom Controls) */}
+          <PdfFloatingToolbar
+            activeTool={activeTool}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onSelectTool={handleSelectTool}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            onAddStamp={handleAddStamp}
+            zoomLevel={zoomState.currentZoomLevel || 1.0}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onResetZoom={handleResetZoom}
           />
-        </Viewport>
+
+          {/* Viewport with Canvas Render, Selection, and Annotation Layers */}
+          <Viewport
+            documentId={documentId}
+            className="pdf-viewport"
+            style={{ width: "100%", height: "100%" }}
+          >
+            <Scroller
+              documentId={documentId}
+              renderPage={(page) => (
+                <PagePointerProvider
+                  key={page.pageIndex}
+                  documentId={documentId}
+                  pageIndex={page.pageIndex}
+                  data-testid={`pdf-page-${page.pageIndex + 1}`}
+                  style={{
+                    position: "relative",
+                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+                    backgroundColor: "#ffffff",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <RenderLayer
+                    documentId={documentId}
+                    pageIndex={page.pageIndex}
+                    style={{
+                      pointerEvents: "none",
+                      userSelect: "none",
+                    }}
+                  />
+                  <PdfTextLayer
+                    documentId={documentId}
+                    pageIndex={page.pageIndex}
+                    isAnnotating={activeTool !== "select"}
+                  />
+                  <SelectionLayer
+                    documentId={documentId}
+                    pageIndex={page.pageIndex}
+                  />
+                  <AnnotationLayer
+                    documentId={documentId}
+                    pageIndex={page.pageIndex}
+                  />
+                </PagePointerProvider>
+              )}
+            />
+          </Viewport>
+        </div>
       </div>
 
       <input

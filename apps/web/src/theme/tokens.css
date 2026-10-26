@@ -107,3 +107,18 @@ input[type="range"],
   direction: ltr !important;
 }
 
+/* PDF viewport padding to prevent floating toolbar overlapping content when zoomed in */
+.pdf-viewport {
+  padding-inline-start: calc(var(--control-sm) + var(--space-5)) !important;
+}
+
+@media (max-width: 640px) {
+  .pdf-floating-toolbar {
+    top: var(--space-1) !important;
+    inset-inline-start: var(--space-1) !important;
+  }
+  .pdf-viewport {
+    padding-inline-start: calc(var(--control-sm) + var(--space-3)) !important;
+  }
+}
+

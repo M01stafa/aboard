@@ -1672,3 +1672,26 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (30/30 Playwright E2E tests passing).
 **Related:** BOARD-1, BOARD-2, BOARD-4, WS-1, WS-2, DESIGN.md R1
 **Open:** none.
+
+## 2026-10-26 — Fix Broken PDF Dropdowns and Re-layout Toolbar to Floating Vertical
+**Request:** Fix broken PDF dropdown menus ("Online Tools" and "Page Operations") that were unresponsive when clicked; extract drawing/annotation tools (Select, Highlight, Draw, Text, Stamp, Undo, Redo) and Zoom controls (In, Out, %) into a floating vertical toolbar positioned at inset-inline-start on the PDF canvas mimicking Excalidraw; keep file metadata, page navigation, and top-level actions in a slim top header; ensure scroll container has enough inline-start padding to prevent overlapping text when zoomed in; follow DESIGN.md tokens and 8-point grid; update component tests; run local checks (lint, typecheck, unit, e2e) and commit locally without pushing.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (created): extracted floating vertical toolbar component with three logical groups separated by 1px dividers:
+  1. Top: Select (`pdf-tool-select`), Highlight (`pdf-tool-highlight`), Ink/Draw (`pdf-tool-ink`), Text (`pdf-tool-text`), Stamp (`pdf-tool-stamp`) + hidden file input (`pdf-stamp-input`).
+  2. Middle: Undo (`pdf-undo-button`), Redo (`pdf-redo-button`).
+  3. Bottom: Zoom In (`pdf-zoom-in`), Zoom Out (`pdf-zoom-out`), Zoom Reset / Level (`pdf-zoom-level`).
+  Styled strictly with `background: var(--bg-surface)`, `box-shadow: var(--shadow-3)`, `border-radius: var(--radius-md)`, `border: 1px solid var(--border-card)`, `top: var(--space-2)`, `insetInlineStart: var(--space-2)`, `max-height: calc(100% - var(--space-4))`, and `overflow-y: auto`.
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): converted into a slim top header holding thumbnails toggle (`pdf-thumbnails-toggle`), prev page (`pdf-prev-page`), page indicator (`pdf-page-display`), next page (`pdf-next-page`), document title (`pdf-document-title`), Page Operations menu button (`pdf-page-operations-menu`) + dropdown (`pdf-page-operations-dropdown`), Online Tools menu button (`pdf-online-tools-menu`) + dropdown (`pdf-online-tools-dropdown`), Send to Board (`pdf-send-to-board-btn`), and Download PDF (`pdf-download-btn`). Fixed the unresponsive dropdown bug by replacing `overflowX: "auto"` with `overflow: "visible"`, ensuring dropdowns positioned outside the 48px header box are never vertically clipped. Added mutually exclusive menu toggling.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): wrapped the Viewport in a canvas flex container hosting `PdfFloatingToolbar` pinned to `insetInlineStart: var(--space-2)`, and assigned `className="pdf-viewport"` to the Viewport.
+- `apps/web/src/theme/tokens.css` (changed): added `.pdf-viewport { padding-inline-start: calc(var(--control-sm) + var(--space-5)) !important; }` to give the PDF pages a 72px margin from the inline-start edge, preventing text overlap even at maximum zoom; added responsive mobile rule for small viewports.
+- `apps/web/src/modules/pdf/pdf-toolbar.test.tsx` (changed): updated unit tests to thoroughly test the slim top header, the responsive dropdown open/close states, mutual exclusivity, escape key dismissal, and the new `PdfFloatingToolbar` annotation and zoom controls.
+- `apps/web/src/modules/pdf/pdf-pane.test.tsx` (changed): updated test to render and verify both `PdfToolbar` and `PdfFloatingToolbar`.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (333/333 unit tests passing across 44 test files).
+- `pnpm test:e2e`: PASS (Playwright tests for `pdf-online-tools.spec.ts`, `pdf-page-operations.spec.ts`, `pdf-annotations.spec.ts`, and `pdf-module.spec.ts` passing).
+**Related:** PDF-1, PDF-2, PDF-3, PDF-4, PDF-5, PDF-6, PDFX-1..5, INT-1, DESIGN.md R1, R3, R4, R5
+**Open:** none.
+

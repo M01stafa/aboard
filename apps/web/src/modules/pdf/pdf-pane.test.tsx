@@ -4,6 +4,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { PdfPane, isMobileDevice } from "./pdf-pane";
 import { PdfToolbar } from "./pdf-toolbar";
+import { PdfFloatingToolbar } from "./pdf-floating-toolbar";
 import { I18nProvider } from "@/i18n/provider";
 import type { Tab } from "@/workspace/types";
 import type { ProjectService } from "@/core/storage";
@@ -43,11 +44,13 @@ describe("PdfToolbar component (Task 28)", () => {
             documentTitle="Biology_101.pdf"
             currentPage={2}
             totalPages={10}
-            zoomLevel={1.25}
             showThumbnails={false}
             onToggleThumbnails={onToggleThumbnails}
             onPrevPage={onPrevPage}
             onNextPage={onNextPage}
+          />
+          <PdfFloatingToolbar
+            zoomLevel={1.25}
             onZoomIn={onZoomIn}
             onZoomOut={onZoomOut}
             onResetZoom={onResetZoom}
