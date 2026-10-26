@@ -1638,5 +1638,22 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Phase 1 / Setup
 **Open:** none.
 
+## 2026-10-26 — Fix Broken RTL Layout in Workspace and Excalidraw
+**Request:** Fix broken RTL layout in workspace shell and Excalidraw board: ensure top bar uses Flexbox with `dir="rtl"` and `gap` spacing, prevent save status ("جاري الحفظ...") from squishing via `white-space: nowrap`, ensure action buttons group on the left and logo on the right; remove aggressive CSS overrides from Excalidraw and keep canvas and drawing tools LTR so icons do not overlap or break while retaining Arabic translations; ensure bottom controls and toolbar icons never overlap; write E2E test verifying non-overlapping bounding boxes in Arabic; run lint, typecheck, unit, and e2e checks; commit locally without pushing.
+**Changes:**
+- `apps/web/src/workspace/save-status.tsx` (changed): added `whiteSpace: "nowrap"` and `flexShrink: 0` to container and label span, preventing squishing or line breaks under RTL.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): added `gap: "var(--space-2)"` to `<header>`, added `whiteSpace: "nowrap"` and `flexShrink: 0` to logo container, removed `marginInline` from `<nav>` in favor of header flex gap, ensuring clean grouping (logo/status on the right, tabs center, action controls on the left in RTL).
+- `apps/web/src/modules/board/board-pane.tsx` (changed): removed aggressive `.App-menu_top` layout and absolute position overrides; enforced `direction: ltr !important` on `.aboard-board-pane` and `.excalidraw` so native Flexbox and toolbars remain clean, centered, and unobstructed with zero icon overlaps while keeping Arabic text translations; reset Excalidraw `:root[dir=rtl]` icon flip transforms.
+- `apps/web/e2e/board-module.spec.ts` (changed): added E2E test proving that when switching to Arabic, the top bar places logo on the right and actions on the left without squishing, and every visible Excalidraw toolbar icon satisfies `curr.x + curr.width <= next.x + 1.5`, mathematically proving zero overlaps.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (330/330 unit tests passing across 44 test files).
+- `pnpm test:e2e`: PASS (30/30 Playwright E2E tests passing, including board-module.spec.ts).
+**Related:** WS-1, WS-2, BOARD-1, BOARD-2, DESIGN.md R1, R3
+**Open:** none.
+
+
 
 

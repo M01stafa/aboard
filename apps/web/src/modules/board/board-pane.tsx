@@ -399,6 +399,7 @@ export function BoardPane({
           position: "relative",
           overflow: "hidden",
           backgroundColor: "var(--bg-surface)",
+          direction: "ltr",
           // Scoped brand accent variables per docs/specs/architecture.md §15 and Spike S1 (V03)
           "--color-primary": "var(--btn-primary-bg)",
           "--color-primary-hover": "var(--btn-primary-hover)",
@@ -443,6 +444,12 @@ export function BoardPane({
               outline-offset: -2px !important;
             }
 
+            /* Keep Excalidraw canvas and native toolbars LTR in all languages to preserve natural layout */
+            .aboard-board-pane,
+            .aboard-board-pane .excalidraw {
+              direction: ltr !important;
+            }
+
             /* Fix Inverted Sliders: ensure range inputs operate naturally (LTR, 0 to 100) */
             .aboard-board-pane input[type="range"],
             .aboard-board-pane .range-wrapper,
@@ -458,73 +465,12 @@ export function BoardPane({
               display: none !important;
             }
 
-            /* Fix Excalidraw RTL top bar mirroring: toolbar to the left, hamburger menu to the right */
-            [dir="rtl"] .aboard-board-pane .excalidraw .App-menu_top {
-              display: flex !important;
-              direction: ltr !important;
-              justify-content: space-between !important;
-              align-items: flex-start !important;
-              inline-size: 100%;
-              box-sizing: border-box !important;
-              padding-inline: var(--space-2) !important;
-            }
-            [dir="rtl"] .aboard-board-pane .excalidraw .shapes-section {
-              order: 1 !important;
-              display: flex !important;
-              justify-content: flex-start !important;
-              direction: ltr !important;
-            }
-            [dir="rtl"] .aboard-board-pane .excalidraw .App-menu_top__left {
-              order: 2 !important;
-              direction: rtl !important;
-              display: flex !important;
-              flex-direction: column !important;
-              align-items: flex-end !important;
-            }
-
-            /* Fix bottom-left zoom/undo cluster: clean flex alignment, 8pt grid token spacing, no overlap */
-            .aboard-board-pane .excalidraw .layer-ui__wrapper__footer-left {
-              display: flex !important;
-              align-items: center !important;
-              gap: var(--space-1) !important;
-              padding: var(--space-1) !important;
-            }
-            .aboard-board-pane .excalidraw .layer-ui__wrapper__footer-left .island,
-            .aboard-board-pane .excalidraw .layer-ui__wrapper__footer-left .Section,
-            .aboard-board-pane .excalidraw .layer-ui__wrapper__footer-left section {
-              display: flex !important;
-              flex-direction: row !important;
-              align-items: center !important;
-              gap: var(--space-1) !important;
-            }
-            .aboard-board-pane .excalidraw .undo-redo-buttons {
-              margin-inline: var(--space-1) !important;
-              display: flex !important;
-              align-items: center !important;
-            }
-            .aboard-board-pane .excalidraw .zoom-actions {
-              margin-inline: var(--space-1) !important;
-              display: flex !important;
-              align-items: center !important;
-            }
+            /* Reset Excalidraw's native :root[dir=rtl] button transforms since canvas is kept LTR */
             [dir="rtl"] .aboard-board-pane .excalidraw .undo-redo-buttons .undo-button-container button,
-            [dir="rtl"] .aboard-board-pane .excalidraw .undo-redo-buttons .redo-button-container button {
-              transform: none !important;
-            }
+            [dir="rtl"] .aboard-board-pane .excalidraw .undo-redo-buttons .redo-button-container button,
             [dir="rtl"] .aboard-board-pane .excalidraw .zoom-out-button,
             [dir="rtl"] .aboard-board-pane .excalidraw .zoom-in-button {
               transform: none !important;
-            }
-            [dir="rtl"] .aboard-board-pane .excalidraw .layer-ui__wrapper__footer-left {
-              inset-inline-start: var(--space-2) !important;
-            }
-            [dir="rtl"] .aboard-board-pane [data-testid="templates-panel-toggle"] {
-              inset-inline-end: auto !important;
-              inset-inline-start: calc(var(--space-2) + 48px) !important;
-            }
-            [dir="rtl"] .aboard-board-pane .board-send-to-pdf-container {
-              inset-inline-end: auto !important;
-              inset-inline-start: calc(var(--space-2) + 48px + var(--space-16)) !important;
             }
           `}</style>
           <ExcalidrawBoard

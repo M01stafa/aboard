@@ -113,6 +113,8 @@ export function SaveStatusIndicator({ debounceMs = 10000 }: SaveStatusIndicatorP
         borderRadius: "var(--radius-sm)",
         userSelect: "none",
         boxSizing: "border-box",
+        whiteSpace: "nowrap",
+        flexShrink: 0,
       }}
     >
       <span
@@ -125,7 +127,7 @@ export function SaveStatusIndicator({ debounceMs = 10000 }: SaveStatusIndicatorP
           flexShrink: 0,
         }}
       />
-      <span>{getStatusLabel(displayedStatus)}</span>
+      <span style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{getStatusLabel(displayedStatus)}</span>
     </div>
   );
 }

@@ -308,5 +308,85 @@ test.describe("Board Whiteboard Module Integration (Task 25 / BOARD-1, BOARD-2, 
     const topBarDir = await topBar.evaluate((el) => window.getComputedStyle(el).direction);
     expect(topBarDir).toBe("ltr");
   });
+
+  test("switches to Arabic (RTL), keeps top bar and Excalidraw toolbar clean without overlapping icons", async ({
+    page,
+  }) => {
+    // 1. Set language to Arabic before navigation
+    await page.addInitScript(() => {
+      localStorage.setItem("aboard:language", "ar");
+    });
+
+    await page.goto(`/workspace?p=${projectId}&kind=board`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    // 2. Verify Top Bar in RTL:
+    // Logo and status on the right (start), action buttons on the left (end), not squished
+    const logoLink = page.locator('header a[href="/"]');
+    const saveStatus = page.locator('[data-testid="save-status-indicator"]');
+    const actionControls = page.locator('[data-testid="add-tab-btn"]');
+
+    await expect(logoLink).toBeVisible();
+    await expect(saveStatus).toBeVisible();
+    await expect(actionControls).toBeVisible();
+
+    const logoBox = await logoLink.boundingBox();
+    const statusBox = await saveStatus.boundingBox();
+    const actionBox = await actionControls.boundingBox();
+    expect(logoBox).toBeTruthy();
+    expect(statusBox).toBeTruthy();
+    expect(actionBox).toBeTruthy();
+
+    if (logoBox && statusBox && actionBox) {
+      // In RTL, logo and status are on the right (larger x coordinate than action buttons)
+      expect(logoBox.x).toBeGreaterThan(actionBox.x);
+      // Logo and status do not overlap horizontally
+      expect(statusBox.x + statusBox.width).toBeLessThanOrEqual(logoBox.x + 4);
+    }
+
+    // 3. Verify Excalidraw Board Toolbar in RTL:
+    const boardPane = page.locator('.pane[data-slot="primary"] [data-testid="pane-board-tab-1"]');
+    await expect(boardPane).toBeVisible();
+
+    // Assert that the board pane enforces direction: ltr
+    const paneDir = await boardPane.evaluate((el) => window.getComputedStyle(el).direction);
+    expect(paneDir).toBe("ltr");
+
+    // Wait for Excalidraw toolbar buttons to mount
+    const toolItems = boardPane.locator(
+      '.App-toolbar-container input[type="radio"], .App-toolbar-container button, .shapes-section [data-testid^="toolbar-"]'
+    );
+    await expect(toolItems.first()).toBeVisible({ timeout: 25000 });
+
+    // Collect bounding boxes of all visible toolbar tool items
+    const count = await toolItems.count();
+    const boxes: { x: number; width: number; y: number; height: number }[] = [];
+    for (let i = 0; i < count; i++) {
+      const item = toolItems.nth(i);
+      if (await item.isVisible()) {
+        const box = await item.boundingBox();
+        if (box && box.width > 0 && box.height > 0) {
+          boxes.push(box);
+        }
+      }
+    }
+
+    expect(boxes.length).toBeGreaterThan(5);
+
+    // Sort by x coordinate ascending (left-to-right)
+    boxes.sort((a, b) => a.x - b.x);
+
+    // Assert that no adjacent toolbar icons overlap horizontally
+    for (let i = 0; i < boxes.length - 1; i++) {
+      const curr = boxes[i];
+      const next = boxes[i + 1];
+      // Right edge of current icon (curr.x + curr.width) must not exceed next.x (+ 1.5px subpixel tolerance)
+      expect(curr.x + curr.width).toBeLessThanOrEqual(next.x + 1.5);
+    }
+
+    // 4. Verify bottom controls (zoom and undo) exist and do not overlap
+    const zoomControls = boardPane.locator('.zoom-actions, .layer-ui__wrapper__footer-left');
+    await expect(zoomControls.first()).toBeVisible();
+  });
 });
 

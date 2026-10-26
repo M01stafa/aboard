@@ -1382,13 +1382,14 @@ export function WorkspaceHost({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: "var(--space-2)",
           boxSizing: "border-box",
           position: "relative",
           zIndex: 30,
         }}
       >
-        {/* Left: App Logo & Status Indicator */}
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexShrink: 0 }}>
+        {/* Start (Left in LTR, Right in RTL): App Logo & Status Indicator */}
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexShrink: 0, whiteSpace: "nowrap" }}>
           <Link
             href="/"
             onClick={async (e) => {
@@ -1409,6 +1410,8 @@ export function WorkspaceHost({
               fontSize: "0.875rem",
               fontWeight: "var(--weight-semibold)",
               paddingInlineEnd: "var(--space-1)",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1422,15 +1425,16 @@ export function WorkspaceHost({
                 blockSize: "24px",
                 borderRadius: "var(--radius-sm)",
                 objectFit: "contain",
+                flexShrink: 0,
               }}
             />
-            <span>{t("common.appName")}</span>
+            <span style={{ whiteSpace: "nowrap" }}>{t("common.appName")}</span>
           </Link>
 
           <SaveStatusIndicator />
         </div>
 
-        {/* Center / Left: Tab Navigation */}
+        {/* Center: Tab Navigation */}
         <nav
           aria-label="Workspace tabs"
           style={{
@@ -1438,7 +1442,6 @@ export function WorkspaceHost({
             minInlineSize: 0,
             display: "flex",
             alignItems: "center",
-            marginInline: "var(--space-2)",
             overflow: "hidden",
             blockSize: "100%",
           }}
