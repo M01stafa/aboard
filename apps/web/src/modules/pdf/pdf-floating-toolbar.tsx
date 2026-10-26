@@ -104,6 +104,24 @@ export function PdfFloatingToolbar({
     };
   }, [showPageMenu]);
 
+  // Debug computed CSS of floating toolbar in browser
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const el = document.querySelector(".pdf-floating-toolbar");
+      if (el) {
+        const cs = window.getComputedStyle(el);
+        console.log("[PdfFloatingToolbar CSS]", {
+          computedLeft: cs.left,
+          computedRight: cs.right,
+          computedPosition: cs.position,
+          computedZIndex: cs.zIndex,
+          direction: cs.direction,
+          htmlDir: document.documentElement.getAttribute("dir"),
+        });
+      }
+    }
+  }, []);
+
   const getToolButtonStyle = (tool: AnnotationToolType): React.CSSProperties => {
     const isActive = activeTool === tool;
     return {

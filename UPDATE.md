@@ -1746,4 +1746,25 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-1, PDF-2, PDF-5, PDF-6, DESIGN.md R1, R3
 **Open:** none.
 
+## 2026-10-26 — Hard Restart, Clear Cache, and Debug CSS Positioning
+**Request:** Stop dev server, delete .next cache folder, restart dev server; debug exact computed CSS of the floating toolbar; add console log printing computed styles and DOM direction; verify <html> and <body> dir attributes; commit locally without pushing.
+**Changes:**
+- `apps/web/.next` (deleted): deleted stale Next.js build cache and restarted fresh `pnpm dev` process on port 3000.
+- `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (changed): added `useEffect` mounting hook logging `computedLeft`, `computedRight`, `computedPosition`, `computedZIndex`, `direction`, and `htmlDir` directly to browser console for immediate live inspection.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- Browser computed CSS inspection in LTR mode (`dir="ltr"` on `<html>`):
+  - `.pdf-floating-toolbar` position: `absolute`
+  - `.pdf-floating-toolbar` left: `16px` (`var(--space-2)`)
+  - `.pdf-floating-toolbar` right: `1198px` (calculated by browser for container width 1264px - 50px - 16px)
+  - `.pdf-floating-toolbar` zIndex: `50`
+  - `.pdf-floating-toolbar` bounding rect: `x: 24, y: 120, width: 50, height: 525, left: 24, right: 74`
+  - `<html>` dir: `"ltr"`
+  - `<body>` dir: `null` (computed: `"ltr"`)
+  - Parent container `pdf-canvas-container`: `position: relative`, `display: block`, `justify-content: normal`
+**Related:** PDF-1, PDF-2, DESIGN.md R1, R3
+**Open:** none.
+
 
