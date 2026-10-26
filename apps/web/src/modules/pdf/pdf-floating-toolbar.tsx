@@ -160,9 +160,7 @@ export function PdfFloatingToolbar({
         border: "1px solid var(--border-card)",
         boxSizing: "border-box",
         userSelect: "none",
-        maxHeight: "calc(100% - var(--space-4))",
-        overflowY: "auto",
-        scrollbarWidth: "none",
+        overflow: "visible",
       }}
     >
       {/* Hidden file input for stamp image selection */}

@@ -1713,4 +1713,20 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-1, PDF-2, PDF-3, PDF-4, PDF-5, PDF-6, INT-1, DESIGN.md R1, R3
 **Open:** none.
 
+## 2026-10-26 — Force PDF Floating Toolbar to Inline-Start and Fix Hidden Page Operations Dropdown
+**Request:** Force PDF floating toolbar to left edge (LTR) and right edge (RTL) using position: absolute; inset-inline-start: var(--space-2); fix Page Operations dropdown not appearing when clicked due to clipping by parent overflow: hidden / overflow-y: auto on the floating toolbar container; ensure dropdown opens into visible viewport without overflow; commit locally without pushing.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (changed): set `overflow: "visible"` on `<aside className="pdf-floating-toolbar">` (removing `overflowY: "auto"` and `scrollbarWidth: "none"` which forced horizontal clipping of the 210px absolute dropdown); preserved logical anchoring with `position: "absolute"`, `top: "var(--space-2)"`, `insetInlineStart: "var(--space-2)"`, `insetInlineEnd: "auto"`; kept dropdown menu positioned at `position: "absolute"`, `insetInlineStart: "calc(100% + var(--space-1))"`, `insetInlineEnd: "auto"`, `bottom: 0`, `zIndex: 100` opening adjacent to the toolbar button upwards into the canvas viewport.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (14/14 unit tests in `pdf-toolbar.test.tsx` and `pdf-pane.test.tsx`).
+- `pnpm test:e2e e2e/pdf-page-operations.spec.ts`: PASS (1/1 Playwright E2E test passing).
+- Playwright layout verification:
+  - LTR (`aboard:language = "en"`): toolbar at `left: 24, right: 74` (anchored to left edge), dropdown menu at `left: 73, right: 283, bottom: 636`, `overflow: "visible"`, visible on canvas.
+  - RTL (`aboard:language = "ar"`): toolbar at `left: 1206, right: 1256` (anchored to right edge), dropdown menu at `left: 997, right: 1207, bottom: 636`, `overflow: "visible"`, visible on canvas.
+**Related:** PDF-1, PDF-2, PDF-5, PDF-6, DESIGN.md R1, R3
+**Open:** none.
+
 
