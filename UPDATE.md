@@ -1767,4 +1767,23 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-1, PDF-2, DESIGN.md R1, R3
 **Open:** none.
 
+## 2026-10-26 — Make PDF Toolbar Float Overlay Without Reserving Layout Space
+**Request:** Remove reserved layout space (padding-inline-start on canvas container) so the PDF canvas extends full width across the pane without a dark navy strip on the left; ensure the toolbar with z-index: 50 behaves as a true floating overlay on top of the PDF canvas; commit locally without pushing.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): removed `paddingInlineStart: "calc(var(--control-sm) + var(--space-5))"` from `[data-testid="pdf-canvas-container"]`, allowing `<Viewport>` to take full 100% width and 100% height of the canvas container.
+- `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (changed): verified `insetInlineStart: "var(--space-2)"`, `top: "var(--space-2)"`, and `zIndex: 50` so toolbar floats as an overlay above the PDF canvas; Page Operations dropdown opens outwards.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (14/14 unit tests in `pdf-toolbar.test.tsx` and `pdf-pane.test.tsx`).
+- `pnpm test:e2e e2e/pdf-page-operations.spec.ts e2e/pdf-annotations.spec.ts`: PASS (2/2 Playwright E2E tests passing).
+- Playwright layout verification:
+  - `pdf-canvas-container` paddingInlineStart: `0px` (dark column removed).
+  - `Viewport` width: `100%` (1264px matches container width 1264px, left: 8px matches container left: 8px).
+  - `PdfFloatingToolbar`: `position: absolute`, `zIndex: 50`, overlays the PDF canvas cleanly.
+  - Page Operations dropdown: opens outwards to the right (`x: 73px > toolbar x: 24px`).
+**Related:** PDF-1, PDF-2, DESIGN.md R1, R3
+**Open:** none.
+
 

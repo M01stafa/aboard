@@ -183,6 +183,7 @@ export function PdfFloatingToolbar({
         style={{
           position: "absolute",
           top: "var(--space-2)",
+          insetInlineStart: "var(--space-2)",
           zIndex: 50,
           display: "flex",
           flexDirection: "column",

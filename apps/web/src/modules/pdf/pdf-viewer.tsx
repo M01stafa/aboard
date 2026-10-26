@@ -768,7 +768,6 @@ function ViewerInner({
             height: "100%",
             minWidth: 0,
             overflow: "hidden",
-            paddingInlineStart: "calc(var(--control-sm) + var(--space-5))",
             boxSizing: "border-box",
           }}
         >
