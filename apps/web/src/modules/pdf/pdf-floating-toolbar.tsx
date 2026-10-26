@@ -139,30 +139,47 @@ export function PdfFloatingToolbar({
   });
 
   return (
-    <aside
-      className="pdf-floating-toolbar"
-      aria-label="PDF Annotation and Zoom Controls"
-      data-testid="pdf-floating-toolbar"
-      style={{
-        position: "absolute",
-        top: "var(--space-2)",
-        insetInlineStart: "var(--space-2)",
-        insetInlineEnd: "auto",
-        zIndex: 30,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: "var(--space-1)",
-        padding: "var(--space-1)",
-        backgroundColor: "var(--bg-surface)",
-        boxShadow: "var(--shadow-3)",
-        borderRadius: "var(--radius-md)",
-        border: "1px solid var(--border-card)",
-        boxSizing: "border-box",
-        userSelect: "none",
-        overflow: "visible",
-      }}
-    >
+    <>
+      <style>{`
+        .pdf-floating-toolbar {
+          left: var(--space-2);
+          right: auto;
+        }
+        [dir="rtl"] .pdf-floating-toolbar {
+          right: var(--space-2);
+          left: auto;
+        }
+        .pdf-page-operations-dropdown {
+          left: calc(100% + var(--space-1));
+          right: auto;
+        }
+        [dir="rtl"] .pdf-page-operations-dropdown {
+          right: calc(100% + var(--space-1));
+          left: auto;
+        }
+      `}</style>
+      <aside
+        className="pdf-floating-toolbar"
+        aria-label="PDF Annotation and Zoom Controls"
+        data-testid="pdf-floating-toolbar"
+        style={{
+          position: "absolute",
+          top: "var(--space-2)",
+          zIndex: 50,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "var(--space-1)",
+          padding: "var(--space-1)",
+          backgroundColor: "var(--bg-surface)",
+          boxShadow: "var(--shadow-3)",
+          borderRadius: "var(--radius-md)",
+          border: "1px solid var(--border-card)",
+          boxSizing: "border-box",
+          userSelect: "none",
+          overflow: "visible",
+        }}
+      >
       {/* Hidden file input for stamp image selection */}
       <input
         type="file"
@@ -568,13 +585,12 @@ export function PdfFloatingToolbar({
 
         {showPageMenu && (
           <div
+            className="pdf-page-operations-dropdown"
             role="menu"
             aria-label={t("pdf.pageOperations")}
             data-testid="pdf-page-operations-dropdown"
             style={{
               position: "absolute",
-              insetInlineStart: "calc(100% + var(--space-1))",
-              insetInlineEnd: "auto",
               bottom: 0,
               backgroundColor: "var(--bg-surface)",
               border: "1px solid var(--border-card)",
@@ -808,5 +824,6 @@ export function PdfFloatingToolbar({
         )}
       </div>
     </aside>
-  );
+  </>
+);
 }

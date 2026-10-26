@@ -761,6 +761,7 @@ function ViewerInner({
 
         {/* Canvas container hosting floating vertical toolbar and Viewport */}
         <div
+          data-testid="pdf-canvas-container"
           style={{
             position: "relative",
             flex: 1,
@@ -771,33 +772,10 @@ function ViewerInner({
             boxSizing: "border-box",
           }}
         >
-          {/* Floating Vertical Toolbar (PDF Annotation, Zoom Controls, Page Operations) */}
-          <PdfFloatingToolbar
-            activeTool={activeTool}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onSelectTool={handleSelectTool}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            onAddStamp={handleAddStamp}
-            zoomLevel={zoomState.currentZoomLevel || 1.0}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onResetZoom={handleResetZoom}
-            currentPage={displayPage || scrollState.currentPage || 1}
-            totalPages={scrollState.totalPages || 1}
-            onRotatePage={handleRotatePage}
-            onMovePageUp={handleMovePageUp}
-            onMovePageDown={handleMovePageDown}
-            onDeletePage={handleDeletePage}
-            onInsertImagePage={handleInsertImagePage}
-            isOperatingPage={isOperatingPage}
-          />
-
           {/* Viewport with Canvas Render, Selection, and Annotation Layers */}
           <Viewport
             documentId={documentId}
-            style={{ width: "100%", height: "100%" }}
+            style={{ width: "100%", height: "100%", position: "relative", zIndex: 1 }}
           >
             <Scroller
               documentId={documentId}
@@ -839,6 +817,29 @@ function ViewerInner({
               )}
             />
           </Viewport>
+
+          {/* Floating Vertical Toolbar (PDF Annotation, Zoom Controls, Page Operations) */}
+          <PdfFloatingToolbar
+            activeTool={activeTool}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onSelectTool={handleSelectTool}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            onAddStamp={handleAddStamp}
+            zoomLevel={zoomState.currentZoomLevel || 1.0}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onResetZoom={handleResetZoom}
+            currentPage={displayPage || scrollState.currentPage || 1}
+            totalPages={scrollState.totalPages || 1}
+            onRotatePage={handleRotatePage}
+            onMovePageUp={handleMovePageUp}
+            onMovePageDown={handleMovePageDown}
+            onDeletePage={handleDeletePage}
+            onInsertImagePage={handleInsertImagePage}
+            isOperatingPage={isOperatingPage}
+          />
         </div>
       </div>
 

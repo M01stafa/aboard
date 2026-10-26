@@ -1729,4 +1729,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-1, PDF-2, PDF-5, PDF-6, DESIGN.md R1, R3
 **Open:** none.
 
+## 2026-10-26 — Force PDF Floating Toolbar Left and Keep it Above PDF on Zoom
+**Request:** Bypass logical properties and explicitly use left: var(--space-2); right: auto; for default LTR state, and [dir="rtl"] { right: var(--space-2); left: auto; } for RTL; fix z-index so the floating toolbar with z-index: 50 floats above the PDF pages and canvas on zoom; ensure PDF Viewport has z-index: 1 and canvas container has position: relative; ensure Page Operations dropdown opens correctly; commit locally without pushing.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (changed): added CSS rules specifying `.pdf-floating-toolbar { left: var(--space-2); right: auto; }` and `[dir="rtl"] .pdf-floating-toolbar { right: var(--space-2); left: auto; }`, plus dropdown rules `.pdf-page-operations-dropdown { left: calc(100% + var(--space-1)); right: auto; }` and `[dir="rtl"] .pdf-page-operations-dropdown { right: calc(100% + var(--space-1)); left: auto; }`; set `zIndex: 50` on `<aside className="pdf-floating-toolbar">`.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): set `style={{ width: "100%", height: "100%", position: "relative", zIndex: 1 }}` on `<Viewport>`; moved `<PdfFloatingToolbar>` after `<Viewport>` in JSX DOM tree; retained canvas container `position: "relative"`.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (331/331 unit tests passing across 44 test files).
+- `pnpm test:e2e e2e/pdf-page-operations.spec.ts e2e/pdf-annotations.spec.ts`: PASS (2/2 Playwright E2E tests passing).
+- Playwright zoom & stacking verification:
+  - LTR (`aboard:language = "en"`): toolbar at `left: 24, right: 74` (anchored to left edge), toolbar `z-index: 50`, viewport `z-index: 1`. When zoomed in 250%, hit-testing (`elementFromPoint`) over the toolbar coordinates returns the toolbar button, proving it floats above the scaled PDF canvas. Page operations dropdown opens to the right (`left: 73`).
+  - RTL (`aboard:language = "ar"`): toolbar anchored to right edge (`left: 1206, right: 1256`), toolbar `z-index: 50`. Page operations dropdown opens to the left (`right: 1207`).
+**Related:** PDF-1, PDF-2, PDF-5, PDF-6, DESIGN.md R1, R3
+**Open:** none.
+
 
