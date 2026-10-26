@@ -51,8 +51,8 @@ test.describe("STORE-1 / WS-3 / WS-4: Silent Persistence & Save Status", () => {
       await page.waitForTimeout(150);
     }
 
-    // 4. Wait for debounce (~500 ms) to settle and verify status returns to "Saved on this device"
-    await expect(statusIndicator).toHaveText(/Saved on this device/i, { timeout: 3000 });
+    // 4. Wait for debounce (~10 s) to settle and verify status returns to "Saved on this device"
+    await expect(statusIndicator).toHaveText(/Saved on this device/i, { timeout: 15000 });
 
     // 5. Navigate away to launcher / close page
     await page.goto("/");

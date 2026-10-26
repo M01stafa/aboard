@@ -1372,21 +1372,23 @@ export function WorkspaceHost({
       {/* Global Drive error / quota banner */}
       <DriveStatusBanner onExportClick={() => setShowExportDialog(true)} />
 
-      {/* Pane Toolbar (48px height per DESIGN.md §4.2) */}
+      {/* Unified Workspace Top Bar (48px height per DESIGN.md §4.2) */}
       <header
         style={{
           blockSize: "var(--control-lg)",
-          paddingInline: "var(--space-3)",
+          paddingInline: "var(--space-2)",
           borderBlockEnd: "1px solid var(--border-card)",
           backgroundColor: "var(--bg-surface)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           boxSizing: "border-box",
-          zIndex: 20,
+          position: "relative",
+          zIndex: 30,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
+        {/* Left: App Logo & Status Indicator */}
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexShrink: 0 }}>
           <Link
             href="/"
             onClick={async (e) => {
@@ -1406,6 +1408,7 @@ export function WorkspaceHost({
               textDecoration: "none",
               fontSize: "0.875rem",
               fontWeight: "var(--weight-semibold)",
+              paddingInlineEnd: "var(--space-1)",
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1424,27 +1427,195 @@ export function WorkspaceHost({
             <span>{t("common.appName")}</span>
           </Link>
 
-          <span
-            style={{
-              fontSize: "0.8125rem",
-              fontFamily: "var(--font-mono)",
-              color: "var(--text-muted)",
-              backgroundColor: "var(--bg-subtle)",
-              paddingBlock: "var(--space-1)",
-              paddingInline: "var(--space-2)",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-card)",
-              boxSizing: "border-box",
-            }}
-          >
-            <bdi dir="ltr">{projectId || "demo"}</bdi>
-          </span>
-
           <SaveStatusIndicator />
         </div>
 
-        {/* Split and layout controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+        {/* Center / Left: Tab Navigation */}
+        <nav
+          aria-label="Workspace tabs"
+          style={{
+            flex: 1,
+            minInlineSize: 0,
+            display: "flex",
+            alignItems: "center",
+            marginInline: "var(--space-2)",
+            overflow: "hidden",
+            blockSize: "100%",
+          }}
+        >
+          <div
+            role="tablist"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-1)",
+              flex: 1,
+              minInlineSize: 0,
+              overflowX: "auto",
+              overflowY: "hidden",
+              blockSize: "100%",
+              scrollbarWidth: "none",
+            }}
+          >
+            {!isRestoringLayout &&
+              layout.tabBarOrder.map((tabId, idx) => {
+              const tab = layout.tabs.find((t) => t.id === tabId);
+              if (!tab) return null;
+              const isPrimary = layout.primary === tabId;
+              const isSecondary = layout.split !== "none" && layout.secondary === tabId;
+
+              return (
+                <button
+                  key={tabId}
+                  ref={(el) => {
+                    tabRefs.current[idx] = el;
+                  }}
+                  type="button"
+                  role="tab"
+                  onClick={() => activateTab(tabId)}
+                  onKeyDown={(e) => handleTabKeyDown(e, idx)}
+                  className="ws-tab-btn"
+                  data-active={isPrimary}
+                  data-secondary={isSecondary}
+                  data-testid={`tab-btn-${tabId}`}
+                  aria-selected={isPrimary}
+                >
+                  <span>{tab.title}</span>
+
+                  {layout.tabs.length > 1 && (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${t("workspace.closeTab")} ${tab.title}`}
+                      data-testid={`tab-close-${tabId}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(tabId);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          closeTab(tabId);
+                        }
+                      }}
+                      style={{
+                        inlineSize: "16px",
+                        blockSize: "16px",
+                        borderRadius: "var(--radius-sm)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.875rem",
+                        cursor: "pointer",
+                        color: "var(--text-muted)",
+                        marginInlineStart: "var(--space-1)",
+                      }}
+                    >
+                      ×
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* Right: Add Tab & Action Controls */}
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", flexShrink: 0 }}>
+          <div ref={addMenuRef} style={{ position: "relative", flexShrink: 0, zIndex: 40 }}>
+            <button
+              type="button"
+              onClick={() => setIsAddMenuOpen((prev) => !prev)}
+              className="ws-tool-btn"
+              title={t("workspace.newTab")}
+              aria-label={t("workspace.newTab")}
+              aria-haspopup="menu"
+              aria-expanded={isAddMenuOpen}
+              data-testid="add-tab-btn"
+              style={{
+                cursor: "pointer",
+                pointerEvents: "auto",
+                position: "relative",
+                zIndex: 1,
+              }}
+            >
+              +
+            </button>
+
+            {isAddMenuOpen && (
+              <div
+                role="menu"
+                aria-label={t("workspace.newTabMenu")}
+                data-testid="add-tab-menu"
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + var(--space-1))",
+                  insetInlineEnd: 0,
+                  zIndex: 100,
+                  minInlineSize: "calc(var(--space-16) + var(--space-8))",
+                  backgroundColor: "var(--bg-surface)",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: "var(--radius-md)",
+                  boxShadow: "var(--shadow-card)",
+                  paddingBlock: "var(--space-1)",
+                  paddingInline: "var(--space-1)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "var(--space-1)",
+                  boxSizing: "border-box",
+                  pointerEvents: "auto",
+                }}
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="add-tab-board"
+                  onClick={() => handleCreateNewTab("board")}
+                  disabled={hasBoard}
+                  title={hasBoard ? t("workspace.toolAlreadyOpen") : undefined}
+                  className="ws-menu-item"
+                >
+                  <span>📝</span>
+                  <span>{t("workspace.newWhiteboard")}</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="add-tab-pdf"
+                  onClick={() => handleCreateNewTab("pdf")}
+                  disabled={hasPdf}
+                  title={hasPdf ? t("workspace.toolAlreadyOpen") : undefined}
+                  className="ws-menu-item"
+                >
+                  <span>📄</span>
+                  <span>{t("workspace.newPdf")}</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="add-tab-circuit"
+                  onClick={() => handleCreateNewTab("circuit")}
+                  disabled={hasCircuit}
+                  title={hasCircuit ? t("workspace.toolAlreadyOpen") : undefined}
+                  className="ws-menu-item"
+                >
+                  <span>⚡</span>
+                  <span>{t("workspace.newCircuit")}</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div
+            style={{
+              inlineSize: "1px",
+              blockSize: "24px",
+              backgroundColor: "var(--border-card)",
+              marginInline: "var(--space-1)",
+            }}
+          />
+
           <button
             type="button"
             onClick={() => setSplit("none")}
@@ -1579,182 +1750,6 @@ export function WorkspaceHost({
         </div>
       </header>
 
-      {/* Tab Bar (48px height per DESIGN.md §4.2) */}
-      <nav
-        aria-label="Workspace tabs"
-        style={{
-          blockSize: "var(--control-lg)",
-          backgroundColor: "var(--bg-subtle)",
-          borderBlockEnd: "1px solid var(--border-card)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          paddingInline: "var(--space-2)",
-          boxSizing: "border-box",
-          position: "relative",
-          zIndex: 30,
-        }}
-      >
-        <div
-          role="tablist"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-1)",
-            flex: 1,
-            minInlineSize: 0,
-            overflowX: "auto",
-            overflowY: "hidden",
-          }}
-        >
-          {!isRestoringLayout &&
-            layout.tabBarOrder.map((tabId, idx) => {
-            const tab = layout.tabs.find((t) => t.id === tabId);
-            if (!tab) return null;
-            const isPrimary = layout.primary === tabId;
-            const isSecondary = layout.split !== "none" && layout.secondary === tabId;
-
-            return (
-              <button
-                key={tabId}
-                ref={(el) => {
-                  tabRefs.current[idx] = el;
-                }}
-                type="button"
-                role="tab"
-                onClick={() => activateTab(tabId)}
-                onKeyDown={(e) => handleTabKeyDown(e, idx)}
-                className="ws-tab-btn"
-                data-active={isPrimary}
-                data-secondary={isSecondary}
-                data-testid={`tab-btn-${tabId}`}
-                aria-selected={isPrimary}
-              >
-                <span>{tab.title}</span>
-
-                {layout.tabs.length > 1 && (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`${t("workspace.closeTab")} ${tab.title}`}
-                    data-testid={`tab-close-${tabId}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(tabId);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        closeTab(tabId);
-                      }
-                    }}
-                    style={{
-                      inlineSize: "16px",
-                      blockSize: "16px",
-                      borderRadius: "var(--radius-sm)",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "0.875rem",
-                      cursor: "pointer",
-                      color: "var(--text-muted)",
-                      marginInlineStart: "var(--space-1)",
-                    }}
-                  >
-                    ×
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        <div ref={addMenuRef} style={{ position: "relative", flexShrink: 0, zIndex: 40 }}>
-          <button
-            type="button"
-            onClick={() => setIsAddMenuOpen((prev) => !prev)}
-            className="ws-tool-btn"
-            title={t("workspace.newTab")}
-            aria-label={t("workspace.newTab")}
-            aria-haspopup="menu"
-            aria-expanded={isAddMenuOpen}
-            data-testid="add-tab-btn"
-            style={{
-              cursor: "pointer",
-              pointerEvents: "auto",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            +
-          </button>
-
-          {isAddMenuOpen && (
-            <div
-              role="menu"
-              aria-label={t("workspace.newTabMenu")}
-              data-testid="add-tab-menu"
-              style={{
-                position: "absolute",
-                top: "calc(100% + var(--space-1))",
-                insetInlineEnd: 0,
-                zIndex: 100,
-                minInlineSize: "calc(var(--space-16) + var(--space-8))",
-                backgroundColor: "var(--bg-surface)",
-                border: "1px solid var(--border-card)",
-                borderRadius: "var(--radius-md)",
-                boxShadow: "var(--shadow-card)",
-                paddingBlock: "var(--space-1)",
-                paddingInline: "var(--space-1)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-1)",
-                boxSizing: "border-box",
-                pointerEvents: "auto",
-              }}
-            >
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="add-tab-board"
-                onClick={() => handleCreateNewTab("board")}
-                disabled={hasBoard}
-                title={hasBoard ? t("workspace.toolAlreadyOpen") : undefined}
-                className="ws-menu-item"
-              >
-                <span>📝</span>
-                <span>{t("workspace.newWhiteboard")}</span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="add-tab-pdf"
-                onClick={() => handleCreateNewTab("pdf")}
-                disabled={hasPdf}
-                title={hasPdf ? t("workspace.toolAlreadyOpen") : undefined}
-                className="ws-menu-item"
-              >
-                <span>📄</span>
-                <span>{t("workspace.newPdf")}</span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="add-tab-circuit"
-                onClick={() => handleCreateNewTab("circuit")}
-                disabled={hasCircuit}
-                title={hasCircuit ? t("workspace.toolAlreadyOpen") : undefined}
-                className="ws-menu-item"
-              >
-                <span>⚡</span>
-                <span>{t("workspace.newCircuit")}</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </nav>
-
       {/* Workspace Grid with Stable DOM Panes and CSS Grid Placement */}
       {isRestoringLayout ? (
         <div
@@ -1764,7 +1759,7 @@ export function WorkspaceHost({
             alignItems: "center",
             justifyContent: "center",
             flex: 1,
-            blockSize: "calc(100% - var(--control-lg) * 2)",
+            blockSize: "calc(100% - var(--control-lg))",
             color: "var(--text-muted)",
             fontSize: "14px",
             fontFamily: "var(--font-sans)",

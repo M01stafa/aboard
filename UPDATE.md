@@ -1595,3 +1595,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (27/27 Playwright E2E tests passing, including workspace-no-reload.spec.ts).
 **Related:** CIRC-1, CIRC-2, CIRC-5, WS-1, WS-2
 **Open:** none.
+
+## 2026-10-26 — Merge Workspace Header and Tab Bar to Maximize Canvas Space
+**Request:** Merge the Workspace global header and tab bar into a single unified top bar in `workspace-host.tsx` to maximize canvas vertical space; relocate action buttons (Split View, Swap, Drive Mode Switch, Export Project) inside the top bar right next to the '+' (Add Tab) button; keep "Aboard" logo on the far left (start); keep tab list in center/left; remove large Project ID badge text to save horizontal space; debounce "Saved on this device" / "Saving..." text in `save-status.tsx` so UI only reflects "Saved" status after 10 seconds of inactivity; ensure no drag-shield or tab interaction breakage; write E2E tests and unit tests; run local checks and commit locally without pushing to GitHub.
+**Changes:**
+- `apps/web/src/workspace/save-status.tsx` (changed): added `SaveStatusIndicatorProps { debounceMs?: number }` defaulting to 10,000 ms; transitions to `"saving"` update `displayedStatus` immediately and cancel any pending transitions; transitions to `"saved-local"` or `"saved-drive"` delay state updates for 10 seconds of inactivity before switching back to "Saved"; dot color and data attribute stay synchronized with `displayedStatus`.
+- `apps/web/src/workspace/save-status.test.tsx` (created): added Vitest unit test suite with fake timers proving immediate "saving" display, inactivity timer resets on consecutive saves, 10-second debounce settling, and custom `debounceMs` prop support.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): unified separate `<header>` (48px) and `<nav>` (48px) into a single 48px `<header>` (`blockSize: var(--control-lg)`); removed large `<span ...><bdi dir="ltr">{projectId || "demo"}</bdi></span>` Project ID badge; positioned logo and debounced `SaveStatusIndicator` on the left; placed `<nav aria-label="Workspace tabs">` with scrollable `<div role="tablist">` in the center; grouped `+` (Add Tab) button and action controls (`split-none-btn`, `split-vertical-btn`, `split-horizontal-btn`, `swap-panes-btn`, divider, `workspace-mode-switch-btn`, `workspace-export-btn`) on the right; updated `workspace-restoring-layout` height calculation to `calc(100% - var(--control-lg))`.
+- `apps/web/e2e/store-1-save-status.spec.ts` (changed): increased wait timeout from 3000 ms to 15000 ms to accommodate the 10-second debounce of inactivity.
+- `apps/web/e2e/workspace-unified-topbar.spec.ts` (created): added Playwright E2E test proving exactly 1 `<header>` exists, large project text is absent, logo and debounced status indicator are present, tabs are clickable and switch active state, `+` button opens menu, split view controls toggle single/vertical/horizontal splits, and export button opens export dialog.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (330/330 unit tests passing across 44 test files, including save-status.test.tsx).
+- `pnpm test:e2e`: PASS (28/28 Playwright E2E tests passing, including store-1-save-status.spec.ts and workspace-unified-topbar.spec.ts).
+**Related:** WS-1, WS-2, WS-3, WS-4, STORE-1, DESIGN.md §4.2, R1
+**Open:** none.
+
