@@ -1630,4 +1630,13 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** BOARD-1, BOARD-2, BOARD-4, SEC-7, DESIGN.md R1, R3
 **Open:** none.
 
+## 2026-10-26 — Start Local Development Server
+**Request:** Run the application code locally (`pnpm dev`).
+**Changes:**
+- `UPDATE.md` (changed): recorded launch of the local Next.js development server.
+**Checks:** Executed asset copy scripts (`copy-excalidraw-fonts.mjs` and `copy-pdfium-wasm.mjs`), started `pnpm dev` with Turbopack, and verified server is listening and ready on `http://localhost:3000`.
+**Related:** Phase 1 / Setup
+**Open:** none.
+
+
 
