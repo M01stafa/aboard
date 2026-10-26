@@ -99,3 +99,11 @@ html { background:var(--bg-body); color:var(--text-main); font-family:var(--font
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-property:color, background-color, border-color !important; animation:none !important; }
 }
+
+/* Ensure range sliders operate naturally (left-to-right, 0 to 100) in both LTR and RTL */
+input[type="range"],
+.range-wrapper,
+.range-input {
+  direction: ltr !important;
+}
+

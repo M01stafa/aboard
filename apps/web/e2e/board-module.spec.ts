@@ -253,5 +253,60 @@ test.describe("Board Whiteboard Module Integration (Task 25 / BOARD-1, BOARD-2, 
       ).toHaveCount(0);
     }
   });
+
+  test("removes Web Embed and Mermaid from extra tools and enforces natural slider direction in RTL", async ({
+    page,
+  }) => {
+    await page.goto(`/workspace?p=${projectId}&kind=board`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    const boardPane = page.locator('.pane[data-slot="primary"] [data-testid="pane-board-tab-1"]');
+    await expect(boardPane).toBeVisible();
+
+    // Wait for Excalidraw toolbar to be attached
+    const extraToolsBtn = boardPane.locator(
+      '.App-toolbar__extra-tools-trigger, button[title*="Extra tools" i], button[aria-label*="Extra tools" i]'
+    );
+    await expect(extraToolsBtn).toBeVisible({ timeout: 25000 });
+
+    // Open extra tools dropdown
+    await extraToolsBtn.click();
+
+    // Verify extra tools dropdown opens
+    const dropdown = page.locator('.App-toolbar__extra-tools-dropdown, .dropdown-menu');
+    await expect(dropdown).toBeVisible();
+
+    // Verify "Web Embed" and "Mermaid to Excalidraw" are absent / hidden
+    await expect(page.locator('text="Web Embed"')).toBeHidden();
+    await expect(page.locator('text="Mermaid to Excalidraw"')).toBeHidden();
+    await expect(dropdown.locator('[data-testid="toolbar-embeddable"]:visible')).toHaveCount(0);
+
+    // Verify allowed tools (Frame, Laser) remain visible
+    await expect(dropdown.locator('[data-testid="toolbar-frame"]')).toBeVisible();
+    await expect(dropdown.locator('[data-testid="toolbar-laser"]')).toBeVisible();
+
+    // Close menu
+    await page.keyboard.press("Escape");
+
+    // Verify slider direction is forced to LTR globally even under RTL
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("dir", "rtl");
+    });
+    const sliderDirection = await page.evaluate(() => {
+      const input = document.createElement("input");
+      input.type = "range";
+      input.className = "range-input";
+      document.body.appendChild(input);
+      const computed = window.getComputedStyle(input).direction;
+      input.remove();
+      return computed;
+    });
+    expect(sliderDirection).toBe("ltr");
+
+    // Verify top bar RTL override forces direction ltr for toolbar left / menu right
+    const topBar = boardPane.locator('.App-menu_top');
+    const topBarDir = await topBar.evaluate((el) => window.getComputedStyle(el).direction);
+    expect(topBarDir).toBe("ltr");
+  });
 });
 

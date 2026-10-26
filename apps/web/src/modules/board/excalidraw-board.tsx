@@ -11,7 +11,11 @@ import type { ExcalidrawProps } from "@excalidraw/excalidraw/types";
  */
 export function ExcalidrawBoard(props: ExcalidrawProps) {
   return (
-    <Excalidraw {...props}>
+    <Excalidraw
+      {...props}
+      aiEnabled={false}
+      validateEmbeddable={false}
+    >
       <MainMenu>
         <MainMenu.DefaultItems.ClearCanvas />
         <MainMenu.Separator />

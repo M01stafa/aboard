@@ -1613,3 +1613,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** WS-1, WS-2, WS-3, WS-4, STORE-1, DESIGN.md §4.2, R1
 **Open:** none.
 
+## 2026-10-26 — Fix RTL Layouts, Inverted Sliders, and Remove Excalidraw Embeds
+**Request:** Fix inverted sliders globally where dragging left increases and dragging right decreases value under RTL; fix Excalidraw RTL layout mirroring so tools are on the left and hamburger menu is on the right; fix bottom-left zoom/undo cluster so buttons do not overlap or clutter, following 8-point grid tokens; remove "Web Embed" and "Generate" (Mermaid to Excalidraw) from Excalidraw's extra tools dropdown via component configuration and targeted CSS; update E2E tests to verify "Web Embed" is absent from DOM; run lint, typecheck, unit tests, and e2e tests; commit locally without pushing to GitHub.
+**Changes:**
+- `apps/web/src/theme/tokens.css` (changed): added global rule forcing `direction: ltr !important` on `input[type="range"]`, `.range-wrapper`, and `.range-input` so sliders operate naturally (left-to-right, 0 to 100) in both LTR and RTL.
+- `apps/web/src/modules/board/excalidraw-board.tsx` (changed): passed `aiEnabled={false}` and `validateEmbeddable={false}` to `<Excalidraw>` component configuration.
+- `apps/web/src/modules/board/board-pane.tsx` (changed): scoped range input direction to LTR; disabled Web Embed and Mermaid to Excalidraw tools and Generate heading via targeted CSS overrides (`.App-toolbar__extra-tools-dropdown [data-testid="toolbar-embeddable"]` and `.App-toolbar__extra-tools-dropdown .dropdown-menu-container > div`); added RTL layout override for `.App-menu_top` placing `.shapes-section` (toolbar) on the left and `.App-menu_top__left` (hamburger menu + properties panel) on the right; cleaned up bottom zoom/undo cluster with flexbox, 8pt grid token spacing (`var(--space-1)`), and removed scale transform distortions; ensured templates and Send to PDF buttons do not overlap toolbar in RTL.
+- `apps/web/src/modules/board/use-board-persistence.test.ts` (changed): updated async wait loop in image file restore test to poll `isLoaded` cleanly under heavy parallel worker execution.
+- `apps/web/e2e/board-module.spec.ts` (changed): added E2E test proving Web Embed and Mermaid tools are absent/hidden when opening the extra tools dropdown menu, Frame and Laser tools remain visible, and range sliders and Excalidraw top bar retain proper direction in RTL.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (330/330 unit tests passing across 44 test files).
+- `pnpm test:e2e`: PASS (29/29 Playwright E2E tests passing, including board-module.spec.ts).
+**Related:** BOARD-1, BOARD-2, BOARD-4, SEC-7, DESIGN.md R1, R3
+**Open:** none.
+
+

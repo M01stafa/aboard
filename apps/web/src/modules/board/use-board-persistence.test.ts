@@ -359,9 +359,11 @@ describe("useBoardPersistence Hook (BOARD-1, BOARD-2)", () => {
     });
 
     // Wait for readItem + getFile + FileReader to resolve
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
+    for (let i = 0; i < 20 && !latestResult.isLoaded; i++) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
 
     expect(mockGetFile).toHaveBeenCalledWith("proj-1", "sha256-xyz-content-key");
     expect(latestResult.isLoaded).toBe(true);

@@ -442,6 +442,90 @@ export function BoardPane({
               outline: 2px solid var(--accent-text) !important;
               outline-offset: -2px !important;
             }
+
+            /* Fix Inverted Sliders: ensure range inputs operate naturally (LTR, 0 to 100) */
+            .aboard-board-pane input[type="range"],
+            .aboard-board-pane .range-wrapper,
+            .aboard-board-pane .range-input {
+              direction: ltr !important;
+            }
+
+            /* Remove unwanted Excalidraw tools: Web Embed, Generate heading, and Mermaid to Excalidraw */
+            .excalidraw .App-toolbar__extra-tools-dropdown [data-testid="toolbar-embeddable"],
+            .excalidraw .App-toolbar__extra-tools-dropdown .dropdown-menu-container > div,
+            .aboard-board-pane .excalidraw .App-toolbar__extra-tools-dropdown [data-testid="toolbar-embeddable"],
+            .aboard-board-pane .excalidraw .App-toolbar__extra-tools-dropdown .dropdown-menu-container > div {
+              display: none !important;
+            }
+
+            /* Fix Excalidraw RTL top bar mirroring: toolbar to the left, hamburger menu to the right */
+            [dir="rtl"] .aboard-board-pane .excalidraw .App-menu_top {
+              display: flex !important;
+              direction: ltr !important;
+              justify-content: space-between !important;
+              align-items: flex-start !important;
+              inline-size: 100%;
+              box-sizing: border-box !important;
+              padding-inline: var(--space-2) !important;
+            }
+            [dir="rtl"] .aboard-board-pane .excalidraw .shapes-section {
+              order: 1 !important;
+              display: flex !important;
+              justify-content: flex-start !important;
+              direction: ltr !important;
+            }
+            [dir="rtl"] .aboard-board-pane .excalidraw .App-menu_top__left {
+              order: 2 !important;
+              direction: rtl !important;
+              display: flex !important;
+              flex-direction: column !important;
+              align-items: flex-end !important;
+            }
+
+            /* Fix bottom-left zoom/undo cluster: clean flex alignment, 8pt grid token spacing, no overlap */
+            .aboard-board-pane .excalidraw .layer-ui__wrapper__footer-left {
+              display: flex !important;
+              align-items: center !important;
+              gap: var(--space-1) !important;
+              padding: var(--space-1) !important;
+            }
+            .aboard-board-pane .excalidraw .layer-ui__wrapper__footer-left .island,
+            .aboard-board-pane .excalidraw .layer-ui__wrapper__footer-left .Section,
+            .aboard-board-pane .excalidraw .layer-ui__wrapper__footer-left section {
+              display: flex !important;
+              flex-direction: row !important;
+              align-items: center !important;
+              gap: var(--space-1) !important;
+            }
+            .aboard-board-pane .excalidraw .undo-redo-buttons {
+              margin-inline: var(--space-1) !important;
+              display: flex !important;
+              align-items: center !important;
+            }
+            .aboard-board-pane .excalidraw .zoom-actions {
+              margin-inline: var(--space-1) !important;
+              display: flex !important;
+              align-items: center !important;
+            }
+            [dir="rtl"] .aboard-board-pane .excalidraw .undo-redo-buttons .undo-button-container button,
+            [dir="rtl"] .aboard-board-pane .excalidraw .undo-redo-buttons .redo-button-container button {
+              transform: none !important;
+            }
+            [dir="rtl"] .aboard-board-pane .excalidraw .zoom-out-button,
+            [dir="rtl"] .aboard-board-pane .excalidraw .zoom-in-button {
+              transform: none !important;
+            }
+            [dir="rtl"] .aboard-board-pane .excalidraw .layer-ui__wrapper__footer-left {
+              inset-inline-start: var(--space-2) !important;
+            }
+            [dir="rtl"] .aboard-board-pane [data-testid="templates-panel-toggle"] {
+              inset-inline-end: auto !important;
+              inset-inline-start: calc(var(--space-2) + 48px) !important;
+            }
+            [dir="rtl"] .aboard-board-pane .board-send-to-pdf-container {
+              inset-inline-end: auto !important;
+              inset-inline-start: calc(var(--space-2) + 48px + var(--space-16)) !important;
+            }
           `}</style>
           <ExcalidrawBoard
             excalidrawAPI={handleApi as unknown as (api: unknown) => void}
@@ -462,9 +546,12 @@ export function BoardPane({
             theme={activeTheme}
             langCode={langCode}
             UIOptions={UI_OPTIONS}
+            aiEnabled={false}
+            validateEmbeddable={false}
           />
           <div
             ref={pdfMenuRef}
+            className="board-send-to-pdf-container"
             style={{
               position: "absolute",
               insetBlockStart: "var(--space-2)",
