@@ -1652,8 +1652,23 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (330/330 unit tests passing across 44 test files).
 - `pnpm test:e2e`: PASS (30/30 Playwright E2E tests passing, including board-module.spec.ts).
 **Related:** WS-1, WS-2, BOARD-1, BOARD-2, DESIGN.md R1, R3
+
+
+## 2026-10-26 — Fix Top Bar Spacing and Restore Excalidraw Menu Actions
+**Request:** Fix top bar action button vertical spacing and centering so buttons do not touch the top edge of the screen; restore Excalidraw hamburger menu actions (Export image, Find on canvas, Reset canvas, Preferences/Theme/Canvas background) while excluding social links (GitHub, Discord, Twitter), Help, Excalidraw+, and Sign up; keep file actions (saveToActiveFile, loadScene) disabled; ensure Arabic translations appear via langCode; verify clicking "Export image" downloads canvas image; run local checks (lint, typecheck, unit, e2e) and commit locally without pushing.
+**Changes:**
+- `apps/web/src/workspace/workspace-host.tsx` (changed): added `paddingBlock: "var(--space-1)"` to `<header>`, set `.ws-tab-btn` height to `var(--control-sm)` with `border-radius: var(--radius-sm)`, and added `blockSize: "var(--control-sm)"` and `display: "flex", alignItems: "center"` to the action controls and `addMenuRef` containers, ensuring 8px vertical margin on both top and bottom edges.
+- `apps/web/src/modules/board/board-pane.tsx` (changed): updated `UI_OPTIONS` to enable `export: { saveFileToDisk: true }`, `saveAsImage: true`, and `toggleTheme: true` while keeping `saveToActiveFile: false` and `loadScene: false`.
+- `apps/web/src/modules/board/excalidraw-board.tsx` (changed): explicitly rendered `SaveAsImage` (Export image), `SearchMenu` (Find on canvas), `ClearCanvas` (Reset canvas), `Separator`, `ToggleTheme`, and `ChangeCanvasBackground` in `<MainMenu>`, excluding all social links, Help, and branding.
+- `apps/web/src/modules/board/board-pane.test.tsx` (changed): updated canvasActions assertions to verify `export` and `saveAsImage` are enabled while `loadScene` and `saveToActiveFile` remain disabled.
+- `apps/web/src/modules/board/excalidraw-board.test.tsx` (changed): updated unit tests to verify `menu-save-as-image` and `menu-search` exist alongside `menu-clear-canvas`, `menu-toggle-theme`, and `menu-change-canvas-bg`, while `menu-export`, `menu-help`, `menu-socials`, `menu-load-scene`, and `menu-save-to-active-file` remain null.
+- `apps/web/e2e/board-module.spec.ts` (changed): updated E2E test to trigger hamburger menu via `.main-menu-trigger`, verify `[data-testid="image-export-button"]`, `[data-testid="search-menu-button"]`, `[data-testid="clear-canvas-button"]`, `[data-testid="toggle-dark-mode"]`, and `[data-testid="canvas-background-label"]` are visible, verify social links and branding are absent, click "Export image", and verify `ImageExportDialog` opens with "Export to PNG", "Export to SVG", and "Copy PNG to clipboard" actions.
+- `apps/web/e2e/workspace-unified-topbar.spec.ts` (changed): added bounding box verification proving action buttons have equal vertical spacing from top and bottom edges (>= 6px each, difference <= 2px).
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (330/330 unit tests passing across 44 test files).
+- `pnpm test:e2e`: PASS (30/30 Playwright E2E tests passing).
+**Related:** BOARD-1, BOARD-2, BOARD-4, WS-1, WS-2, DESIGN.md R1
 **Open:** none.
-
-
-
-

@@ -105,5 +105,18 @@ test.describe("Workspace Host Unified Top Bar (Header + Tab Bar)", () => {
     const cancelBtn = page.locator('[data-testid="export-cancel-btn"]');
     await cancelBtn.click();
     await expect(page.locator('[data-testid="alpha-export-dialog"]')).toHaveCount(0);
+
+    // 9. Verify vertical centering and equal spacing of action buttons in header
+    const headerBox = await header.boundingBox();
+    const btnBox = await exportBtn.boundingBox();
+    expect(headerBox).toBeTruthy();
+    expect(btnBox).toBeTruthy();
+    if (headerBox && btnBox) {
+      const topOffset = btnBox.y - headerBox.y;
+      const bottomOffset = headerBox.y + headerBox.height - (btnBox.y + btnBox.height);
+      // Both top and bottom offsets should be equal (approx 8px per var(--space-1))
+      expect(Math.abs(topOffset - bottomOffset)).toBeLessThanOrEqual(2);
+      expect(topOffset).toBeGreaterThanOrEqual(6);
+    }
   });
 });

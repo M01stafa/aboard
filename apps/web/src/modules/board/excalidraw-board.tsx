@@ -17,6 +17,8 @@ export function ExcalidrawBoard(props: ExcalidrawProps) {
       validateEmbeddable={false}
     >
       <MainMenu>
+        <MainMenu.DefaultItems.SaveAsImage />
+        <MainMenu.DefaultItems.SearchMenu />
         <MainMenu.DefaultItems.ClearCanvas />
         <MainMenu.Separator />
         <MainMenu.DefaultItems.ToggleTheme />

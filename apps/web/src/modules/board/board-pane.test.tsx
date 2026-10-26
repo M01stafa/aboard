@@ -258,8 +258,8 @@ describe("BoardPane Component (Task 25 / BOARD-1, BOARD-2, BOARD-4)", () => {
     expect(uiOpts).toBeDefined();
     expect(uiOpts.canvasActions.loadScene).toBe(false);
     expect(uiOpts.canvasActions.saveToActiveFile).toBe(false);
-    expect(uiOpts.canvasActions.export).toBe(false);
-    expect(uiOpts.canvasActions.saveAsImage).toBe(false);
+    expect(uiOpts.canvasActions.export).toEqual({ saveFileToDisk: true });
+    expect(uiOpts.canvasActions.saveAsImage).toBe(true);
   });
 
   it("calls excalidrawAPI.refresh() when visible changes to true (tab switch per §6.2)", async () => {

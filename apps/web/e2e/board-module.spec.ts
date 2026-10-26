@@ -239,19 +239,54 @@ test.describe("Board Whiteboard Module Integration (Task 25 / BOARD-1, BOARD-2, 
     await expect(libraryTrigger).toBeHidden();
 
     // Check hamburger main menu trigger
-    const menuBtn = boardPane.locator('button[aria-label="Main menu"]');
-    if (await menuBtn.isVisible()) {
-      await menuBtn.click();
-      // Ensure help, discord, github, twitter items are absent
-      await expect(boardPane.locator('[data-testid="help-menu-item"]')).toBeHidden();
-      await expect(
-        page.locator('a[href*="discord"], a[href*="github.com/excalidraw"], a[href*="twitter.com/excalidraw"]')
-      ).toHaveCount(0);
-      // Ensure native Save to... and Export image... are absent
-      await expect(
-        page.locator('[data-testid="menu-item-export-image"], [data-testid="menu-item-save-as"], [data-testid="menu-save-as-image"], [data-testid="menu-export"]')
-      ).toHaveCount(0);
-    }
+    const menuBtn = boardPane.locator('.main-menu-trigger, [data-testid="main-menu-trigger"], button[aria-label="Main menu"]');
+    await expect(menuBtn).toBeVisible({ timeout: 10000 });
+    await menuBtn.click();
+
+    // Verify restored items exist:
+    // 1. Export image
+    const exportImageBtn = page.locator('[data-testid="image-export-button"]');
+    await expect(exportImageBtn).toBeVisible();
+
+    // 2. Find on canvas
+    const searchBtn = page.locator('[data-testid="search-menu-button"]');
+    await expect(searchBtn).toBeVisible();
+
+    // 3. Clear / Reset canvas
+    const clearCanvasBtn = page.locator('[data-testid="clear-canvas-button"]');
+    await expect(clearCanvasBtn).toBeVisible();
+
+    // 4. Preferences (Theme toggle & Canvas background)
+    const toggleThemeBtn = page.locator('[data-testid="toggle-dark-mode"]');
+    await expect(toggleThemeBtn).toBeVisible();
+    const canvasBgLabel = page.locator('[data-testid="canvas-background-label"]');
+    await expect(canvasBgLabel).toBeVisible();
+
+    // Verify third-party external links, social links, Help, and branding are absent
+    await expect(boardPane.locator('[data-testid="help-menu-item"]')).toBeHidden();
+    await expect(page.locator('[data-testid="help-menu-item"]')).toHaveCount(0);
+    await expect(
+      page.locator('a[href*="discord"], a[href*="github.com/excalidraw"], a[href*="twitter.com/excalidraw"]')
+    ).toHaveCount(0);
+    await expect(page.locator('text="Excalidraw+"')).toHaveCount(0);
+    await expect(page.locator('text="Sign up"')).toHaveCount(0);
+
+    // Verify loadScene and saveToActiveFile are absent
+    await expect(page.locator('[data-testid="load-button"], [data-testid="save-button"]')).toHaveCount(0);
+
+    // Verify functionality: clicking "Export image" opens the ImageExportDialog and downloads PNG
+    await exportImageBtn.click();
+    const exportDialog = page.getByRole("dialog");
+    await expect(exportDialog).toBeVisible();
+    await expect(exportDialog.getByRole("heading", { name: "Export image" })).toBeVisible();
+    await expect(exportDialog.getByRole("button", { name: "Export to PNG" })).toBeVisible();
+    await expect(exportDialog.getByRole("button", { name: "Export to SVG" })).toBeVisible();
+
+    await expect(exportDialog.getByRole("button", { name: "Copy PNG to clipboard" })).toBeVisible();
+
+    // Close export dialog
+    await page.keyboard.press("Escape");
+    await expect(exportDialog).toBeHidden();
   });
 
   test("removes Web Embed and Mermaid from extra tools and enforces natural slider direction in RTL", async ({

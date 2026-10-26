@@ -30,20 +30,20 @@ describe("ExcalidrawBoard Native Branding & Menu Sanitization", () => {
     });
 
     // Native essential Aboard-approved actions should exist
+    expect(container.querySelector('[data-testid="menu-save-as-image"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="menu-search"]')).toBeTruthy();
     expect(container.querySelector('[data-testid="menu-clear-canvas"]')).toBeTruthy();
     expect(container.querySelector('[data-testid="menu-toggle-theme"]')).toBeTruthy();
     expect(container.querySelector('[data-testid="menu-change-canvas-bg"]')).toBeTruthy();
 
-    // Native Excalidraw export/save/search actions must NOT exist
-    expect(container.querySelector('[data-testid="menu-save-as-image"]')).toBeNull();
+    // Native Excalidraw external/unwanted file actions must NOT exist
     expect(container.querySelector('[data-testid="menu-export"]')).toBeNull();
-    expect(container.querySelector('[data-testid="menu-search"]')).toBeNull();
+    expect(container.querySelector('[data-testid="menu-load-scene"]')).toBeNull();
+    expect(container.querySelector('[data-testid="menu-save-to-active-file"]')).toBeNull();
 
     // Third-party external links and unwanted items must NOT exist
     expect(container.querySelector('[data-testid="menu-help"]')).toBeNull();
     expect(container.querySelector('[data-testid="menu-socials"]')).toBeNull();
-    expect(container.querySelector('[data-testid="menu-load-scene"]')).toBeNull();
-    expect(container.querySelector('[data-testid="menu-save-to-active-file"]')).toBeNull();
   });
 
   it("suppresses upstream welcome screen branding", () => {

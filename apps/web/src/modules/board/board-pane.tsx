@@ -31,10 +31,11 @@ const ExcalidrawBoard = dynamic(
  */
 const UI_OPTIONS = {
   canvasActions: {
-    export: false,
+    export: { saveFileToDisk: true },
+    saveAsImage: true,
     saveToActiveFile: false,
     loadScene: false,
-    saveAsImage: false,
+    toggleTheme: true,
   },
 } as const;
 

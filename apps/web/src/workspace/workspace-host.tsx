@@ -1268,9 +1268,10 @@ export function WorkspaceHost({
           outline-offset: 2px;
         }
         .ws-tab-btn {
-          height: var(--control-lg);
+          height: var(--control-sm);
           padding-inline: var(--space-3);
           border: 0;
+          border-radius: var(--radius-sm);
           background: transparent;
           color: var(--text-muted);
           font-family: var(--font-sans);
@@ -1376,6 +1377,7 @@ export function WorkspaceHost({
       <header
         style={{
           blockSize: "var(--control-lg)",
+          paddingBlock: "var(--space-1)",
           paddingInline: "var(--space-2)",
           borderBlockEnd: "1px solid var(--border-card)",
           backgroundColor: "var(--bg-surface)",
@@ -1525,8 +1527,26 @@ export function WorkspaceHost({
         </nav>
 
         {/* Right: Add Tab & Action Controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)", flexShrink: 0 }}>
-          <div ref={addMenuRef} style={{ position: "relative", flexShrink: 0, zIndex: 40 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-1)",
+            flexShrink: 0,
+            blockSize: "var(--control-sm)",
+          }}
+        >
+          <div
+            ref={addMenuRef}
+            style={{
+              position: "relative",
+              flexShrink: 0,
+              zIndex: 40,
+              display: "flex",
+              alignItems: "center",
+              blockSize: "var(--control-sm)",
+            }}
+          >
             <button
               type="button"
               onClick={() => setIsAddMenuOpen((prev) => !prev)}
