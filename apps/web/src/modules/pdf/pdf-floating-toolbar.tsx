@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n/provider";
 import type { AnnotationToolType } from "./pdf-toolbar";
 
@@ -16,6 +16,15 @@ export interface PdfFloatingToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetZoom: () => void;
+  // Page Operations (PDF-6)
+  currentPage?: number;
+  totalPages?: number;
+  onRotatePage?: () => void;
+  onMovePageUp?: () => void;
+  onMovePageDown?: () => void;
+  onDeletePage?: () => void;
+  onInsertImagePage?: (file: File) => void;
+  isOperatingPage?: boolean;
 }
 
 export function PdfFloatingToolbar({
@@ -30,9 +39,20 @@ export function PdfFloatingToolbar({
   onZoomIn,
   onZoomOut,
   onResetZoom,
+  currentPage = 1,
+  totalPages = 1,
+  onRotatePage,
+  onMovePageUp,
+  onMovePageDown,
+  onDeletePage,
+  onInsertImagePage,
+  isOperatingPage = false,
 }: PdfFloatingToolbarProps) {
   const { t } = useI18n();
   const stampInputRef = useRef<HTMLInputElement>(null);
+  const imagePageInputRef = useRef<HTMLInputElement>(null);
+  const [showPageMenu, setShowPageMenu] = useState(false);
+  const pageMenuRef = useRef<HTMLDivElement>(null);
 
   const handleStampClick = () => {
     onSelectTool?.("stamp");
@@ -48,6 +68,41 @@ export function PdfFloatingToolbar({
       stampInputRef.current.value = "";
     }
   };
+
+  const handleImagePageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onInsertImagePage?.(file);
+    }
+    if (imagePageInputRef.current) {
+      imagePageInputRef.current.value = "";
+    }
+    setShowPageMenu(false);
+  };
+
+  // Close page operations dropdown on click outside or escape key
+  useEffect(() => {
+    if (!showPageMenu) return;
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (pageMenuRef.current && !pageMenuRef.current.contains(e.target as Node)) {
+        setShowPageMenu(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowPageMenu(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showPageMenu]);
 
   const getToolButtonStyle = (tool: AnnotationToolType): React.CSSProperties => {
     const isActive = activeTool === tool;
@@ -92,6 +147,7 @@ export function PdfFloatingToolbar({
         position: "absolute",
         top: "var(--space-2)",
         insetInlineStart: "var(--space-2)",
+        insetInlineEnd: "auto",
         zIndex: 30,
         display: "flex",
         flexDirection: "column",
@@ -116,6 +172,16 @@ export function PdfFloatingToolbar({
         onChange={handleStampFileChange}
         accept="image/png,image/jpeg"
         data-testid="pdf-stamp-input"
+        style={{ display: "none" }}
+      />
+
+      {/* Hidden file input for image page insertion */}
+      <input
+        type="file"
+        ref={imagePageInputRef}
+        onChange={handleImagePageChange}
+        accept="image/png,image/jpeg"
+        data-testid="pdf-insert-image-input"
         style={{ display: "none" }}
       />
 
@@ -447,6 +513,301 @@ export function PdfFloatingToolbar({
         >
           {Math.round(zoomLevel * 100)}%
         </button>
+      </div>
+
+      {/* Divider before Page Operations */}
+      <div
+        style={{
+          width: "100%",
+          height: "1px",
+          backgroundColor: "var(--border-card)",
+          marginBlock: "var(--space-1)",
+        }}
+      />
+
+      {/* Bottommost Tool: Page Operations Menu Button & Dropdown */}
+      <div ref={pageMenuRef} style={{ position: "relative" }}>
+        <button
+          type="button"
+          onClick={() => setShowPageMenu((prev) => !prev)}
+          aria-haspopup="true"
+          aria-expanded={showPageMenu}
+          aria-label={t("pdf.pageOperations")}
+          title={t("pdf.pageOperations")}
+          data-testid="pdf-page-operations-menu"
+          disabled={isOperatingPage}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "var(--control-sm)",
+            height: "var(--control-sm)",
+            borderRadius: "var(--radius-sm)",
+            border: showPageMenu ? "1px solid var(--accent-text)" : "1px solid transparent",
+            backgroundColor: showPageMenu ? "var(--btn-outline-hover-bg)" : "transparent",
+            color: showPageMenu ? "var(--accent-text-strong)" : "var(--text-main)",
+            cursor: isOperatingPage ? "wait" : "pointer",
+            boxSizing: "border-box",
+            transition: "background-color 150ms ease, border-color 150ms ease",
+          }}
+          onMouseEnter={(e) => {
+            if (!showPageMenu) {
+              e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!showPageMenu) {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+            <polyline points="2 17 12 22 22 17" />
+            <polyline points="2 12 12 17 22 12" />
+          </svg>
+        </button>
+
+        {showPageMenu && (
+          <div
+            role="menu"
+            aria-label={t("pdf.pageOperations")}
+            data-testid="pdf-page-operations-dropdown"
+            style={{
+              position: "absolute",
+              insetInlineStart: "calc(100% + var(--space-1))",
+              insetInlineEnd: "auto",
+              bottom: 0,
+              backgroundColor: "var(--bg-surface)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "var(--radius-sm)",
+              boxShadow: "var(--shadow-3)",
+              zIndex: 100,
+              minWidth: "calc(var(--space-8) * 3)",
+              padding: "var(--space-1)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-1)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {/* Rotate Page 90° */}
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="pdf-rotate-page-btn"
+              onClick={() => {
+                setShowPageMenu(false);
+                onRotatePage?.();
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                height: "var(--control-sm)",
+                paddingInline: "var(--space-1)",
+                borderRadius: "var(--radius-sm)",
+                border: "none",
+                backgroundColor: "transparent",
+                color: "var(--text-main)",
+                cursor: "pointer",
+                fontSize: "13px",
+                fontWeight: 500,
+                textAlign: "start",
+                fontFamily: "var(--font-sans)",
+                transition: "background-color 150ms ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                <polyline points="21 3 21 8 16 8" />
+              </svg>
+              <span>{t("pdf.rotatePage")}</span>
+            </button>
+
+            {/* Move Page Up */}
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="pdf-move-page-up-btn"
+              disabled={currentPage <= 1}
+              onClick={() => {
+                setShowPageMenu(false);
+                onMovePageUp?.();
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                height: "var(--control-sm)",
+                paddingInline: "var(--space-1)",
+                borderRadius: "var(--radius-sm)",
+                border: "none",
+                backgroundColor: "transparent",
+                color: currentPage <= 1 ? "var(--text-muted)" : "var(--text-main)",
+                cursor: currentPage <= 1 ? "not-allowed" : "pointer",
+                fontSize: "13px",
+                fontWeight: 500,
+                textAlign: "start",
+                fontFamily: "var(--font-sans)",
+                transition: "background-color 150ms ease",
+              }}
+              onMouseEnter={(e) => {
+                if (currentPage > 1) {
+                  e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="18 15 12 9 6 15" />
+              </svg>
+              <span>{t("pdf.movePageUp")}</span>
+            </button>
+
+            {/* Move Page Down */}
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="pdf-move-page-down-btn"
+              disabled={currentPage >= totalPages}
+              onClick={() => {
+                setShowPageMenu(false);
+                onMovePageDown?.();
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                height: "var(--control-sm)",
+                paddingInline: "var(--space-1)",
+                borderRadius: "var(--radius-sm)",
+                border: "none",
+                backgroundColor: "transparent",
+                color: currentPage >= totalPages ? "var(--text-muted)" : "var(--text-main)",
+                cursor: currentPage >= totalPages ? "not-allowed" : "pointer",
+                fontSize: "13px",
+                fontWeight: 500,
+                textAlign: "start",
+                fontFamily: "var(--font-sans)",
+                transition: "background-color 150ms ease",
+              }}
+              onMouseEnter={(e) => {
+                if (currentPage < totalPages) {
+                  e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+              <span>{t("pdf.movePageDown")}</span>
+            </button>
+
+            {/* Insert Image as Page */}
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="pdf-insert-image-btn"
+              onClick={() => {
+                imagePageInputRef.current?.click();
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                height: "var(--control-sm)",
+                paddingInline: "var(--space-1)",
+                borderRadius: "var(--radius-sm)",
+                border: "none",
+                backgroundColor: "transparent",
+                color: "var(--text-main)",
+                cursor: "pointer",
+                fontSize: "13px",
+                fontWeight: 500,
+                textAlign: "start",
+                fontFamily: "var(--font-sans)",
+                transition: "background-color 150ms ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+              <span>{t("pdf.insertImagePage")}</span>
+            </button>
+
+            {/* Divider */}
+            <div
+              style={{
+                height: "1px",
+                backgroundColor: "var(--border-card)",
+                marginBlock: "var(--space-1)",
+              }}
+            />
+
+            {/* Delete Page */}
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="pdf-delete-page-btn"
+              disabled={totalPages <= 1}
+              onClick={() => {
+                setShowPageMenu(false);
+                onDeletePage?.();
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                height: "var(--control-sm)",
+                paddingInline: "var(--space-1)",
+                borderRadius: "var(--radius-sm)",
+                border: "none",
+                backgroundColor: "transparent",
+                color: totalPages <= 1 ? "var(--text-muted)" : "var(--danger-text)",
+                cursor: totalPages <= 1 ? "not-allowed" : "pointer",
+                fontSize: "13px",
+                fontWeight: 500,
+                textAlign: "start",
+                fontFamily: "var(--font-sans)",
+                transition: "background-color 150ms ease",
+              }}
+              onMouseEnter={(e) => {
+                if (totalPages > 1) {
+                  e.currentTarget.style.backgroundColor = "var(--danger-bg)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              <span>{t("pdf.deletePage")}</span>
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   );

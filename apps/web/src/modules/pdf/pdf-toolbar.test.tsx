@@ -44,7 +44,7 @@ describe("PdfToolbar Slim Header & Dropdowns (Task 29, 30, 41)", () => {
     hasBoardTab: true,
   };
 
-  it("renders slim top header with navigation, document title, and action buttons", () => {
+  it("renders slim top header with navigation, document title, and action buttons without online tools or page operations", () => {
     act(() => {
       root.render(
         <I18nProvider>
@@ -61,168 +61,9 @@ describe("PdfToolbar Slim Header & Dropdowns (Task 29, 30, 41)", () => {
     expect(container.querySelector('[data-testid="pdf-document-title"]')?.textContent).toBe("Lecture 10 - Neurological Anatomy.pdf");
     expect(container.querySelector('[data-testid="pdf-send-to-board-btn"]')).not.toBeNull();
     expect(container.querySelector('[data-testid="pdf-download-btn"]')).not.toBeNull();
-    expect(container.querySelector('[data-testid="pdf-page-operations-menu"]')).not.toBeNull();
-    expect(container.querySelector('[data-testid="pdf-online-tools-menu"]')).not.toBeNull();
-  });
-
-  it("opens Page Operations menu and triggers rotate, move up, move down, insert image, and delete", () => {
-    const onRotatePage = vi.fn();
-    const onMovePageUp = vi.fn();
-    const onMovePageDown = vi.fn();
-    const onDeletePage = vi.fn();
-
-    act(() => {
-      root.render(
-        <I18nProvider>
-          <PdfToolbar
-            {...defaultToolbarProps}
-            currentPage={2}
-            totalPages={5}
-            onRotatePage={onRotatePage}
-            onMovePageUp={onMovePageUp}
-            onMovePageDown={onMovePageDown}
-            onDeletePage={onDeletePage}
-          />
-        </I18nProvider>
-      );
-    });
-
-    const menuBtn = container.querySelector('[data-testid="pdf-page-operations-menu"]') as HTMLButtonElement;
-    expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).toBeNull();
-
-    // Open dropdown menu
-    act(() => {
-      menuBtn.click();
-    });
-    expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).not.toBeNull();
-
-    // Click Rotate
-    const rotateBtn = container.querySelector('[data-testid="pdf-rotate-page-btn"]') as HTMLButtonElement;
-    act(() => {
-      rotateBtn.click();
-    });
-    expect(onRotatePage).toHaveBeenCalledTimes(1);
-    expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).toBeNull();
-
-    // Reopen menu and click Move Page Up
-    act(() => {
-      menuBtn.click();
-    });
-    const moveUpBtn = container.querySelector('[data-testid="pdf-move-page-up-btn"]') as HTMLButtonElement;
-    act(() => {
-      moveUpBtn.click();
-    });
-    expect(onMovePageUp).toHaveBeenCalledTimes(1);
-
-    // Reopen menu and click Move Page Down
-    act(() => {
-      menuBtn.click();
-    });
-    const moveDownBtn = container.querySelector('[data-testid="pdf-move-page-down-btn"]') as HTMLButtonElement;
-    act(() => {
-      moveDownBtn.click();
-    });
-    expect(onMovePageDown).toHaveBeenCalledTimes(1);
-
-    // Reopen menu and click Delete
-    act(() => {
-      menuBtn.click();
-    });
-    const deleteBtn = container.querySelector('[data-testid="pdf-delete-page-btn"]') as HTMLButtonElement;
-    act(() => {
-      deleteBtn.click();
-    });
-    expect(onDeletePage).toHaveBeenCalledTimes(1);
-  });
-
-  it("renders Online Tools dropdown and triggers onRunOnlineTool for ocr, compress, and office-to-pdf", () => {
-    const onRunOnlineTool = vi.fn();
-
-    act(() => {
-      root.render(
-        <I18nProvider>
-          <PdfToolbar
-            {...defaultToolbarProps}
-            onRunOnlineTool={onRunOnlineTool}
-            isProcessingOnlineTool={false}
-          />
-        </I18nProvider>
-      );
-    });
-
-    const toolsBtn = container.querySelector('[data-testid="pdf-online-tools-menu"]') as HTMLButtonElement;
-    expect(toolsBtn).not.toBeNull();
-    expect(container.querySelector('[data-testid="pdf-online-tools-dropdown"]')).toBeNull();
-
-    // Open dropdown
-    act(() => {
-      toolsBtn.click();
-    });
-    expect(container.querySelector('[data-testid="pdf-online-tools-dropdown"]')).not.toBeNull();
-
-    // Click OCR
-    const ocrBtn = container.querySelector('[data-testid="pdf-tool-ocr-btn"]') as HTMLButtonElement;
-    expect(ocrBtn).not.toBeNull();
-    act(() => {
-      ocrBtn.click();
-    });
-    expect(onRunOnlineTool).toHaveBeenCalledWith("ocr");
-    expect(container.querySelector('[data-testid="pdf-online-tools-dropdown"]')).toBeNull();
-
-    // Reopen and check Compress
-    act(() => {
-      toolsBtn.click();
-    });
-    const compressBtn = container.querySelector('[data-testid="pdf-tool-compress-btn"]') as HTMLButtonElement;
-    expect(compressBtn).not.toBeNull();
-    act(() => {
-      compressBtn.click();
-    });
-    expect(onRunOnlineTool).toHaveBeenCalledWith("compress");
-
-    // Reopen and check Office to PDF
-    act(() => {
-      toolsBtn.click();
-    });
-    const officeBtn = container.querySelector('[data-testid="pdf-tool-office-btn"]') as HTMLButtonElement;
-    expect(officeBtn).not.toBeNull();
-    act(() => {
-      officeBtn.click();
-    });
-    expect(onRunOnlineTool).toHaveBeenCalledWith("office-to-pdf");
-  });
-
-  it("handles mutually exclusive dropdowns (opening Page Operations closes Online Tools and vice versa)", () => {
-    act(() => {
-      root.render(
-        <I18nProvider>
-          <PdfToolbar {...defaultToolbarProps} />
-        </I18nProvider>
-      );
-    });
-
-    const pageMenuBtn = container.querySelector('[data-testid="pdf-page-operations-menu"]') as HTMLButtonElement;
-    const toolsMenuBtn = container.querySelector('[data-testid="pdf-online-tools-menu"]') as HTMLButtonElement;
-
-    // Open Page Operations
-    act(() => {
-      pageMenuBtn.click();
-    });
-    expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).not.toBeNull();
-    expect(container.querySelector('[data-testid="pdf-online-tools-dropdown"]')).toBeNull();
-
-    // Open Online Tools -> Page Operations should close
-    act(() => {
-      toolsMenuBtn.click();
-    });
-    expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).toBeNull();
-    expect(container.querySelector('[data-testid="pdf-online-tools-dropdown"]')).not.toBeNull();
-
-    // Pressing Escape closes dropdown
-    act(() => {
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    });
-    expect(container.querySelector('[data-testid="pdf-online-tools-dropdown"]')).toBeNull();
+    // Page Operations and Online Tools are not in the top header
+    expect(container.querySelector('[data-testid="pdf-page-operations-menu"]')).toBeNull();
+    expect(container.querySelector('[data-testid="pdf-online-tools-menu"]')).toBeNull();
   });
 
   it("triggers onDownloadAnnotated when download button is clicked", () => {
@@ -503,4 +344,76 @@ describe("PdfFloatingToolbar (Floating Vertical Controls)", () => {
     });
     expect(onResetZoom).toHaveBeenCalledTimes(1);
   });
+
+  it("opens Page Operations menu in floating toolbar and triggers page operations", () => {
+    const onRotatePage = vi.fn();
+    const onMovePageUp = vi.fn();
+    const onMovePageDown = vi.fn();
+    const onDeletePage = vi.fn();
+
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <PdfFloatingToolbar
+            {...defaultFloatingProps}
+            currentPage={2}
+            totalPages={5}
+            onRotatePage={onRotatePage}
+            onMovePageUp={onMovePageUp}
+            onMovePageDown={onMovePageDown}
+            onDeletePage={onDeletePage}
+          />
+        </I18nProvider>
+      );
+    });
+
+    const menuBtn = container.querySelector('[data-testid="pdf-page-operations-menu"]') as HTMLButtonElement;
+    expect(menuBtn).not.toBeNull();
+    expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).toBeNull();
+
+    // Open dropdown menu
+    act(() => {
+      menuBtn.click();
+    });
+    expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).not.toBeNull();
+
+    // Click Rotate
+    const rotateBtn = container.querySelector('[data-testid="pdf-rotate-page-btn"]') as HTMLButtonElement;
+    act(() => {
+      rotateBtn.click();
+    });
+    expect(onRotatePage).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).toBeNull();
+
+    // Reopen menu and click Move Page Up
+    act(() => {
+      menuBtn.click();
+    });
+    const moveUpBtn = container.querySelector('[data-testid="pdf-move-page-up-btn"]') as HTMLButtonElement;
+    act(() => {
+      moveUpBtn.click();
+    });
+    expect(onMovePageUp).toHaveBeenCalledTimes(1);
+
+    // Reopen menu and click Move Page Down
+    act(() => {
+      menuBtn.click();
+    });
+    const moveDownBtn = container.querySelector('[data-testid="pdf-move-page-down-btn"]') as HTMLButtonElement;
+    act(() => {
+      moveDownBtn.click();
+    });
+    expect(onMovePageDown).toHaveBeenCalledTimes(1);
+
+    // Reopen menu and click Delete
+    act(() => {
+      menuBtn.click();
+    });
+    const deleteBtn = container.querySelector('[data-testid="pdf-delete-page-btn"]') as HTMLButtonElement;
+    act(() => {
+      deleteBtn.click();
+    });
+    expect(onDeletePage).toHaveBeenCalledTimes(1);
+  });
 });
+

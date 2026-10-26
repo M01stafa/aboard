@@ -680,17 +680,9 @@ function ViewerInner({
         onNextPage={handleNextPage}
         onDownloadAnnotated={handleDownloadAnnotated}
         isDownloading={isDownloading}
-        onRotatePage={handleRotatePage}
-        onMovePageUp={handleMovePageUp}
-        onMovePageDown={handleMovePageDown}
-        onDeletePage={handleDeletePage}
-        onInsertImagePage={handleInsertImagePage}
-        isOperatingPage={isOperatingPage}
         onSendToBoard={handleSendToBoard}
         isSendingToBoard={isSendingToBoard}
         hasBoardTab={hasBoardTab}
-        onRunOnlineTool={handleRunOnlineTool}
-        isProcessingOnlineTool={Boolean(processingTool)}
       />
 
       <div
@@ -775,9 +767,11 @@ function ViewerInner({
             height: "100%",
             minWidth: 0,
             overflow: "hidden",
+            paddingInlineStart: "calc(var(--control-sm) + var(--space-5))",
+            boxSizing: "border-box",
           }}
         >
-          {/* Floating Vertical Toolbar (PDF Annotation & Zoom Controls) */}
+          {/* Floating Vertical Toolbar (PDF Annotation, Zoom Controls, Page Operations) */}
           <PdfFloatingToolbar
             activeTool={activeTool}
             canUndo={canUndo}
@@ -790,12 +784,19 @@ function ViewerInner({
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onResetZoom={handleResetZoom}
+            currentPage={displayPage || scrollState.currentPage || 1}
+            totalPages={scrollState.totalPages || 1}
+            onRotatePage={handleRotatePage}
+            onMovePageUp={handleMovePageUp}
+            onMovePageDown={handleMovePageDown}
+            onDeletePage={handleDeletePage}
+            onInsertImagePage={handleInsertImagePage}
+            isOperatingPage={isOperatingPage}
           />
 
           {/* Viewport with Canvas Render, Selection, and Annotation Layers */}
           <Viewport
             documentId={documentId}
-            className="pdf-viewport"
             style={{ width: "100%", height: "100%" }}
           >
             <Scroller

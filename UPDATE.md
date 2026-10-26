@@ -1695,3 +1695,22 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-1, PDF-2, PDF-3, PDF-4, PDF-5, PDF-6, PDFX-1..5, INT-1, DESIGN.md R1, R3, R4, R5
 **Open:** none.
 
+## 2026-10-26 — Fix PDF Toolbar Position, Remove Online Tools, and Move Page Operations
+**Request:** Fix floating toolbar position: anchor to left edge in LTR (English) and right edge in RTL (Arabic) using `inset-inline-start` (`inset-inline-end: auto`); remove "Online Tools" completely from the PDF top header UI and its associated state while keeping the Stirling API client intact; move "Page Operations" from the top header to the bottom of the floating vertical toolbar (below zoom controls); remove `!important` from PDF viewport padding-inline-start and replace with container layout padding (`paddingInlineStart: calc(var(--control-sm) + var(--space-5))` on canvas container wrapper); revert custom overrides from `tokens.css` to strictly match DESIGN.md section 9; update tests and commit locally without pushing.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (changed): anchored floating toolbar to inline-start edge using `insetInlineStart: "var(--space-2)"` and `insetInlineEnd: "auto"`; moved Page Operations button (`pdf-page-operations-menu`), dropdown (`pdf-page-operations-dropdown`), actions (rotate, move up, move down, insert image, delete page), and image file input (`pdf-insert-image-input`) to the bottom of the vertical toolbar below the zoom group.
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): removed "Online Tools" button, dropdown, and UI state; removed "Page Operations" from top header; retained clean header navigation and top-level action buttons (Send to Board, Download PDF).
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): passed page operations props (`currentPage`, `totalPages`, `onRotatePage`, `onMovePageUp`, `onMovePageDown`, `onDeletePage`, `onInsertImagePage`, `isOperatingPage`) to `<PdfFloatingToolbar>`; removed online tools and page operations props from `<PdfToolbar>`; added `paddingInlineStart: "calc(var(--control-sm) + var(--space-5))"` and `boxSizing: "border-box"` to the canvas container to clear the toolbar without text overlap; removed `className="pdf-viewport"` from `<Viewport>`.
+- `apps/web/src/theme/tokens.css` (changed): reverted custom `.pdf-viewport` and `.pdf-floating-toolbar` CSS rules and eliminated all `!important` declarations, returning `tokens.css` to exact DESIGN.md §9 token specification.
+- `apps/web/src/modules/pdf/pdf-toolbar.test.tsx` (changed): updated unit tests to verify slim top header without online tools or page operations, and verified Page Operations menu and action handlers on `PdfFloatingToolbar`.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (331/331 unit tests passing across 44 test files).
+- `pnpm test:e2e e2e/pdf-page-operations.spec.ts`: PASS (1/1 Playwright E2E test passing).
+- `pnpm test:e2e e2e/pdf-annotations.spec.ts`: PASS (1/1 Playwright E2E test passing).
+**Related:** PDF-1, PDF-2, PDF-3, PDF-4, PDF-5, PDF-6, INT-1, DESIGN.md R1, R3
+**Open:** none.
+
+

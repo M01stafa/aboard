@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import { useI18n } from "@/i18n/provider";
 
 export type AnnotationToolType = "select" | "highlight" | "ink" | "freeText" | "stamp";
@@ -25,22 +25,19 @@ export interface PdfToolbarProps {
   onUndo?: () => void;
   onRedo?: () => void;
   onAddStamp?: (file: File) => void;
-  // Task 30: Annotated Download & Page Operations (PDF-5, PDF-6)
-  onDownloadAnnotated?: () => void;
-  isDownloading?: boolean;
   onRotatePage?: () => void;
   onMovePageUp?: () => void;
   onMovePageDown?: () => void;
   onDeletePage?: () => void;
   onInsertImagePage?: (file: File) => void;
   isOperatingPage?: boolean;
+  // Annotated Download & Export (PDF-5)
+  onDownloadAnnotated?: () => void;
+  isDownloading?: boolean;
   // Cross-Tool Integration (INT-1)
   onSendToBoard?: () => void;
   isSendingToBoard?: boolean;
   hasBoardTab?: boolean;
-  // Online Tools (Task 41 / PDFX-1..5)
-  onRunOnlineTool?: (tool: "ocr" | "compress" | "office-to-pdf") => void;
-  isProcessingOnlineTool?: boolean;
 }
 
 export function PdfToolbar({
@@ -53,80 +50,11 @@ export function PdfToolbar({
   onNextPage,
   onDownloadAnnotated,
   isDownloading = false,
-  onRotatePage,
-  onMovePageUp,
-  onMovePageDown,
-  onDeletePage,
-  onInsertImagePage,
-  isOperatingPage = false,
   onSendToBoard,
   isSendingToBoard = false,
   hasBoardTab = true,
-  onRunOnlineTool,
-  isProcessingOnlineTool = false,
 }: PdfToolbarProps) {
   const { t } = useI18n();
-  const imagePageInputRef = useRef<HTMLInputElement>(null);
-  const [showPageMenu, setShowPageMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [showToolsMenu, setShowToolsMenu] = useState(false);
-  const toolsMenuRef = useRef<HTMLDivElement>(null);
-
-  const togglePageMenu = () => {
-    setShowPageMenu((prev) => {
-      const next = !prev;
-      if (next) setShowToolsMenu(false);
-      return next;
-    });
-  };
-
-  const toggleToolsMenu = () => {
-    setShowToolsMenu((prev) => {
-      const next = !prev;
-      if (next) setShowPageMenu(false);
-      return next;
-    });
-  };
-
-  const handleImagePageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onInsertImagePage?.(file);
-    }
-    if (imagePageInputRef.current) {
-      imagePageInputRef.current.value = "";
-    }
-    setShowPageMenu(false);
-  };
-
-  // Close dropdowns on click outside or escape key
-  useEffect(() => {
-    if (!showPageMenu && !showToolsMenu) return;
-
-    const handlePointerDown = (e: PointerEvent) => {
-      const target = e.target as Node;
-      if (showPageMenu && menuRef.current && !menuRef.current.contains(target)) {
-        setShowPageMenu(false);
-      }
-      if (showToolsMenu && toolsMenuRef.current && !toolsMenuRef.current.contains(target)) {
-        setShowToolsMenu(false);
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setShowPageMenu(false);
-        setShowToolsMenu(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [showPageMenu, showToolsMenu]);
 
   return (
     <header
@@ -147,20 +75,9 @@ export function PdfToolbar({
         gap: "var(--space-1)",
         userSelect: "none",
         position: "relative",
-        zIndex: 40,
-        overflow: "visible",
+        zIndex: 20,
       }}
     >
-      {/* Hidden file input for image page insertion */}
-      <input
-        type="file"
-        ref={imagePageInputRef}
-        onChange={handleImagePageChange}
-        accept="image/png,image/jpeg"
-        data-testid="pdf-insert-image-input"
-        style={{ display: "none" }}
-      />
-
       {/* Start Group: Navigation & Document Metadata */}
       <div
         style={{
@@ -190,6 +107,16 @@ export function PdfToolbar({
             cursor: "pointer",
             transition: "background-color 150ms ease, border-color 150ms ease",
           }}
+          onMouseEnter={(e) => {
+            if (!showThumbnails) {
+              e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!showThumbnails) {
+              e.currentTarget.style.backgroundColor = "var(--bg-surface)";
+            }
+          }}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -217,6 +144,16 @@ export function PdfToolbar({
             color: currentPage <= 1 ? "var(--text-muted)" : "var(--text-main)",
             cursor: currentPage <= 1 ? "not-allowed" : "pointer",
             transition: "background-color 150ms ease",
+          }}
+          onMouseEnter={(e) => {
+            if (currentPage > 1) {
+              e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (currentPage > 1) {
+              e.currentTarget.style.backgroundColor = "var(--bg-surface)";
+            }
           }}
         >
           <svg
@@ -272,6 +209,16 @@ export function PdfToolbar({
             cursor: currentPage >= totalPages ? "not-allowed" : "pointer",
             transition: "background-color 150ms ease",
           }}
+          onMouseEnter={(e) => {
+            if (currentPage < totalPages) {
+              e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (currentPage < totalPages) {
+              e.currentTarget.style.backgroundColor = "var(--bg-surface)";
+            }
+          }}
         >
           <svg
             className="icon-directional"
@@ -320,7 +267,7 @@ export function PdfToolbar({
         )}
       </div>
 
-      {/* End Group: Actions & Tools Menus */}
+      {/* End Group: Top-Level Document Actions */}
       <div
         style={{
           display: "flex",
@@ -329,485 +276,6 @@ export function PdfToolbar({
           flexShrink: 0,
         }}
       >
-        {/* Page Operations Dropdown Menu (PDF-6) */}
-        <div ref={menuRef} style={{ position: "relative" }}>
-          <button
-            type="button"
-            onClick={togglePageMenu}
-            aria-haspopup="true"
-            aria-expanded={showPageMenu}
-            aria-label={t("pdf.pageOperations")}
-            title={t("pdf.pageOperations")}
-            data-testid="pdf-page-operations-menu"
-            disabled={isOperatingPage}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "var(--control-sm)",
-              paddingInline: "var(--space-1)",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-card)",
-              backgroundColor: showPageMenu ? "var(--bg-subtle)" : "var(--bg-surface)",
-              color: "var(--text-main)",
-              cursor: isOperatingPage ? "wait" : "pointer",
-              fontSize: "13px",
-              fontWeight: 500,
-              gap: "var(--space-1)",
-              fontFamily: "var(--font-sans)",
-              transition: "background-color 150ms ease",
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="12 2 2 7 12 12 22 7 12 2" />
-              <polyline points="2 17 12 22 22 17" />
-              <polyline points="2 12 12 17 22 12" />
-            </svg>
-            <span>{t("pdf.pageOperations")}</span>
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                transform: showPageMenu ? "rotate(180deg)" : "rotate(0deg)",
-                transition: "transform 150ms ease",
-              }}
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-
-          {showPageMenu && (
-            <div
-              role="menu"
-              aria-label={t("pdf.pageOperations")}
-              data-testid="pdf-page-operations-dropdown"
-              style={{
-                position: "absolute",
-                top: "calc(100% + var(--space-1))",
-                insetInlineEnd: 0,
-                backgroundColor: "var(--bg-surface)",
-                border: "1px solid var(--border-card)",
-                borderRadius: "var(--radius-sm)",
-                boxShadow: "var(--shadow-3)",
-                zIndex: 100,
-                minWidth: "calc(var(--space-8) * 3)",
-                padding: "var(--space-1)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-1)",
-              }}
-            >
-              {/* Rotate Page 90° */}
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="pdf-rotate-page-btn"
-                onClick={() => {
-                  setShowPageMenu(false);
-                  onRotatePage?.();
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-1)",
-                  height: "var(--control-sm)",
-                  paddingInline: "var(--space-1)",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  backgroundColor: "transparent",
-                  color: "var(--text-main)",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  textAlign: "start",
-                  fontFamily: "var(--font-sans)",
-                  transition: "background-color 150ms ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-                  <polyline points="21 3 21 8 16 8" />
-                </svg>
-                <span>{t("pdf.rotatePage")}</span>
-              </button>
-
-              {/* Move Page Up */}
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="pdf-move-page-up-btn"
-                disabled={currentPage <= 1}
-                onClick={() => {
-                  setShowPageMenu(false);
-                  onMovePageUp?.();
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-1)",
-                  height: "var(--control-sm)",
-                  paddingInline: "var(--space-1)",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  backgroundColor: "transparent",
-                  color: currentPage <= 1 ? "var(--text-muted)" : "var(--text-main)",
-                  cursor: currentPage <= 1 ? "not-allowed" : "pointer",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  textAlign: "start",
-                  fontFamily: "var(--font-sans)",
-                  transition: "background-color 150ms ease",
-                }}
-                onMouseEnter={(e) => {
-                  if (currentPage > 1) {
-                    e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="18 15 12 9 6 15" />
-                </svg>
-                <span>{t("pdf.movePageUp")}</span>
-              </button>
-
-              {/* Move Page Down */}
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="pdf-move-page-down-btn"
-                disabled={currentPage >= totalPages}
-                onClick={() => {
-                  setShowPageMenu(false);
-                  onMovePageDown?.();
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-1)",
-                  height: "var(--control-sm)",
-                  paddingInline: "var(--space-1)",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  backgroundColor: "transparent",
-                  color: currentPage >= totalPages ? "var(--text-muted)" : "var(--text-main)",
-                  cursor: currentPage >= totalPages ? "not-allowed" : "pointer",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  textAlign: "start",
-                  fontFamily: "var(--font-sans)",
-                  transition: "background-color 150ms ease",
-                }}
-                onMouseEnter={(e) => {
-                  if (currentPage < totalPages) {
-                    e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-                <span>{t("pdf.movePageDown")}</span>
-              </button>
-
-              {/* Insert Image as Page */}
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="pdf-insert-image-btn"
-                onClick={() => {
-                  imagePageInputRef.current?.click();
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-1)",
-                  height: "var(--control-sm)",
-                  paddingInline: "var(--space-1)",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  backgroundColor: "transparent",
-                  color: "var(--text-main)",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  textAlign: "start",
-                  fontFamily: "var(--font-sans)",
-                  transition: "background-color 150ms ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-                <span>{t("pdf.insertImagePage")}</span>
-              </button>
-
-              {/* Divider */}
-              <div
-                style={{
-                  height: "1px",
-                  backgroundColor: "var(--border-card)",
-                  marginBlock: "var(--space-1)",
-                }}
-              />
-
-              {/* Delete Page */}
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="pdf-delete-page-btn"
-                disabled={totalPages <= 1}
-                onClick={() => {
-                  setShowPageMenu(false);
-                  onDeletePage?.();
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--space-1)",
-                  height: "var(--control-sm)",
-                  paddingInline: "var(--space-1)",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  backgroundColor: "transparent",
-                  color: totalPages <= 1 ? "var(--text-muted)" : "var(--danger-text)",
-                  cursor: totalPages <= 1 ? "not-allowed" : "pointer",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  textAlign: "start",
-                  fontFamily: "var(--font-sans)",
-                  transition: "background-color 150ms ease",
-                }}
-                onMouseEnter={(e) => {
-                  if (totalPages > 1) {
-                    e.currentTarget.style.backgroundColor = "var(--danger-bg)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-                <span>{t("pdf.deletePage")}</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Online Tools Dropdown Menu (Task 41 / PDFX-1..5) */}
-        <div ref={toolsMenuRef} style={{ position: "relative" }}>
-          <button
-            type="button"
-            onClick={toggleToolsMenu}
-            aria-haspopup="true"
-            aria-expanded={showToolsMenu}
-            aria-label={t("pdf.toolsMenu")}
-            title={t("pdf.toolsMenu")}
-            data-testid="pdf-online-tools-menu"
-            disabled={isProcessingOnlineTool}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "var(--control-sm)",
-              paddingInline: "var(--space-1)",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-card)",
-              backgroundColor: showToolsMenu ? "var(--bg-subtle)" : "var(--bg-surface)",
-              color: "var(--text-main)",
-              cursor: isProcessingOnlineTool ? "wait" : "pointer",
-              fontSize: "13px",
-              fontWeight: 500,
-              gap: "var(--space-1)",
-              fontFamily: "var(--font-sans)",
-              transition: "background-color 150ms ease",
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-            <span>{t("pdf.toolsMenu")}</span>
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                transform: showToolsMenu ? "rotate(180deg)" : "rotate(0deg)",
-                transition: "transform 150ms ease",
-              }}
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-
-          {showToolsMenu && (
-            <div
-              role="menu"
-              aria-label={t("pdf.toolsMenu")}
-              data-testid="pdf-online-tools-dropdown"
-              style={{
-                position: "absolute",
-                top: "calc(100% + var(--space-1))",
-                insetInlineEnd: 0,
-                backgroundColor: "var(--bg-surface)",
-                border: "1px solid var(--border-card)",
-                borderRadius: "var(--radius-sm)",
-                boxShadow: "var(--shadow-3)",
-                zIndex: 100,
-                minWidth: "calc(var(--space-8) * 4)",
-                padding: "var(--space-1)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-1)",
-              }}
-            >
-              {/* OCR */}
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="pdf-tool-ocr-btn"
-                onClick={() => {
-                  setShowToolsMenu(false);
-                  onRunOnlineTool?.("ocr");
-                }}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  padding: "var(--space-1)",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  backgroundColor: "transparent",
-                  color: "var(--text-main)",
-                  cursor: "pointer",
-                  textAlign: "start",
-                  gap: "var(--space-1)",
-                  fontFamily: "var(--font-sans)",
-                  transition: "background-color 150ms ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <span style={{ fontWeight: 600, fontSize: "13px" }}>{t("pdf.toolOcr")}</span>
-                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                  {t("pdf.toolOcrDesc")}
-                </span>
-              </button>
-
-              {/* Compress */}
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="pdf-tool-compress-btn"
-                onClick={() => {
-                  setShowToolsMenu(false);
-                  onRunOnlineTool?.("compress");
-                }}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  padding: "var(--space-1)",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  backgroundColor: "transparent",
-                  color: "var(--text-main)",
-                  cursor: "pointer",
-                  textAlign: "start",
-                  gap: "var(--space-1)",
-                  fontFamily: "var(--font-sans)",
-                  transition: "background-color 150ms ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <span style={{ fontWeight: 600, fontSize: "13px" }}>{t("pdf.toolCompress")}</span>
-                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                  {t("pdf.toolCompressDesc")}
-                </span>
-              </button>
-
-              {/* Office to PDF */}
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="pdf-tool-office-btn"
-                onClick={() => {
-                  setShowToolsMenu(false);
-                  onRunOnlineTool?.("office-to-pdf");
-                }}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  padding: "var(--space-1)",
-                  borderRadius: "var(--radius-sm)",
-                  border: "none",
-                  backgroundColor: "transparent",
-                  color: "var(--text-main)",
-                  cursor: "pointer",
-                  textAlign: "start",
-                  gap: "var(--space-1)",
-                  fontFamily: "var(--font-sans)",
-                  transition: "background-color 150ms ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <span style={{ fontWeight: 600, fontSize: "13px" }}>{t("pdf.toolOfficeToPdf")}</span>
-                <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                  {t("pdf.toolOfficeToPdfDesc")}
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
-
         {/* Send to Board Button (INT-1) */}
         <button
           type="button"
@@ -836,6 +304,16 @@ export function PdfToolbar({
             gap: "var(--space-1)",
             fontFamily: "var(--font-sans)",
             transition: "background-color 150ms ease, opacity 150ms ease",
+          }}
+          onMouseEnter={(e) => {
+            if (hasBoardTab && !isSendingToBoard) {
+              e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (hasBoardTab && !isSendingToBoard) {
+              e.currentTarget.style.backgroundColor = "var(--bg-surface)";
+            }
           }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -870,6 +348,16 @@ export function PdfToolbar({
             gap: "var(--space-1)",
             fontFamily: "var(--font-sans)",
             transition: "background-color 150ms ease",
+          }}
+          onMouseEnter={(e) => {
+            if (!isDownloading) {
+              e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isDownloading) {
+              e.currentTarget.style.backgroundColor = "var(--bg-surface)";
+            }
           }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
