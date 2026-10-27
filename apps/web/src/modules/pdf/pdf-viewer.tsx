@@ -24,7 +24,11 @@ import { ThumbnailPluginPackage } from "@embedpdf/plugin-thumbnail";
 import { ThumbnailsPane, ThumbImg } from "@embedpdf/plugin-thumbnail/react";
 import { InteractionManagerPluginPackage } from "@embedpdf/plugin-interaction-manager";
 import { PagePointerProvider } from "@embedpdf/plugin-interaction-manager/react";
-import { SelectionPluginPackage, SelectionLayer } from "@embedpdf/plugin-selection/react";
+import {
+  SelectionPluginPackage,
+  SelectionLayer,
+  useSelectionCapability,
+} from "@embedpdf/plugin-selection/react";
 import { AnnotationPluginPackage, AnnotationLayer } from "@embedpdf/plugin-annotation/react";
 import { PdfTextLayer } from "./pdf-text-layer";
 import { HistoryPluginPackage } from "@embedpdf/plugin-history";
@@ -119,6 +123,11 @@ function ViewerInner({
   const { provides: zoomScope, state: zoomState } = useZoom(documentId);
   const { provides: exportScope } = useExport(documentId);
   const { provides: renderCapability } = useRenderCapability();
+  const { provides: selectionCapability } = useSelectionCapability();
+  const selectionScope = useMemo(
+    () => (selectionCapability ? selectionCapability.forDocument(documentId) : null),
+    [selectionCapability, documentId]
+  );
 
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [displayPage, setDisplayPage] = useState(initialPage);
@@ -426,6 +435,9 @@ function ViewerInner({
       if (typeof window === "undefined") return;
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+        if (selectionScope && selectionScope.getFormattedSelection().length > 0) {
+          return;
+        }
         setSelectedText("");
         setSelectionPos(null);
         return;
@@ -433,6 +445,9 @@ function ViewerInner({
 
       const text = selection.toString().trim();
       if (!text) {
+        if (selectionScope && selectionScope.getFormattedSelection().length > 0) {
+          return;
+        }
         setSelectedText("");
         setSelectionPos(null);
         return;
@@ -489,7 +504,71 @@ function ViewerInner({
         containerEl.removeEventListener("pointerup", handleSelection);
       }
     };
-  }, []);
+  }, [selectionScope]);
+
+  // Also detect text selection via EmbedPDF's native SelectionPlugin (INT-4)
+  useEffect(() => {
+    if (!selectionScope) return;
+
+    const syncPluginSelection = () => {
+      selectionScope.getSelectedText().wait(
+        (lines) => {
+          const text = (lines || []).join("\n").trim();
+          if (!text) {
+            setSelectedText("");
+            setSelectionPos(null);
+            return;
+          }
+
+          let top = 24;
+          let left = 64;
+          const container = viewerContainerRef.current;
+          if (container) {
+            const selEl = container.querySelector('[style*="mix-blend-mode"]') as HTMLElement | null;
+            if (selEl) {
+              const selRect = selEl.getBoundingClientRect();
+              const containerRect = container.getBoundingClientRect();
+              if (selRect.width > 0 || selRect.height > 0) {
+                top =
+                  selRect.top - containerRect.top > 50
+                    ? selRect.top - containerRect.top - 40
+                    : selRect.bottom - containerRect.top + 8;
+                left = Math.max(
+                  16,
+                  Math.min(
+                    containerRect.width - 160,
+                    selRect.left - containerRect.left + selRect.width / 2 - 60
+                  )
+                );
+              }
+            }
+          }
+
+          setSelectedText(text);
+          setSelectionPos({ top, left });
+        },
+        () => {}
+      );
+    };
+
+    const unsubEnd = selectionScope.onEndSelection(() => {
+      syncPluginSelection();
+    });
+    const unsubChange = selectionScope.onSelectionChange((sel) => {
+      if (!sel) {
+        const domSel = typeof window !== "undefined" ? window.getSelection() : null;
+        if (!domSel || domSel.isCollapsed || !domSel.toString().trim()) {
+          setSelectedText("");
+          setSelectionPos(null);
+        }
+      }
+    });
+
+    return () => {
+      unsubEnd();
+      unsubChange();
+    };
+  }, [selectionScope]);
 
   const handleSendSelectionToBoard = async () => {
     if (!selectedText) return;
@@ -505,6 +584,7 @@ function ViewerInner({
       onShowToast(t("pdf.selectionSentToBoardSuccess"));
       setSelectedText("");
       setSelectionPos(null);
+      selectionScope?.clear();
       window.getSelection()?.removeAllRanges();
     } catch (err) {
       console.error("[PdfViewer] Failed to send selection to board:", err);
@@ -835,9 +915,12 @@ function ViewerInner({
                   key={page.pageIndex}
                   documentId={documentId}
                   pageIndex={page.pageIndex}
+                  rotation={0}
                   data-testid={`pdf-page-${page.pageIndex + 1}`}
                   style={{
                     position: "relative",
+                    width: `${page.width}px`,
+                    height: `${page.height}px`,
                     marginInline: "auto",
                     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
                     backgroundColor: "#ffffff",
@@ -848,6 +931,9 @@ function ViewerInner({
                     documentId={documentId}
                     pageIndex={page.pageIndex}
                     style={{
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
                       pointerEvents: "none",
                       userSelect: "none",
                     }}
@@ -855,7 +941,7 @@ function ViewerInner({
                   <PdfTextLayer
                     documentId={documentId}
                     pageIndex={page.pageIndex}
-                    isAnnotating={activeTool !== "select"}
+                    isAnnotating={true}
                   />
                   <SelectionLayer
                     documentId={documentId}
@@ -864,6 +950,12 @@ function ViewerInner({
                   <AnnotationLayer
                     documentId={documentId}
                     pageIndex={page.pageIndex}
+                    rotation={0}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      pointerEvents: "none",
+                    }}
                   />
                 </PagePointerProvider>
               )}
@@ -988,23 +1080,38 @@ export function PdfViewer({
       let doc: PdfDocumentObject;
       try {
         doc = await new Promise<PdfDocumentObject>((resolve, reject) => {
-          const task = eng.openDocumentUrl({
-            id: documentId,
-            url: objectUrl,
-          });
+          const task = eng.openDocumentUrl(
+            {
+              id: documentId,
+              url: objectUrl,
+            },
+            { normalizeRotation: true }
+          );
           task.wait(resolve, (e) => reject(new Error(String(e.reason?.message ?? e))));
         });
       } catch (err) {
         // Fallback to array buffer if URL streaming is restricted
         const buffer = await blob.arrayBuffer();
         doc = await new Promise<PdfDocumentObject>((resolve, reject) => {
-          const task = eng.openDocumentBuffer({
-            id: documentId,
-            content: buffer,
-          });
+          const task = eng.openDocumentBuffer(
+            {
+              id: documentId,
+              content: buffer,
+            },
+            { normalizeRotation: true }
+          );
           task.wait(resolve, (e) => reject(new Error(String(e.reason?.message ?? e))));
         });
       }
+
+      doc = {
+        ...doc,
+        normalizedRotation: true,
+        pages: doc.pages.map((p) => ({
+          ...p,
+          rotation: 0,
+        })),
+      };
 
       store.dispatch(startLoadingDocument(documentId, documentTitle));
       store.dispatch(setDocumentLoaded(documentId, doc));

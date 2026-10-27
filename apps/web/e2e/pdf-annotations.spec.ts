@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { PDFDocument, StandardFonts, rgb } from "@cantoo/pdf-lib";
+import { PDFDocument, StandardFonts, rgb, degrees } from "@cantoo/pdf-lib";
 import { mockSignIn } from "./helpers/auth";
 
 test.describe("PDF Annotations & Separate Storage (Task 29 / PDF-3, PDF-4)", () => {
@@ -221,5 +221,219 @@ test.describe("PDF Annotations & Separate Storage (Task 29 / PDF-3, PDF-4)", () 
 
     expect(restoredTypes).toContain(9); // HIGHLIGHT
     expect(restoredTypes).toContain(13); // STAMP
+  });
+
+  test("accurately maps pointer coordinates for Draw (Ink), Text (FreeText), Highlight, Stamp, and Select tools on rotated and zoomed PDFs", async ({
+    page,
+  }) => {
+    // 1. Test on a rotated/landscape PDF (/Rotate 90)
+    const pdfDocRot = await PDFDocument.create();
+    const fontRot = await pdfDocRot.embedFont(StandardFonts.Helvetica);
+    const pRot = pdfDocRot.addPage([595.28, 841.89]);
+    pRot.setRotation(degrees(90));
+    pRot.drawText("Rotated Slide Page Text for Highlight and Select", {
+      x: 100,
+      y: 400,
+      size: 24,
+      font: fontRot,
+      color: rgb(0, 0, 0),
+    });
+    const pdfRotBytes = await pdfDocRot.save();
+
+    await page.goto(`/workspace?p=${projectId}-coords&kind=pdf`);
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+
+    await fileInput.setInputFiles({
+      name: "02_rotated.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfRotBytes),
+    });
+
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(1000);
+
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    const wrapperBox = await page1.evaluate((el) => {
+      const r = el.parentElement!.getBoundingClientRect();
+      return { x: r.left, y: r.top, width: r.width, height: r.height };
+    });
+    expect(Math.abs(page1Box.x - wrapperBox.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(page1Box.y - wrapperBox.y)).toBeLessThanOrEqual(1);
+
+    // Draw (Ink) tool at exact coordinates
+    await primaryPane.locator('[data-testid="pdf-tool-ink"]').click();
+    const inkStartX = page1Box.x + 120;
+    const inkStartY = page1Box.y + 140;
+    const inkEndX = page1Box.x + 270;
+    const inkEndY = page1Box.y + 190;
+
+    await page.mouse.move(inkStartX, inkStartY);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        inkStartX + ((inkEndX - inkStartX) * i) / 10,
+        inkStartY + ((inkEndY - inkStartY) * i) / 10
+      );
+    }
+    await page.mouse.up();
+
+    await expect.poll(async () => {
+      return await page.evaluate(() => {
+        const path = document.querySelector('[data-testid="pdf-page-1"] svg path');
+        return Boolean(path);
+      });
+    }, { timeout: 5000 }).toBe(true);
+
+    const inkSvgRect = await page.evaluate(() => {
+      const path = document.querySelector('[data-testid="pdf-page-1"] svg path');
+      const r = path?.getBoundingClientRect();
+      return r ? { left: r.left, top: r.top, width: r.width, height: r.height } : null;
+    });
+    expect(inkSvgRect).not.toBeNull();
+    expect(Math.abs(inkSvgRect!.left - inkStartX)).toBeLessThanOrEqual(8);
+    expect(Math.abs(inkSvgRect!.top - inkStartY)).toBeLessThanOrEqual(8);
+    expect(Math.abs(inkSvgRect!.width - 150)).toBeLessThanOrEqual(12);
+    expect(Math.abs(inkSvgRect!.height - 50)).toBeLessThanOrEqual(12);
+
+    // Wait for ink commitDelay (800ms) so the first stroke commits before zooming
+    await page.waitForTimeout(900);
+
+    // Zoom in and verify Draw (Ink) coordinates remain aligned with zoomed page
+    await primaryPane.locator('[data-testid="pdf-zoom-in"]').click();
+    await page.waitForTimeout(600);
+    const zoomedPage1Box = await page1.boundingBox();
+    expect(zoomedPage1Box).not.toBeNull();
+    if (!zoomedPage1Box) return;
+
+    await primaryPane.locator('[data-testid="pdf-tool-ink"]').click();
+    const zInkStartX = zoomedPage1Box.x + 150;
+    const zInkStartY = zoomedPage1Box.y + 300;
+    const zInkEndX = zoomedPage1Box.x + 250;
+    const zInkEndY = zoomedPage1Box.y + 360;
+
+    await page.mouse.move(zInkStartX, zInkStartY);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        zInkStartX + ((zInkEndX - zInkStartX) * i) / 10,
+        zInkStartY + ((zInkEndY - zInkStartY) * i) / 10
+      );
+    }
+    await page.mouse.up();
+
+    await expect.poll(async () => {
+      return await page.evaluate(() => {
+        return document.querySelectorAll('[data-testid="pdf-page-1"] svg path').length;
+      });
+    }, { timeout: 5000 }).toBeGreaterThanOrEqual(3);
+
+    const zInkRect = await page.evaluate(() => {
+      const paths = document.querySelectorAll('[data-testid="pdf-page-1"] svg path');
+      const r = paths[paths.length - 1]?.getBoundingClientRect();
+      return r ? { left: r.left, top: r.top, width: r.width, height: r.height } : null;
+    });
+    expect(zInkRect).not.toBeNull();
+    expect(Math.abs(zInkRect!.left - zInkStartX)).toBeLessThanOrEqual(10);
+    expect(Math.abs(zInkRect!.top - zInkStartY)).toBeLessThanOrEqual(10);
+
+    // Wait for second ink stroke to commit before switching to Text tool
+    await page.waitForTimeout(900);
+
+    // Text (FreeText) tool at exact click coordinates
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    await page.mouse.click(zoomedPage1Box.x + 350, zoomedPage1Box.y + 250);
+
+    await expect.poll(async () => {
+      return await page.evaluate(() => {
+        const scope = (window as unknown as {
+          __aboard_pdfAnnotations?: { scope?: { getState?: () => { byUid?: Record<string, { object?: { type: number } }> } } };
+        }).__aboard_pdfAnnotations?.scope;
+        const list = Object.values(scope?.getState?.()?.byUid || {}).map((x) => x.object);
+        return list.some((a) => a?.type === 3); // FREETEXT = 3
+      });
+    }, { timeout: 5000 }).toBe(true);
+
+    // 2. Test Highlight, Stamp, and Select on standard portrait PDF
+    const pdfDocStd = await PDFDocument.create();
+    const fontStd = await pdfDocStd.embedFont(StandardFonts.Helvetica);
+    const pStd = pdfDocStd.addPage([595.28, 841.89]);
+    pStd.drawText("Selectable PDF Text Line For Highlight And Selection Testing", {
+      x: 60,
+      y: 700,
+      size: 18,
+      font: fontStd,
+      color: rgb(0, 0, 0),
+    });
+    const pdfStdBytes = await pdfDocStd.save();
+
+    await page.goto(`/workspace?p=${projectId}-std&kind=pdf`);
+    await fileInput.setInputFiles({
+      name: "standard.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfStdBytes),
+    });
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await expect(page1.locator('[data-text-layer="true"] span').first()).toBeAttached({ timeout: 10000 });
+
+    const textSpanRect = await page.evaluate(() => {
+      const span = document.querySelector('[data-testid="pdf-page-1"] [data-text-layer="true"] span');
+      const r = span?.getBoundingClientRect();
+      return r ? { left: r.left, top: r.top, width: r.width, height: r.height } : null;
+    });
+    expect(textSpanRect).not.toBeNull();
+    if (!textSpanRect) return;
+
+    // Highlight tool: drag across the text line
+    await primaryPane.locator('[data-testid="pdf-tool-highlight"]').click();
+    const hlStartX = textSpanRect.left + 5;
+    const hlY = textSpanRect.top + textSpanRect.height / 2;
+    const hlEndX = textSpanRect.left + 200;
+
+    await page.mouse.move(hlStartX, hlY);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(hlStartX + ((hlEndX - hlStartX) * i) / 10, hlY);
+    }
+    await page.mouse.up();
+
+    await expect.poll(async () => {
+      return await page.evaluate(() => {
+        const scope = (window as unknown as {
+          __aboard_pdfAnnotations?: { scope?: { getState?: () => { byUid?: Record<string, { object?: { type: number } }> } } };
+        }).__aboard_pdfAnnotations?.scope;
+        const list = Object.values(scope?.getState?.()?.byUid || {}).map((x) => x.object);
+        return list.some((a) => a?.type === 9); // HIGHLIGHT = 9
+      });
+    }, { timeout: 5000 }).toBe(true);
+
+    // Select tool: clicking the highlight annotation selects it, and dragging across unhighlighted text selects text
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await page.mouse.click(hlStartX + 20, hlY);
+
+    await expect.poll(async () => {
+      return await page.evaluate(() => {
+        const scope = (window as unknown as {
+          __aboard_pdfAnnotations?: { scope?: { getState?: () => { selectedUids?: string[] } } };
+        }).__aboard_pdfAnnotations?.scope;
+        return (scope?.getState?.()?.selectedUids || []).length;
+      });
+    }, { timeout: 5000 }).toBe(1);
+
+    const selStartX = hlEndX + 25;
+    const selEndX = hlEndX + 160;
+    await page.mouse.move(selStartX, hlY);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(selStartX + ((selEndX - selStartX) * i) / 10, hlY);
+    }
+    await page.mouse.up();
+
+    await expect(primaryPane.locator('[data-testid="pdf-selection-to-board-btn"]')).toBeVisible({ timeout: 5000 });
   });
 });

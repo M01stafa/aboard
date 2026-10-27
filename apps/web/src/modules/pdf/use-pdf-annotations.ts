@@ -142,6 +142,30 @@ export function usePdfAnnotations({
     };
   }, [annotationScope, triggerDebouncedSave]);
 
+  // Keep toolbar activeTool state synced with EmbedPDF's active tool (e.g. when freeText auto-resets to select)
+  useEffect(() => {
+    if (!annotationScope || typeof annotationScope.onActiveToolChange !== "function") return;
+
+    const unsub = annotationScope.onActiveToolChange((tool) => {
+      if (!tool) {
+        setActiveToolState("select");
+      } else if (
+        tool.id === "highlight" ||
+        tool.id === "ink" ||
+        tool.id === "freeText" ||
+        tool.id === "stamp"
+      ) {
+        setActiveToolState(tool.id);
+      }
+    });
+
+    return () => {
+      if (typeof unsub === "function") {
+        unsub();
+      }
+    };
+  }, [annotationScope]);
+
   // Track undo / redo capabilities and trigger save on undo/redo actions
   useEffect(() => {
     if (!historyScope) return;
@@ -194,6 +218,10 @@ export function usePdfAnnotations({
       setActiveToolState(tool);
       if (!annotationScope) return;
 
+      if (typeof annotationScope.deselectAnnotation === "function") {
+        annotationScope.deselectAnnotation();
+      }
+
       if (tool === "select") {
         annotationScope.setActiveTool(null);
       } else if (tool === "highlight") {
@@ -245,6 +273,12 @@ export function usePdfAnnotations({
         annotationScope.createAnnotation(pageIdx, stampAnno, {
           data: arrayBuffer,
         });
+
+        annotationScope.setActiveTool(null);
+        setActiveToolState("select");
+        if (typeof annotationScope.selectAnnotation === "function") {
+          annotationScope.selectAnnotation(pageIdx, stampId);
+        }
 
         triggerDebouncedSave();
       } catch (err) {

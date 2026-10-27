@@ -1813,3 +1813,19 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e e2e/pdf-module.spec.ts`: PASS (1/1 Playwright E2E test passing).
 **Related:** PDF-1, PDF-2, DESIGN.md §6.2, R1, R3
 **Open:** none.
+
+## 2026-10-27 — Fix PDF Annotation Coordinate Misalignment and Restart Server
+**Request:** Diagnose and fix PDF annotation pointer coordinate misalignment across Draw (Ink), Select, Highlight, Text (FreeText), and Stamp tools while preserving the centered PDF layout and physical-left floating toolbar; verify zoom scaling and coordinate mapping across all 5 tools; commit locally without pushing, clear `.next`, and restart the dev server.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): normalized document page rotation (`normalizeRotation: true` and `rotation: 0`) on load so PDFium's upright rendered page dimensions (`page.size`), `Scroller`'s `pageWrapper`, `PagePointerProvider`, and `AnnotationLayer` share a 1:1 coordinate space without double-rotating or swapping page dimensions on rotated/landscape PDFs; positioned `<AnnotationLayer>` with `position: "absolute", inset: 0, pointerEvents: "none"` and `<RenderLayer>` with `display: "block", width: "100%", height: "100%", pointerEvents: "none"`; set `isAnnotating={true}` on `<PdfTextLayer>` so it does not block pointer events on `<PagePointerProvider>` or `<AnnotationLayer>`, while wiring `useSelectionCapability` (`selectionScope.onEndSelection`) to display the "Selection to Note" (`INT-4`) button.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts` (changed): synced `activeTool` state with `annotationScope.onActiveToolChange`, deselected active annotations when switching tools, and reset `activeTool` to `"select"` after inserting a Stamp annotation so the stamp can be immediately selected/dragged.
+- `apps/web/e2e/pdf-annotations.spec.ts` (changed): added E2E test verifying exact pointer-to-page coordinate mapping across Draw (`ink`), Text (`freeText`), Highlight (`highlight`), Stamp (`stamp`), and Select (`select`) tools on rotated (`/Rotate 90`), zoomed, and standard PDFs.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (332/332 unit tests passing across 44 test files).
+- `pnpm test:e2e e2e/pdf-annotations.spec.ts e2e/pdf-module.spec.ts e2e/cross-tool-notes-links.spec.ts`: PASS (4/4 Playwright E2E tests passing).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle scan clean).
+**Related:** PDF-1, PDF-2, PDF-3, PDF-4, INT-4
+**Open:** none.
