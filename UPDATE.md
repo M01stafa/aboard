@@ -1799,3 +1799,17 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (331/331 unit tests passing across 44 test files).
 **Related:** PDF-1, PDF-2, PDF-5, PDF-6, DESIGN.md R1, R3
 **Open:** none.
+## 2026-10-27 — Fix PDF Page Navigation Arrows and Add Ctrl+Wheel Zoom
+**Request:** Fix visually reversed Previous/Next page navigation arrows in RTL mode (`[dir="rtl"] .icon-directional { transform: scaleX(-1); }`) so chevrons point outward in the logical backward/forward direction; implement desktop `Ctrl+Wheel` zoom on the PDF viewport container (`passive: false`) calling `event.preventDefault()` to block browser page zoom and invoking EmbedPDF's `zoomScope.zoomIn()` (`deltaY < 0`) and `zoomScope.zoomOut()` (`deltaY > 0`) with throttling and unmount cleanup; commit locally without pushing.
+**Changes:**
+- `apps/web/src/theme/tokens.css` & `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): added `[dir="rtl"] .icon-directional { transform: scaleX(-1); }` per DESIGN.md §6.2 so `pdf-prev-page` and `pdf-next-page` chevrons mirror in RTL and point in the logical backward (`>`) and forward (`<`) directions.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): attached a non-passive `wheel` event listener (`{ passive: false }`) to `pdf-canvas-container` with unmount cleanup; when `event.ctrlKey` is true, calls `event.preventDefault()` and triggers `zoomScope.zoomIn()` (`deltaY < 0`) or `zoomScope.zoomOut()` (`deltaY > 0`) with a 50ms same-direction throttle.
+- `apps/web/src/modules/pdf/pdf-toolbar.test.tsx` & `apps/web/e2e/pdf-module.spec.ts` (changed): added unit and E2E tests verifying RTL directional icon mirroring and `Ctrl+Wheel` zoom in/out with `defaultPrevented`.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test` (`pdf-toolbar.test.tsx`, `pdf-pane.test.tsx`): PASS (15/15 unit tests passing).
+- `pnpm test:e2e e2e/pdf-module.spec.ts`: PASS (1/1 Playwright E2E test passing).
+**Related:** PDF-1, PDF-2, DESIGN.md §6.2, R1, R3
+**Open:** none.

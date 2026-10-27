@@ -78,6 +78,11 @@ export function PdfToolbar({
         zIndex: 20,
       }}
     >
+      <style>{`
+        [dir="rtl"] .icon-directional {
+          transform: scaleX(-1);
+        }
+      `}</style>
       {/* Start Group: Navigation & Document Metadata */}
       <div
         style={{

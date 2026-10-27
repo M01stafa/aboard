@@ -76,6 +76,55 @@ test.describe("PDF Viewer Module Integration (Task 28 / PDF-1, PDF-2, PDF-7)", (
     const textLayer = page1.locator('[data-text-layer="true"]');
     await expect(textLayer).toBeAttached({ timeout: 10000 });
 
+    // Verify Ctrl+Wheel zooms the PDF document and calls preventDefault()
+    const zoomDisplay = primaryPane.locator('[data-testid="pdf-zoom-level"]');
+    const initialZoomText = await zoomDisplay.textContent();
+    const initialZoomVal = parseInt(initialZoomText || "100", 10);
+
+    const preventedIn = await page.evaluate(() => {
+      const container = document.querySelector('[data-testid="pdf-canvas-container"]');
+      if (!container) return false;
+      const evt = new WheelEvent("wheel", {
+        bubbles: true,
+        cancelable: true,
+        ctrlKey: true,
+        deltaY: -100,
+      });
+      container.dispatchEvent(evt);
+      return evt.defaultPrevented;
+    });
+    expect(preventedIn).toBe(true);
+
+    await expect
+      .poll(async () => {
+        const text = await zoomDisplay.textContent();
+        return parseInt(text || "0", 10);
+      })
+      .toBeGreaterThan(initialZoomVal);
+
+    const zoomedInVal = parseInt((await zoomDisplay.textContent()) || "0", 10);
+
+    const preventedOut = await page.evaluate(() => {
+      const container = document.querySelector('[data-testid="pdf-canvas-container"]');
+      if (!container) return false;
+      const evt = new WheelEvent("wheel", {
+        bubbles: true,
+        cancelable: true,
+        ctrlKey: true,
+        deltaY: 100,
+      });
+      container.dispatchEvent(evt);
+      return evt.defaultPrevented;
+    });
+    expect(preventedOut).toBe(true);
+
+    await expect
+      .poll(async () => {
+        const text = await zoomDisplay.textContent();
+        return parseInt(text || "0", 10);
+      })
+      .toBeLessThan(zoomedInVal);
+
     // 6. Navigate to Page 2
     const nextBtn = primaryPane.locator('[data-testid="pdf-next-page"]');
     await expect(nextBtn).toBeEnabled();

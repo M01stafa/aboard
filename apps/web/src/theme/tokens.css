@@ -62,6 +62,7 @@
   --gradient-accent:linear-gradient(90deg, var(--gold-500), var(--tech-500), var(--blue-900));
 }
 [dir="rtl"] { --gradient-accent:linear-gradient(270deg, var(--gold-500), var(--tech-500), var(--blue-900)); }
+[dir="rtl"] .icon-directional { transform: scaleX(-1); }
 
 :root[data-theme="dark"] {
   color-scheme:dark;

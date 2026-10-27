@@ -129,6 +129,47 @@ function ViewerInner({
   const [selectionPos, setSelectionPos] = useState<{ top: number; left: number } | null>(null);
   const [isSendingSelection, setIsSendingSelection] = useState(false);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const zoomScopeRef = useRef(zoomScope);
+
+  useEffect(() => {
+    zoomScopeRef.current = zoomScope;
+  }, [zoomScope]);
+
+  // Desktop Ctrl + Wheel zoom on the PDF viewport container
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+
+    let lastZoomTime = 0;
+    let lastZoomDir = 0;
+    const THROTTLE_MS = 50;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+
+      if (event.deltaY === 0) return;
+      const dir = event.deltaY < 0 ? 1 : -1;
+      const now = Date.now();
+      if (now - lastZoomTime < THROTTLE_MS && dir === lastZoomDir) {
+        return;
+      }
+      lastZoomTime = now;
+      lastZoomDir = dir;
+
+      if (dir > 0) {
+        zoomScopeRef.current?.zoomIn();
+      } else {
+        zoomScopeRef.current?.zoomOut();
+      }
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
 
   // Online Tools (Task 41 / PDFX-1..5)
   const [showNoticeModal, setShowNoticeModal] = useState(false);
@@ -761,6 +802,7 @@ function ViewerInner({
 
         {/* Canvas container hosting floating vertical toolbar and Viewport */}
         <div
+          ref={canvasContainerRef}
           data-testid="pdf-canvas-container"
           style={{
             position: "relative",

@@ -112,6 +112,25 @@ describe("PdfToolbar Slim Header & Dropdowns (Task 29, 30, 41)", () => {
     });
     expect(onSendToBoard).toHaveBeenCalledTimes(1);
   });
+
+  it("includes RTL directional icon mirroring rule for Previous and Next navigation arrows", () => {
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <PdfToolbar {...defaultToolbarProps} />
+        </I18nProvider>
+      );
+    });
+
+    const prevIcon = container.querySelector('[data-testid="pdf-prev-page"] svg.icon-directional');
+    const nextIcon = container.querySelector('[data-testid="pdf-next-page"] svg.icon-directional');
+    expect(prevIcon).not.toBeNull();
+    expect(nextIcon).not.toBeNull();
+
+    const styleEl = container.querySelector("style");
+    expect(styleEl?.textContent).toContain('[dir="rtl"] .icon-directional');
+    expect(styleEl?.textContent).toContain("scaleX(-1)");
+  });
 });
 
 describe("PdfFloatingToolbar (Floating Vertical Controls)", () => {
