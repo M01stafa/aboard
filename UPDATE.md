@@ -1829,3 +1829,22 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle scan clean).
 **Related:** PDF-1, PDF-2, PDF-3, PDF-4, INT-4
 **Open:** none.
+
+
+## 2026-10-27 — Fix Ink Tool Coordinate Offset, Image Aspect Ratio, and Image Compression
+**Request:** Fix Ink tool (Draw) coordinate offset ensuring the SVG path layer aligns 1:1 with pointer coordinates across LTR and RTL; fix image insertion (Stamp) to maintain intrinsic aspect ratio and downscale/compress large images via offscreen canvas; verify visually via Playwright; commit locally without pushing, clear .next, and restart dev server.
+**Changes:**
+- `apps/web/src/modules/pdf/image-stamp-utils.ts` (created): added `processStampImage` reading intrinsic image dimensions, calculating proportional PDF point bounding box sizes without distortion, downscaling large images (max dimension 1200px or size > 300KB) via offscreen canvas, and exporting compressed WebP/JPEG buffers.
+- `apps/web/src/modules/pdf/image-stamp-utils.test.ts` (created): unit test suite verifying proportional aspect ratio calculations and buffer handling.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts` (changed): updated `handleAddStamp` to use `processStampImage`, setting proportional stamp size `{ width, height }` instead of hardcoded 144x96.
+- `apps/web/src/modules/pdf/custom-ink-renderer.tsx` (created): created locked Ink renderer setting explicit `position: "absolute", left: 0, top: 0, width: "100%", height: "100%", overflow: "visible"` on SVG paths, eliminating static positioning offsets in RTL/LTR.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): passed `scale={zoomState.currentZoomLevel || 1.0}` and `direction: "ltr"` to `<PagePointerProvider>` and `<AnnotationLayer>`, and registered `annotationRenderers={[customInkRenderer]}` on `<AnnotationLayer>`.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts` (created): Playwright E2E test verifying 1:1 sub-pixel Ink alignment in RTL mode and stamp aspect ratio preservation.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (333/333 unit tests passing across 45 test files).
+- `pnpm test:e2e e2e/pdf-ink-stamp.spec.ts e2e/pdf-annotations.spec.ts`: PASS (3/3 Playwright tests passing).
+**Related:** PDF-3, PDF-4, DESIGN.md R1, R3
+**Open:** none.

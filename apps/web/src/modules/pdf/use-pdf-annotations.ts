@@ -14,6 +14,7 @@ import {
   serializeAnnotations,
   deserializeAnnotations,
 } from "./annotation-storage";
+import { processStampImage } from "./image-stamp-utils";
 import type { AnnotationToolType } from "./pdf-toolbar";
 
 export interface UsePdfAnnotationsOptions {
@@ -253,7 +254,7 @@ export function usePdfAnnotations({
     async (file: File) => {
       if (!annotationScope) return;
       try {
-        const arrayBuffer = await file.arrayBuffer();
+        const { buffer, width, height } = await processStampImage(file);
         const pageIdx = Math.max(0, currentPage - 1);
         const stampId =
           typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -266,12 +267,12 @@ export function usePdfAnnotations({
           pageIndex: pageIdx,
           rect: {
             origin: { x: 72, y: 72 },
-            size: { width: 144, height: 96 },
+            size: { width, height },
           },
         };
 
         annotationScope.createAnnotation(pageIdx, stampAnno, {
-          data: arrayBuffer,
+          data: buffer,
         });
 
         annotationScope.setActiveTool(null);
