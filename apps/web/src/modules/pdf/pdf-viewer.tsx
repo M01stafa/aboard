@@ -765,8 +765,11 @@ function ViewerInner({
           style={{
             position: "relative",
             flex: 1,
+            width: "100%",
             height: "100%",
             minWidth: 0,
+            marginInline: "auto",
+            direction: "ltr",
             overflow: "hidden",
             boxSizing: "border-box",
           }}
@@ -774,7 +777,14 @@ function ViewerInner({
           {/* Viewport with Canvas Render, Selection, and Annotation Layers */}
           <Viewport
             documentId={documentId}
-            style={{ width: "100%", height: "100%", position: "relative", zIndex: 1 }}
+            style={{
+              width: "100%",
+              height: "100%",
+              marginInline: "auto",
+              direction: "ltr",
+              position: "relative",
+              zIndex: 1,
+            }}
           >
             <Scroller
               documentId={documentId}
@@ -786,6 +796,7 @@ function ViewerInner({
                   data-testid={`pdf-page-${page.pageIndex + 1}`}
                   style={{
                     position: "relative",
+                    marginInline: "auto",
                     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
                     backgroundColor: "#ffffff",
                     boxSizing: "border-box",

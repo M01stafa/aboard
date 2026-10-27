@@ -1787,3 +1787,15 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
+## 2026-10-27 — Fix RTL PDF Layout (Force Toolbar Left and Center Pages), Cleanup, and Restart Server
+**Request:** Force the PDF floating toolbar to the physical left edge of the screen in both LTR and RTL using `left: var(--space-2); right: auto;` and ensure the Page Operations dropdown opens to the right; center the PDF page in `pdf-viewer.tsx` by setting `width: 100%`, `margin-inline: auto`, and `direction: ltr` on the PDF canvas container and viewport; remove the temporary `[PdfFloatingToolbar CSS]` `console.log` in `pdf-floating-toolbar.tsx`; commit locally without pushing, stop the dev server, delete `apps/web/.next`, and start a clean `pnpm dev` server in the background.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (changed): removed `[dir="rtl"]` CSS overrides and `insetInlineStart` inline style; set explicit `left: var(--space-2); right: auto;` on `.pdf-floating-toolbar` and `left: calc(100% + var(--space-1)); right: auto;` on `.pdf-page-operations-dropdown`; removed temporary `[PdfFloatingToolbar CSS]` `console.log` `useEffect`.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): added `width: "100%"`, `marginInline: "auto"`, and `direction: "ltr"` to `pdf-canvas-container` and `<Viewport>`, and `marginInline: "auto"` to `<PagePointerProvider>`, centering PDF pages in both LTR and RTL.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (331/331 unit tests passing across 44 test files).
+**Related:** PDF-1, PDF-2, PDF-5, PDF-6, DESIGN.md R1, R3
+**Open:** none.

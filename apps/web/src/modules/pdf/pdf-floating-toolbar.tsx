@@ -104,24 +104,6 @@ export function PdfFloatingToolbar({
     };
   }, [showPageMenu]);
 
-  // Debug computed CSS of floating toolbar in browser
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const el = document.querySelector(".pdf-floating-toolbar");
-      if (el) {
-        const cs = window.getComputedStyle(el);
-        console.log("[PdfFloatingToolbar CSS]", {
-          computedLeft: cs.left,
-          computedRight: cs.right,
-          computedPosition: cs.position,
-          computedZIndex: cs.zIndex,
-          direction: cs.direction,
-          htmlDir: document.documentElement.getAttribute("dir"),
-        });
-      }
-    }
-  }, []);
-
   const getToolButtonStyle = (tool: AnnotationToolType): React.CSSProperties => {
     const isActive = activeTool === tool;
     return {
@@ -163,17 +145,9 @@ export function PdfFloatingToolbar({
           left: var(--space-2);
           right: auto;
         }
-        [dir="rtl"] .pdf-floating-toolbar {
-          right: var(--space-2);
-          left: auto;
-        }
         .pdf-page-operations-dropdown {
           left: calc(100% + var(--space-1));
           right: auto;
-        }
-        [dir="rtl"] .pdf-page-operations-dropdown {
-          right: calc(100% + var(--space-1));
-          left: auto;
         }
       `}</style>
       <aside
@@ -183,7 +157,8 @@ export function PdfFloatingToolbar({
         style={{
           position: "absolute",
           top: "var(--space-2)",
-          insetInlineStart: "var(--space-2)",
+          left: "var(--space-2)",
+          right: "auto",
           zIndex: 50,
           display: "flex",
           flexDirection: "column",
@@ -611,6 +586,8 @@ export function PdfFloatingToolbar({
             style={{
               position: "absolute",
               bottom: 0,
+              left: "calc(100% + var(--space-1))",
+              right: "auto",
               backgroundColor: "var(--bg-surface)",
               border: "1px solid var(--border-card)",
               borderRadius: "var(--radius-sm)",
