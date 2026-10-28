@@ -145,6 +145,69 @@ describe("Google Picker Integration (picker.ts / §10.11, PDF-1, ALPHA-2)", () =
     expect(result?.blob.size).toBeGreaterThan(0);
   });
 
+  it("normalizes .alpha extension to Drive zip/binary MIME types and enables folders", async () => {
+    let capturedMimes = "";
+    let includeFoldersCalled = false;
+
+    window.gapi = {
+      load: (_mod: string, callbacks: { callback: () => void }) => {
+        callbacks.callback();
+      },
+    };
+
+    window.google = {
+      picker: {
+        ViewId: { DOCS: "docs" },
+        Action: { PICKED: "picked", CANCEL: "cancel" },
+        Response: { ACTION: "action", DOCUMENTS: "docs" },
+        Document: { ID: "id", NAME: "name", MIME_TYPE: "mimeType" },
+        DocsView: class {
+          setMimeTypes(types: string) {
+            capturedMimes = types;
+            return this;
+          }
+          setIncludeFolders(enabled: boolean) {
+            includeFoldersCalled = enabled;
+            return this;
+          }
+          setSelectFolderEnabled() {
+            return this;
+          }
+        },
+        PickerBuilder: class {
+          setAppId() { return this; }
+          setOAuthToken() { return this; }
+          setDeveloperKey() { return this; }
+          addView() { return this; }
+          setLocale() { return this; }
+          setTitle() { return this; }
+          setCallback(cb: (data: Record<string, unknown>) => void) {
+            setTimeout(() => {
+              cb({ action: "cancel" });
+            }, 10);
+            return this;
+          }
+          build() {
+            return {
+              setVisible: () => {},
+            };
+          }
+        },
+      },
+    } as unknown as typeof window.google;
+
+    await openGooglePicker({
+      mimeTypes: "application/octet-stream,.alpha,application/zip",
+      tokenManager: mockTokenManager,
+    });
+
+    expect(includeFoldersCalled).toBe(true);
+    expect(capturedMimes).toContain("application/octet-stream");
+    expect(capturedMimes).toContain("application/zip");
+    expect(capturedMimes).toContain("application/x-zip-compressed");
+    expect(capturedMimes).not.toContain(".alpha");
+  });
+
   it("resolves null when user cancels Google Picker", async () => {
     window.gapi = {
       load: (_mod: string, callbacks: { callback: () => void }) => {

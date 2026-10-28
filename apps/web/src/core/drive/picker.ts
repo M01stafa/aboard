@@ -18,6 +18,8 @@ export interface GooglePickerBuilder {
 
 export interface GoogleDocsView {
   setMimeTypes(mimeTypes: string): this;
+  setIncludeFolders?(includeFolders: boolean): this;
+  setSelectFolderEnabled?(selectFolder: boolean): this;
 }
 
 export interface PickedFileResult {
@@ -139,8 +141,37 @@ export async function openGooglePicker(
       const { picker } = window.google!;
       const docsView = new picker.DocsView(picker.ViewId.DOCS);
 
+      if (typeof docsView.setIncludeFolders === "function") {
+        docsView.setIncludeFolders(true);
+      }
+      if (typeof docsView.setSelectFolderEnabled === "function") {
+        docsView.setSelectFolderEnabled(false);
+      }
+
       if (options.mimeTypes) {
-        docsView.setMimeTypes(options.mimeTypes);
+        const rawTypes = options.mimeTypes.split(",").map((t) => t.trim());
+        const validMimes: string[] = [];
+
+        for (const t of rawTypes) {
+          if (!t) continue;
+          if (t.toLowerCase() === ".alpha" || t.toLowerCase() === "alpha") {
+            const alphaMimes = [
+              "application/octet-stream",
+              "application/zip",
+              "application/x-zip-compressed",
+              "application/x-zip",
+            ];
+            for (const am of alphaMimes) {
+              if (!validMimes.includes(am)) validMimes.push(am);
+            }
+          } else if (!t.startsWith(".")) {
+            if (!validMimes.includes(t)) validMimes.push(t);
+          }
+        }
+
+        if (validMimes.length > 0) {
+          docsView.setMimeTypes(validMimes.join(","));
+        }
       }
 
       const builder = new picker.PickerBuilder()

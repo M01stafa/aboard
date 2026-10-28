@@ -2001,3 +2001,18 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Next.js dev server: verified `get_errors` returns 0 config errors and 0 session errors.
 **Related:** PDF-3, PDF-5, ALPHA-1
 **Open:** none.
+
+
+## 2026-10-28 — Google Picker API Key Diagnosis and .alpha File Compatibility
+**Request:** Diagnose Google Picker "API developer key is invalid" error in `apps/web/.env.local`, ensure Google Picker DocsView configuration supports `.alpha` files and folder navigation, provide exact Google Cloud Console fix instructions, verify `.alpha` Drive export/import workflows, and restart dev server after clearing `.next`.
+**Changes:**
+- `apps/web/src/core/drive/picker.ts` (changed): added `setIncludeFolders(true)` and `setSelectFolderEnabled(false)` on `DocsView` to enable browsing into Drive folders; normalized input `mimeTypes` to map `.alpha` to valid Drive archive/binary MIME types (`application/octet-stream`, `application/zip`, `application/x-zip-compressed`, `application/x-zip`) while filtering raw extension tokens that Picker rejects.
+- `apps/web/src/core/drive/picker.test.ts` (changed): added unit test verifying `.alpha` extension normalization and folder navigation enablement.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (339/339 unit tests passing across 45 test files).
+- Server verified: deleted `.next`, restarted daemon outside sandbox, HTTP 200 on `http://localhost:3000`.
+**Related:** ALPHA-2, STORE-2, SEC-5
+**Open:** Google Cloud Console configuration (enable Picker API and add HTTP referrer restrictions) by project owner.
