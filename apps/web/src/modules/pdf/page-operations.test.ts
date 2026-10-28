@@ -7,6 +7,9 @@ import {
   reorderPages,
   insertImagePage,
   burnAnnotationsWithPdfLib,
+  detectImageMime,
+  isPng,
+  isJpg,
 } from "./page-operations";
 import type { ProjectService } from "@/core/storage/project-service";
 
@@ -142,6 +145,61 @@ describe("page-operations (@cantoo/pdf-lib)", () => {
 
     const doc = await PDFDocument.load(burnedBytes);
     expect(doc.getPageCount()).toBe(2);
+    expect(burnedBytes.byteLength).toBeGreaterThan(0);
+  });
+
+  it("detectImageMime accurately detects mime types from magic bytes", () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    expect(detectImageMime(png)).toBe("image/png");
+    expect(isPng(png)).toBe(true);
+
+    const jpg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
+    expect(detectImageMime(jpg)).toBe("image/jpeg");
+    expect(isJpg(jpg)).toBe(true);
+
+    const webp = new Uint8Array([
+      0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+    ]);
+    expect(detectImageMime(webp)).toBe("image/webp");
+
+    const gif = new Uint8Array([0x47, 0x49, 0x46, 0x38]);
+    expect(detectImageMime(gif)).toBe("image/gif");
+  });
+
+  it("burnAnnotationsWithPdfLib gracefully skips corrupt/unsupported stamp without failing document", async () => {
+    const originalPdf = await createTestPdf(1);
+    const corruptStampHash = "corrupt-stamp-hash";
+    const corruptBytes = new Uint8Array([1, 2, 3, 4, 5]);
+
+    const mockProjectService = {
+      getFile: vi.fn().mockResolvedValue(new Blob([corruptBytes], { type: "application/pdf" })),
+    } as unknown as ProjectService;
+
+    const annotationsJson = JSON.stringify([
+      {
+        annotation: {
+          id: "corrupt-stamp",
+          pageIndex: 0,
+          type: PdfAnnotationSubtype.STAMP,
+          rect: { origin: { x: 50, y: 50 }, size: { width: 100, height: 80 } },
+        },
+        ctx: {
+          fileId: corruptStampHash,
+          fileKey: corruptStampHash,
+          mimeType: "application/pdf",
+        },
+      },
+    ]);
+
+    const burnedBytes = await burnAnnotationsWithPdfLib(
+      originalPdf,
+      annotationsJson,
+      "proj-corrupt",
+      mockProjectService
+    );
+
+    const doc = await PDFDocument.load(burnedBytes);
+    expect(doc.getPageCount()).toBe(1);
     expect(burnedBytes.byteLength).toBeGreaterThan(0);
   });
 });

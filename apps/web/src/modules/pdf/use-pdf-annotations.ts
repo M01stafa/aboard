@@ -477,6 +477,7 @@ export function usePdfAnnotations({
 
         annotationScope.createAnnotation(pageIdx, stampAnno, {
           data: buffer,
+          mimeType: (mimeType === "image/jpeg" ? "image/jpeg" : "image/png") as "image/png" | "image/jpeg",
         });
 
         annotationScope.setActiveTool(null);

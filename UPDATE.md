@@ -1984,3 +1984,20 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: running outside sandbox, verified HTTP 200 on `http://localhost:3000`.
 **Related:** ALPHA-1, ALPHA-2, ALPHA-3, ALPHA-6, PDF-3, PDF-4, PDF-5
 **Open:** none.
+
+
+## 2026-10-28 — Fix Stamp Image Decoding and Fallback in PDF Export Engine
+**Request:** Fix runtime console error "The input is not a PNG file!" in `embedImageSafely` at `src/modules/pdf/page-operations.ts:131` triggered during PDF export.
+**Changes:**
+- `apps/web/src/modules/pdf/page-operations.ts` (changed): added `detectImageMime` to inspect binary magic bytes (PNG, JPEG, WebP, GIF, BMP, SVG); updated `isJpg` to check standard SOI marker (`0xFF, 0xD8`); improved `embedImageSafely` to never treat stamp images as `application/pdf`, dynamically convert WebP/GIF/BMP to PNG via offscreen canvas with accurate MIME type, and safely return `null` with a warning on unconvertible images instead of throwing "The input is not a PNG file!" and failing the entire document export.
+- `apps/web/src/modules/pdf/annotation-storage.ts` (changed): imported `detectImageMime`; when serializing and deserializing stamps, resolved actual image MIME types from binary headers instead of defaulting to `"application/pdf"`.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts` (changed): passed explicit `mimeType` in `createAnnotation` context.
+- `apps/web/src/modules/pdf/page-operations.test.ts` (changed): added tests verifying `detectImageMime` and testing that `burnAnnotationsWithPdfLib` gracefully handles unsupported/corrupted stamp data without crashing document generation.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (338/338 unit tests passing across 45 test files).
+- Next.js dev server: verified `get_errors` returns 0 config errors and 0 session errors.
+**Related:** PDF-3, PDF-5, ALPHA-1
+**Open:** none.

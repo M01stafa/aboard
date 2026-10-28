@@ -3,6 +3,7 @@ import type { ProjectService } from "@/core/storage/project-service";
 import type { PdfAnnotationObject } from "@embedpdf/models";
 import type { AnnotationTransferItem } from "@embedpdf/plugin-annotation";
 import type { CustomInkStroke } from "./pdf-custom-ink-layer";
+import { detectImageMime } from "./page-operations";
 
 export interface SerializedAnnotationItem {
   annotation: PdfAnnotationObject;
@@ -62,7 +63,10 @@ export async function serializeAnnotations(
       }
 
       if (rawBuffer) {
-        const mimeType = clonedCtx.mimeType || "application/pdf";
+        let mimeType = clonedCtx.mimeType;
+        if (!mimeType || mimeType === "application/pdf" || !mimeType.startsWith("image/")) {
+          mimeType = detectImageMime(new Uint8Array(rawBuffer));
+        }
         const blob = new Blob([rawBuffer], { type: mimeType });
         const hash = await computeBlobSha256(blob);
 
@@ -154,10 +158,17 @@ export async function deserializeAnnotations(
       try {
         const blob = await projectService.getFile(projectId, fileHash);
         const arrayBuffer = await blob.arrayBuffer();
+        const rawU8 = new Uint8Array(arrayBuffer);
+        const detectedMime = detectImageMime(rawU8);
         ctx = {
           ...ctx,
           data: arrayBuffer,
-          mimeType: ctx?.mimeType || blob.type || "application/pdf",
+          mimeType:
+            ctx?.mimeType && ctx.mimeType.startsWith("image/")
+              ? ctx.mimeType
+              : blob.type && blob.type.startsWith("image/")
+              ? blob.type
+              : detectedMime,
         };
       } catch (err) {
         console.error(

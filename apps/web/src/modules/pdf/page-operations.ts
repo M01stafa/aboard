@@ -1,4 +1,4 @@
-import { PDFDocument, degrees, rgb, StandardFonts } from "@cantoo/pdf-lib";
+import { PDFDocument, degrees, rgb, StandardFonts, type PDFImage } from "@cantoo/pdf-lib";
 import { PdfAnnotationSubtype } from "@embedpdf/models";
 import type { ProjectService } from "@/core/storage/project-service";
 import { deserializeAnnotations, extractCustomInkStrokes } from "./annotation-storage";
@@ -57,6 +57,133 @@ export function isPng(bytes: Uint8Array): boolean {
     bytes[2] === 0x4e &&
     bytes[3] === 0x47
   );
+}
+
+export function isJpg(bytes: Uint8Array): boolean {
+  return bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xd8;
+}
+
+/**
+ * Detects actual image MIME type from binary magic bytes.
+ * Prevents treating stamp images as "application/pdf".
+ */
+export function detectImageMime(bytes: Uint8Array): string {
+  if (isPng(bytes)) return "image/png";
+  if (isJpg(bytes)) return "image/jpeg";
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  if (bytes.length >= 3 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+    return "image/gif";
+  }
+  if (bytes.length >= 2 && bytes[0] === 0x42 && bytes[1] === 0x4d) {
+    return "image/bmp";
+  }
+  if (bytes.length >= 1 && bytes[0] === 0x3c) {
+    return "image/svg+xml";
+  }
+  return "image/png";
+}
+
+/**
+ * Safely embeds an image into a PDFDocument.
+ * If the image is PNG, uses embedPng.
+ * If the image is JPEG (starts with SOI marker 0xFFD8), uses embedJpg.
+ * If the image is another format (e.g. WebP, GIF, SVG, BMP) and in a browser context,
+ * dynamically converts it to PNG via an offscreen canvas and embeds it.
+ * If the image format is unsupported or unconvertible, logs a warning and returns null
+ * to prevent breaking the overall PDF export.
+ */
+export async function embedImageSafely(
+  pdfDoc: PDFDocument,
+  imageBytes: Uint8Array | ArrayBuffer,
+  mimeType?: string
+): Promise<PDFImage | null> {
+  const u8 = imageBytes instanceof Uint8Array ? imageBytes : new Uint8Array(imageBytes);
+
+  // 1. Direct PNG embed
+  if (isPng(u8)) {
+    try {
+      return await pdfDoc.embedPng(u8);
+    } catch {
+      // Fall through to conversion
+    }
+  }
+
+  // 2. Direct JPEG embed
+  if (isJpg(u8)) {
+    try {
+      return await pdfDoc.embedJpg(u8);
+    } catch {
+      // Fall through to conversion
+    }
+  }
+
+  // Resolve true image MIME type, ignoring non-image fallback strings like application/pdf
+  const actualMime =
+    mimeType && mimeType.startsWith("image/") ? mimeType : detectImageMime(u8);
+
+  // 3. In browser, convert any format (WebP, GIF, SVG, BMP, or non-standard JPEG) to PNG via Canvas
+  if (typeof document !== "undefined" && typeof Image !== "undefined") {
+    try {
+      const blob = new Blob([u8 as BlobPart], { type: actualMime });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`Failed to decode image as ${actualMime}`));
+        img.src = url;
+      });
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth || img.width || 100;
+      canvas.height = img.naturalHeight || img.height || 100;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        const pngBlob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/png")
+        );
+        if (pngBlob) {
+          const ab = await pngBlob.arrayBuffer();
+          return await pdfDoc.embedPng(new Uint8Array(ab));
+        }
+      }
+    } catch (e) {
+      console.warn("[page-operations] Canvas fallback conversion failed:", e);
+    }
+  }
+
+  // 4. Fallback checks: only call embed if byte signatures actually match
+  if (isPng(u8)) {
+    try {
+      return await pdfDoc.embedPng(u8);
+    } catch {
+      // return null below
+    }
+  }
+  if (isJpg(u8)) {
+    try {
+      return await pdfDoc.embedJpg(u8);
+    } catch {
+      // return null below
+    }
+  }
+
+  console.warn(
+    `[page-operations] Unsupported stamp image format (${actualMime}), skipping embed without failing document.`
+  );
+  return null;
 }
 
 /**
@@ -145,12 +272,9 @@ export async function insertImagePage(
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const u8Image = imageBytes instanceof Uint8Array ? imageBytes : new Uint8Array(imageBytes);
 
-  let embeddedImage;
-  if (mimeType === "image/png" || isPng(u8Image)) {
-    embeddedImage = await pdfDoc.embedPng(u8Image);
-  } else {
-    // Default to JPEG
-    embeddedImage = await pdfDoc.embedJpg(u8Image);
+  const embeddedImage = await embedImageSafely(pdfDoc, u8Image, mimeType);
+  if (!embeddedImage) {
+    throw new Error(`Failed to decode image for page insertion: unsupported format`);
   }
 
   const { width, height } = embeddedImage.scale(1);
@@ -208,10 +332,10 @@ export async function burnAnnotationsWithPdfLib(
       if (rawData) {
         const u8 = rawData instanceof Uint8Array ? rawData : new Uint8Array(rawData as ArrayBuffer);
         try {
-          const embeddedImg =
-            ctx?.mimeType === "image/png" || isPng(u8)
-              ? await pdfDoc.embedPng(u8)
-              : await pdfDoc.embedJpg(u8);
+          const embeddedImg = await embedImageSafely(pdfDoc, u8, ctx?.mimeType);
+          if (!embeddedImg) {
+            continue;
+          }
 
           const rect = annotation.rect;
           const x = rect?.origin?.x ?? 72;
