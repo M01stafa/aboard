@@ -52,14 +52,24 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(page1Box).not.toBeNull();
     if (!page1Box) return;
 
+    // Zoom in twice before drawing
+    await primaryPane.locator('[data-testid="pdf-zoom-in"]').click();
+    await page.waitForTimeout(300);
+    await primaryPane.locator('[data-testid="pdf-zoom-in"]').click();
+    await page.waitForTimeout(300);
+
+    const page1BoxZoomed = await page1.boundingBox();
+    expect(page1BoxZoomed).not.toBeNull();
+    if (!page1BoxZoomed) return;
+
     // 2. Test Draw (Ink) tool
     await primaryPane.locator('[data-testid="pdf-tool-ink"]').click();
     await page.waitForTimeout(200);
 
-    const drawStartX = page1Box.x + 180;
-    const drawStartY = page1Box.y + 200;
-    const drawEndX = page1Box.x + 280;
-    const drawEndY = page1Box.y + 300;
+    const drawStartX = page1BoxZoomed.x + 180;
+    const drawStartY = page1BoxZoomed.y + 200;
+    const drawEndX = page1BoxZoomed.x + 280;
+    const drawEndY = page1BoxZoomed.y + 300;
 
     await page.mouse.move(drawStartX, drawStartY);
     await page.mouse.down();
@@ -95,6 +105,35 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(inkRect).not.toBeNull();
     expect(Math.abs(inkRect!.left - drawStartX)).toBeLessThanOrEqual(8);
     expect(Math.abs(inkRect!.top - drawStartY)).toBeLessThanOrEqual(8);
+
+    // Select the ink tool and check selection bounding box
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await page.waitForTimeout(200);
+
+    // Click on the ink stroke
+    await page.mouse.click(drawStartX + 10, drawStartY + 10);
+    await page.waitForTimeout(300);
+
+    const selectionInfo = await page.evaluate(() => {
+      // Find selection outline or handles
+      const pageEl = document.querySelector('[data-testid="pdf-page-1"]');
+      const allDivs = Array.from(pageEl?.querySelectorAll("div") || []);
+      const outlineDiv = allDivs.find((d) => {
+        const s = window.getComputedStyle(d);
+        return s.outlineStyle !== "none" && s.outlineStyle !== "";
+      });
+      const rotHandle = pageEl?.querySelector('[style*="cursor: grab"], [style*="cursor: crosshair"], svg path[d*="M21"]');
+      return {
+        hasOutline: Boolean(outlineDiv),
+        outlineRect: outlineDiv ? outlineDiv.getBoundingClientRect() : null,
+        rotHandleRect: rotHandle ? rotHandle.getBoundingClientRect() : null,
+      };
+    });
+
+    expect(selectionInfo.hasOutline).toBe(true);
+    expect(selectionInfo.outlineRect).not.toBeNull();
+    expect(Math.abs(selectionInfo.outlineRect!.left - drawStartX)).toBeLessThanOrEqual(8);
+    expect(Math.abs(selectionInfo.outlineRect!.top - drawStartY)).toBeLessThanOrEqual(8);
 
     // 3. Test Stamp tool preserving aspect ratio
     // Create a 200x100 (2:1 aspect ratio) test PNG
@@ -143,5 +182,16 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(stampSize).not.toBeNull();
     // A 1x1 square image must have width === height (NOT the hardcoded 144x96 ratio!)
     expect(stampSize!.width).toBe(stampSize!.height);
+
+    // Verify the image element is actually rendered on DOM (naturalWidth > 0, NOT an empty box)
+    const stampImg = primaryPane.locator('[data-testid^="stamp-container-"] img, img[alt="stamp"]');
+    await expect(stampImg).toBeVisible({ timeout: 5000 });
+    const imgMetrics = await stampImg.evaluate((el: HTMLImageElement) => ({
+      naturalWidth: el.naturalWidth,
+      naturalHeight: el.naturalHeight,
+      complete: el.complete,
+    }));
+    expect(imgMetrics.naturalWidth).toBeGreaterThan(0);
+    expect(imgMetrics.naturalHeight).toBeGreaterThan(0);
   });
 });

@@ -29,8 +29,12 @@ import {
   SelectionLayer,
   useSelectionCapability,
 } from "@embedpdf/plugin-selection/react";
-import { AnnotationPluginPackage, AnnotationLayer } from "@embedpdf/plugin-annotation/react";
-import { customInkRenderer } from "./custom-ink-renderer";
+import {
+  AnnotationPluginPackage,
+  AnnotationLayer,
+  useRegisterRenderers,
+} from "@embedpdf/plugin-annotation/react";
+import { customStampRenderer } from "./custom-stamp-renderer";
 import { PdfTextLayer } from "./pdf-text-layer";
 import { HistoryPluginPackage } from "@embedpdf/plugin-history";
 import { ExportPluginPackage, useExport } from "@embedpdf/plugin-export/react";
@@ -119,6 +123,7 @@ function ViewerInner({
   hasBoardTab = true,
 }: ViewerInnerProps) {
   const { t } = useI18n();
+  useRegisterRenderers(useMemo(() => [customStampRenderer], []));
   const ps = projectServiceOverride ?? defaultProjectService;
   const { provides: scrollScope, state: scrollState } = useScroll(documentId);
   const { provides: zoomScope, state: zoomState } = useZoom(documentId);
@@ -916,14 +921,11 @@ function ViewerInner({
                   key={page.pageIndex}
                   documentId={documentId}
                   pageIndex={page.pageIndex}
-                  rotation={0}
-                  scale={zoomState.currentZoomLevel || 1.0}
                   data-testid={`pdf-page-${page.pageIndex + 1}`}
                   style={{
                     position: "relative",
-                    width: `${page.width}px`,
-                    height: `${page.height}px`,
-                    marginInline: "auto",
+                    width: "100%",
+                    height: "100%",
                     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
                     backgroundColor: "#ffffff",
                     boxSizing: "border-box",
@@ -953,9 +955,6 @@ function ViewerInner({
                   <AnnotationLayer
                     documentId={documentId}
                     pageIndex={page.pageIndex}
-                    rotation={0}
-                    scale={zoomState.currentZoomLevel || 1.0}
-                    annotationRenderers={[customInkRenderer]}
                     style={{
                       position: "absolute",
                       inset: 0,

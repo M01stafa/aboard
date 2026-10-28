@@ -16,3 +16,4 @@ describe("processStampImage", () => {
     expect(result.height).toBeGreaterThan(0);
   });
 });
+

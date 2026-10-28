@@ -15,6 +15,7 @@ import {
   deserializeAnnotations,
 } from "./annotation-storage";
 import { processStampImage } from "./image-stamp-utils";
+import { stampBlobUrlCache } from "./custom-stamp-renderer";
 import type { AnnotationToolType } from "./pdf-toolbar";
 
 export interface UsePdfAnnotationsOptions {
@@ -72,13 +73,36 @@ export function usePdfAnnotations({
     try {
       const items = await new Promise<AnnotationTransferItem[]>((resolve, reject) => {
         const task = annotationScope.exportAnnotations();
-        task.wait(resolve, (err) => reject(new Error(String(err))));
+        task.wait(resolve, (err: unknown) => {
+          const reasonObj =
+            err && typeof err === "object" && "reason" in err
+              ? (err as { reason: unknown }).reason
+              : err;
+          const msg =
+            reasonObj && typeof reasonObj === "object" && "message" in reasonObj
+              ? String((reasonObj as { message: unknown }).message)
+              : typeof err === "object" && err !== null && "message" in err
+              ? String((err as { message: unknown }).message)
+              : String(err);
+          reject(new Error(msg));
+        });
       });
 
       const serialized = await serializeAnnotations(projectId, hashKey, items, ps);
       await ps.saveAnnotations(projectId, hashKey, serialized);
-    } catch (err) {
-      console.error("[usePdfAnnotations] Flush annotations failed:", err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (
+        msg.includes("Document not found") ||
+        msg.includes("NotFound") ||
+        msg.includes("not found") ||
+        msg.includes("document not found") ||
+        msg === "[object Object]"
+      ) {
+        // Document was closed or unmounted before flush completed; safely ignore
+        return;
+      }
+      console.warn("[usePdfAnnotations] Flush annotations warning:", msg);
     }
   }, [annotationScope, projectId, hashKey, ps]);
 
@@ -254,12 +278,16 @@ export function usePdfAnnotations({
     async (file: File) => {
       if (!annotationScope) return;
       try {
-        const { buffer, width, height } = await processStampImage(file);
+        const { buffer, width, height, mimeType } = await processStampImage(file);
         const pageIdx = Math.max(0, currentPage - 1);
         const stampId =
           typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
             ? crypto.randomUUID()
             : `stamp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+        const blob = new Blob([buffer], { type: mimeType });
+        const blobUrl = URL.createObjectURL(blob);
+        stampBlobUrlCache.set(stampId, blobUrl);
 
         const stampAnno: PdfStampAnnoObject = {
           id: stampId,

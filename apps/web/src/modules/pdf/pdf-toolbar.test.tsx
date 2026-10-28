@@ -113,7 +113,7 @@ describe("PdfToolbar Slim Header & Dropdowns (Task 29, 30, 41)", () => {
     expect(onSendToBoard).toHaveBeenCalledTimes(1);
   });
 
-  it("includes RTL directional icon mirroring rule for Previous and Next navigation arrows", () => {
+  it("maintains consistent outward-pointing stepper layout in LTR container (< 1 / N >)", () => {
     act(() => {
       root.render(
         <I18nProvider>
@@ -122,14 +122,20 @@ describe("PdfToolbar Slim Header & Dropdowns (Task 29, 30, 41)", () => {
       );
     });
 
-    const prevIcon = container.querySelector('[data-testid="pdf-prev-page"] svg.icon-directional');
-    const nextIcon = container.querySelector('[data-testid="pdf-next-page"] svg.icon-directional');
-    expect(prevIcon).not.toBeNull();
-    expect(nextIcon).not.toBeNull();
+    const prevBtn = container.querySelector('[data-testid="pdf-prev-page"]');
+    const nextBtn = container.querySelector('[data-testid="pdf-next-page"]');
+    const pageDisplay = container.querySelector('[data-testid="pdf-page-display"]');
+    expect(prevBtn).not.toBeNull();
+    expect(nextBtn).not.toBeNull();
+    expect(pageDisplay).not.toBeNull();
 
-    const styleEl = container.querySelector("style");
-    expect(styleEl?.textContent).toContain('[dir="rtl"] .icon-directional');
-    expect(styleEl?.textContent).toContain("scaleX(-1)");
+    // Verify left chevron on prev button and right chevron on next button
+    expect(prevBtn?.querySelector("polyline")?.getAttribute("points")).toBe("15 18 9 12 15 6");
+    expect(nextBtn?.querySelector("polyline")?.getAttribute("points")).toBe("9 18 15 12 9 6");
+
+    // Stepper parent container is locked to dir="ltr"
+    const stepperWrapper = prevBtn?.parentElement;
+    expect(stepperWrapper?.getAttribute("dir")).toBe("ltr");
   });
 });
 

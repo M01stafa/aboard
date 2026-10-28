@@ -1848,3 +1848,42 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e e2e/pdf-ink-stamp.spec.ts e2e/pdf-annotations.spec.ts`: PASS (3/3 Playwright tests passing).
 **Related:** PDF-3, PDF-4, DESIGN.md R1, R3
 **Open:** none.
+
+
+## 2026-10-27 — Fix RTL PDF Navigation Arrows, Ink Renderer Registration, and Flush Handler
+**Request:** Fix RTL top toolbar navigation stepper arrows pointing inward (`> 1 / 6 <`), resolve Ink tool drawing stroke/bounding box coordinate alignment, and eliminate Next.js dev server runtime error on unmount.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): wrapped previous page button, page indicator, and next page button in `<div dir="ltr">` and removed `.icon-directional` mirroring rule, ensuring standard `< 1 / N >` outward navigation in both LTR and RTL.
+- `apps/web/src/modules/pdf/pdf-toolbar.test.tsx` (changed): updated unit tests to verify `dir="ltr"` stepper container and outward chevron polyline coordinates.
+- `apps/web/src/modules/pdf/custom-ink-renderer.tsx` (changed): configured `useAppearanceStream: false` and locked SVG coordinates with `direction: "ltr", left: 0, top: 0, right: "auto"` to guarantee 1:1 vector rendering without PDFium bitmap distortion.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): registered `customInkRenderer` globally via `useRegisterRenderers` so active drawing previews (`AnnotationPaintLayer`) and committed annotations use the exact same renderer.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts` (changed): extracted nested `err.reason.message` to safely suppress unmount/closed document task rejections and avoid `[object Object]` console runtime errors.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts` (changed): added assertions confirming selection bounding box alignment with drawn coordinates in RTL mode.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (333/333 unit tests passing across 45 test files).
+- `pnpm test:e2e e2e/pdf-ink-stamp.spec.ts`: PASS (1/1 Playwright test passing).
+- `next-devtools get_errors`: PASS (0 config errors, 0 session errors).
+**Related:** PDF-1, PDF-2, PDF-3, PDF-4, DESIGN.md §6.2
+**Open:** none.
+
+
+## 2026-10-28 — Rebuild PDF Ink and Image Tools Based on EmbedPDF Native Architecture
+**Request:** Rebuild PDF Ink (Draw) and Image (Stamp) annotation tools based on native EmbedPDF headless architecture; resolve ink stroke coordinate offset from pointer/bounding box; fix image stamp failure where only empty bounding box appears; verify visually in internal browser via Playwright test; restart local dev server and commit locally (do NOT push).
+**Changes:**
+- `apps/web/src/modules/pdf/image-stamp-utils.ts` (changed): restricted canvas compression mime type strictly to `image/jpeg` (for JPEGs) or `image/png` (for PNG, SVG, WebP, transparency), eliminating `image/webp` which caused `@embedpdf/models` `getImageMetadata()` to return null and fail PDFium image creation in WASM.
+- `apps/web/src/modules/pdf/custom-stamp-renderer.tsx` (created): implemented stamp renderer with in-memory `stampBlobUrlCache` for instant, flicker-free rendering of client image blobs, falling back to PDFium's `renderAnnotation` via `useAnnotationCapability`.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts` (changed): imported `stampBlobUrlCache` and cached client blob URLs upon `handleAddStamp` with PNG/JPEG binary data.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): restored EmbedPDF native headless architecture inside `<Scroller renderPage={(page) => ...}>`; removed hardcoded unscaled `width` and `height` overrides on `<PagePointerProvider>`, allowing it to automatically scale with document zoom; removed hardcoded `rotation={0}` and `scale={...}` overrides on both `<PagePointerProvider>` and `<AnnotationLayer>`; removed `customInkRenderer` and registered `customStampRenderer`.
+- `apps/web/src/modules/pdf/custom-ink-renderer.tsx` (deleted): removed redundant custom ink renderer hack, allowing EmbedPDF's native `ink` renderer to render SVG paths with 1:1 coordinate fidelity.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts` (changed): verified in Playwright that ink strokes align 1:1 with pointer coordinates, and that image stamps render an actual `<img>` tag with `naturalWidth > 0` and `naturalHeight > 0` preserving aspect ratio.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (333/333 unit tests passing across 45 test files).
+- `pnpm test:e2e e2e/pdf-ink-stamp.spec.ts`: PASS (1/1 Playwright test passing, 9.4s).
+- `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle scan clean).
+**Related:** PDF-3, PDF-4
+**Open:** none.

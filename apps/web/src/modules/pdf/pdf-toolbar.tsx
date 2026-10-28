@@ -78,11 +78,6 @@ export function PdfToolbar({
         zIndex: 20,
       }}
     >
-      <style>{`
-        [dir="rtl"] .icon-directional {
-          transform: scaleX(-1);
-        }
-      `}</style>
       {/* Start Group: Navigation & Document Metadata */}
       <div
         style={{
@@ -129,116 +124,125 @@ export function PdfToolbar({
           </svg>
         </button>
 
-        {/* Previous Page */}
-        <button
-          type="button"
-          onClick={onPrevPage}
-          disabled={currentPage <= 1}
-          aria-label={t("pdf.prevPage")}
-          title={t("pdf.prevPage")}
-          data-testid="pdf-prev-page"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "var(--control-sm)",
-            height: "var(--control-sm)",
-            borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--border-card)",
-            backgroundColor: currentPage <= 1 ? "var(--bg-subtle)" : "var(--bg-surface)",
-            color: currentPage <= 1 ? "var(--text-muted)" : "var(--text-main)",
-            cursor: currentPage <= 1 ? "not-allowed" : "pointer",
-            transition: "background-color 150ms ease",
-          }}
-          onMouseEnter={(e) => {
-            if (currentPage > 1) {
-              e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (currentPage > 1) {
-              e.currentTarget.style.backgroundColor = "var(--bg-surface)";
-            }
-          }}
-        >
-          <svg
-            className="icon-directional"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-
-        {/* Page Indicator */}
-        <span
-          data-testid="pdf-page-display"
+        {/* Page Stepper: < Page/Total > locked to LTR layout */}
+        <div
           dir="ltr"
           style={{
-            fontSize: "13px",
-            fontWeight: 500,
-            minWidth: "var(--space-6)",
-            textAlign: "center",
-            fontVariantNumeric: "tabular-nums",
-            color: "var(--text-main)",
-            fontFamily: "var(--font-sans)",
-          }}
-        >
-          {currentPage} / {totalPages || 1}
-        </span>
-
-        {/* Next Page */}
-        <button
-          type="button"
-          onClick={onNextPage}
-          disabled={currentPage >= totalPages}
-          aria-label={t("pdf.nextPage")}
-          title={t("pdf.nextPage")}
-          data-testid="pdf-next-page"
-          style={{
             display: "inline-flex",
             alignItems: "center",
-            justifyContent: "center",
-            width: "var(--control-sm)",
-            height: "var(--control-sm)",
-            borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--border-card)",
-            backgroundColor: currentPage >= totalPages ? "var(--bg-subtle)" : "var(--bg-surface)",
-            color: currentPage >= totalPages ? "var(--text-muted)" : "var(--text-main)",
-            cursor: currentPage >= totalPages ? "not-allowed" : "pointer",
-            transition: "background-color 150ms ease",
-          }}
-          onMouseEnter={(e) => {
-            if (currentPage < totalPages) {
-              e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (currentPage < totalPages) {
-              e.currentTarget.style.backgroundColor = "var(--bg-surface)";
-            }
+            gap: "var(--space-1)",
+            direction: "ltr",
           }}
         >
-          <svg
-            className="icon-directional"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          {/* Previous Page */}
+          <button
+            type="button"
+            onClick={onPrevPage}
+            disabled={currentPage <= 1}
+            aria-label={t("pdf.prevPage")}
+            title={t("pdf.prevPage")}
+            data-testid="pdf-prev-page"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "var(--control-sm)",
+              height: "var(--control-sm)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-card)",
+              backgroundColor: currentPage <= 1 ? "var(--bg-subtle)" : "var(--bg-surface)",
+              color: currentPage <= 1 ? "var(--text-muted)" : "var(--text-main)",
+              cursor: currentPage <= 1 ? "not-allowed" : "pointer",
+              transition: "background-color 150ms ease",
+            }}
+            onMouseEnter={(e) => {
+              if (currentPage > 1) {
+                e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (currentPage > 1) {
+                e.currentTarget.style.backgroundColor = "var(--bg-surface)";
+              }
+            }}
           >
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </button>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+
+          {/* Page Indicator */}
+          <span
+            data-testid="pdf-page-display"
+            dir="ltr"
+            style={{
+              fontSize: "13px",
+              fontWeight: 500,
+              minWidth: "var(--space-6)",
+              textAlign: "center",
+              fontVariantNumeric: "tabular-nums",
+              color: "var(--text-main)",
+              fontFamily: "var(--font-sans)",
+            }}
+          >
+            {currentPage} / {totalPages || 1}
+          </span>
+
+          {/* Next Page */}
+          <button
+            type="button"
+            onClick={onNextPage}
+            disabled={currentPage >= totalPages}
+            aria-label={t("pdf.nextPage")}
+            title={t("pdf.nextPage")}
+            data-testid="pdf-next-page"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "var(--control-sm)",
+              height: "var(--control-sm)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-card)",
+              backgroundColor: currentPage >= totalPages ? "var(--bg-subtle)" : "var(--bg-surface)",
+              color: currentPage >= totalPages ? "var(--text-muted)" : "var(--text-main)",
+              cursor: currentPage >= totalPages ? "not-allowed" : "pointer",
+              transition: "background-color 150ms ease",
+            }}
+            onMouseEnter={(e) => {
+              if (currentPage < totalPages) {
+                e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (currentPage < totalPages) {
+                e.currentTarget.style.backgroundColor = "var(--bg-surface)";
+              }
+            }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
 
         {/* Divider */}
         {documentTitle && (

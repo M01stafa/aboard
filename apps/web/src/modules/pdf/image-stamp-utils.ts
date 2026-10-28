@@ -118,14 +118,14 @@ export async function processStampImage(file: File): Promise<ProcessedStampImage
 
     ctx.drawImage(sourceImage, 0, 0, targetCanvasWidth, targetCanvasHeight);
 
-    // Prefer image/webp for transparency + high compression, fallback to image/png or image/jpeg
+    // EmbedPDF & PDFium direct engine ONLY support image/png and image/jpeg (NEVER image/webp)
     const targetMime =
-      file.type === "image/png" || file.type === "image/webp"
-        ? "image/webp"
-        : "image/jpeg";
+      file.type === "image/jpeg" || file.type === "image/jpg"
+        ? "image/jpeg"
+        : "image/png";
 
     const compressedBlob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((b) => resolve(b), targetMime, 0.85);
+      canvas.toBlob((b) => resolve(b), targetMime, targetMime === "image/jpeg" ? 0.85 : undefined);
     });
 
     if (!compressedBlob) {
@@ -149,3 +149,4 @@ export async function processStampImage(file: File): Promise<ProcessedStampImage
     cleanup();
   }
 }
+
