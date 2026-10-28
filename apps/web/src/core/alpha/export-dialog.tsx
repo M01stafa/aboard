@@ -2,8 +2,79 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useI18n } from "@/i18n/provider";
-import { exportAlpha, ExportCapExceededError } from "./export";
-import type { ProjectService } from "@/core/storage";
+import { exportAlpha, ExportCapExceededError, safeFileName } from "./export";
+import { projectService as defaultProjectService, type ProjectService } from "@/core/storage";
+
+export interface ProjectPdfInfo {
+  id: string;
+  title: string;
+  fileKey: string;
+}
+
+export async function getProjectPdfs(
+  projectId: string,
+  ps: ProjectService
+): Promise<ProjectPdfInfo[]> {
+  const result: ProjectPdfInfo[] = [];
+
+  // 1. From manifest items
+  try {
+    const manifest = await ps.openProject(projectId);
+    for (const it of manifest.items || []) {
+      if (it.kind === "pdf" && it.fileKey) {
+        result.push({
+          id: it.id,
+          title: it.title || "document.pdf",
+          fileKey: it.fileKey,
+        });
+      }
+    }
+  } catch {
+    // Non-fatal
+  }
+
+  // 2. From Dexie stored items (if manifest was not updated or item was just added)
+  try {
+    const { getDb } = await import("@/core/db");
+    const db = getDb();
+    if (db) {
+      const storedItems = await db.items.where("projectId").equals(projectId).toArray();
+      for (const it of storedItems) {
+        if (it.kind === "pdf") {
+          const fileKey = (it as unknown as { fileKey?: string }).fileKey || "";
+          if (fileKey && !result.some((r) => r.id === it.id || r.fileKey === fileKey)) {
+            result.push({
+              id: it.id,
+              title: it.title || "document.pdf",
+              fileKey,
+            });
+          }
+        }
+      }
+    }
+  } catch {
+    // Non-fatal
+  }
+
+  // 3. Fallback: Check files table in provider / Dexie for any application/pdf
+  if (result.length === 0) {
+    try {
+      const files = await ps.listFiles(projectId);
+      const pdfFiles = files.filter((f) => f.mime === "application/pdf");
+      for (const pf of pdfFiles) {
+        result.push({
+          id: pf.key,
+          title: pf.name || "document.pdf",
+          fileKey: pf.key,
+        });
+      }
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  return result;
+}
 
 export interface ExportDialogProps {
   projectId: string;
@@ -19,16 +90,42 @@ export function ExportDialog({
   projectService,
 }: ExportDialogProps) {
   const { t } = useI18n();
+  // .alpha Backup options
   const [includePdfs, setIncludePdfs] = useState(true);
   const [includeAnnotated, setIncludeAnnotated] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [errorHint, setErrorHint] = useState<string | null>(null);
+
+  // PDF-only Drive Export options
+  const [pdfExportType, setPdfExportType] = useState<"flattened" | "clean">("flattened");
   const [isExportingDrive, setIsExportingDrive] = useState(false);
   const [driveSuccess, setDriveSuccess] = useState(false);
+  const [projectPdfs, setProjectPdfs] = useState<ProjectPdfInfo[] | null>(null);
+
+  const [error, setError] = useState<string | null>(null);
+  const [errorHint, setErrorHint] = useState<string | null>(null);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const exportBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Load project PDFs on modal open
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    const ps = projectService ?? defaultProjectService;
+
+    (async () => {
+      try {
+        const pdfs = await getProjectPdfs(projectId, ps);
+        if (!cancelled) setProjectPdfs(pdfs);
+      } catch {
+        if (!cancelled) setProjectPdfs([]);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, projectId, projectService]);
 
   // Close on Escape key & trap focus inside dialog (R5)
   useEffect(() => {
@@ -74,6 +171,7 @@ export function ExportDialog({
 
   if (!isOpen) return null;
 
+  // Button 1: Export .alpha Backup (saving the project so it can be reopened later)
   const handleExport = async () => {
     if (isExporting || isExportingDrive) return;
     setIsExporting(true);
@@ -106,44 +204,82 @@ export function ExportDialog({
     }
   };
 
+  // Button 2: Export PDFs to Drive (standard flattened or clean PDF, no JSON files)
   const handleExportToDrive = async () => {
     if (isExporting || isExportingDrive) return;
     setIsExportingDrive(true);
     setError(null);
     setErrorHint(null);
 
-    try {
-      const res = await exportAlpha(projectId, {
-        includePdfs,
-        includeAnnotated,
-        streamToDisk: false,
-        projectService,
-      });
+    const ps = projectService ?? defaultProjectService;
 
-      if (!res.blob) {
-        throw new Error("Export produced no blob");
+    try {
+      // 1. Flush save queue to ensure latest annotations are persisted
+      await ps.flushNow?.();
+
+      // 2. Discover PDFs in this project
+      const pdfs = await getProjectPdfs(projectId, ps);
+      if (pdfs.length === 0) {
+        throw new Error(t("export.pdfExportNoPdfs"));
       }
 
       const { uploadExportToDrive } = await import("@/core/drive/api");
       const { driveTokenManager } = await import("@/core/drive/tokens");
-      await uploadExportToDrive(res.fileName, res.blob, undefined, driveTokenManager);
+
+      // 3. Export each PDF according to selected type (flattened vs clean)
+      for (const pdfDoc of pdfs) {
+        const rawBlob = await ps.getFile(projectId, pdfDoc.fileKey);
+        if (!rawBlob) {
+          throw new Error(`File content for "${pdfDoc.title}" could not be retrieved.`);
+        }
+        const pdfBuffer = await rawBlob.arrayBuffer();
+
+        let finalBlob: Blob;
+        let fileName: string;
+        const baseName = (pdfDoc.title || "document").replace(/\.pdf$/i, "");
+
+        if (pdfExportType === "flattened") {
+          // Flattened: read annotations and burn custom ink, stamps, highlights into PDF pages
+          const annotationsJson =
+            (await ps.readAnnotations(projectId, pdfDoc.fileKey).catch(() => "")) ||
+            (await ps.readAnnotations(projectId, pdfDoc.id).catch(() => "")) ||
+            "";
+
+          const { burnAnnotationsWithPdfLib } = await import("@/modules/pdf/page-operations");
+          const burnedBytes = await burnAnnotationsWithPdfLib(
+            pdfBuffer,
+            annotationsJson,
+            projectId,
+            ps
+          );
+          finalBlob = new Blob([burnedBytes.buffer as ArrayBuffer], { type: "application/pdf" });
+          fileName = `${safeFileName(baseName)}-flattened.pdf`;
+        } else {
+          // Clean: original PDF document with all annotations stripped
+          finalBlob = new Blob([pdfBuffer], { type: "application/pdf" });
+          fileName = `${safeFileName(baseName)}-clean.pdf`;
+        }
+
+        // Upload single standard PDF directly to Aboard/Exports/ in Google Drive (SEC-1, SEC-2, SEC-7)
+        await uploadExportToDrive(
+          fileName,
+          finalBlob,
+          undefined,
+          driveTokenManager,
+          "application/pdf"
+        );
+      }
+
       setDriveSuccess(true);
       setTimeout(() => {
         onClose();
       }, 1200);
     } catch (err: unknown) {
-      if (err instanceof ExportCapExceededError) {
-        const sizeMb = (err.totalBytes / (1024 * 1024)).toFixed(0);
-        const capMb = (err.capBytes / (1024 * 1024)).toFixed(0);
-        setError(t("export.capExceeded", { size: sizeMb, cap: capMb }));
-        setErrorHint(t("export.capExceededHint"));
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("quota") || msg.includes("storageQuotaExceeded")) {
+        setError(t("driveErrors.quotaExceeded"));
       } else {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (msg.includes("quota") || msg.includes("storageQuotaExceeded")) {
-          setError(t("driveErrors.quotaExceeded"));
-        } else {
-          setError(msg);
-        }
+        setError(msg);
       }
     } finally {
       setIsExportingDrive(false);
@@ -166,7 +302,7 @@ export function ExportDialog({
         boxSizing: "border-box",
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget && !isExporting) {
+        if (e.target === e.currentTarget && !isExporting && !isExportingDrive) {
           onClose();
         }
       }}
@@ -179,15 +315,15 @@ export function ExportDialog({
         data-testid="alpha-export-dialog"
         style={{
           width: "100%",
-          maxWidth: "calc(var(--control-lg) * 10)",
+          maxWidth: "calc(var(--space-8) * 8.5)",
           backgroundColor: "var(--bg-surface)",
           border: "1px solid var(--border-card)",
           borderRadius: "var(--radius-md)",
           padding: "var(--space-3)",
-          boxShadow: "0 16px 32px rgba(0, 0, 0, 0.3)",
+          boxShadow: "0 16px 32px rgba(0, 0, 0, 0.4)",
           display: "flex",
           flexDirection: "column",
-          gap: "var(--space-2)",
+          gap: "var(--space-3)",
           boxSizing: "border-box",
           color: "var(--text-main)",
         }}
@@ -216,8 +352,9 @@ export function ExportDialog({
           </p>
         </div>
 
-        {/* Options */}
+        {/* SECTION 1: PDF Export to Drive (PDF-Only) */}
         <div
+          data-testid="export-pdf-section"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -228,13 +365,164 @@ export function ExportDialog({
             border: "1px solid var(--border-card)",
           }}
         >
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+              <span style={{ fontSize: "1rem" }}>📄</span>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "0.9375rem",
+                  fontWeight: 600,
+                  color: "var(--text-main)",
+                }}
+              >
+                {t("export.pdfSectionTitle")}
+              </h3>
+            </div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "0.75rem",
+                color: "var(--text-muted)",
+                lineHeight: 1.4,
+              }}
+            >
+              {t("export.pdfSectionDesc")}
+            </p>
+          </div>
+
+          {/* Option A: Flattened PDF */}
+          <label
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "var(--space-2)",
+              cursor: isExportingDrive || isExporting ? "not-allowed" : "pointer",
+              userSelect: "none",
+            }}
+          >
+            <input
+              type="radio"
+              name="pdf-export-mode"
+              data-testid="export-pdf-flattened"
+              value="flattened"
+              checked={pdfExportType === "flattened"}
+              disabled={isExportingDrive || isExporting}
+              onChange={() => setPdfExportType("flattened")}
+              style={{
+                width: "16px",
+                height: "16px",
+                marginBlockStart: "var(--space-0)",
+                accentColor: "var(--accent-text)",
+                cursor: "pointer",
+              }}
+            />
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-0)" }}>
+              <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--text-main)" }}>
+                {t("export.pdfExportFlattened")}
+              </span>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                {t("export.pdfExportFlattenedHint")}
+              </span>
+            </div>
+          </label>
+
+          {/* Option B: Clean PDF */}
+          <label
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "var(--space-2)",
+              cursor: isExportingDrive || isExporting ? "not-allowed" : "pointer",
+              userSelect: "none",
+            }}
+          >
+            <input
+              type="radio"
+              name="pdf-export-mode"
+              data-testid="export-pdf-clean"
+              value="clean"
+              checked={pdfExportType === "clean"}
+              disabled={isExportingDrive || isExporting}
+              onChange={() => setPdfExportType("clean")}
+              style={{
+                width: "16px",
+                height: "16px",
+                marginBlockStart: "var(--space-0)",
+                accentColor: "var(--accent-text)",
+                cursor: "pointer",
+              }}
+            />
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-0)" }}>
+              <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--text-main)" }}>
+                {t("export.pdfExportClean")}
+              </span>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                {t("export.pdfExportCleanHint")}
+              </span>
+            </div>
+          </label>
+
+          {projectPdfs !== null && projectPdfs.length === 0 && (
+            <span
+              style={{
+                fontSize: "0.75rem",
+                color: "var(--text-muted)",
+                fontStyle: "italic",
+                paddingInlineStart: "var(--space-3)",
+              }}
+            >
+              {t("export.pdfExportNoPdfs")}
+            </span>
+          )}
+        </div>
+
+        {/* SECTION 2: Project Backup (.alpha) */}
+        <div
+          data-testid="export-alpha-section"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-2)",
+            padding: "var(--space-2)",
+            backgroundColor: "var(--bg-subtle)",
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--border-card)",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+              <span style={{ fontSize: "1rem" }}>📦</span>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "0.9375rem",
+                  fontWeight: 600,
+                  color: "var(--text-main)",
+                }}
+              >
+                {t("export.alphaSectionTitle")}
+              </h3>
+            </div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: "0.75rem",
+                color: "var(--text-muted)",
+                lineHeight: 1.4,
+              }}
+            >
+              {t("export.alphaSectionDesc")}
+            </p>
+          </div>
+
           {/* Option 1: Include PDFs */}
           <label
             style={{
               display: "flex",
               alignItems: "flex-start",
               gap: "var(--space-2)",
-              cursor: "pointer",
+              cursor: isExporting ? "not-allowed" : "pointer",
               userSelect: "none",
             }}
           >
@@ -247,12 +535,13 @@ export function ExportDialog({
               style={{
                 width: "16px",
                 height: "16px",
+                marginBlockStart: "var(--space-0)",
                 accentColor: "var(--accent-text)",
                 cursor: "pointer",
               }}
             />
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-              <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-0)" }}>
+              <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--text-main)" }}>
                 {t("export.includePdfs")}
               </span>
               <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
@@ -267,7 +556,7 @@ export function ExportDialog({
               display: "flex",
               alignItems: "flex-start",
               gap: "var(--space-2)",
-              cursor: "pointer",
+              cursor: isExporting || !includePdfs ? "not-allowed" : "pointer",
               userSelect: "none",
             }}
           >
@@ -280,15 +569,17 @@ export function ExportDialog({
               style={{
                 width: "16px",
                 height: "16px",
+                marginBlockStart: "var(--space-0)",
                 accentColor: "var(--accent-text)",
                 cursor: isExporting || !includePdfs ? "not-allowed" : "pointer",
               }}
             />
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-0)" }}>
               <span
                 style={{
                   fontSize: "0.875rem",
                   fontWeight: 500,
+                  color: "var(--text-main)",
                   opacity: !includePdfs ? 0.5 : 1,
                 }}
               >
@@ -307,7 +598,7 @@ export function ExportDialog({
           </label>
         </div>
 
-        {/* Error notification if cap exceeded */}
+        {/* Error notification */}
         {error && (
           <div
             role="alert"
@@ -336,18 +627,18 @@ export function ExportDialog({
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-end",
-            gap: "var(--space-1)",
-            marginTop: "var(--space-1)",
+            justifyContent: "space-between",
+            gap: "var(--space-2)",
+            marginBlockStart: "var(--space-1)",
           }}
         >
           <button
             type="button"
             data-testid="export-cancel-btn"
-            disabled={isExporting}
+            disabled={isExporting || isExportingDrive}
             onClick={onClose}
             style={{
-              height: "var(--control-sm)",
+              height: "var(--space-5)",
               paddingInline: "var(--space-2)",
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--border-card)",
@@ -355,66 +646,83 @@ export function ExportDialog({
               color: "var(--text-main)",
               fontSize: "0.875rem",
               fontWeight: 500,
-              cursor: isExporting ? "not-allowed" : "pointer",
+              cursor: isExporting || isExportingDrive ? "not-allowed" : "pointer",
             }}
           >
             {t("export.cancel")}
           </button>
 
-          <button
-            type="button"
-            data-testid="export-drive-btn"
-            disabled={isExporting || isExportingDrive}
-            onClick={handleExportToDrive}
-            style={{
-              height: "var(--control-sm)",
-              paddingInline: "var(--space-2)",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-card)",
-              backgroundColor: "var(--bg-subtle)",
-              color: "var(--accent-text)",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              cursor: isExporting || isExportingDrive ? "wait" : "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-            }}
-          >
-            <span>☁</span>
-            <span>
-              {driveSuccess
-                ? t("export.exportedToDrive")
-                : isExportingDrive
-                ? t("export.exportingToDrive")
-                : t("export.exportToDrive")}
-            </span>
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            {/* Button 2: Export PDFs to Drive */}
+            <button
+              type="button"
+              data-testid="export-drive-btn"
+              disabled={isExporting || isExportingDrive || (projectPdfs !== null && projectPdfs.length === 0)}
+              onClick={handleExportToDrive}
+              title={
+                projectPdfs !== null && projectPdfs.length === 0
+                  ? t("export.pdfExportNoPdfs")
+                  : t("export.exportPdfsToDrive")
+              }
+              style={{
+                height: "var(--space-5)",
+                paddingInline: "var(--space-2)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--accent-text)",
+                backgroundColor: "var(--btn-outline-hover-bg)",
+                color: "var(--accent-text-strong)",
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                cursor:
+                  isExporting || isExportingDrive
+                    ? "wait"
+                    : projectPdfs !== null && projectPdfs.length === 0
+                    ? "not-allowed"
+                    : "pointer",
+                opacity: projectPdfs !== null && projectPdfs.length === 0 ? 0.5 : 1,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                transition: "background-color 150ms ease, opacity 150ms ease",
+              }}
+            >
+              <span>☁</span>
+              <span>
+                {driveSuccess
+                  ? t("export.exportedPdfsToDrive")
+                  : isExportingDrive
+                  ? t("export.exportingPdfsToDrive")
+                  : t("export.exportPdfsToDrive")}
+              </span>
+            </button>
 
-          <button
-            ref={exportBtnRef}
-            type="button"
-            data-testid="export-submit-btn"
-            disabled={isExporting || isExportingDrive}
-            onClick={handleExport}
-            style={{
-              height: "var(--control-sm)",
-              paddingInline: "var(--space-2)",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-card)",
-              background: "var(--btn-gold-bg)",
-              color: "var(--btn-gold-text)",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              cursor: isExporting ? "wait" : "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-            }}
-          >
-            <span>⤓</span>
-            <span>{isExporting ? t("export.exporting") : t("export.action")}</span>
-          </button>
+            {/* Button 1: Export .alpha Backup */}
+            <button
+              ref={exportBtnRef}
+              type="button"
+              data-testid="export-submit-btn"
+              disabled={isExporting || isExportingDrive}
+              onClick={handleExport}
+              style={{
+                height: "var(--space-5)",
+                paddingInline: "var(--space-2)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border-card)",
+                background: "var(--btn-gold-bg)",
+                color: "var(--btn-gold-text)",
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                cursor: isExporting || isExportingDrive ? "wait" : "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                transition: "opacity 150ms ease",
+              }}
+            >
+              <span>⤓</span>
+              <span>{isExporting ? t("export.exporting") : t("export.action")}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

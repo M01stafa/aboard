@@ -192,4 +192,50 @@ test.describe(".alpha Project Export (Task 31 / ALPHA-1, ALPHA-5, ALPHA-6, ALPHA
 
     await zipReader.close();
   });
+
+  test("proves redesigned Export dialog clearly differentiates PDF Drive Export vs .alpha Backup", async ({ page }) => {
+    await page.goto(`/workspace?p=${projectId}&kind=board`);
+    const exportBtn = page.locator('[data-testid="workspace-export-btn"]');
+    await expect(exportBtn).toBeVisible({ timeout: 10000 });
+    await exportBtn.click();
+
+    const dialog = page.locator('[data-testid="alpha-export-dialog"]');
+    await expect(dialog).toBeVisible();
+
+    // 1. PDF Export Section (Sharing / Printing without JSON clutter)
+    const pdfSection = dialog.locator('[data-testid="export-pdf-section"]');
+    await expect(pdfSection).toBeVisible();
+    const flattenedRadio = dialog.locator('[data-testid="export-pdf-flattened"]');
+    const cleanRadio = dialog.locator('[data-testid="export-pdf-clean"]');
+    await expect(flattenedRadio).toBeVisible();
+    await expect(cleanRadio).toBeVisible();
+    await expect(flattenedRadio).toBeChecked();
+    await expect(cleanRadio).not.toBeChecked();
+
+    // Toggle to Clean PDF
+    await cleanRadio.click();
+    await expect(cleanRadio).toBeChecked();
+    await expect(flattenedRadio).not.toBeChecked();
+
+    // 2. Project Backup (.alpha) Section
+    const alphaSection = dialog.locator('[data-testid="export-alpha-section"]');
+    await expect(alphaSection).toBeVisible();
+    const pdfsCheckbox = dialog.locator('[data-testid="export-include-pdfs"]');
+    const annotatedCheckbox = dialog.locator('[data-testid="export-include-annotated"]');
+    await expect(pdfsCheckbox).toBeVisible();
+    await expect(annotatedCheckbox).toBeVisible();
+
+    // 3. Buttons: Button 1 "Export .alpha Backup" and Button 2 "Export PDFs to Drive"
+    const submitBtn = dialog.locator('[data-testid="export-submit-btn"]');
+    const driveBtn = dialog.locator('[data-testid="export-drive-btn"]');
+    await expect(submitBtn).toBeVisible();
+    await expect(submitBtn).toContainText("Export .alpha Backup");
+    await expect(driveBtn).toBeVisible();
+    await expect(driveBtn).toContainText("Export PDFs to Drive");
+
+    // 4. Cancel closes dialog cleanly
+    const cancelBtn = dialog.locator('[data-testid="export-cancel-btn"]');
+    await cancelBtn.click();
+    await expect(dialog).toHaveCount(0);
+  });
 });

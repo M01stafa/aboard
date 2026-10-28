@@ -607,15 +607,22 @@ export async function uploadExportToDrive(
   fileName: string,
   blob: Blob,
   onProgress?: (progress: number) => void,
-  tokenManager?: DriveTokenManager
+  tokenManager?: DriveTokenManager,
+  mimeType?: string
 ): Promise<{ id: string; headRevisionId?: string }> {
   const root = await getOrCreateRootFolder(tokenManager);
   const exportsFolder = await getOrCreateExportsFolder(root.id, tokenManager);
 
+  const resolvedMime =
+    mimeType ||
+    (fileName.toLowerCase().endsWith(".pdf")
+      ? "application/pdf"
+      : "application/octet-stream");
+
   return uploadFile(
     {
       name: fileName,
-      mimeType: "application/octet-stream",
+      mimeType: resolvedMime,
       parents: [exportsFolder.id],
       appProperties: {
         aboardKind: "export",

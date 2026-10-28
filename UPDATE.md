@@ -1942,3 +1942,22 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Server verified: HTTP 200 on `http://localhost:3000`.
 **Related:** PDF-3, PDF-4
 **Open:** none.
+
+
+## 2026-10-28 — Redesign Export Dialog, Clarify Copy, and Implement PDF-Only Exports to Drive
+**Request:** Redesign Export Dialog to clearly separate "Project Backup (.alpha)" from "PDF Export"; update copy, checkboxes, and buttons ("Export .alpha Backup" vs "Export PDFs to Drive"); implement PDF-only Drive exports ("Export Flattened PDF" with all custom strokes, highlights, and stamps burned into PDF pages vs "Export Clean PDF" stripping all annotations), uploading a single standard .pdf file to Aboard/Exports/ in Google Drive without project JSON clutter; verify via Playwright and unit tests; commit locally (do NOT push); restart server.
+**Changes:**
+- `apps/web/src/core/alpha/export-dialog.tsx` (changed): redesigned dialog layout into two distinct sections: Section 1 "Export PDFs to Google Drive" with radio options for Flattened PDF (recommended, burning custom ink strokes, highlights, and stamps via `burnAnnotationsWithPdfLib`) and Clean PDF (original un-annotated document), uploading directly to `Aboard/Exports/` as a single standard `.pdf` file with `mimeType: "application/pdf"`; Section 2 "Project Backup (.alpha)" preserving full project bundling options; footer updated with Button 1 "Export .alpha Backup" and Button 2 "Export PDFs to Drive"; added `getProjectPdfs` discovery helper.
+- `apps/web/src/core/drive/api.ts` (changed): updated `uploadExportToDrive` signature and implementation to support optional `mimeType` parameter with automatic `"application/pdf"` detection for `.pdf` files.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added localized copy for both sections, radio options, button labels, and status messages in English and Arabic.
+- `apps/web/src/core/alpha/export-dialog.test.tsx` (changed): added unit tests verifying rendering of PDF-only export section with flattened/clean options, uploading flattened PDF with burned annotations, and uploading clean PDF without annotations.
+- `apps/web/e2e/alpha-export.spec.ts` (changed): added E2E test proving redesigned dialog clearly differentiates PDF Drive Export vs .alpha Backup, toggling between Flattened and Clean options, and verifying button copy.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (336/336 unit tests passing across 45 test files).
+- `pnpm test:e2e`: PASS (all PDF, Alpha export/import, Drive error, and unified topbar E2E tests passing).
+- Server verified: HTTP 200 on `http://localhost:3000`.
+**Related:** ALPHA-1, ALPHA-6, ALPHA-7, PDF-5, STORE-2
+**Open:** none.
