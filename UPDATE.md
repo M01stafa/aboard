@@ -1923,3 +1923,22 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Playwright `pdf-ink-objects`, `pdf-ink-stamp`, `pdf-annotations`, `pdf-module`, `pdf-page-operations`: PASS (6/6).
 **Related:** PDF-3, PDF-4, PDF-5
 **Open:** none.
+
+
+## 2026-10-28 — Enable Marquee Selection for Custom Annotations and Add Delete/Backspace Shortcuts
+**Request:** Implement marquee selection (dragging a bounding box with the Select tool) that calculates intersection against custom ink strokes and EmbedPDF annotations (stamps, text), selecting all intersecting objects and displaying their selection handles; implement Delete and Backspace keyboard shortcuts to immediately delete selected custom annotations and EmbedPDF annotations with undo/redo history; preserve native text selection and "Send to Board" trigger when dragging over text lines; verify via Playwright; restart local dev server; commit locally (do NOT push).
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx` (changed): added `rectsIntersect` and `getAbsoluteStrokeBounds` to calculate bounding box collisions between marquee rectangles and custom ink strokes (factoring in translation offsets); implemented marquee drag logic with real-time selection of intersecting custom ink strokes and EmbedPDF annotations via `annotationScope.setSelection`; rendered visual dashed marquee rectangle `<g data-testid="pdf-marquee-selection">` with `#0b7ad6` border, semi-transparent fill, and 4 corner handles; implemented multi-stroke dragging (`onMoveStrokes`) when multiple strokes are selected; single clicks on empty space deselect all; clicking on an individual stroke selects it and allows dragging; added text element detection check (`isOverText`) so dragging over text lines passes cleanly through to `PagePointerProvider` and the text layer for text selection and "Send to Board".
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts` (changed): added `selectedStrokeIds` state and ref; added `handleMoveCustomStrokes` to batch-move multiple selected strokes with a single undo entry; added `handleDeleteSelected` to remove selected custom strokes from `customStrokes`, delete selected annotations via `annotationScope.deleteAnnotations`, push previous stroke state to `customUndoStackRef`, set `canUndo(true)`, and trigger debounced save.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): wired window `keydown` listener for `Delete` and `Backspace` (ignoring input/textarea elements), calling `handleDeleteSelected()` with `e.preventDefault()`; wired `Ctrl+Z`, `Ctrl+Y`, and `Ctrl+Shift+Z` to `handleUndo()` / `handleRedo()`; passed `isAnnotating={activeTool !== "select"}` to `PdfTextLayer`; wired selection and stroke move handlers to `<PdfCustomInkLayer>`.
+- `apps/web/e2e/pdf-ink-objects.spec.ts` (changed): added test case verifying that dragging a marquee box over a custom stroke selects it, pressing `Delete` removes it, `Ctrl+Z` restores it, clicking selects it, and `Backspace` deletes it.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts` (changed): updated assertion to reflect that Select mode retains pointer interaction on the custom layer for marquee and object manipulation.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (333/333 unit tests passing across 45 test files).
+- `pnpm test:e2e`: PASS (all 7 PDF E2E tests passing: `pdf-ink-objects.spec.ts`, `pdf-ink-stamp.spec.ts`, `pdf-annotations.spec.ts`, `pdf-module.spec.ts`, `pdf-page-operations.spec.ts`).
+- Server verified: HTTP 200 on `http://localhost:3000`.
+**Related:** PDF-3, PDF-4
+**Open:** none.

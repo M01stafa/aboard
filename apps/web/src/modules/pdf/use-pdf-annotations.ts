@@ -37,12 +37,20 @@ export interface UsePdfAnnotationsResult {
   handleRedo: () => void;
   handleAddStamp: (file: File) => Promise<void>;
   customStrokes: Record<number, CustomInkStroke[]>;
+  selectedStrokeIds: string[];
+  setSelectedStrokeIds: (ids: string[]) => void;
+  handleDeleteSelected: () => boolean;
   handleAddCustomStroke: (pageIndex: number, stroke: CustomInkStroke) => void;
   handleMoveCustomStroke: (
     pageIndex: number,
     strokeId: string,
     transform: CustomInkTransform
   ) => void;
+  handleMoveCustomStrokes: (
+    pageIndex: number,
+    moves: Array<{ strokeId: string; transform: CustomInkTransform }>
+  ) => void;
+  annotationScope: ReturnType<typeof useAnnotation>["provides"];
 }
 
 export function usePdfAnnotations({
@@ -72,6 +80,11 @@ export function usePdfAnnotations({
   useEffect(() => {
     customStrokesRef.current = customStrokes;
   }, [customStrokes]);
+  const [selectedStrokeIds, setSelectedStrokeIds] = useState<string[]>([]);
+  const selectedStrokeIdsRef = useRef<string[]>([]);
+  useEffect(() => {
+    selectedStrokeIdsRef.current = selectedStrokeIds;
+  }, [selectedStrokeIds]);
   const customUndoStackRef = useRef<Array<Record<number, CustomInkStroke[]>>>([]);
   const customRedoStackRef = useRef<Array<Record<number, CustomInkStroke[]>>>([]);
 
@@ -311,14 +324,18 @@ export function usePdfAnnotations({
     [triggerDebouncedSave]
   );
 
-  const handleMoveCustomStroke = useCallback(
-    (pageIndex: number, strokeId: string, transform: CustomInkTransform) => {
+  const handleMoveCustomStrokes = useCallback(
+    (pageIndex: number, moves: Array<{ strokeId: string; transform: CustomInkTransform }>) => {
       const prev = customStrokesRef.current;
       const pageStrokes = prev[pageIndex];
-      if (!pageStrokes || !pageStrokes.some((s) => s.id === strokeId)) return;
+      if (!pageStrokes || moves.length === 0) return;
+      const moveMap = new Map(moves.map((m) => [m.strokeId, m.transform]));
       const next = {
         ...prev,
-        [pageIndex]: pageStrokes.map((s) => (s.id === strokeId ? { ...s, transform } : s)),
+        [pageIndex]: pageStrokes.map((s) => {
+          const t = moveMap.get(s.id);
+          return t ? { ...s, transform: t } : s;
+        }),
       };
       customUndoStackRef.current.push(prev);
       customRedoStackRef.current = [];
@@ -330,6 +347,65 @@ export function usePdfAnnotations({
     },
     [triggerDebouncedSave]
   );
+
+  const handleMoveCustomStroke = useCallback(
+    (pageIndex: number, strokeId: string, transform: CustomInkTransform) => {
+      handleMoveCustomStrokes(pageIndex, [{ strokeId, transform }]);
+    },
+    [handleMoveCustomStrokes]
+  );
+
+  const handleDeleteSelected = useCallback((): boolean => {
+    let changed = false;
+    const prevStrokes = customStrokesRef.current;
+    const selStrokes = new Set(selectedStrokeIdsRef.current);
+
+    // 1. Delete selected custom ink strokes
+    if (selStrokes.size > 0) {
+      const nextStrokes: Record<number, CustomInkStroke[]> = {};
+      let strokesRemoved = false;
+      for (const [pStr, list] of Object.entries(prevStrokes)) {
+        const pIdx = parseInt(pStr, 10);
+        const filtered = list.filter((s) => !selStrokes.has(s.id));
+        if (filtered.length !== list.length) {
+          strokesRemoved = true;
+          changed = true;
+        }
+        nextStrokes[pIdx] = filtered;
+      }
+
+      if (strokesRemoved) {
+        customUndoStackRef.current.push(prevStrokes);
+        customRedoStackRef.current = [];
+        customStrokesRef.current = nextStrokes;
+        setCustomStrokes(nextStrokes);
+        selectedStrokeIdsRef.current = [];
+        setSelectedStrokeIds([]);
+        setCanUndo(true);
+        setCanRedo(false);
+        triggerDebouncedSave();
+      }
+    }
+
+    // 2. Delete selected EmbedPDF annotations (stamps, freeText, highlights)
+    if (annotationScope) {
+      const selectedAnnoIds = annotationScope.getSelectedAnnotationIds();
+      if (selectedAnnoIds && selectedAnnoIds.length > 0) {
+        const allAnnos = annotationScope.getAnnotations();
+        const toDelete = allAnnos
+          .filter((ta) => selectedAnnoIds.includes(ta.object.id))
+          .map((ta) => ({ pageIndex: ta.object.pageIndex, id: ta.object.id }));
+        if (toDelete.length > 0) {
+          annotationScope.deleteAnnotations(toDelete);
+          annotationScope.deselectAnnotation();
+          triggerDebouncedSave();
+          changed = true;
+        }
+      }
+    }
+
+    return changed;
+  }, [annotationScope, triggerDebouncedSave]);
 
   const handleUndo = useCallback(() => {
     if (customUndoStackRef.current.length > 0) {
@@ -413,9 +489,11 @@ export function usePdfAnnotations({
         scope: annotationScope,
         history: historyScope,
         customStrokes: customStrokesRef.current,
+        selectedStrokeIds: selectedStrokeIdsRef.current,
+        deleteSelected: handleDeleteSelected,
       };
     }
-  }, [annotationScope, historyScope, customStrokes]);
+  }, [annotationScope, historyScope, customStrokes, selectedStrokeIds, handleDeleteSelected]);
 
   return {
     activeTool,
@@ -426,7 +504,12 @@ export function usePdfAnnotations({
     handleRedo,
     handleAddStamp,
     customStrokes,
+    selectedStrokeIds,
+    setSelectedStrokeIds,
+    handleDeleteSelected,
     handleAddCustomStroke,
     handleMoveCustomStroke,
+    handleMoveCustomStrokes,
+    annotationScope,
   };
 }

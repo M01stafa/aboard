@@ -123,4 +123,98 @@ test.describe("PDF custom ink: no text selection while drawing, strokes are mova
     expect(zoomed).not.toBeNull();
     expect(zoomed!.pathW).toBeGreaterThan(before.width);
   });
+
+  test("marquee selection selects custom stroke and Delete/Backspace removes it, Ctrl+Z restores it", async ({ page }) => {
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Marquee selection & Delete shortcut verification", {
+      x: 50,
+      y: 750,
+      size: 16,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${projectId}&kind=pdf`);
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles({
+      name: "marquee-test.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+    const box = await page1.boundingBox();
+    expect(box).not.toBeNull();
+    if (!box) return;
+
+    // Draw a stroke in the middle of page1
+    await primaryPane.locator('[data-testid="pdf-tool-ink"]').click();
+    const sx = box.x + 100;
+    const sy = box.y + 200;
+    const ex = box.x + 220;
+    const ey = box.y + 260;
+    await page.mouse.move(sx, sy);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(sx + ((ex - sx) * i) / 10, sy + ((ey - sy) * i) / 10);
+    }
+    await page.mouse.up();
+
+    const strokePath = primaryPane.locator('[data-testid="pdf-custom-ink-layer-1"] path');
+    await expect(strokePath).toHaveCount(1);
+
+    // Switch to Select tool
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await page.waitForTimeout(200);
+
+    // Drag a marquee box over the stroke starting from empty space
+    const marqueeStartX = box.x + 20;
+    const marqueeStartY = box.y + 150;
+    const marqueeEndX = box.x + 350;
+    const marqueeEndY = box.y + 350;
+
+    await page.mouse.move(marqueeStartX, marqueeStartY);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        marqueeStartX + ((marqueeEndX - marqueeStartX) * i) / 10,
+        marqueeStartY + ((marqueeEndY - marqueeStartY) * i) / 10
+      );
+    }
+
+    // Verify marquee selection visual box is displayed while dragging
+    const marqueeVisual = primaryPane.locator('[data-testid="pdf-marquee-selection"]');
+    await expect(marqueeVisual).toBeVisible();
+
+    await page.mouse.up();
+    // After pointer up, marquee box hides and stroke shows its selection bounding box
+    await expect(primaryPane.locator('[data-testid="pdf-custom-ink-bbox"]')).toBeVisible();
+
+    // Press Delete key to delete selected annotation
+    await page.keyboard.press("Delete");
+    await expect(strokePath).toHaveCount(0);
+
+    // Press Ctrl+Z to undo deletion and verify stroke reappears
+    await page.keyboard.press("Control+z");
+    await expect(strokePath).toHaveCount(1);
+
+    // Click on the stroke to select it, then press Backspace to test Backspace deletion
+    await page.mouse.click((sx + ex) / 2, (sy + ey) / 2);
+    await expect(primaryPane.locator('[data-testid="pdf-custom-ink-bbox"]')).toBeVisible();
+
+    await page.keyboard.press("Backspace");
+    await expect(strokePath).toHaveCount(0);
+
+    // Click Undo button to bring it back again
+    await primaryPane.locator('[data-testid="pdf-undo-button"]').click();
+    await expect(strokePath).toHaveCount(1);
+  });
 });
+

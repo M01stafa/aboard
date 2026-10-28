@@ -48,7 +48,12 @@ export function pointsToSvgPath(points: CustomInkPoint[]): string {
   return d;
 }
 
-function getStrokeBounds(stroke: CustomInkStroke) {
+export function getStrokeBounds(stroke: CustomInkStroke): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -68,17 +73,77 @@ function getStrokeBounds(stroke: CustomInkStroke) {
   };
 }
 
+export function getAbsoluteStrokeBounds(stroke: CustomInkStroke): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
+  const b = getStrokeBounds(stroke);
+  const off = getStrokeOffset(stroke);
+  return {
+    x: b.x + off.x,
+    y: b.y + off.y,
+    width: b.width,
+    height: b.height,
+  };
+}
+
+export function rectsIntersect(
+  r1: { x: number; y: number; width: number; height: number },
+  r2: { x: number; y: number; width: number; height: number }
+): boolean {
+  return !(
+    r2.x > r1.x + r1.width ||
+    r2.x + r2.width < r1.x ||
+    r2.y > r1.y + r1.height ||
+    r2.y + r2.height < r1.y
+  );
+}
+
+export interface MarqueeRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface AnnotationScopeLike {
+  getAnnotations?: (options?: { pageIndex?: number }) => Array<{
+    object: {
+      id: string;
+      pageIndex: number;
+      type: number;
+      rect?: {
+        origin: { x: number; y: number };
+        size: { width: number; height: number };
+      };
+    };
+  }>;
+  setSelection?: (ids: string[]) => void;
+  selectAnnotation?: (pageIndex: number, id: string) => void;
+  deselectAnnotation?: () => void;
+  getSelectedAnnotationIds?: () => string[];
+}
+
 export interface PdfCustomInkLayerProps {
   pageIndex: number;
   pageWidth: number;
   pageHeight: number;
   /** Draw tool active: the layer captures pointer input and draws. */
   isActive: boolean;
-  /** Select tool active: strokes can be clicked and dragged. */
+  /** Select tool active: strokes can be clicked and dragged, and marquee selection is enabled. */
   isSelectMode?: boolean;
   strokes: CustomInkStroke[];
+  selectedStrokeIds?: string[];
+  onSelectStrokes?: (strokeIds: string[]) => void;
   onAddStroke: (pageIndex: number, stroke: CustomInkStroke) => void;
   onMoveStroke?: (pageIndex: number, strokeId: string, transform: CustomInkTransform) => void;
+  onMoveStrokes?: (
+    pageIndex: number,
+    moves: Array<{ strokeId: string; transform: CustomInkTransform }>
+  ) => void;
+  annotationScope?: AnnotationScopeLike | null;
   strokeColor?: string;
   strokeWidth?: number;
   strokeOpacity?: number;
@@ -88,10 +153,15 @@ type Interaction =
   | { kind: "draw"; stroke: CustomInkStroke }
   | {
       kind: "drag";
-      id: string;
+      anchorId: string;
       start: CustomInkPoint;
-      base: CustomInkTransform;
-      current: CustomInkTransform;
+      bases: Record<string, CustomInkTransform>;
+      currentOffsets: Record<string, CustomInkTransform>;
+    }
+  | {
+      kind: "marquee";
+      start: CustomInkPoint;
+      current: CustomInkPoint;
     };
 
 export function PdfCustomInkLayer({
@@ -101,19 +171,23 @@ export function PdfCustomInkLayer({
   isActive,
   isSelectMode = false,
   strokes,
+  selectedStrokeIds = [],
+  onSelectStrokes,
   onAddStroke,
   onMoveStroke,
+  onMoveStrokes,
+  annotationScope,
   strokeColor = "#E44234",
   strokeWidth = 2.5,
   strokeOpacity = 1,
 }: PdfCustomInkLayerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [currentStroke, setCurrentStroke] = useState<CustomInkStroke | null>(null);
-  const [drag, setDrag] = useState<{ id: string; x: number; y: number } | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [dragOffsets, setDragOffsets] = useState<Record<string, CustomInkTransform>>({});
+  const [marquee, setMarquee] = useState<MarqueeRect | null>(null);
   const interactionRef = useRef<Interaction | null>(null);
 
-  // Latest props for the native listeners below (kept in a ref so listeners attach once).
+  // Latest props for native listeners
   const propsRef = useRef({
     pageIndex,
     pageWidth,
@@ -121,12 +195,17 @@ export function PdfCustomInkLayer({
     isActive,
     isSelectMode,
     strokes,
+    selectedStrokeIds,
+    onSelectStrokes,
     onAddStroke,
     onMoveStroke,
+    onMoveStrokes,
+    annotationScope,
     strokeColor,
     strokeWidth,
     strokeOpacity,
   });
+
   useEffect(() => {
     propsRef.current = {
       pageIndex,
@@ -135,17 +214,19 @@ export function PdfCustomInkLayer({
       isActive,
       isSelectMode,
       strokes,
+      selectedStrokeIds,
+      onSelectStrokes,
       onAddStroke,
       onMoveStroke,
+      onMoveStrokes,
+      annotationScope,
       strokeColor,
       strokeWidth,
       strokeOpacity,
     };
   });
 
-  // Native listeners: EmbedPDF attaches native listeners on the page element, so a React
-  // synthetic stopPropagation cannot keep the text layer from reacting. These run on the SVG
-  // itself and stop the event before it bubbles to the page.
+  // Native listeners: attach directly to SVG to prevent text selection and handle 1:1 drawing + marquee
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
@@ -178,6 +259,8 @@ export function PdfCustomInkLayer({
     const handleDown = (e: PointerEvent) => {
       if (e.button !== 0) return;
       const p = propsRef.current;
+
+      // 1. Draw mode
       if (p.isActive) {
         e.preventDefault();
         e.stopPropagation();
@@ -200,22 +283,119 @@ export function PdfCustomInkLayer({
         setCurrentStroke(stroke);
         return;
       }
+
+      // 2. Select mode: object click, drag, or marquee drag
       if (p.isSelectMode) {
+        const pt = toPagePoint(e.clientX, e.clientY);
+        if (!pt) return;
+
         const target = e.target as Element | null;
         const strokeEl = target?.closest?.("[data-ink-stroke-id]");
-        const id = strokeEl?.getAttribute("data-ink-stroke-id");
-        if (!id) return;
-        const stroke = p.strokes.find((s) => s.id === id);
-        const pt = toPagePoint(e.clientX, e.clientY);
-        if (!stroke || !pt) return;
+        const strokeId = strokeEl?.getAttribute("data-ink-stroke-id");
+
+        if (strokeId) {
+          // User clicked on a custom ink stroke
+          e.preventDefault();
+          e.stopPropagation();
+          window.getSelection()?.removeAllRanges();
+          capture(e.pointerId);
+          const currentSelected = new Set(p.selectedStrokeIds || []);
+          let activeSelected = Array.from(currentSelected);
+
+          if (!currentSelected.has(strokeId)) {
+            activeSelected = [strokeId];
+            p.onSelectStrokes?.([strokeId]);
+            p.annotationScope?.deselectAnnotation?.();
+          }
+
+          // Prepare drag bases for all currently selected strokes
+          const bases: Record<string, CustomInkTransform> = {};
+          for (const sid of activeSelected) {
+            const st = p.strokes.find((s) => s.id === sid);
+            if (st) {
+              bases[sid] = getStrokeOffset(st);
+            }
+          }
+          if (!bases[strokeId]) {
+            const st = p.strokes.find((s) => s.id === strokeId);
+            if (st) bases[strokeId] = getStrokeOffset(st);
+          }
+
+          interactionRef.current = {
+            kind: "drag",
+            anchorId: strokeId,
+            start: pt,
+            bases,
+            currentOffsets: { ...bases },
+          };
+          setDragOffsets({ ...bases });
+          return;
+        }
+
+        // Pointer is NOT on a custom stroke: check if clicked on an EmbedPDF annotation
+        const pageAnnos = p.annotationScope?.getAnnotations?.({ pageIndex: p.pageIndex }) || [];
+        const clickedAnno = pageAnnos.find((ta) => {
+          const r = ta?.object?.rect;
+          if (!r) return false;
+          return (
+            pt.x >= r.origin.x &&
+            pt.x <= r.origin.x + r.size.width &&
+            pt.y >= r.origin.y &&
+            pt.y <= r.origin.y + r.size.height
+          );
+        });
+
+        if (clickedAnno) {
+          p.onSelectStrokes?.([]);
+          p.annotationScope?.selectAnnotation?.(p.pageIndex, clickedAnno.object.id);
+          interactionRef.current = null;
+          return;
+        }
+
+        // Check if pointer is directly over a text element (span in text layer)
+        const isOverText = (() => {
+          if (typeof document === "undefined") return false;
+          if (document.elementsFromPoint) {
+            const els = document.elementsFromPoint(e.clientX, e.clientY);
+            for (const el of els) {
+              if (el.tagName === "SPAN" && el.closest('[data-text-layer="true"]')) return true;
+              if (el.hasAttribute("data-char-index") || el.closest("[data-char-index]")) return true;
+              if (el.closest('.embed-pdf-text-layer, [data-testid="pdf-text-layer"]')) return true;
+            }
+          }
+          const spans = svg.parentElement?.querySelectorAll<HTMLElement>('[data-text-layer="true"] span');
+          if (spans && spans.length > 0) {
+            for (let i = 0; i < spans.length; i++) {
+              const rect = spans[i].getBoundingClientRect();
+              if (
+                e.clientX >= rect.left &&
+                e.clientX <= rect.right &&
+                e.clientY >= rect.top &&
+                e.clientY <= rect.bottom
+              ) {
+                return true;
+              }
+            }
+          }
+          return false;
+        })();
+
+        if (isOverText) {
+          // Allow text selection to propagate to PagePointerProvider / text layer
+          return;
+        }
+
+        // Pointer is on empty space: start Marquee Selection!
         e.preventDefault();
         e.stopPropagation();
         window.getSelection()?.removeAllRanges();
         capture(e.pointerId);
-        const base = getStrokeOffset(stroke);
-        interactionRef.current = { kind: "drag", id, start: pt, base, current: base };
-        setSelectedId(id);
-        setDrag({ id, x: base.x, y: base.y });
+        interactionRef.current = {
+          kind: "marquee",
+          start: pt,
+          current: pt,
+        };
+        setMarquee({ x: pt.x, y: pt.y, width: 0, height: 0 });
       }
     };
 
@@ -226,6 +406,8 @@ export function PdfCustomInkLayer({
       e.stopPropagation();
       const pt = toPagePoint(e.clientX, e.clientY);
       if (!pt) return;
+      const p = propsRef.current;
+
       if (it.kind === "draw") {
         const last = it.stroke.points[it.stroke.points.length - 1];
         const dx = pt.x - last.x;
@@ -233,13 +415,47 @@ export function PdfCustomInkLayer({
         if (dx * dx + dy * dy < 0.25) return;
         it.stroke = { ...it.stroke, points: [...it.stroke.points, pt] };
         setCurrentStroke(it.stroke);
-      } else {
-        const next = {
-          x: it.base.x + (pt.x - it.start.x),
-          y: it.base.y + (pt.y - it.start.y),
-        };
-        it.current = next;
-        setDrag({ id: it.id, x: next.x, y: next.y });
+      } else if (it.kind === "drag") {
+        const dx = pt.x - it.start.x;
+        const dy = pt.y - it.start.y;
+        const nextOffsets: Record<string, CustomInkTransform> = {};
+        for (const [id, base] of Object.entries(it.bases)) {
+          nextOffsets[id] = { x: base.x + dx, y: base.y + dy };
+        }
+        it.currentOffsets = nextOffsets;
+        setDragOffsets(nextOffsets);
+      } else if (it.kind === "marquee") {
+        it.current = pt;
+        const mx = Math.min(it.start.x, pt.x);
+        const my = Math.min(it.start.y, pt.y);
+        const mw = Math.abs(pt.x - it.start.x);
+        const mh = Math.abs(pt.y - it.start.y);
+        const box: MarqueeRect = { x: mx, y: my, width: mw, height: mh };
+        setMarquee(box);
+
+        if (mw > 2 || mh > 2) {
+          // Find intersecting custom strokes
+          const intersectingStrokeIds = p.strokes
+            .filter((s) => rectsIntersect(box, getAbsoluteStrokeBounds(s)))
+            .map((s) => s.id);
+          p.onSelectStrokes?.(intersectingStrokeIds);
+
+          // Find intersecting EmbedPDF annotations (stamps, text, etc.)
+          const pageAnnos = p.annotationScope?.getAnnotations?.({ pageIndex: p.pageIndex }) || [];
+          const intersectingAnnoIds = pageAnnos
+            .filter((ta) => {
+              const r = ta?.object?.rect;
+              if (!r) return false;
+              return rectsIntersect(box, {
+                x: r.origin.x,
+                y: r.origin.y,
+                width: r.size.width,
+                height: r.size.height,
+              });
+            })
+            .map((ta) => ta.object.id);
+          p.annotationScope?.setSelection?.(intersectingAnnoIds);
+        }
       }
     };
 
@@ -250,35 +466,59 @@ export function PdfCustomInkLayer({
       e.stopPropagation();
       release(e.pointerId);
       const p = propsRef.current;
+
       if (it.kind === "draw") {
         if (commit && it.stroke.points.length > 0) {
           p.onAddStroke(p.pageIndex, it.stroke);
         }
         setCurrentStroke(null);
-      } else {
-        const moved =
-          Math.abs(it.current.x - it.base.x) > 0.5 || Math.abs(it.current.y - it.base.y) > 0.5;
-        if (commit && moved) {
-          p.onMoveStroke?.(p.pageIndex, it.id, it.current);
+      } else if (it.kind === "drag") {
+        if (commit) {
+          const moves: Array<{ strokeId: string; transform: CustomInkTransform }> = [];
+          for (const [id, cur] of Object.entries(it.currentOffsets)) {
+            const base = it.bases[id] || { x: 0, y: 0 };
+            if (Math.abs(cur.x - base.x) > 0.5 || Math.abs(cur.y - base.y) > 0.5) {
+              moves.push({ strokeId: id, transform: cur });
+            }
+          }
+          if (moves.length > 0) {
+            if (p.onMoveStrokes) {
+              p.onMoveStrokes(p.pageIndex, moves);
+            } else if (p.onMoveStroke && moves[0]) {
+              p.onMoveStroke(p.pageIndex, moves[0].strokeId, moves[0].transform);
+            }
+          }
         }
-        setDrag(null);
+        setDragOffsets({});
+      } else if (it.kind === "marquee") {
+        const mx = Math.min(it.start.x, it.current.x);
+        const my = Math.min(it.start.y, it.current.y);
+        const mw = Math.abs(it.current.x - it.start.x);
+        const mh = Math.abs(it.current.y - it.start.y);
+
+        if (mw <= 3 && mh <= 3) {
+          // Just a single click on empty space: deselect everything
+          p.onSelectStrokes?.([]);
+          p.annotationScope?.deselectAnnotation?.();
+        }
+        setMarquee(null);
       }
     };
 
     const handleUp = (e: PointerEvent) => finish(e, true);
     const handleCancel = (e: PointerEvent) => finish(e, false);
 
-    // Legacy mouse events must not reach the page either (they start native text selection).
+    // Prevent native selection on mouse down
     const handleMouseDown = (e: MouseEvent) => {
       const p = propsRef.current;
-      const target = e.target as Element | null;
-      if (p.isActive || (p.isSelectMode && target?.closest?.("[data-ink-stroke-id]"))) {
+      if (p.isActive) {
         e.preventDefault();
         e.stopPropagation();
       }
     };
+
     const blockWhenBusy = (e: Event) => {
-      if (propsRef.current.isActive || interactionRef.current) {
+      if (propsRef.current.isActive) {
         e.preventDefault();
       }
     };
@@ -301,25 +541,13 @@ export function PdfCustomInkLayer({
     };
   }, []);
 
-  // Deselect when pressing anywhere that is not a stroke
-  useEffect(() => {
-    if (!selectedId) return;
-    const onDocDown = (e: PointerEvent) => {
-      const target = e.target as Element | null;
-      if (!target?.closest?.("[data-ink-stroke-id]")) {
-        setSelectedId(null);
-      }
-    };
-    document.addEventListener("pointerdown", onDocDown, true);
-    return () => document.removeEventListener("pointerdown", onDocDown, true);
-  }, [selectedId]);
+  const selectedSet = useMemo(() => new Set(selectedStrokeIds), [selectedStrokeIds]);
 
   const renderedStrokes = useMemo(
     () =>
       strokes.map((s) => {
-        const offset =
-          drag && drag.id === s.id ? { x: drag.x, y: drag.y } : getStrokeOffset(s);
-        const isSelected = isSelectMode && selectedId === s.id;
+        const offset = dragOffsets[s.id] ?? getStrokeOffset(s);
+        const isSelected = isSelectMode && selectedSet.has(s.id);
         const bounds = isSelected ? getStrokeBounds(s) : null;
         const handleSize = 8;
         return (
@@ -359,7 +587,7 @@ export function PdfCustomInkLayer({
                   y={bounds.y}
                   width={bounds.width}
                   height={bounds.height}
-                  fill="none"
+                  fill="rgba(11, 122, 214, 0.04)"
                   stroke="#0b7ad6"
                   strokeWidth={1.5}
                   vectorEffect="non-scaling-stroke"
@@ -387,7 +615,7 @@ export function PdfCustomInkLayer({
           </g>
         );
       }),
-    [strokes, drag, isSelectMode, selectedId]
+    [strokes, dragOffsets, isSelectMode, selectedSet]
   );
 
   return (
@@ -400,11 +628,11 @@ export function PdfCustomInkLayer({
         inset: 0,
         width: "100%",
         height: "100%",
-        pointerEvents: isActive ? "auto" : "none",
+        pointerEvents: isActive || isSelectMode ? "auto" : "none",
         cursor: isActive ? "crosshair" : "default",
         zIndex: 15,
         overflow: "visible",
-        touchAction: isActive ? "none" : "auto",
+        touchAction: isActive || isSelectMode ? "none" : "auto",
         userSelect: "none",
         WebkitUserSelect: "none",
         direction: "ltr",
@@ -422,6 +650,39 @@ export function PdfCustomInkLayer({
           strokeLinejoin="round"
           style={{ pointerEvents: "none" }}
         />
+      )}
+      {marquee && (marquee.width > 2 || marquee.height > 2) && (
+        <g data-testid="pdf-marquee-selection" style={{ pointerEvents: "none" }}>
+          <rect
+            x={marquee.x}
+            y={marquee.y}
+            width={marquee.width}
+            height={marquee.height}
+            fill="rgba(11, 122, 214, 0.08)"
+            stroke="#0b7ad6"
+            strokeWidth={1.5}
+            strokeDasharray="4 2"
+            vectorEffect="non-scaling-stroke"
+          />
+          {[
+            [marquee.x, marquee.y],
+            [marquee.x + marquee.width, marquee.y],
+            [marquee.x, marquee.y + marquee.height],
+            [marquee.x + marquee.width, marquee.y + marquee.height],
+          ].map(([hx, hy], i) => (
+            <rect
+              key={i}
+              x={hx - 4}
+              y={hy - 4}
+              width={8}
+              height={8}
+              fill="#ffffff"
+              stroke="#0b7ad6"
+              strokeWidth={1.5}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        </g>
       )}
     </svg>
   );

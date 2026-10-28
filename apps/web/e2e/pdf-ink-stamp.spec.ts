@@ -109,7 +109,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     const layerPointerEvents = await primaryPane
       .locator('[data-testid="pdf-custom-ink-layer-1"]')
       .evaluate((el) => window.getComputedStyle(el).pointerEvents);
-    expect(layerPointerEvents).toBe("none");
+    expect(layerPointerEvents).toBe("auto");
 
     // 3. Test Stamp tool preserving aspect ratio
     // Create a 200x100 (2:1 aspect ratio) test PNG

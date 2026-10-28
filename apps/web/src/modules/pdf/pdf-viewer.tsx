@@ -374,6 +374,11 @@ function ViewerInner({
     customStrokes,
     handleAddCustomStroke,
     handleMoveCustomStroke,
+    handleMoveCustomStrokes,
+    selectedStrokeIds,
+    setSelectedStrokeIds,
+    handleDeleteSelected,
+    annotationScope,
   } = usePdfAnnotations({
     documentId,
     projectId,
@@ -381,6 +386,45 @@ function ViewerInner({
     currentPage: displayPage || scrollState.currentPage || 1,
     projectServiceOverride,
   });
+
+  // Delete/Backspace shortcut for selected custom annotations and Undo/Redo shortcuts (PDF-3, PDF-4)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const deleted = handleDeleteSelected();
+        if (deleted) {
+          e.preventDefault();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+        if (e.key.toLowerCase() === "z") {
+          e.preventDefault();
+          if (e.shiftKey) {
+            handleRedo();
+          } else {
+            handleUndo();
+          }
+        } else if (e.key.toLowerCase() === "y") {
+          e.preventDefault();
+          handleRedo();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleDeleteSelected, handleUndo, handleRedo]);
 
   // Restore the student's initial page position once the document is layout-ready
   useEffect(() => {
@@ -957,7 +1001,7 @@ function ViewerInner({
                   <PdfTextLayer
                     documentId={documentId}
                     pageIndex={page.pageIndex}
-                    isAnnotating={true}
+                    isAnnotating={activeTool !== "select"}
                   />
                   <SelectionLayer
                     documentId={documentId}
@@ -980,8 +1024,12 @@ function ViewerInner({
                     isActive={activeTool === "ink"}
                     isSelectMode={activeTool === "select"}
                     strokes={customStrokes[page.pageIndex] || []}
+                    selectedStrokeIds={selectedStrokeIds}
+                    onSelectStrokes={setSelectedStrokeIds}
                     onAddStroke={handleAddCustomStroke}
                     onMoveStroke={handleMoveCustomStroke}
+                    onMoveStrokes={handleMoveCustomStrokes}
+                    annotationScope={annotationScope}
                   />
                 </PagePointerProvider>
               )}
