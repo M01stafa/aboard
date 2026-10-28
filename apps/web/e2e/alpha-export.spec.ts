@@ -225,13 +225,13 @@ test.describe(".alpha Project Export (Task 31 / ALPHA-1, ALPHA-5, ALPHA-6, ALPHA
     await expect(pdfsCheckbox).toBeVisible();
     await expect(annotatedCheckbox).toBeVisible();
 
-    // 3. Buttons: Button 1 "Export .alpha Backup" and Button 2 "Export PDFs to Drive"
+    // 3. Buttons: Button 1 "Export .alpha" and Button 2 "Export to Drive"
     const submitBtn = dialog.locator('[data-testid="export-submit-btn"]');
     const driveBtn = dialog.locator('[data-testid="export-drive-btn"]');
     await expect(submitBtn).toBeVisible();
-    await expect(submitBtn).toContainText("Export .alpha Backup");
+    await expect(submitBtn).toContainText("Export .alpha");
     await expect(driveBtn).toBeVisible();
-    await expect(driveBtn).toContainText("Export PDFs to Drive");
+    await expect(driveBtn).toContainText("Export to Drive");
 
     // 4. Cancel closes dialog cleanly
     const cancelBtn = dialog.locator('[data-testid="export-cancel-btn"]');

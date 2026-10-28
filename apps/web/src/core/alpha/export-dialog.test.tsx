@@ -156,7 +156,7 @@ describe("ExportDialog UI (Task 31 / ALPHA-6)", () => {
       '[data-testid="export-drive-btn"]'
     ) as HTMLButtonElement;
     expect(driveBtn).not.toBeNull();
-    expect(driveBtn.textContent).toContain("Export PDFs to Drive");
+    expect(driveBtn.textContent).toContain("Export to Drive");
   });
 
   it("exports flattened PDF to Google Drive when clicking export-drive-btn", async () => {

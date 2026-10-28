@@ -382,6 +382,7 @@ function ViewerInner({
   } = usePdfAnnotations({
     documentId,
     projectId,
+    itemId,
     pdfHash,
     currentPage: displayPage || scrollState.currentPage || 1,
     projectServiceOverride,

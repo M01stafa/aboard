@@ -327,6 +327,14 @@ export async function importAlpha(
     };
   });
 
+  let finalLayout = manifest.layout;
+  if (finalLayout && isCollision) {
+    finalLayout = {
+      ...finalLayout,
+      tabs: finalLayout.tabs.map((oldId) => itemIdMap.get(oldId) || oldId),
+    };
+  }
+
   const finalManifest: AlphaManifest = {
     ...manifest,
     project: {
@@ -336,6 +344,7 @@ export async function importAlpha(
       updatedAt: new Date().toISOString(),
     },
     items: finalItems,
+    layout: finalLayout,
   };
 
   // 4. Extraction with atomic rollback on ANY failure
@@ -411,28 +420,89 @@ export async function importAlpha(
         text
       );
 
+      // If standalone annotations item and ID was remapped, also preserve original origItem.id
+      if (origItem.kind === "annotations" && origItem.id !== targetItem.id) {
+        await provider.writeItem(
+          targetProjectId,
+          {
+            id: origItem.id,
+            projectId: targetProjectId,
+            kind: "annotations",
+            title: targetItem.title,
+            updatedAt: Date.now(),
+          },
+          text
+        );
+      }
+
       // Extract & rewrite linked annotations if present
-      if (origItem.kind === "pdf" && origItem.annotationsPath) {
-        const annoEntry = byPath.get(origItem.annotationsPath);
-        if (annoEntry) {
-          let annoText = await readEntryText(annoEntry);
-          if (annoText) {
-            if (isCollision) {
-              for (const [oldId, newId] of itemIdMap.entries()) {
-                annoText = annoText.replaceAll(`alpha://pdf/${oldId}`, `alpha://pdf/${newId}`);
+      if (origItem.kind === "pdf") {
+        const annoPath =
+          origItem.annotationsPath ||
+          (byPath.has(`annotations/${origItem.id}.json`)
+            ? `annotations/${origItem.id}.json`
+            : origItem.fileKey && byPath.has(`annotations/${origItem.fileKey}.json`)
+            ? `annotations/${origItem.fileKey}.json`
+            : undefined);
+
+        if (annoPath) {
+          const annoEntry = byPath.get(annoPath);
+          if (annoEntry) {
+            let annoText = await readEntryText(annoEntry);
+            if (annoText) {
+              if (isCollision) {
+                for (const [oldId, newId] of itemIdMap.entries()) {
+                  annoText = annoText.replaceAll(`alpha://pdf/${oldId}`, `alpha://pdf/${newId}`);
+                }
+              }
+
+              const targetFileKey =
+                (targetItem as unknown as { fileKey?: string }).fileKey ||
+                (origItem as unknown as { fileKey?: string }).fileKey;
+
+              // 1. Write under targetFileKey (the SHA-256 hash of the PDF, which usePdfAnnotations uses as hashKey)
+              if (targetFileKey) {
+                await provider.writeItem(
+                  targetProjectId,
+                  {
+                    id: targetFileKey,
+                    projectId: targetProjectId,
+                    kind: "annotations",
+                    title: `${targetItem.title} Annotations`,
+                    updatedAt: Date.now(),
+                  },
+                  annoText
+                );
+              }
+
+              // 2. Write under anno-${targetItem.id}
+              await provider.writeItem(
+                targetProjectId,
+                {
+                  id: `anno-${targetItem.id}`,
+                  projectId: targetProjectId,
+                  kind: "annotations",
+                  title: `${targetItem.title} Annotations`,
+                  updatedAt: Date.now(),
+                },
+                annoText
+              );
+
+              // 3. If ID was remapped due to collision, also write under original origItem.fileKey and anno-${origItem.id}
+              if (origItem.id !== targetItem.id) {
+                await provider.writeItem(
+                  targetProjectId,
+                  {
+                    id: `anno-${origItem.id}`,
+                    projectId: targetProjectId,
+                    kind: "annotations",
+                    title: `${targetItem.title} Annotations`,
+                    updatedAt: Date.now(),
+                  },
+                  annoText
+                );
               }
             }
-            await provider.writeItem(
-              targetProjectId,
-              {
-                id: `anno-${targetItem.id}`,
-                projectId: targetProjectId,
-                kind: "annotations",
-                title: `${targetItem.title} Annotations`,
-                updatedAt: Date.now(),
-              },
-              annoText
-            );
           }
         }
       }

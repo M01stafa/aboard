@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { bus } from "@/core/bus";
 import { useI18n } from "@/i18n/provider";
 import { exportAlpha, ExportCapExceededError, safeFileName } from "./export";
 import { projectService as defaultProjectService, type ProjectService } from "@/core/storage";
@@ -178,7 +179,12 @@ export function ExportDialog({
     setError(null);
     setErrorHint(null);
 
+    const ps = projectService ?? defaultProjectService;
+
     try {
+      bus.emit("workspace:flush", {});
+      await ps.flushNow?.();
+
       await exportAlpha(projectId, {
         includePdfs,
         includeAnnotated,
@@ -214,6 +220,7 @@ export function ExportDialog({
     const ps = projectService ?? defaultProjectService;
 
     try {
+      bus.emit("workspace:flush", {});
       // 1. Flush save queue to ensure latest annotations are persisted
       await ps.flushNow?.();
 
@@ -315,7 +322,7 @@ export function ExportDialog({
         data-testid="alpha-export-dialog"
         style={{
           width: "100%",
-          maxWidth: "calc(var(--space-8) * 8.5)",
+          maxWidth: "calc(var(--space-8) * 9)",
           backgroundColor: "var(--bg-surface)",
           border: "1px solid var(--border-card)",
           borderRadius: "var(--radius-md)",
@@ -630,6 +637,7 @@ export function ExportDialog({
             justifyContent: "space-between",
             gap: "var(--space-2)",
             marginBlockStart: "var(--space-1)",
+            flexWrap: "nowrap",
           }}
         >
           <button
@@ -647,12 +655,14 @@ export function ExportDialog({
               fontSize: "0.875rem",
               fontWeight: 500,
               cursor: isExporting || isExportingDrive ? "not-allowed" : "pointer",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             {t("export.cancel")}
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexShrink: 0 }}>
             {/* Button 2: Export PDFs to Drive */}
             <button
               type="button"
@@ -683,6 +693,8 @@ export function ExportDialog({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "var(--space-1)",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
                 transition: "background-color 150ms ease, opacity 150ms ease",
               }}
             >
@@ -696,7 +708,7 @@ export function ExportDialog({
               </span>
             </button>
 
-            {/* Button 1: Export .alpha Backup */}
+            {/* Button 1: Export .alpha */}
             <button
               ref={exportBtnRef}
               type="button"
@@ -716,6 +728,8 @@ export function ExportDialog({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "var(--space-1)",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
                 transition: "opacity 150ms ease",
               }}
             >

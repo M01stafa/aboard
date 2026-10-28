@@ -200,7 +200,27 @@ export class ProjectService {
     fileKey?: string
   ): Promise<void> {
     try {
-      const manifest = await this.provider.loadManifest(projectId);
+      let manifest: AlphaManifest;
+      try {
+        manifest = await this.provider.loadManifest(projectId);
+      } catch {
+        const now = new Date().toISOString();
+        manifest = {
+          format: "alpha-project",
+          formatVersion: 1,
+          app: { name: "Aboard", version: "0.1.0" },
+          project: {
+            id: projectId,
+            title: title || "Project",
+            createdAt: now,
+            updatedAt: now,
+          },
+          items: [],
+          files: [],
+          layout: { tabs: [itemId], split: "none" },
+        };
+      }
+
       const exists = manifest.items.some((i) => i.id === itemId);
       if (!exists) {
         const ext = kind === "circuit" ? "txt" : "json";
@@ -229,9 +249,13 @@ export class ProjectService {
             path: itemPath,
           });
         }
-        manifest.project.updatedAt = new Date().toISOString();
-        await this.provider.saveManifest(manifest);
       }
+
+      if (!manifest.layout?.tabs || manifest.layout.tabs.length === 0) {
+        manifest.layout = { tabs: [itemId], split: "none" };
+      }
+      manifest.project.updatedAt = new Date().toISOString();
+      await this.provider.saveManifest(manifest);
     } catch {
       // Manifest update is non-fatal
     }
@@ -355,6 +379,8 @@ export class ProjectService {
 
   /**
    * Reads an annotations item payload, or returns null if not found.
+   * Tolerant lookup: checks itemId, anno-itemId prefix, manifest alternate key (fileKey vs id),
+   * and Dexie items table.
    */
   async readAnnotations(projectId: string, itemId: string): Promise<string | null>;
   async readAnnotations(itemId: string): Promise<string | null>;
@@ -362,7 +388,52 @@ export class ProjectService {
     const projectId = arg2 !== undefined ? arg1 : (this.activeProjectId ?? "default");
     const itemId = arg2 !== undefined ? arg2 : arg1;
     try {
-      return await this.readItem(projectId, itemId);
+      // 1. Direct lookup
+      let content = await this.readItem(projectId, itemId).catch(() => null);
+      if (content && content.trim().length > 0) return content;
+
+      // 2. Fallback: anno- prefix
+      content = await this.readItem(projectId, `anno-${itemId}`).catch(() => null);
+      if (content && content.trim().length > 0) return content;
+
+      // 3. Fallback: check manifest for alternate key (fileKey <-> id)
+      const manifest = await this.openProject(projectId).catch(() => null);
+      if (manifest?.items) {
+        const matchingPdf = manifest.items.find(
+          (it) => it.kind === "pdf" && (it.id === itemId || (it as { fileKey?: string }).fileKey === itemId)
+        );
+        if (matchingPdf && matchingPdf.kind === "pdf") {
+          const alternateKey = matchingPdf.id === itemId ? matchingPdf.fileKey : matchingPdf.id;
+          if (alternateKey) {
+            content = await this.readItem(projectId, alternateKey).catch(() => null);
+            if (content && content.trim().length > 0) return content;
+            content = await this.readItem(projectId, `anno-${alternateKey}`).catch(() => null);
+            if (content && content.trim().length > 0) return content;
+          }
+        }
+      }
+
+      // 4. Fallback: check Dexie directly if db available
+      try {
+        const { getDb } = await import("@/core/db");
+        const db = getDb();
+        if (db) {
+          const directMatch = await db.items.where({ projectId, id: itemId }).first();
+          if (directMatch) {
+            const raw = await this.readItem(projectId, directMatch.id).catch(() => null);
+            if (raw && raw.trim().length > 0) return raw;
+          }
+          const annoMatch = await db.items.where({ projectId, id: `anno-${itemId}` }).first();
+          if (annoMatch) {
+            const raw = await this.readItem(projectId, annoMatch.id).catch(() => null);
+            if (raw && raw.trim().length > 0) return raw;
+          }
+        }
+      } catch {
+        // Non-fatal
+      }
+
+      return null;
     } catch {
       return null;
     }
@@ -378,23 +449,24 @@ export class ProjectService {
     payload: string,
     title?: string
   ): Promise<void> {
+    let fileKey = "";
+    try {
+      fileKey = (JSON.parse(payload) as { fileKey?: string })?.fileKey || "";
+    } catch {
+      // ignore
+    }
     const item: ItemRecord = {
       id: itemId,
       projectId,
       kind: "pdf",
       title: title ?? "PDF Document",
+      fileKey,
       updatedAt: Date.now(),
     };
     if (this.saveQueue) {
       this.saveQueue.enqueue(projectId, item, payload);
     } else {
       await this.provider.writeItem(projectId, item, payload);
-    }
-    let fileKey = "";
-    try {
-      fileKey = (JSON.parse(payload) as { fileKey?: string })?.fileKey || "";
-    } catch {
-      // ignore
     }
     await this.ensureItemInManifest(projectId, itemId, "pdf", title, fileKey);
   }
@@ -706,12 +778,18 @@ export class ProjectService {
                 : "annotations";
             const itemPath = `${folder}/${item.id}.${ext}`;
             if (item.kind === "pdf") {
+              let fKey = (item as unknown as { fileKey?: string }).fileKey || "";
+              if (!fKey && item.payload) {
+                try {
+                  fKey = (JSON.parse(item.payload) as { fileKey?: string })?.fileKey || "";
+                } catch {}
+              }
               updatedItems.push({
                 id: item.id,
                 kind: "pdf",
                 title: item.title || "PDF Document",
                 path: itemPath,
-                fileKey: (item as unknown as { fileKey?: string }).fileKey || "",
+                fileKey: fKey,
               });
             } else {
               updatedItems.push({
@@ -738,6 +816,21 @@ export class ProjectService {
       });
     }
 
+    if (!manifest.layout?.tabs || manifest.layout.tabs.length === 0) {
+      const toolItems = updatedItems.filter(
+        (i) => i.kind === "board" || i.kind === "pdf" || i.kind === "circuit"
+      );
+      if (toolItems.length > 0) {
+        manifest.layout = {
+          tabs: [toolItems[0].id],
+          split: "none",
+        };
+      }
+    }
+
+    const files: ProjectBundle["files"] = [];
+    const manifestFiles: AlphaManifest["files"] = [];
+
     for (let i = 0; i < updatedItems.length; i++) {
       const it = updatedItems[i];
       try {
@@ -753,13 +846,61 @@ export class ProjectService {
         totalBytes += new TextEncoder().encode(text).length;
 
         // If PDF, check if annotations exist
-        if (it.kind === "pdf" && it.fileKey) {
-          const annoJson = await this.readAnnotations(projectId, it.fileKey).catch(() => "");
+        if (it.kind === "pdf") {
+          const annoJson =
+            (it.fileKey ? await this.readAnnotations(projectId, it.fileKey).catch(() => "") : "") ||
+            (await this.readAnnotations(projectId, it.id).catch(() => "")) ||
+            "";
           if (annoJson && annoJson.trim().length > 0) {
             const annoPath = `annotations/${it.id}.json`;
             it.annotationsPath = annoPath;
-            textEntries.push({ path: annoPath, text: annoJson });
-            totalBytes += new TextEncoder().encode(annoJson).length;
+            if (!textEntries.some((e) => e.path === annoPath)) {
+              textEntries.push({ path: annoPath, text: annoJson });
+              totalBytes += new TextEncoder().encode(annoJson).length;
+            }
+
+            if (options?.includeAnnotated && it.fileKey) {
+              try {
+                const rawBlob = await this.getFile(projectId, it.fileKey);
+                if (rawBlob) {
+                  const pdfBuffer = await rawBlob.arrayBuffer();
+                  const { burnAnnotationsWithPdfLib } = await import("@/modules/pdf/page-operations");
+                  const burnedBytes = await burnAnnotationsWithPdfLib(
+                    pdfBuffer,
+                    annoJson,
+                    projectId,
+                    this
+                  );
+                  const annotatedBlob = new Blob([burnedBytes.buffer as ArrayBuffer], { type: "application/pdf" });
+                  const { computeBlobSha256 } = await import("@/core/storage/sha256");
+                  const annotatedHash = await computeBlobSha256(annotatedBlob);
+                  const annotatedPath = `files/${annotatedHash}.pdf`;
+                  const annoFileName = `${(it.title || "document").replace(/\.pdf$/i, "")}-annotated.pdf`;
+
+                  files.push({
+                    key: annotatedHash,
+                    path: annotatedPath,
+                    mime: "application/pdf",
+                    size: annotatedBlob.size,
+                    name: annoFileName,
+                    getBlob: async () => annotatedBlob,
+                  });
+
+                  manifestFiles.push({
+                    key: annotatedHash,
+                    path: annotatedPath,
+                    mime: "application/pdf",
+                    size: annotatedBlob.size,
+                    name: annoFileName,
+                    sha256: annotatedHash,
+                  });
+
+                  totalBytes += annotatedBlob.size;
+                }
+              } catch (err) {
+                console.warn("[ProjectService.collect] Failed burning annotated copy:", err);
+              }
+            }
           }
         }
       } catch (err) {
@@ -769,8 +910,6 @@ export class ProjectService {
 
     // 2. Collect binary files (PDFs, images, stamps)
     const storedFiles = await this.provider.listFiles(projectId);
-    const files: ProjectBundle["files"] = [];
-    const manifestFiles: AlphaManifest["files"] = [];
 
     const includePdfs = options?.includePdfs !== false; // default true
 

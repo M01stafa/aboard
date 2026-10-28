@@ -9,6 +9,8 @@ export interface ItemRecord {
   kind: ItemKind;
   title: string;
   updatedAt: number;
+  fileKey?: string;
+  payload?: string;
 }
 
 export interface AlphaManifest {

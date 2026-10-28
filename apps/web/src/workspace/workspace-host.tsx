@@ -166,6 +166,17 @@ export function WorkspaceHost({
     [projectId]
   );
 
+  // Persist initial layout on mount so fresh tabs (e.g. from ?kind=pdf) are recorded in manifest
+  useEffect(() => {
+    if (projectId && projectId !== "demo") {
+      void defaultProjectService.saveLayout(projectId, {
+        tabs: layout.tabs.map((t) => t.itemId),
+        split: layout.split,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
   // Flushes in-flight debounced saves across all tool panes and commits SaveQueue to IndexedDB
   const handleLeaveWorkspace = useCallback(async () => {
     try {

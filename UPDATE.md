@@ -1961,3 +1961,26 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Server verified: HTTP 200 on `http://localhost:3000`.
 **Related:** ALPHA-1, ALPHA-6, ALPHA-7, PDF-5, STORE-2
 **Open:** none.
+
+## 2026-10-28 — Fix Export Dialog Button Layout and Debug .alpha Import Annotations Bug
+**Request:** Shorten Export Dialog button labels ("Export .alpha Backup" -> "Export .alpha", "Export PDFs to Drive" -> "Export to Drive" in English and Arabic), prevent button label wrapping with `white-space: nowrap` and clean flex layout, and fix the bug where importing an `.alpha` file back into the app opened the PDF clean without custom annotations (ink strokes, stamps, highlights). Ensure the original PDF is loaded and custom annotations from JSON are applied. Verify with Playwright, commit locally (do NOT push), and restart server.
+**Changes:**
+- `apps/web/src/core/alpha/export-dialog.tsx` (changed): shortened button labels; applied `whiteSpace: "nowrap"` and `flexShrink: 0` to Cancel, Export to Drive, and Export .alpha buttons; set container `flexWrap: "nowrap"`; increased modal `maxWidth` to `calc(var(--space-8) * 9)` (576px, multiple of 8); added `bus.emit("workspace:flush", {})` and `await ps.flushNow?.()` prior to exporting to guarantee pending in-flight annotations and queue writes are committed before export archive creation.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): updated button strings to "Export .alpha" ("تصدير .alpha") and "Export to Drive" ("تصدير إلى Drive").
+- `apps/web/src/core/alpha/import.ts` (changed): fixed critical annotation key bug during `.alpha` import; instead of writing annotations under `id: anno-${targetItem.id}` or overwriting `targetItem.id`, saved annotations under `targetFileKey` (the SHA-256 hash of the PDF file) and `anno-${targetItem.id}`, leaving `targetItem.id` intact for the PDF document metadata descriptor (`kind: "pdf"`); remapped `manifest.layout.tabs` when collision remapping occurs so imported projects restore the active PDF tab correctly.
+- `apps/web/src/core/storage/project-service.ts` (changed): enhanced `readAnnotations` with fallback resolution across `fileKey`, `anno-${itemId}`, manifest alternate keys, and Dexie; in `ensureItemInManifest`, automatically created and persisted project manifest with initial layout if not already created; in `savePdf`, attached `fileKey` to the item record and ensured `manifest.layout` reflects the opened item; in `collect()`, supported burning extra annotated copies when `includeAnnotated` is true while keeping the primary PDF item linked to the original clean PDF.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts` & `pdf-viewer.tsx` (changed): passed `itemId` to `usePdfAnnotations`; saved annotations under `hashKey` and `anno-${itemId}`; in `restore()`, checked `hashKey`, `anno-${itemId}`, and `pdfHash`.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): persisted initial layout on mount so newly opened module tabs are immediately recorded in the manifest.
+- `apps/web/src/core/storage/types.ts` (changed): added optional `fileKey` and `payload` to `ItemRecord`.
+- `apps/web/e2e/alpha-import.spec.ts` (changed): added E2E test verifying round-trip persistence of custom drawing annotations (drawing ink on PDF, exporting `.alpha`, wiping IndexedDB, importing `.alpha`, asserting stroke is restored and editable with Select tool).
+- `apps/web/e2e/alpha-export.spec.ts` & `apps/web/src/core/alpha/export-dialog.test.tsx` (changed): updated assertions to match the shortened button labels.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (336/336 unit tests passing across 45 test files).
+- `pnpm test:e2e`: PASS (all 6 Playwright tests in `alpha-export.spec.ts`, `alpha-import.spec.ts`, and `pdf-ink-objects.spec.ts` passing).
+- `pnpm ci:security`: PASS (Gitleaks clean, audit clean, .next bundle scan clean).
+- Dev server: running outside sandbox, verified HTTP 200 on `http://localhost:3000`.
+**Related:** ALPHA-1, ALPHA-2, ALPHA-3, ALPHA-6, PDF-3, PDF-4, PDF-5
+**Open:** none.

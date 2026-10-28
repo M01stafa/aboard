@@ -23,6 +23,7 @@ import type { CustomInkStroke, CustomInkTransform } from "./pdf-custom-ink-layer
 export interface UsePdfAnnotationsOptions {
   documentId: string;
   projectId?: string;
+  itemId?: string;
   pdfHash?: string;
   currentPage: number;
   projectServiceOverride?: ProjectService;
@@ -56,6 +57,7 @@ export interface UsePdfAnnotationsResult {
 export function usePdfAnnotations({
   documentId,
   projectId = "default",
+  itemId,
   pdfHash,
   currentPage,
   projectServiceOverride,
@@ -127,6 +129,9 @@ export function usePdfAnnotations({
         customStrokesRef.current
       );
       await ps.saveAnnotations(projectId, hashKey, serialized);
+      if (itemId) {
+        await ps.saveAnnotations(projectId, `anno-${itemId}`, serialized);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (
@@ -141,7 +146,7 @@ export function usePdfAnnotations({
       }
       console.warn("[usePdfAnnotations] Flush annotations warning:", msg);
     }
-  }, [annotationScope, projectId, hashKey, ps]);
+  }, [annotationScope, projectId, hashKey, itemId, ps]);
 
   // Debounced save through ProjectService & SaveQueue (coalesces rapid drawing strokes)
   const triggerDebouncedSave = useCallback(() => {
@@ -164,7 +169,13 @@ export function usePdfAnnotations({
 
     async function restore() {
       try {
-        const savedJson = await ps.readAnnotations(projectId, hashKey);
+        let savedJson = await ps.readAnnotations(projectId, hashKey);
+        if (!savedJson && itemId) {
+          savedJson = await ps.readAnnotations(projectId, `anno-${itemId}`);
+        }
+        if (!savedJson && pdfHash && pdfHash !== hashKey) {
+          savedJson = await ps.readAnnotations(projectId, pdfHash);
+        }
         if (!savedJson || savedJson.trim() === "" || savedJson === "[]") {
           return;
         }
@@ -188,7 +199,7 @@ export function usePdfAnnotations({
     }
 
     restore();
-  }, [annotationScope, projectId, hashKey, ps]);
+  }, [annotationScope, projectId, hashKey, itemId, pdfHash, ps]);
 
   // Listen to annotation change events (create, update, delete)
   useEffect(() => {
