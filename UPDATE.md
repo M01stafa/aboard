@@ -1887,3 +1887,25 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle scan clean).
 **Related:** PDF-3, PDF-4
 **Open:** none.
+
+## 2026-10-28 — Eradicate EmbedPDF Ink Tool and Build Custom PDF Drawing Layer
+**Request:** Completely eradicate the EmbedPDF native ink/draw tool from the codebase and build a custom, precise SVG drawing layer from scratch that overlays the PDF page directly with exact 1:1 mouse alignment; integrate with existing save/load annotation logic and ProjectService; support unified undo/redo and burn strokes into exported PDF with @cantoo/pdf-lib; verify 1:1 alignment via Playwright test; restart local dev server and commit locally (do NOT push).
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx` (created): built custom SVG drawing layer overlaying the PDF page directly with sub-pixel mouse pointer capture, quadratic Bezier spline rendering (`pointsToSvgPath`), automatic SVG `viewBox` scaling with document zoom, `pointer-events: auto` during drawing, and `pointer-events: none` during other tool modes. Added `compositeCustomStrokesOnBlob` for "Send to Whiteboard" integration.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts` (changed): eradicated EmbedPDF native ink tool activation (`annotationScope.setActiveTool(null)` when tool is ink/select); added state and undo/redo stacks for custom ink strokes; unified undo/redo so toolbar buttons seamlessly undo and redo custom ink strokes; restored custom strokes from saved JSON.
+- `apps/web/src/modules/pdf/annotation-storage.ts` (changed): updated `serializeAnnotations` and `deserializeAnnotations` with payload version 2 to store and load `customInkStrokes` alongside existing EmbedPDF annotations; added `extractCustomInkStrokes`.
+- `apps/web/src/modules/pdf/page-operations.ts` (changed): implemented `drawCustomInkStrokesOnDoc` and `burnCustomInkOnPdfBytes` using `@cantoo/pdf-lib` to burn custom ink strokes into PDF page content streams on download/export with full hex color support.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): wired `<PdfCustomInkLayer>` inside `<PagePointerProvider>` on each page in `<Scroller renderPage={(page) => ...}>`; merged custom ink burning during download; composited custom ink when sending page to whiteboard.
+- `scripts/check-spacing.mjs` (changed): exempted `pdf-custom-ink-layer.tsx` per `.agents/rules/spacing.md` §1 (rendered PDF and canvas content).
+- `apps/web/e2e/pdf-ink-stamp.spec.ts` & `apps/web/e2e/pdf-annotations.spec.ts` (changed): updated Playwright tests to verify 1:1 drawing alignment (< 2px offset) and custom undo/redo.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (333/333 unit tests passing across 45 test files).
+- `pnpm test:e2e e2e/pdf-ink-stamp.spec.ts`: PASS (1/1 Playwright test passing, 5.2s).
+- `pnpm test:e2e e2e/pdf-annotations.spec.ts`: PASS (2/2 Playwright tests passing, 14.3s).
+- `pnpm test:e2e e2e/pdf-module.spec.ts e2e/pdf-page-operations.spec.ts`: PASS (2/2 Playwright tests passing, 6.6s).
+- Server verified: HTTP 200 on `http://localhost:3000`.
+**Related:** PDF-3, PDF-4, PDF-5, INT-1
+**Open:** none.

@@ -13,10 +13,12 @@ import {
 import {
   serializeAnnotations,
   deserializeAnnotations,
+  extractCustomInkStrokes,
 } from "./annotation-storage";
 import { processStampImage } from "./image-stamp-utils";
 import { stampBlobUrlCache } from "./custom-stamp-renderer";
 import type { AnnotationToolType } from "./pdf-toolbar";
+import type { CustomInkStroke } from "./pdf-custom-ink-layer";
 
 export interface UsePdfAnnotationsOptions {
   documentId: string;
@@ -34,6 +36,8 @@ export interface UsePdfAnnotationsResult {
   handleUndo: () => void;
   handleRedo: () => void;
   handleAddStamp: (file: File) => Promise<void>;
+  customStrokes: Record<number, CustomInkStroke[]>;
+  handleAddCustomStroke: (pageIndex: number, stroke: CustomInkStroke) => void;
 }
 
 export function usePdfAnnotations({
@@ -56,6 +60,15 @@ export function usePdfAnnotations({
   const [activeTool, setActiveToolState] = useState<AnnotationToolType>("select");
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+
+  // Custom ink state (isolated completely from EmbedPDF to guarantee 1:1 mouse alignment)
+  const [customStrokes, setCustomStrokes] = useState<Record<number, CustomInkStroke[]>>({});
+  const customStrokesRef = useRef<Record<number, CustomInkStroke[]>>({});
+  useEffect(() => {
+    customStrokesRef.current = customStrokes;
+  }, [customStrokes]);
+  const customUndoStackRef = useRef<Array<Record<number, CustomInkStroke[]>>>([]);
+  const customRedoStackRef = useRef<Array<Record<number, CustomInkStroke[]>>>([]);
 
   const isRestoringRef = useRef(false);
   const hasRestoredRef = useRef(false);
@@ -88,7 +101,13 @@ export function usePdfAnnotations({
         });
       });
 
-      const serialized = await serializeAnnotations(projectId, hashKey, items, ps);
+      const serialized = await serializeAnnotations(
+        projectId,
+        hashKey,
+        items,
+        ps,
+        customStrokesRef.current
+      );
       await ps.saveAnnotations(projectId, hashKey, serialized);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -132,6 +151,10 @@ export function usePdfAnnotations({
           return;
         }
 
+        const restoredStrokes = extractCustomInkStrokes(savedJson);
+        setCustomStrokes(restoredStrokes);
+        customStrokesRef.current = restoredStrokes;
+
         isRestoringRef.current = true;
         const transferItems = await deserializeAnnotations(projectId, savedJson, ps);
         if (transferItems.length > 0) {
@@ -173,10 +196,10 @@ export function usePdfAnnotations({
 
     const unsub = annotationScope.onActiveToolChange((tool) => {
       if (!tool) {
-        setActiveToolState("select");
+        // If we are currently in custom ink draw mode, do NOT let EmbedPDF reset us to select
+        setActiveToolState((prev) => (prev === "ink" ? "ink" : "select"));
       } else if (
         tool.id === "highlight" ||
-        tool.id === "ink" ||
         tool.id === "freeText" ||
         tool.id === "stamp"
       ) {
@@ -193,14 +216,16 @@ export function usePdfAnnotations({
 
   // Track undo / redo capabilities and trigger save on undo/redo actions
   useEffect(() => {
-    if (!historyScope) return;
-
     const updateHistory = () => {
-      setCanUndo(historyScope.canUndo());
-      setCanRedo(historyScope.canRedo());
+      const hasCustomUndo = customUndoStackRef.current.length > 0;
+      const hasCustomRedo = customRedoStackRef.current.length > 0;
+      setCanUndo(hasCustomUndo || (historyScope ? historyScope.canUndo() : false));
+      setCanRedo(hasCustomRedo || (historyScope ? historyScope.canRedo() : false));
     };
 
     updateHistory();
+
+    if (!historyScope) return;
 
     const unsub = historyScope.onHistoryChange(() => {
       updateHistory();
@@ -214,7 +239,7 @@ export function usePdfAnnotations({
         unsub();
       }
     };
-  }, [historyScope, triggerDebouncedSave]);
+  }, [historyScope, customStrokes, triggerDebouncedSave]);
 
   // Flush pending annotations on workspace:flush event (e.g. user navigating back to launcher)
   useEffect(() => {
@@ -247,12 +272,11 @@ export function usePdfAnnotations({
         annotationScope.deselectAnnotation();
       }
 
-      if (tool === "select") {
+      if (tool === "select" || tool === "ink") {
+        // Native EmbedPDF ink is completely eradicated; keep native tool inactive
         annotationScope.setActiveTool(null);
       } else if (tool === "highlight") {
         annotationScope.setActiveTool("highlight");
-      } else if (tool === "ink") {
-        annotationScope.setActiveTool("ink");
       } else if (tool === "freeText") {
         annotationScope.setActiveTool("freeText");
       } else if (tool === "stamp") {
@@ -262,17 +286,57 @@ export function usePdfAnnotations({
     [annotationScope]
   );
 
+  const handleAddCustomStroke = useCallback(
+    (pageIndex: number, stroke: CustomInkStroke) => {
+      setCustomStrokes((prev) => {
+        customUndoStackRef.current.push(prev);
+        customRedoStackRef.current = [];
+        const pageStrokes = prev[pageIndex] || [];
+        const next = {
+          ...prev,
+          [pageIndex]: [...pageStrokes, stroke],
+        };
+        customStrokesRef.current = next;
+        return next;
+      });
+      setCanUndo(true);
+      setCanRedo(false);
+      triggerDebouncedSave();
+    },
+    [triggerDebouncedSave]
+  );
+
   const handleUndo = useCallback(() => {
+    if (customUndoStackRef.current.length > 0) {
+      const prev = customUndoStackRef.current.pop()!;
+      customRedoStackRef.current.push(customStrokesRef.current);
+      setCustomStrokes(prev);
+      customStrokesRef.current = prev;
+      setCanUndo(customUndoStackRef.current.length > 0 || (historyScope ? historyScope.canUndo() : false));
+      setCanRedo(true);
+      triggerDebouncedSave();
+      return;
+    }
     if (historyScope && historyScope.canUndo()) {
       historyScope.undo();
     }
-  }, [historyScope]);
+  }, [historyScope, triggerDebouncedSave]);
 
   const handleRedo = useCallback(() => {
+    if (customRedoStackRef.current.length > 0) {
+      const next = customRedoStackRef.current.pop()!;
+      customUndoStackRef.current.push(customStrokesRef.current);
+      setCustomStrokes(next);
+      customStrokesRef.current = next;
+      setCanUndo(true);
+      setCanRedo(customRedoStackRef.current.length > 0 || (historyScope ? historyScope.canRedo() : false));
+      triggerDebouncedSave();
+      return;
+    }
     if (historyScope && historyScope.canRedo()) {
       historyScope.redo();
     }
-  }, [historyScope]);
+  }, [historyScope, triggerDebouncedSave]);
 
   const handleAddStamp = useCallback(
     async (file: File) => {
@@ -323,9 +387,10 @@ export function usePdfAnnotations({
       (window as unknown as { __aboard_pdfAnnotations?: unknown }).__aboard_pdfAnnotations = {
         scope: annotationScope,
         history: historyScope,
+        customStrokes: customStrokesRef.current,
       };
     }
-  }, [annotationScope, historyScope]);
+  }, [annotationScope, historyScope, customStrokes]);
 
   return {
     activeTool,
@@ -335,5 +400,7 @@ export function usePdfAnnotations({
     handleUndo,
     handleRedo,
     handleAddStamp,
+    customStrokes,
+    handleAddCustomStroke,
   };
 }

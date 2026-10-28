@@ -45,12 +45,14 @@ import { useI18n } from "@/i18n/provider";
 import { PdfToolbar } from "./pdf-toolbar";
 import { PdfFloatingToolbar } from "./pdf-floating-toolbar";
 import { usePdfAnnotations } from "./use-pdf-annotations";
+import { PdfCustomInkLayer, compositeCustomStrokesOnBlob } from "./pdf-custom-ink-layer";
 import {
   rotatePage,
   deletePage,
   reorderPages,
   insertImagePage,
   burnAnnotationsWithPdfLib,
+  burnCustomInkOnPdfBytes,
 } from "./page-operations";
 import {
   executeStirlingTool,
@@ -330,6 +332,10 @@ function ViewerInner({
       });
 
       let pageBlob = await task.toPromise();
+      if (customStrokes[pageIndex] && customStrokes[pageIndex].length > 0) {
+        const { width: origW, height: origH } = await getImageDimensions(pageBlob);
+        pageBlob = await compositeCustomStrokesOnBlob(pageBlob, customStrokes[pageIndex], origW, origH);
+      }
       if (pageBlob.size > MAX_ALLOWED_FILE_BYTES) {
         pageBlob = await compressImageIfNeeded(pageBlob);
       }
@@ -365,6 +371,8 @@ function ViewerInner({
     handleUndo,
     handleRedo,
     handleAddStamp,
+    customStrokes,
+    handleAddCustomStroke,
   } = usePdfAnnotations({
     documentId,
     projectId,
@@ -643,6 +651,8 @@ function ViewerInner({
         const task = exportScope.saveAsCopy();
         const arrayBuffer = await task.toPromise();
         pdfBytes = new Uint8Array(arrayBuffer);
+        // Burn custom ink strokes onto the exported PDF
+        pdfBytes = await burnCustomInkOnPdfBytes(pdfBytes, customStrokes);
       } else {
         // 2. Standalone burning fallback using @cantoo/pdf-lib
         const curBuffer = await blob.arrayBuffer();
@@ -961,6 +971,14 @@ function ViewerInner({
                       pointerEvents: "none",
                       direction: "ltr",
                     }}
+                  />
+                  <PdfCustomInkLayer
+                    pageIndex={page.pageIndex}
+                    pageWidth={page.rotatedWidth || page.width}
+                    pageHeight={page.rotatedHeight || page.height}
+                    isActive={activeTool === "ink"}
+                    strokes={customStrokes[page.pageIndex] || []}
+                    onAddStroke={handleAddCustomStroke}
                   />
                 </PagePointerProvider>
               )}

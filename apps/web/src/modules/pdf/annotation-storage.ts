@@ -2,6 +2,7 @@ import { computeBlobSha256 } from "@/core/storage/sha256";
 import type { ProjectService } from "@/core/storage/project-service";
 import type { PdfAnnotationObject } from "@embedpdf/models";
 import type { AnnotationTransferItem } from "@embedpdf/plugin-annotation";
+import type { CustomInkStroke } from "./pdf-custom-ink-layer";
 
 export interface SerializedAnnotationItem {
   annotation: PdfAnnotationObject;
@@ -12,6 +13,12 @@ export interface SerializedAnnotationItem {
     data?: unknown;
     [key: string]: unknown;
   };
+}
+
+export interface SerializedAnnotationsPayload {
+  version?: number;
+  items: SerializedAnnotationItem[];
+  customInkStrokes?: Record<number, CustomInkStroke[]>;
 }
 
 /**
@@ -29,7 +36,8 @@ export async function serializeAnnotations(
   projectId: string,
   _pdfHash: string,
   items: AnnotationTransferItem[],
-  projectService: ProjectService
+  projectService: ProjectService,
+  customInkStrokes?: Record<number, CustomInkStroke[]>
 ): Promise<string> {
   const serializedItems: SerializedAnnotationItem[] = [];
 
@@ -87,6 +95,15 @@ export async function serializeAnnotations(
     });
   }
 
+  if (customInkStrokes && Object.values(customInkStrokes).some((arr) => arr.length > 0)) {
+    const payload: SerializedAnnotationsPayload = {
+      version: 2,
+      items: serializedItems,
+      customInkStrokes,
+    };
+    return JSON.stringify(payload);
+  }
+
   return JSON.stringify(serializedItems);
 }
 
@@ -104,7 +121,7 @@ export async function deserializeAnnotations(
     return [];
   }
 
-  let parsed: SerializedAnnotationItem[];
+  let parsed: unknown;
   try {
     parsed = JSON.parse(json);
   } catch (err) {
@@ -112,13 +129,23 @@ export async function deserializeAnnotations(
     return [];
   }
 
-  if (!Array.isArray(parsed)) {
+  let rawItems: SerializedAnnotationItem[] = [];
+  if (Array.isArray(parsed)) {
+    rawItems = parsed;
+  } else if (
+    parsed &&
+    typeof parsed === "object" &&
+    "items" in parsed &&
+    Array.isArray((parsed as SerializedAnnotationsPayload).items)
+  ) {
+    rawItems = (parsed as SerializedAnnotationsPayload).items;
+  } else {
     return [];
   }
 
   const restoredItems: AnnotationTransferItem[] = [];
 
-  for (const item of parsed) {
+  for (const item of rawItems) {
     const annotation = { ...item.annotation };
     let ctx = item.ctx ? { ...item.ctx } : undefined;
 
@@ -152,4 +179,18 @@ export async function deserializeAnnotations(
   }
 
   return restoredItems;
+}
+
+/**
+ * Extracts custom ink strokes from serialized JSON, returning an empty map if none found.
+ */
+export function extractCustomInkStrokes(json: string): Record<number, CustomInkStroke[]> {
+  if (!json || json.trim() === "") return {};
+  try {
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed === "object" && "customInkStrokes" in parsed) {
+      return (parsed as SerializedAnnotationsPayload).customInkStrokes || {};
+    }
+  } catch {}
+  return {};
 }

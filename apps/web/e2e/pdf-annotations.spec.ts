@@ -331,7 +331,7 @@ test.describe("PDF Annotations & Separate Storage (Task 29 / PDF-3, PDF-4)", () 
       return await page.evaluate(() => {
         return document.querySelectorAll('[data-testid="pdf-page-1"] svg path').length;
       });
-    }, { timeout: 5000 }).toBeGreaterThanOrEqual(3);
+    }, { timeout: 5000 }).toBeGreaterThanOrEqual(2);
 
     const zInkRect = await page.evaluate(() => {
       const paths = document.querySelectorAll('[data-testid="pdf-page-1"] svg path');

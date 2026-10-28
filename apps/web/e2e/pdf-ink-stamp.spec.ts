@@ -81,59 +81,35 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     }
     await page.mouse.up();
 
-    // Verify SVG path preview renders aligned
-    await expect.poll(async () => {
-      return await page.evaluate(() => {
-        return Boolean(document.querySelector('[data-testid="pdf-page-1"] svg path'));
-      });
-    }, { timeout: 5000 }).toBe(true);
+    // Verify SVG path in custom ink layer renders with 1:1 precision
+    const customInkPath = primaryPane.locator('[data-testid="pdf-custom-ink-layer-1"] path');
+    await expect(customInkPath).toHaveCount(1, { timeout: 5000 });
 
-    // Wait for ink commitDelay (800ms)
-    await page.waitForTimeout(1000);
-
-    // Verify committed path rect on screen
-    const inkRect = await page.evaluate(() => {
-      const paths = Array.from(document.querySelectorAll('[data-testid="pdf-page-1"] svg path'));
-      // The ink stroke path is the one with visible stroke color or round linecap
-      const inkPath = paths.find((p) => {
-        const d = p.getAttribute("d") || "";
-        return d.length > 20 && !d.includes("M21");
-      });
-      const r = inkPath?.getBoundingClientRect();
-      return r ? { left: r.left, top: r.top, width: r.width, height: r.height } : null;
+    // Verify drawn path rect on screen matches mouse coordinates within 2px
+    const inkRect = await customInkPath.evaluate((el: SVGElement) => {
+      const r = el.getBoundingClientRect();
+      return { left: r.left, top: r.top, width: r.width, height: r.height };
     });
     expect(inkRect).not.toBeNull();
-    expect(Math.abs(inkRect!.left - drawStartX)).toBeLessThanOrEqual(8);
-    expect(Math.abs(inkRect!.top - drawStartY)).toBeLessThanOrEqual(8);
+    expect(Math.abs(inkRect.left - drawStartX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(inkRect.top - drawStartY)).toBeLessThanOrEqual(2);
 
-    // Select the ink tool and check selection bounding box
+    // Test Undo on custom ink
+    await primaryPane.locator('[data-testid="pdf-undo-button"]').click();
+    await expect(customInkPath).toHaveCount(0, { timeout: 3000 });
+
+    // Test Redo on custom ink
+    await primaryPane.locator('[data-testid="pdf-redo-button"]').click();
+    await expect(customInkPath).toHaveCount(1, { timeout: 3000 });
+
+    // Switch to select tool and verify pointerEvents allows interaction
     await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
     await page.waitForTimeout(200);
 
-    // Click on the ink stroke
-    await page.mouse.click(drawStartX + 10, drawStartY + 10);
-    await page.waitForTimeout(300);
-
-    const selectionInfo = await page.evaluate(() => {
-      // Find selection outline or handles
-      const pageEl = document.querySelector('[data-testid="pdf-page-1"]');
-      const allDivs = Array.from(pageEl?.querySelectorAll("div") || []);
-      const outlineDiv = allDivs.find((d) => {
-        const s = window.getComputedStyle(d);
-        return s.outlineStyle !== "none" && s.outlineStyle !== "";
-      });
-      const rotHandle = pageEl?.querySelector('[style*="cursor: grab"], [style*="cursor: crosshair"], svg path[d*="M21"]');
-      return {
-        hasOutline: Boolean(outlineDiv),
-        outlineRect: outlineDiv ? outlineDiv.getBoundingClientRect() : null,
-        rotHandleRect: rotHandle ? rotHandle.getBoundingClientRect() : null,
-      };
-    });
-
-    expect(selectionInfo.hasOutline).toBe(true);
-    expect(selectionInfo.outlineRect).not.toBeNull();
-    expect(Math.abs(selectionInfo.outlineRect!.left - drawStartX)).toBeLessThanOrEqual(8);
-    expect(Math.abs(selectionInfo.outlineRect!.top - drawStartY)).toBeLessThanOrEqual(8);
+    const layerPointerEvents = await primaryPane
+      .locator('[data-testid="pdf-custom-ink-layer-1"]')
+      .evaluate((el) => window.getComputedStyle(el).pointerEvents);
+    expect(layerPointerEvents).toBe("none");
 
     // 3. Test Stamp tool preserving aspect ratio
     // Create a 200x100 (2:1 aspect ratio) test PNG

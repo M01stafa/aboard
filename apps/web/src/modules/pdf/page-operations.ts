@@ -1,7 +1,51 @@
 import { PDFDocument, degrees, rgb, StandardFonts } from "@cantoo/pdf-lib";
 import { PdfAnnotationSubtype } from "@embedpdf/models";
 import type { ProjectService } from "@/core/storage/project-service";
-import { deserializeAnnotations } from "./annotation-storage";
+import { deserializeAnnotations, extractCustomInkStrokes } from "./annotation-storage";
+import type { CustomInkStroke } from "./pdf-custom-ink-layer";
+
+function parseStrokeColor(hex?: string): { r: number; g: number; b: number } {
+  if (hex && hex.startsWith("#")) {
+    const h = hex.slice(1);
+    if (h.length === 6) {
+      return {
+        r: parseInt(h.slice(0, 2), 16) / 255,
+        g: parseInt(h.slice(2, 4), 16) / 255,
+        b: parseInt(h.slice(4, 6), 16) / 255,
+      };
+    }
+  }
+  return { r: 0.89, g: 0.26, b: 0.20 };
+}
+
+export function drawCustomInkStrokesOnDoc(
+  pdfDoc: PDFDocument,
+  customInkStrokes: Record<number, CustomInkStroke[]>
+): void {
+  const pages = pdfDoc.getPages();
+  for (const [pageIdxStr, strokes] of Object.entries(customInkStrokes)) {
+    const pageIdx = parseInt(pageIdxStr, 10);
+    if (pageIdx < 0 || pageIdx >= pages.length) continue;
+    const page = pages[pageIdx];
+    const pageHeight = page.getHeight();
+
+    for (const stroke of strokes) {
+      if (!stroke.points || stroke.points.length < 2) continue;
+      const c = parseStrokeColor(stroke.color);
+      for (let i = 0; i < stroke.points.length - 1; i++) {
+        const p1 = stroke.points[i];
+        const p2 = stroke.points[i + 1];
+        page.drawLine({
+          start: { x: p1.x, y: pageHeight - p1.y },
+          end: { x: p2.x, y: pageHeight - p2.y },
+          thickness: stroke.width || 2,
+          color: rgb(c.r, c.g, c.b),
+          opacity: stroke.opacity ?? 1,
+        });
+      }
+    }
+  }
+}
 
 export function isPng(bytes: Uint8Array): boolean {
   return (
@@ -233,5 +277,25 @@ export async function burnAnnotationsWithPdfLib(
     }
   }
 
+  // 4. CUSTOM INK: Burn custom ink strokes into page content streams
+  const customInkStrokes = extractCustomInkStrokes(annotationsJson);
+  drawCustomInkStrokesOnDoc(pdfDoc, customInkStrokes);
+
+  return await pdfDoc.save();
+}
+
+/**
+ * Burns custom ink strokes directly onto an existing PDF byte array.
+ * Used after live exportScope.saveAsCopy() to merge custom strokes seamlessly.
+ */
+export async function burnCustomInkOnPdfBytes(
+  pdfBytes: Uint8Array,
+  customInkStrokes: Record<number, CustomInkStroke[]>
+): Promise<Uint8Array> {
+  const hasStrokes = Object.values(customInkStrokes).some((arr) => arr && arr.length > 0);
+  if (!hasStrokes) return pdfBytes;
+
+  const pdfDoc = await PDFDocument.load(pdfBytes);
+  drawCustomInkStrokesOnDoc(pdfDoc, customInkStrokes);
   return await pdfDoc.save();
 }
