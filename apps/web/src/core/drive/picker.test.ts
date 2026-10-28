@@ -85,6 +85,9 @@ describe("Google Picker Integration (picker.ts / §10.11, PDF-1, ALPHA-2)", () =
             setKey = key;
             return this;
           }
+          setOrigin(origin: string) {
+            return this;
+          }
           addView() {
             return this;
           }
@@ -178,6 +181,7 @@ describe("Google Picker Integration (picker.ts / §10.11, PDF-1, ALPHA-2)", () =
           setAppId() { return this; }
           setOAuthToken() { return this; }
           setDeveloperKey() { return this; }
+          setOrigin() { return this; }
           addView() { return this; }
           setLocale() { return this; }
           setTitle() { return this; }
@@ -230,6 +234,7 @@ describe("Google Picker Integration (picker.ts / §10.11, PDF-1, ALPHA-2)", () =
           setAppId() { return this; }
           setOAuthToken() { return this; }
           setDeveloperKey() { return this; }
+          setOrigin() { return this; }
           addView() { return this; }
           setLocale() { return this; }
           setTitle() { return this; }

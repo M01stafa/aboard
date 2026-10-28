@@ -15,12 +15,15 @@ export class DriveTokenManager {
   private inflight?: Promise<string>;
 
   /**
-   * Returns a valid access token. If missing or expiring within 60 seconds,
+   * Returns a valid access token. If missing or expiring within 60 seconds (or if forceFresh is true),
    * refreshes via the drive-token Edge Function with concurrent request deduplication.
    */
-  async get(): Promise<string> {
-    if (this.token && Date.now() < this.token.exp - 60_000) {
+  async get(forceFresh = false): Promise<string> {
+    if (!forceFresh && this.token && Date.now() < this.token.exp - 60_000) {
       return this.token.value;
+    }
+    if (forceFresh) {
+      this.token = undefined;
     }
     this.inflight ??= this.fetchToken().finally(() => {
       this.inflight = undefined;

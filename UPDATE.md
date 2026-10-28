@@ -2016,3 +2016,19 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Server verified: deleted `.next`, restarted daemon outside sandbox, HTTP 200 on `http://localhost:3000`.
 **Related:** ALPHA-2, STORE-2, SEC-5
 **Open:** Google Cloud Console configuration (enable Picker API and add HTTP referrer restrictions) by project owner.
+
+
+## 2026-10-29 — Diagnose Persistent Google Picker Key and OAuth Token Flow
+**Request:** Diagnose persistent "The API developer key is invalid" in Google Picker, verify .env.local key format and server compilation, inspect OAuth token flow in DriveTokenManager with force-fresh refresh and reconnect handling, add cache-busting to Picker loader, set explicit origin matching on PickerBuilder, and restart dev server after clearing .next.
+**Changes:**
+- `apps/web/src/core/drive/tokens.ts` (changed): added `forceFresh` parameter to `DriveTokenManager.get()` ensuring Picker always requests an unexpired, newly refreshed access token from Edge Functions.
+- `apps/web/src/core/drive/picker.ts` (changed): added cache-busting parameter (`?cachebust=${Date.now()}`) to `https://apis.google.com/js/api.js`; called `tm.get(true)` with error handling emitting `drive:reconnect-required` on token acquisition failure; added `.setOrigin(window.location.origin)` to `PickerBuilder` for exact cross-origin iframe security matching.
+- `apps/web/src/core/drive/picker.test.ts` (changed): updated mocks to support `setOrigin`.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (339/339 unit tests passing across 45 test files).
+- Server verified: deleted `.next`, restarted daemon outside sandbox, HTTP 200 on `http://localhost:3000`.
+**Related:** ALPHA-2, STORE-2, SEC-2, SEC-5
+**Open:** none.

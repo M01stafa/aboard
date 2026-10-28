@@ -1,5 +1,6 @@
 import { driveTokenManager, type DriveTokenManager } from "./tokens";
 import { downloadFileBlob } from "./api";
+import { bus } from "@/core/bus";
 
 /**
  * Google Picker API interfaces conforming to official gapi / Google Picker v1 API.
@@ -9,6 +10,7 @@ export interface GooglePickerBuilder {
   setAppId(appId: string): this;
   setOAuthToken(token: string): this;
   setDeveloperKey(key: string): this;
+  setOrigin(origin: string): this;
   addView(view: unknown): this;
   setLocale(locale: string): this;
   setCallback(callback: (data: Record<string, unknown>) => void): this;
@@ -79,22 +81,30 @@ export async function loadPickerApi(): Promise<void> {
   // 1. Ensure https://apis.google.com/js/api.js script tag is injected
   if (!window.gapi) {
     await new Promise<void>((resolve, reject) => {
-      const existingScript = document.querySelector(
-        'script[src="https://apis.google.com/js/api.js"]'
+      const existingScript = document.querySelector<HTMLScriptElement>(
+        'script[src*="apis.google.com/js/api.js"]'
       );
       if (existingScript) {
+        if (window.gapi) {
+          resolve();
+          return;
+        }
         existingScript.addEventListener("load", () => resolve(), { once: true });
         existingScript.addEventListener("error", (e) => reject(e), { once: true });
         return;
       }
 
       const script = document.createElement("script");
-      script.src = "https://apis.google.com/js/api.js";
+      script.src = `https://apis.google.com/js/api.js?cachebust=${Date.now()}`;
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
       script.onerror = (e) => {
-        reject(new Error(`Failed to load Google API script (${e instanceof Event ? "CSP or Network error" : String(e)})`));
+        reject(
+          new Error(
+            `Failed to load Google API script (${e instanceof Event ? "CSP or Network error" : String(e)})`
+          )
+        );
       };
       document.head.appendChild(script);
     });
@@ -128,9 +138,23 @@ export async function openGooglePicker(
   await loadPickerApi();
 
   const tm = options.tokenManager ?? driveTokenManager;
-  const token = await tm.get();
+  let token: string;
+  try {
+    // Always obtain a fresh, valid OAuth access token before initializing the Picker
+    token = await tm.get(true);
+  } catch (err: unknown) {
+    bus.emit("drive:reconnect-required", { reason: "token_fetch_failed" });
+    throw new Error(
+      "Google Drive is not connected or your session has expired. Please sign in or reconnect Google Drive."
+    );
+  }
+
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || "";
   const appId = process.env.NEXT_PUBLIC_GOOGLE_APP_ID || "";
+  const origin =
+    typeof window !== "undefined" && window.location.origin
+      ? window.location.origin
+      : "http://localhost:3000";
 
   if (!window.google?.picker) {
     throw new Error("Google Picker library failed to initialize");
@@ -177,7 +201,13 @@ export async function openGooglePicker(
       const builder = new picker.PickerBuilder()
         .setAppId(appId)
         .setOAuthToken(token)
-        .setDeveloperKey(apiKey)
+        .setDeveloperKey(apiKey);
+
+      if (typeof builder.setOrigin === "function") {
+        builder.setOrigin(origin);
+      }
+
+      builder
         .addView(docsView)
         .setLocale(options.locale || "en");
 
