@@ -18,7 +18,7 @@ import {
 import { processStampImage } from "./image-stamp-utils";
 import { stampBlobUrlCache } from "./custom-stamp-renderer";
 import type { AnnotationToolType } from "./pdf-toolbar";
-import type { CustomInkStroke } from "./pdf-custom-ink-layer";
+import type { CustomInkStroke, CustomInkTransform } from "./pdf-custom-ink-layer";
 
 export interface UsePdfAnnotationsOptions {
   documentId: string;
@@ -38,6 +38,11 @@ export interface UsePdfAnnotationsResult {
   handleAddStamp: (file: File) => Promise<void>;
   customStrokes: Record<number, CustomInkStroke[]>;
   handleAddCustomStroke: (pageIndex: number, stroke: CustomInkStroke) => void;
+  handleMoveCustomStroke: (
+    pageIndex: number,
+    strokeId: string,
+    transform: CustomInkTransform
+  ) => void;
 }
 
 export function usePdfAnnotations({
@@ -306,6 +311,26 @@ export function usePdfAnnotations({
     [triggerDebouncedSave]
   );
 
+  const handleMoveCustomStroke = useCallback(
+    (pageIndex: number, strokeId: string, transform: CustomInkTransform) => {
+      const prev = customStrokesRef.current;
+      const pageStrokes = prev[pageIndex];
+      if (!pageStrokes || !pageStrokes.some((s) => s.id === strokeId)) return;
+      const next = {
+        ...prev,
+        [pageIndex]: pageStrokes.map((s) => (s.id === strokeId ? { ...s, transform } : s)),
+      };
+      customUndoStackRef.current.push(prev);
+      customRedoStackRef.current = [];
+      customStrokesRef.current = next;
+      setCustomStrokes(next);
+      setCanUndo(true);
+      setCanRedo(false);
+      triggerDebouncedSave();
+    },
+    [triggerDebouncedSave]
+  );
+
   const handleUndo = useCallback(() => {
     if (customUndoStackRef.current.length > 0) {
       const prev = customUndoStackRef.current.pop()!;
@@ -402,5 +427,6 @@ export function usePdfAnnotations({
     handleAddStamp,
     customStrokes,
     handleAddCustomStroke,
+    handleMoveCustomStroke,
   };
 }

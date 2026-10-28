@@ -1909,3 +1909,17 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Server verified: HTTP 200 on `http://localhost:3000`.
 **Related:** PDF-3, PDF-4, PDF-5, INT-1
 **Open:** none.
+
+## 2026-10-28 — Block Text Selection While Drawing and Make Ink Strokes Movable Objects
+**Request:** Prevent text selection under the custom ink layer while drawing; turn strokes into movable objects (SVG `<g>` + translate transform, bounding box with handles in Select mode), with save/load, undo/redo, zoom scaling and export kept working; verify with Playwright; commit locally (no push); restart server.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx` (changed): pointer logic moved to native listeners on the SVG (EmbedPDF attaches native listeners on the page element, so React `stopPropagation` could not shield the text layer); while drawing, `pointerdown`/`pointermove`/`mousedown` call `preventDefault()` + `stopPropagation()`, native selection is cleared, `selectstart`/`dragstart` are blocked, SVG has `user-select: none` and `touch-action: none`. Each stroke renders as `<g transform="translate(x, y)">` with the visible `<path>` and a wide transparent hit `<polyline>`; in Select mode clicking shows a bounding box with corner handles (viewBox units, so it scales with zoom) and dragging moves the stroke. Added optional `transform` to `CustomInkStroke`; `compositeCustomStrokesOnBlob` applies it.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts` (changed): added `handleMoveCustomStroke` (pushes onto the unified custom undo stack, clears redo, triggers debounced save). Transforms persist automatically in the existing `customInkStrokes` JSON payload.
+- `apps/web/src/modules/pdf/page-operations.ts` (changed): export burning applies each stroke's translation.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): passes `isSelectMode` and `onMoveStroke` to the layer.
+- `apps/web/e2e/pdf-ink-objects.spec.ts` (created): drawing across text selects nothing (no native selection, no EmbedPDF selection rects); Select tool click shows bounding box, drag moves stroke by the exact delta (< 2px); undo/redo of the move; stroke scales on zoom.
+**Checks:**
+- `pnpm lint`, `pnpm typecheck`: PASS. `pnpm test`: PASS (333/333).
+- Playwright `pdf-ink-objects`, `pdf-ink-stamp`, `pdf-annotations`, `pdf-module`, `pdf-page-operations`: PASS (6/6).
+**Related:** PDF-3, PDF-4, PDF-5
+**Open:** none.

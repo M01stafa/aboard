@@ -1,8 +1,13 @@
 "use client";
 
-import React, { useRef, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 export interface CustomInkPoint {
+  x: number;
+  y: number;
+}
+
+export interface CustomInkTransform {
   x: number;
   y: number;
 }
@@ -13,6 +18,12 @@ export interface CustomInkStroke {
   color: string;
   width: number;
   opacity: number;
+  /** Translation applied to the stroke in page units (set when the stroke is moved). */
+  transform?: CustomInkTransform;
+}
+
+export function getStrokeOffset(stroke: CustomInkStroke): CustomInkTransform {
+  return stroke.transform ?? { x: 0, y: 0 };
 }
 
 export function pointsToSvgPath(points: CustomInkPoint[]): string {
@@ -37,148 +48,347 @@ export function pointsToSvgPath(points: CustomInkPoint[]): string {
   return d;
 }
 
+function getStrokeBounds(stroke: CustomInkStroke) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const p of stroke.points) {
+    if (p.x < minX) minX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y > maxY) maxY = p.y;
+  }
+  const pad = (stroke.width || 2) / 2 + 4;
+  return {
+    x: minX - pad,
+    y: minY - pad,
+    width: maxX - minX + pad * 2,
+    height: maxY - minY + pad * 2,
+  };
+}
+
 export interface PdfCustomInkLayerProps {
   pageIndex: number;
   pageWidth: number;
   pageHeight: number;
+  /** Draw tool active: the layer captures pointer input and draws. */
   isActive: boolean;
+  /** Select tool active: strokes can be clicked and dragged. */
+  isSelectMode?: boolean;
   strokes: CustomInkStroke[];
   onAddStroke: (pageIndex: number, stroke: CustomInkStroke) => void;
+  onMoveStroke?: (pageIndex: number, strokeId: string, transform: CustomInkTransform) => void;
   strokeColor?: string;
   strokeWidth?: number;
   strokeOpacity?: number;
 }
+
+type Interaction =
+  | { kind: "draw"; stroke: CustomInkStroke }
+  | {
+      kind: "drag";
+      id: string;
+      start: CustomInkPoint;
+      base: CustomInkTransform;
+      current: CustomInkTransform;
+    };
 
 export function PdfCustomInkLayer({
   pageIndex,
   pageWidth,
   pageHeight,
   isActive,
+  isSelectMode = false,
   strokes,
   onAddStroke,
+  onMoveStroke,
   strokeColor = "#E44234",
   strokeWidth = 2.5,
   strokeOpacity = 1,
 }: PdfCustomInkLayerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [currentStroke, setCurrentStroke] = useState<CustomInkStroke | null>(null);
-  const isDrawingRef = useRef(false);
+  const [drag, setDrag] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const interactionRef = useRef<Interaction | null>(null);
 
-  const getCoordinates = useCallback(
-    (e: React.PointerEvent<SVGSVGElement>): CustomInkPoint | null => {
-      const svg = svgRef.current;
-      if (!svg) return null;
+  // Latest props for the native listeners below (kept in a ref so listeners attach once).
+  const propsRef = useRef({
+    pageIndex,
+    pageWidth,
+    pageHeight,
+    isActive,
+    isSelectMode,
+    strokes,
+    onAddStroke,
+    onMoveStroke,
+    strokeColor,
+    strokeWidth,
+    strokeOpacity,
+  });
+  useEffect(() => {
+    propsRef.current = {
+      pageIndex,
+      pageWidth,
+      pageHeight,
+      isActive,
+      isSelectMode,
+      strokes,
+      onAddStroke,
+      onMoveStroke,
+      strokeColor,
+      strokeWidth,
+      strokeOpacity,
+    };
+  });
+
+  // Native listeners: EmbedPDF attaches native listeners on the page element, so a React
+  // synthetic stopPropagation cannot keep the text layer from reacting. These run on the SVG
+  // itself and stop the event before it bubbles to the page.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    const toPagePoint = (clientX: number, clientY: number): CustomInkPoint | null => {
       const rect = svg.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return null;
-
-      const scaleX = pageWidth / rect.width;
-      const scaleY = pageHeight / rect.height;
+      const p = propsRef.current;
       return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY,
+        x: (clientX - rect.left) * (p.pageWidth / rect.width),
+        y: (clientY - rect.top) * (p.pageHeight / rect.height),
       };
-    },
-    [pageWidth, pageHeight]
-  );
+    };
 
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent<SVGSVGElement>) => {
-      if (!isActive || e.button !== 0) return;
-      const pt = getCoordinates(e);
-      if (!pt) return;
-
+    const capture = (id: number) => {
       try {
-        e.currentTarget.setPointerCapture(e.pointerId);
+        svg.setPointerCapture(id);
       } catch {
-        // Pointer capture fallback if not supported
+        // Pointer capture is optional
       }
-
-      isDrawingRef.current = true;
-      const id =
-        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : `stroke-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-
-      setCurrentStroke({
-        id,
-        points: [pt],
-        color: strokeColor,
-        width: strokeWidth,
-        opacity: strokeOpacity,
-      });
-    },
-    [isActive, getCoordinates, strokeColor, strokeWidth, strokeOpacity]
-  );
-
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent<SVGSVGElement>) => {
-      if (!isDrawingRef.current) return;
-      const pt = getCoordinates(e);
-      if (!pt) return;
-
-      setCurrentStroke((prev) => {
-        if (!prev) return null;
-        const lastPt = prev.points[prev.points.length - 1];
-        if (lastPt) {
-          const dx = pt.x - lastPt.x;
-          const dy = pt.y - lastPt.y;
-          if (dx * dx + dy * dy < 0.25) return prev;
-        }
-        return {
-          ...prev,
-          points: [...prev.points, pt],
-        };
-      });
-    },
-    [getCoordinates]
-  );
-
-  const handlePointerUp = useCallback(
-    (e: React.PointerEvent<SVGSVGElement>) => {
-      if (!isDrawingRef.current) return;
-      isDrawingRef.current = false;
+    };
+    const release = (id: number) => {
       try {
-        e.currentTarget.releasePointerCapture(e.pointerId);
+        svg.releasePointerCapture(id);
       } catch {
         // Safe release
       }
+    };
 
-      if (currentStroke && currentStroke.points.length > 0) {
-        onAddStroke(pageIndex, currentStroke);
+    const handleDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      const p = propsRef.current;
+      if (p.isActive) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.getSelection()?.removeAllRanges();
+        const pt = toPagePoint(e.clientX, e.clientY);
+        if (!pt) return;
+        capture(e.pointerId);
+        const id =
+          typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : `stroke-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const stroke: CustomInkStroke = {
+          id,
+          points: [pt],
+          color: p.strokeColor,
+          width: p.strokeWidth,
+          opacity: p.strokeOpacity,
+        };
+        interactionRef.current = { kind: "draw", stroke };
+        setCurrentStroke(stroke);
+        return;
       }
-      setCurrentStroke(null);
-    },
-    [currentStroke, onAddStroke, pageIndex]
-  );
+      if (p.isSelectMode) {
+        const target = e.target as Element | null;
+        const strokeEl = target?.closest?.("[data-ink-stroke-id]");
+        const id = strokeEl?.getAttribute("data-ink-stroke-id");
+        if (!id) return;
+        const stroke = p.strokes.find((s) => s.id === id);
+        const pt = toPagePoint(e.clientX, e.clientY);
+        if (!stroke || !pt) return;
+        e.preventDefault();
+        e.stopPropagation();
+        window.getSelection()?.removeAllRanges();
+        capture(e.pointerId);
+        const base = getStrokeOffset(stroke);
+        interactionRef.current = { kind: "drag", id, start: pt, base, current: base };
+        setSelectedId(id);
+        setDrag({ id, x: base.x, y: base.y });
+      }
+    };
 
-  const handlePointerCancel = useCallback(
-    (e: React.PointerEvent<SVGSVGElement>) => {
-      if (isDrawingRef.current) {
-        isDrawingRef.current = false;
-        try {
-          e.currentTarget.releasePointerCapture(e.pointerId);
-        } catch {}
+    const handleMove = (e: PointerEvent) => {
+      const it = interactionRef.current;
+      if (!it) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const pt = toPagePoint(e.clientX, e.clientY);
+      if (!pt) return;
+      if (it.kind === "draw") {
+        const last = it.stroke.points[it.stroke.points.length - 1];
+        const dx = pt.x - last.x;
+        const dy = pt.y - last.y;
+        if (dx * dx + dy * dy < 0.25) return;
+        it.stroke = { ...it.stroke, points: [...it.stroke.points, pt] };
+        setCurrentStroke(it.stroke);
+      } else {
+        const next = {
+          x: it.base.x + (pt.x - it.start.x),
+          y: it.base.y + (pt.y - it.start.y),
+        };
+        it.current = next;
+        setDrag({ id: it.id, x: next.x, y: next.y });
+      }
+    };
+
+    const finish = (e: PointerEvent, commit: boolean) => {
+      const it = interactionRef.current;
+      if (!it) return;
+      interactionRef.current = null;
+      e.stopPropagation();
+      release(e.pointerId);
+      const p = propsRef.current;
+      if (it.kind === "draw") {
+        if (commit && it.stroke.points.length > 0) {
+          p.onAddStroke(p.pageIndex, it.stroke);
+        }
         setCurrentStroke(null);
+      } else {
+        const moved =
+          Math.abs(it.current.x - it.base.x) > 0.5 || Math.abs(it.current.y - it.base.y) > 0.5;
+        if (commit && moved) {
+          p.onMoveStroke?.(p.pageIndex, it.id, it.current);
+        }
+        setDrag(null);
       }
-    },
-    []
-  );
+    };
 
-  const renderedStrokes = useMemo(() => {
-    return strokes.map((s) => (
-      <path
-        key={s.id}
-        d={pointsToSvgPath(s.points)}
-        fill="none"
-        stroke={s.color}
-        strokeWidth={s.width}
-        strokeOpacity={s.opacity}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ pointerEvents: "none" }}
-      />
-    ));
-  }, [strokes]);
+    const handleUp = (e: PointerEvent) => finish(e, true);
+    const handleCancel = (e: PointerEvent) => finish(e, false);
+
+    // Legacy mouse events must not reach the page either (they start native text selection).
+    const handleMouseDown = (e: MouseEvent) => {
+      const p = propsRef.current;
+      const target = e.target as Element | null;
+      if (p.isActive || (p.isSelectMode && target?.closest?.("[data-ink-stroke-id]"))) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    const blockWhenBusy = (e: Event) => {
+      if (propsRef.current.isActive || interactionRef.current) {
+        e.preventDefault();
+      }
+    };
+
+    svg.addEventListener("pointerdown", handleDown);
+    svg.addEventListener("pointermove", handleMove);
+    svg.addEventListener("pointerup", handleUp);
+    svg.addEventListener("pointercancel", handleCancel);
+    svg.addEventListener("mousedown", handleMouseDown);
+    svg.addEventListener("selectstart", blockWhenBusy);
+    svg.addEventListener("dragstart", blockWhenBusy);
+    return () => {
+      svg.removeEventListener("pointerdown", handleDown);
+      svg.removeEventListener("pointermove", handleMove);
+      svg.removeEventListener("pointerup", handleUp);
+      svg.removeEventListener("pointercancel", handleCancel);
+      svg.removeEventListener("mousedown", handleMouseDown);
+      svg.removeEventListener("selectstart", blockWhenBusy);
+      svg.removeEventListener("dragstart", blockWhenBusy);
+    };
+  }, []);
+
+  // Deselect when pressing anywhere that is not a stroke
+  useEffect(() => {
+    if (!selectedId) return;
+    const onDocDown = (e: PointerEvent) => {
+      const target = e.target as Element | null;
+      if (!target?.closest?.("[data-ink-stroke-id]")) {
+        setSelectedId(null);
+      }
+    };
+    document.addEventListener("pointerdown", onDocDown, true);
+    return () => document.removeEventListener("pointerdown", onDocDown, true);
+  }, [selectedId]);
+
+  const renderedStrokes = useMemo(
+    () =>
+      strokes.map((s) => {
+        const offset =
+          drag && drag.id === s.id ? { x: drag.x, y: drag.y } : getStrokeOffset(s);
+        const isSelected = isSelectMode && selectedId === s.id;
+        const bounds = isSelected ? getStrokeBounds(s) : null;
+        const handleSize = 8;
+        return (
+          <g
+            key={s.id}
+            data-ink-stroke-id={s.id}
+            data-testid="pdf-custom-ink-stroke"
+            transform={`translate(${offset.x}, ${offset.y})`}
+          >
+            <path
+              d={pointsToSvgPath(s.points)}
+              fill="none"
+              stroke={s.color}
+              strokeWidth={s.width}
+              strokeOpacity={s.opacity}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ pointerEvents: "none" }}
+            />
+            <polyline
+              points={s.points.map((p) => `${p.x},${p.y}`).join(" ")}
+              fill="none"
+              stroke="transparent"
+              strokeWidth={Math.max(s.width, 16)}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{
+                pointerEvents: isSelectMode ? "stroke" : "none",
+                cursor: isSelectMode ? "move" : "default",
+                touchAction: "none",
+              }}
+            />
+            {bounds && (
+              <g style={{ pointerEvents: "none" }} data-testid="pdf-custom-ink-bbox">
+                <rect
+                  x={bounds.x}
+                  y={bounds.y}
+                  width={bounds.width}
+                  height={bounds.height}
+                  fill="none"
+                  stroke="#0b7ad6"
+                  strokeWidth={1.5}
+                  vectorEffect="non-scaling-stroke"
+                />
+                {[
+                  [bounds.x, bounds.y],
+                  [bounds.x + bounds.width, bounds.y],
+                  [bounds.x, bounds.y + bounds.height],
+                  [bounds.x + bounds.width, bounds.y + bounds.height],
+                ].map(([hx, hy], i) => (
+                  <rect
+                    key={i}
+                    x={hx - handleSize / 2}
+                    y={hy - handleSize / 2}
+                    width={handleSize}
+                    height={handleSize}
+                    fill="#ffffff"
+                    stroke="#0b7ad6"
+                    strokeWidth={1.5}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ))}
+              </g>
+            )}
+          </g>
+        );
+      }),
+    [strokes, drag, isSelectMode, selectedId]
+  );
 
   return (
     <svg
@@ -195,12 +405,10 @@ export function PdfCustomInkLayer({
         zIndex: 15,
         overflow: "visible",
         touchAction: isActive ? "none" : "auto",
+        userSelect: "none",
+        WebkitUserSelect: "none",
         direction: "ltr",
       }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerCancel}
     >
       {renderedStrokes}
       {currentStroke && (
@@ -253,6 +461,8 @@ export async function compositeCustomStrokesOnBlob(
 
       for (const stroke of strokes) {
         if (!stroke.points || stroke.points.length === 0) continue;
+        const off = getStrokeOffset(stroke);
+        const pts = stroke.points.map((p) => ({ x: p.x + off.x, y: p.y + off.y }));
         ctx.beginPath();
         ctx.strokeStyle = stroke.color;
         ctx.lineWidth = (stroke.width || 2) * scaleX;
@@ -260,29 +470,25 @@ export async function compositeCustomStrokesOnBlob(
         ctx.lineJoin = "round";
         ctx.globalAlpha = stroke.opacity ?? 1;
 
-        if (stroke.points.length === 1) {
-          ctx.moveTo(stroke.points[0].x * scaleX, stroke.points[0].y * scaleY);
-          ctx.lineTo(stroke.points[0].x * scaleX + 0.1, stroke.points[0].y * scaleY + 0.1);
+        if (pts.length === 1) {
+          ctx.moveTo(pts[0].x * scaleX, pts[0].y * scaleY);
+          ctx.lineTo(pts[0].x * scaleX + 0.1, pts[0].y * scaleY + 0.1);
         } else {
-          ctx.moveTo(stroke.points[0].x * scaleX, stroke.points[0].y * scaleY);
-          for (let i = 1; i < stroke.points.length - 1; i++) {
-            const p1 = stroke.points[i];
-            const p2 = stroke.points[i + 1];
+          ctx.moveTo(pts[0].x * scaleX, pts[0].y * scaleY);
+          for (let i = 1; i < pts.length - 1; i++) {
+            const p1 = pts[i];
+            const p2 = pts[i + 1];
             const midX = ((p1.x + p2.x) / 2) * scaleX;
             const midY = ((p1.y + p2.y) / 2) * scaleY;
             ctx.quadraticCurveTo(p1.x * scaleX, p1.y * scaleY, midX, midY);
           }
-          const last = stroke.points[stroke.points.length - 1];
+          const last = pts[pts.length - 1];
           ctx.lineTo(last.x * scaleX, last.y * scaleY);
         }
         ctx.stroke();
       }
 
-      canvas.toBlob(
-        (b) => resolve(b || blob),
-        blob.type || "image/webp",
-        0.85
-      );
+      canvas.toBlob((b) => resolve(b || blob), blob.type || "image/webp", 0.85);
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);

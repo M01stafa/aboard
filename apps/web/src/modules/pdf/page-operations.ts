@@ -32,12 +32,14 @@ export function drawCustomInkStrokesOnDoc(
     for (const stroke of strokes) {
       if (!stroke.points || stroke.points.length < 2) continue;
       const c = parseStrokeColor(stroke.color);
+      const ox = stroke.transform?.x ?? 0;
+      const oy = stroke.transform?.y ?? 0;
       for (let i = 0; i < stroke.points.length - 1; i++) {
         const p1 = stroke.points[i];
         const p2 = stroke.points[i + 1];
         page.drawLine({
-          start: { x: p1.x, y: pageHeight - p1.y },
-          end: { x: p2.x, y: pageHeight - p2.y },
+          start: { x: p1.x + ox, y: pageHeight - (p1.y + oy) },
+          end: { x: p2.x + ox, y: pageHeight - (p2.y + oy) },
           thickness: stroke.width || 2,
           color: rgb(c.r, c.g, c.b),
           opacity: stroke.opacity ?? 1,

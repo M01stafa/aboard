@@ -373,6 +373,7 @@ function ViewerInner({
     handleAddStamp,
     customStrokes,
     handleAddCustomStroke,
+    handleMoveCustomStroke,
   } = usePdfAnnotations({
     documentId,
     projectId,
@@ -977,8 +978,10 @@ function ViewerInner({
                     pageWidth={page.rotatedWidth || page.width}
                     pageHeight={page.rotatedHeight || page.height}
                     isActive={activeTool === "ink"}
+                    isSelectMode={activeTool === "select"}
                     strokes={customStrokes[page.pageIndex] || []}
                     onAddStroke={handleAddCustomStroke}
+                    onMoveStroke={handleMoveCustomStroke}
                   />
                 </PagePointerProvider>
               )}
