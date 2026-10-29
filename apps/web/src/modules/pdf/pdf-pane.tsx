@@ -386,9 +386,49 @@ export function PdfPane({
                   }
 
                   await addPdfFile(pdfBlob, pdfMeta.name ?? "document.pdf", annotationsJson);
+
+                  // Update project title and ensure Supabase project index reflects localDeviceId
+                  const targetTitle =
+                    res.name && res.name !== "Exports" && res.name !== "google-drive-file"
+                      ? res.name
+                      : (pdfMeta.name ?? "PDF Document").replace(/\.pdf$/i, "");
+                  const { projectService: defaultPs, projectIndex } = await import("@/core/storage");
+                  const activePs = projectServiceOverride ?? defaultPs;
+                  await activePs.renameProject(projectId, targetTitle).catch(() => {});
+
+                  try {
+                    const { getDeviceId } = await import("@/core/db/lifecycle");
+                    const devId = await getDeviceId();
+                    if (projectIndex) {
+                      await projectIndex.onStorageModeChanged(projectId, {
+                        storage: "local",
+                        localDeviceId: devId,
+                      });
+                    }
+                  } catch {
+                    // Non-fatal index update
+                  }
                 } else if (res.blob) {
                   // Single PDF file selected
                   await addPdfFile(res.blob, res.name);
+
+                  const targetTitle = (res.name ?? "PDF Document").replace(/\.pdf$/i, "");
+                  const { projectService: defaultPs, projectIndex } = await import("@/core/storage");
+                  const activePs = projectServiceOverride ?? defaultPs;
+                  await activePs.renameProject(projectId, targetTitle).catch(() => {});
+
+                  try {
+                    const { getDeviceId } = await import("@/core/db/lifecycle");
+                    const devId = await getDeviceId();
+                    if (projectIndex) {
+                      await projectIndex.onStorageModeChanged(projectId, {
+                        storage: "local",
+                        localDeviceId: devId,
+                      });
+                    }
+                  } catch {
+                    // Non-fatal index update
+                  }
                 }
               } catch (pickerErr) {
                 console.warn("[PdfPane] Google Picker error:", pickerErr);

@@ -71,6 +71,26 @@ export function LauncherContent({ user }: { user: User }) {
       const devId = await getDeviceId(user.id);
       setDeviceId(devId);
       const list = await projectIndex.fetchRecentProjects();
+
+      // Self-heal local projects: if a project exists in the browser's local IndexedDB,
+      // ensure it is recognized as this-device even if local_device_id in Supabase was null.
+      const { getDb } = await import("@/core/db/lifecycle");
+      const db = getDb();
+      if (db) {
+        for (const p of list) {
+          if (p.storage === "local" && (!p.local_device_id || p.local_device_id !== devId)) {
+            const localProj = await db.projects.get(p.id).catch(() => null);
+            if (localProj) {
+              p.local_device_id = devId;
+              void projectIndex.onStorageModeChanged(p.id, {
+                storage: "local",
+                localDeviceId: devId,
+              }).catch(() => {});
+            }
+          }
+        }
+      }
+
       setProjects(list);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load projects";
@@ -89,6 +109,26 @@ export function LauncherContent({ user }: { user: User }) {
         setDeviceId(devId);
         const list = await projectIndex.fetchRecentProjects();
         if (cancelled) return;
+
+        // Self-heal local projects: if a project exists in the browser's local IndexedDB,
+        // ensure it is recognized as this-device even if local_device_id in Supabase was null.
+        const { getDb } = await import("@/core/db/lifecycle");
+        const db = getDb();
+        if (db) {
+          for (const p of list) {
+            if (p.storage === "local" && (!p.local_device_id || p.local_device_id !== devId)) {
+              const localProj = await db.projects.get(p.id).catch(() => null);
+              if (localProj) {
+                p.local_device_id = devId;
+                void projectIndex.onStorageModeChanged(p.id, {
+                  storage: "local",
+                  localDeviceId: devId,
+                }).catch(() => {});
+              }
+            }
+          }
+        }
+
         setProjects(list);
       } catch (err: unknown) {
         if (cancelled) return;
@@ -201,11 +241,134 @@ export function LauncherContent({ user }: { user: User }) {
     setImportError(null);
     try {
       const { openGooglePicker } = await import("@/core/drive/picker");
+      const { getExportsFolderId, listFilesInFolder, downloadFileBlob } = await import("@/core/drive/api");
+      const { driveTokenManager } = await import("@/core/drive/tokens");
+
+      let parentId: string | undefined;
+      try {
+        parentId = await getExportsFolderId(driveTokenManager);
+      } catch {
+        // Non-fatal if Aboard/Exports does not exist yet
+      }
+
       const res = await openGooglePicker({
-        mimeTypes: "application/octet-stream,.alpha,application/zip",
+        mimeTypes: "application/octet-stream,.alpha,application/zip,application/pdf",
         title: t("picker.selectAlphaTitle"),
+        parentId,
+        selectFolder: true,
+        tokenManager: driveTokenManager,
       });
-      if (res && res.blob) {
+
+      if (!res) return;
+
+      if (res.isFolder) {
+        // Folder selected: list files inside folder
+        const files = await listFilesInFolder(res.fileId, driveTokenManager);
+        const pdfMeta = files.find(
+          (f) => f.mimeType === "application/pdf" || (f.name ?? "").toLowerCase().endsWith(".pdf")
+        );
+        if (!pdfMeta) {
+          throw new Error("No PDF file found in the selected folder.");
+        }
+
+        const pdfBlob = await downloadFileBlob(pdfMeta.id, driveTokenManager);
+        const jsonMeta = files.find(
+          (f) =>
+            (f.name ?? "").toLowerCase() === "annotations.json" ||
+            (f.name ?? "").toLowerCase().endsWith(".json")
+        );
+        let annotationsJson: string | undefined;
+        if (jsonMeta) {
+          const jsonBlob = await downloadFileBlob(jsonMeta.id, driveTokenManager);
+          annotationsJson = await jsonBlob.text();
+        }
+
+        const currentDevId = deviceId ?? (await getDeviceId(user.id));
+        const projTitle =
+          res.name && res.name !== "Exports" && res.name !== "google-drive-file"
+            ? res.name
+            : (pdfMeta.name ?? "PDF Document").replace(/\.pdf$/i, "");
+
+        const manifest = await projectService.createProject(projTitle, undefined, {
+          storage: "local",
+          localDeviceId: currentDevId,
+        });
+
+        const { computeBlobSha256 } = await import("@/core/storage/sha256");
+        const hash = await computeBlobSha256(pdfBlob);
+        await projectService.putFile(
+          manifest.project.id,
+          pdfBlob,
+          {
+            name: pdfMeta.name ?? `${projTitle}.pdf`,
+            mime: "application/pdf",
+          },
+          hash
+        );
+
+        const itemId = "item-1";
+        await projectService.savePdf(
+          manifest.project.id,
+          itemId,
+          JSON.stringify({
+            type: "alpha-pdf",
+            version: 1,
+            fileKey: hash,
+            name: pdfMeta.name ?? `${projTitle}.pdf`,
+            lastPage: 1,
+          }),
+          pdfMeta.name ?? projTitle
+        );
+
+        if (annotationsJson) {
+          await projectService.saveAnnotations(manifest.project.id, hash, annotationsJson).catch(() => {});
+          await projectService.saveAnnotations(manifest.project.id, `pdf-${hash}`, annotationsJson).catch(() => {});
+          await projectService.saveAnnotations(manifest.project.id, `anno-${itemId}`, annotationsJson).catch(() => {});
+        }
+
+        router.push(`/workspace?p=${manifest.project.id}&kind=pdf`);
+        return;
+      }
+
+      if (res.blob) {
+        if (res.name.toLowerCase().endsWith(".pdf") || res.mimeType === "application/pdf") {
+          const currentDevId = deviceId ?? (await getDeviceId(user.id));
+          const projTitle = res.name.replace(/\.pdf$/i, "") || "PDF Document";
+          const manifest = await projectService.createProject(projTitle, undefined, {
+            storage: "local",
+            localDeviceId: currentDevId,
+          });
+
+          const { computeBlobSha256 } = await import("@/core/storage/sha256");
+          const hash = await computeBlobSha256(res.blob);
+          await projectService.putFile(
+            manifest.project.id,
+            res.blob,
+            {
+              name: res.name,
+              mime: "application/pdf",
+            },
+            hash
+          );
+
+          const itemId = "item-1";
+          await projectService.savePdf(
+            manifest.project.id,
+            itemId,
+            JSON.stringify({
+              type: "alpha-pdf",
+              version: 1,
+              fileKey: hash,
+              name: res.name,
+              lastPage: 1,
+            }),
+            res.name
+          );
+
+          router.push(`/workspace?p=${manifest.project.id}&kind=pdf`);
+          return;
+        }
+
         const file = new File([res.blob], res.name, { type: "application/octet-stream" });
         await handleImportFile(file);
       }

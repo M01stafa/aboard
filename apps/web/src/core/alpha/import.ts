@@ -514,11 +514,20 @@ export async function importAlpha(
     // Notify project launcher index (non-fatal if offline / no auth session)
     try {
       if (projectIndex) {
+        let devId: string | undefined;
+        try {
+          const { getDeviceId } = await import("@/core/db/lifecycle");
+          devId = await getDeviceId(options.userId);
+        } catch {
+          // Non-fatal if uninitialized
+        }
+
         await projectIndex.onProjectCreated({
           id: targetProjectId,
           title: finalManifest.project.title,
           subject: finalManifest.project.subject,
           storage: "local",
+          localDeviceId: devId,
         });
       }
     } catch (indexErr) {

@@ -2054,3 +2054,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (5/5 Playwright tests passing).
 **Related:** PDF-3, PDF-5, STORE-2, STORE-3, ALPHA-2, ALPHA-6
 **Open:** none.
+
+
+## 2026-10-29 — Fix Incorrect "Another device" Badge for Imported Drive Folders
+**Request:** Fix the bug where exporting a PDF to Google Drive as an editable folder and importing it back causes the Recent Projects list to show "Another device" (على جهاز آخر) with a disabled card, assign current device ID to imported projects so badge displays "This device" (على هذا الجهاز), ensure Google Picker on the Launcher supports Drive folders, and self-heal missing device IDs for local projects stored in Dexie.
+**Changes:**
+- `apps/web/src/core/storage/project-service.ts` (changed): in `createProject`, automatically resolved `localDeviceId` using `getDeviceId()` when storage is `local` and `localDeviceId` was omitted, ensuring all locally created projects record the active device.
+- `apps/web/src/core/alpha/import.ts` (changed): in `importAlpha`, resolved active device ID via `getDeviceId(options.userId)` and passed `localDeviceId` to `projectIndex.onProjectCreated`, preventing imported `.alpha` projects from receiving `null` local_device_id.
+- `apps/web/src/modules/pdf/pdf-pane.tsx` (changed): when importing an editable folder from Drive in the PDF workspace, renamed project to match the folder/PDF name and synchronized `localDeviceId` to `projectIndex.onStorageModeChanged`.
+- `apps/web/app/page.tsx` (changed): in `handleOpenAlphaFromDrive`, enabled `selectFolder: true` and scoped to `Aboard/Exports`, adding full support for selecting exported Drive folders and creating local projects with current device ID; in `loadRecentProjects` and `init()`, added Dexie verification to self-heal any existing projects stored in local IndexedDB whose Supabase `local_device_id` was `null` or out of sync.
+- `apps/web/src/core/storage/project-index.test.ts` (changed): added test verifying automatic `localDeviceId` assignment and `this-device` badge resolution.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (342/342 unit tests passing across 45 test files).
+- `pnpm test:e2e`: PASS (5/5 Playwright tests passing).
+**Related:** LAUNCH-2, STORE-1, STORE-2, ALPHA-2
+**Open:** none.

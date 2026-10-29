@@ -282,5 +282,40 @@ describe("Project Index & Badge Selection (Task 22 / LAUNCH-2, STORE-1)", () => 
       expect(deletedSpy).toHaveBeenCalledWith(manifest.project.id, "local");
       await expect(service.openProject(manifest.project.id)).rejects.toThrow();
     });
+
+    it("automatically assigns current deviceId when creating local project without explicit localDeviceId", async () => {
+      const provider = new MockStorageProvider();
+      const service = new ProjectService(provider);
+      const createdSpy = vi.fn().mockResolvedValue(undefined);
+
+      service.setIndexSyncer({
+        onProjectCreated: createdSpy,
+        onProjectRenamed: vi.fn(),
+        onProjectDeleted: vi.fn(),
+        onStorageModeChanged: vi.fn(),
+      });
+
+      const manifest = await service.createProject("Chemistry Lab", "Science", {
+        storage: "local",
+      });
+
+      expect(createdSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: manifest.project.id,
+          title: "Chemistry Lab",
+          storage: "local",
+          localDeviceId: expect.any(String),
+        })
+      );
+
+      const sentDeviceId = createdSpy.mock.calls[0][0].localDeviceId;
+      const badge = getProjectStorageBadge(
+        { storage: "local", local_device_id: sentDeviceId },
+        sentDeviceId
+      );
+      expect(badge.kind).toBe("this-device");
+      expect(badge.labelKey).toBe("launcher.storageThisDevice");
+      expect(badge.isInteractive).toBe(true);
+    });
   });
 });

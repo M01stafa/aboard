@@ -162,12 +162,23 @@ export class ProjectService {
     this.activeProjectId = id;
 
     if (this.indexSyncer) {
+      let localDeviceId = options?.localDeviceId;
+      const storageMode = options?.storage ?? (this.provider.kind === "drive" ? "drive" : "local");
+      if (storageMode === "local" && !localDeviceId) {
+        try {
+          const { getDeviceId } = await import("@/core/db/lifecycle");
+          localDeviceId = await getDeviceId();
+        } catch {
+          // Non-fatal if uninitialized in mock environment
+        }
+      }
+
       await this.indexSyncer.onProjectCreated({
         id,
         title,
         subject,
-        storage: options?.storage ?? (this.provider.kind === "drive" ? "drive" : "local"),
-        localDeviceId: options?.localDeviceId,
+        storage: storageMode,
+        localDeviceId,
         driveFolderId: options?.driveFolderId,
       });
     }
