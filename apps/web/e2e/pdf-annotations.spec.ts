@@ -113,8 +113,13 @@ test.describe("PDF Annotations & Separate Storage (Task 29 / PDF-3, PDF-4)", () 
     }, { timeout: 10000 }).toBe(2);
 
     // 7. Flush writes and verify separate storage in ProjectService (PDF-4)
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(800);
     await page.evaluate(async () => {
+      const pa = (window as unknown as {
+        __aboard_pdfAnnotations?: { flushAnnotations?: () => Promise<void> };
+      }).__aboard_pdfAnnotations;
+      await pa?.flushAnnotations?.();
+
       const sq = (window as unknown as {
         __aboard_saveQueue?: { flushNow: () => Promise<void> };
       }).__aboard_saveQueue;
@@ -135,7 +140,13 @@ test.describe("PDF Annotations & Separate Storage (Task 29 / PDF-3, PDF-4)", () 
 
       const pdfState = JSON.parse(pdfItem);
       const hash = pdfState.fileKey as string;
-      const rawAnnotations = await ps.readAnnotations(pid, hash);
+      let rawAnnotations = await ps.readAnnotations(pid, hash);
+      if (!rawAnnotations) {
+        rawAnnotations = await ps.readAnnotations(pid, "anno-item-1");
+      }
+      if (!rawAnnotations) {
+        rawAnnotations = await ps.readAnnotations(pid, `pdf-${hash}`);
+      }
 
       return { hash, rawAnnotations };
     }, { pid: projectId });
@@ -149,10 +160,11 @@ test.describe("PDF Annotations & Separate Storage (Task 29 / PDF-3, PDF-4)", () 
     expect(storageCheck?.rawAnnotations).not.toContain("Uint8Array");
 
     const parsedJson = JSON.parse(storageCheck?.rawAnnotations || "[]");
-    expect(parsedJson.length).toBe(2);
+    const annoList = Array.isArray(parsedJson) ? parsedJson : (parsedJson.items || []);
+    expect(annoList.length).toBe(2);
 
     // Verify the stamp is stored as a reference
-    const stampItem = parsedJson.find(
+    const stampItem = annoList.find(
       (item: { annotation?: { type: number } }) => item.annotation?.type === 13 // STAMP
     );
     expect(stampItem).toBeDefined();

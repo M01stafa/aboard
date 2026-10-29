@@ -2072,3 +2072,29 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (5/5 Playwright tests passing).
 **Related:** LAUNCH-2, STORE-1, STORE-2, ALPHA-2
 **Open:** none.
+
+
+## 2026-10-29 — PDF Phase Final Cleanup and Google Picker Folder Selection & Device ID Resolution
+**Request:** Diagnose Google Picker developer key error and folder selection disabled state, resolve "Another device" badge bug on the Launcher for imported and local projects, safely remove Stirling-PDF and temporary test pages without regression, and verify full test suite.
+**Changes:**
+- `apps/web/src/core/drive/picker.ts` (changed): automatically included `application/vnd.google-apps.folder` in `validMimes` whenever `selectFolder: true` so Google Picker enables the "Select" button when clicking folders.
+- `apps/web/src/core/drive/api.ts` (changed): added fallback lookup by folder name (`name = 'Aboard'`, `name = 'Exports'`) when finding or creating root and exports folders, ensuring Picker navigates directly into `Aboard/Exports`.
+- `apps/web/src/core/db/lifecycle.ts` (changed): updated `getDeviceId` to resolve authenticated user from `supabase.auth.getSession()` if `userId` is omitted, preventing `"unknown-device"` mismatch on imported and created projects.
+- `apps/web/app/page.tsx` (changed): ensured `openDb(user.id)` is actively resolved during project self-healing in `loadRecentProjects` and `init()`, synchronizing local Dexie projects to `this-device` badge; explicitly enabled folder MIME type in `openGooglePicker`.
+- `apps/web/src/modules/pdf/pdf-pane.tsx` (changed): specified `application/vnd.google-apps.folder` in `openGooglePicker` MIME filter when selecting files/folders from Drive.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): removed Stirling online tools modals, action buttons, and imports.
+- `apps/web/src/modules/pdf/pdf-tools-dialogs.tsx` (deleted): removed Stirling processing and notice modals.
+- `apps/web/src/core/stirling.ts` & `apps/web/src/core/stirling.test.ts` (deleted): deleted client Stirling helper and its tests.
+- `apps/web/src/core/env.ts` & `apps/web/src/core/env.test.ts` (changed): removed `NEXT_PUBLIC_PDF_API_URL` validation and schema entry.
+- `apps/web/next.config.ts` & `.env.example` & `apps/web/.env.example` & `.github/workflows/ci.yml` (changed): removed Stirling endpoint references and CSP entry.
+- `apps/web/app/font-preview/` & `apps/web/app/theme-test/` (deleted): removed temporary test/preview pages; removed font preview link from Settings.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): removed obsolete keys for font preview, theme test, and online Stirling tools.
+- `docs/DESIGN.md` (changed): documented directional icon mirroring and natural LTR range input rules in section 9.
+- `docs/PROGRESS.md` & `docs/TASKS.md` (changed): updated Phase 9 status as dropped by owner.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (331/331 unit tests passing across 44 test files).
+- `pnpm test:e2e`: PASS (36/36 Playwright E2E tests passing).
+**Related:** PDF-1, PDF-3, PDF-4, STORE-1, STORE-2, SEC-2, ALPHA-2, LAUNCH-2
+**Open:** none.

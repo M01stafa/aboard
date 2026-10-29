@@ -531,7 +531,15 @@ export async function getOrCreateRootFolder(
 ): Promise<DriveFileMeta> {
   const query =
     "appProperties has { key='aboardKind' and value='root' } and trashed = false and mimeType = 'application/vnd.google-apps.folder'";
-  const files = await findFiles(query, undefined, tokenManager);
+  let files = await findFiles(query, undefined, tokenManager);
+
+  if (files.length === 0) {
+    files = await findFiles(
+      "name = 'Aboard' and trashed = false and mimeType = 'application/vnd.google-apps.folder' and 'root' in parents",
+      undefined,
+      tokenManager
+    );
+  }
 
   if (files.length > 0) {
     return files[0];
@@ -586,7 +594,15 @@ export async function getOrCreateExportsFolder(
   tokenManager?: DriveTokenManager
 ): Promise<DriveFileMeta> {
   const query = `'${rootFolderId}' in parents and appProperties has { key='aboardKind' and value='exports' } and trashed = false and mimeType = 'application/vnd.google-apps.folder'`;
-  const files = await findFiles(query, undefined, tokenManager);
+  let files = await findFiles(query, undefined, tokenManager);
+
+  if (files.length === 0) {
+    files = await findFiles(
+      `'${rootFolderId}' in parents and name = 'Exports' and trashed = false and mimeType = 'application/vnd.google-apps.folder'`,
+      undefined,
+      tokenManager
+    );
+  }
 
   if (files.length > 0) {
     return files[0];

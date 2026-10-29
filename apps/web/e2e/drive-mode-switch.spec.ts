@@ -197,7 +197,7 @@ test.describe("Drive Mode Switching & Google Picker E2E (Task 37 / §11.6, §10.
     await openDriveBtn.click();
 
     // Verify script tag was injected
-    const scriptTag = page.locator('script[src="https://apis.google.com/js/api.js"]');
+    const scriptTag = page.locator('script[src^="https://apis.google.com/js/api.js"]');
     await expect(scriptTag).toHaveCount(1);
   });
 
@@ -214,7 +214,7 @@ test.describe("Drive Mode Switching & Google Picker E2E (Task 37 / §11.6, §10.
     await pdfDriveBtn.click();
 
     // Verify script tag is present
-    const scriptTag = page.locator('script[src="https://apis.google.com/js/api.js"]');
+    const scriptTag = page.locator('script[src^="https://apis.google.com/js/api.js"]');
     await expect(scriptTag).toHaveCount(1);
   });
 

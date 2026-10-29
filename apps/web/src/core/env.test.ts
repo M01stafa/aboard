@@ -8,7 +8,6 @@ describe("env configuration validation", () => {
     NEXT_PUBLIC_GOOGLE_CLIENT_ID: "791651476865-vvdeqhfn5tn9vie6gif05di83etol9jr.apps.googleusercontent.com",
     NEXT_PUBLIC_GOOGLE_API_KEY: "AIzaSyDummyTestKeyDummyTestKeyDummyTest",
     NEXT_PUBLIC_GOOGLE_APP_ID: "791651476865",
-    NEXT_PUBLIC_PDF_API_URL: "http://localhost:8080",
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAAABk9xxxxxxxx",
   };
 
@@ -19,7 +18,6 @@ describe("env configuration validation", () => {
     expect(validated.NEXT_PUBLIC_GOOGLE_CLIENT_ID).toBe(validConfig.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
     expect(validated.NEXT_PUBLIC_GOOGLE_API_KEY).toBe(validConfig.NEXT_PUBLIC_GOOGLE_API_KEY);
     expect(validated.NEXT_PUBLIC_GOOGLE_APP_ID).toBe("791651476865");
-    expect(validated.NEXT_PUBLIC_PDF_API_URL).toBe("http://localhost:8080");
     expect(validated.NEXT_PUBLIC_TURNSTILE_SITE_KEY).toBe("0x4AAAAAAABk9xxxxxxxx");
   });
 
@@ -31,9 +29,9 @@ describe("env configuration validation", () => {
   });
 
   it("throws clear error when an URL is malformed", () => {
-    const invalid = { ...validConfig, NEXT_PUBLIC_PDF_API_URL: "not-a-valid-url" };
+    const invalid = { ...validConfig, NEXT_PUBLIC_SUPABASE_URL: "not-a-valid-url" };
     expect(() => validateEnv(invalid)).toThrowError(
-      /NEXT_PUBLIC_PDF_API_URL must be a valid URL/
+      /NEXT_PUBLIC_SUPABASE_URL must be a valid URL/
     );
   });
 
@@ -51,7 +49,6 @@ describe("env configuration validation", () => {
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: undefined,
       NEXT_PUBLIC_GOOGLE_API_KEY: undefined,
       NEXT_PUBLIC_GOOGLE_APP_ID: undefined,
-      NEXT_PUBLIC_PDF_API_URL: undefined,
     };
     expect(() => validateEnv(invalid)).toThrowError(
       /\[Aboard\] Invalid or missing environment configuration:/

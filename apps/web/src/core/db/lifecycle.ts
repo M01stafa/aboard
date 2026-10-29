@@ -82,7 +82,19 @@ export function getActiveUserId(): string | null {
  * Opens the database if necessary.
  */
 export async function getDeviceId(userId?: string): Promise<string> {
-  const targetUserId = userId ?? currentUserId;
+  let targetUserId = userId ?? currentUserId;
+  if (!targetUserId) {
+    try {
+      const { supabase } = await import("@/core/supabase");
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user?.id) {
+        targetUserId = data.session.user.id;
+      }
+    } catch {
+      // Non-fatal if uninitialized
+    }
+  }
+
   if (!targetUserId) {
     if (currentDb && currentDb.isOpen()) {
       const rec = await currentDb.meta.get("deviceId");

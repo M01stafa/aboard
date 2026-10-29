@@ -205,6 +205,10 @@ export async function openGooglePicker(
           }
         }
 
+        if (options.selectFolder && !validMimes.includes("application/vnd.google-apps.folder")) {
+          validMimes.push("application/vnd.google-apps.folder");
+        }
+
         if (validMimes.length > 0) {
           docsView.setMimeTypes(validMimes.join(","));
         }

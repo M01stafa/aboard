@@ -37,11 +37,11 @@ describe("i18n translation system", () => {
   });
 
   it("replaces parameters in translation strings", () => {
-    const enText = getTranslation("en", "themeTest.toggleButton" as I18nKey, { theme: "dark" });
-    expect(enText).toBe("Toggle Theme (Current: dark)");
+    const enText = getTranslation("en", "launcher.welcomeUser" as I18nKey, { email: "user@example.com" });
+    expect(enText).toBe("Welcome, user@example.com");
 
-    const arText = getTranslation("ar", "themeTest.toggleButton" as I18nKey, { theme: "فاتح" });
-    expect(arText).toBe("تبديل المظهر (الحالي: فاتح)");
+    const arText = getTranslation("ar", "launcher.welcomeUser" as I18nKey, { email: "user@example.com" });
+    expect(arText).toBe("مرحباً، user@example.com");
   });
 
   it("falls back to English when a key is missing in Arabic", () => {

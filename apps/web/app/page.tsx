@@ -74,11 +74,11 @@ export function LauncherContent({ user }: { user: User }) {
 
       // Self-heal local projects: if a project exists in the browser's local IndexedDB,
       // ensure it is recognized as this-device even if local_device_id in Supabase was null.
-      const { getDb } = await import("@/core/db/lifecycle");
-      const db = getDb();
+      const { openDb } = await import("@/core/db/lifecycle");
+      const db = await openDb(user.id);
       if (db) {
         for (const p of list) {
-          if (p.storage === "local" && (!p.local_device_id || p.local_device_id !== devId)) {
+          if (p.storage === "local" && (!p.local_device_id || p.local_device_id !== devId || p.local_device_id === "unknown-device")) {
             const localProj = await db.projects.get(p.id).catch(() => null);
             if (localProj) {
               p.local_device_id = devId;
@@ -112,11 +112,11 @@ export function LauncherContent({ user }: { user: User }) {
 
         // Self-heal local projects: if a project exists in the browser's local IndexedDB,
         // ensure it is recognized as this-device even if local_device_id in Supabase was null.
-        const { getDb } = await import("@/core/db/lifecycle");
-        const db = getDb();
+        const { openDb } = await import("@/core/db/lifecycle");
+        const db = await openDb(user.id);
         if (db) {
           for (const p of list) {
-            if (p.storage === "local" && (!p.local_device_id || p.local_device_id !== devId)) {
+            if (p.storage === "local" && (!p.local_device_id || p.local_device_id !== devId || p.local_device_id === "unknown-device")) {
               const localProj = await db.projects.get(p.id).catch(() => null);
               if (localProj) {
                 p.local_device_id = devId;
@@ -252,7 +252,7 @@ export function LauncherContent({ user }: { user: User }) {
       }
 
       const res = await openGooglePicker({
-        mimeTypes: "application/octet-stream,.alpha,application/zip,application/pdf",
+        mimeTypes: "application/octet-stream,.alpha,application/zip,application/pdf,application/vnd.google-apps.folder",
         title: t("picker.selectAlphaTitle"),
         parentId,
         selectFolder: true,

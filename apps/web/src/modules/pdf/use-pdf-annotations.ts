@@ -503,6 +503,7 @@ export function usePdfAnnotations({
         customStrokes: customStrokesRef.current,
         selectedStrokeIds: selectedStrokeIdsRef.current,
         deleteSelected: handleDeleteSelected,
+        flushAnnotations,
       };
     }
   }, [annotationScope, historyScope, customStrokes, selectedStrokeIds, handleDeleteSelected]);

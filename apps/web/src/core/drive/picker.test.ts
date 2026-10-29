@@ -339,4 +339,57 @@ describe("Google Picker Integration (picker.ts / §10.11, PDF-1, ALPHA-2)", () =
       isFolder: true,
     });
   });
+
+  it("includes application/vnd.google-apps.folder in mimeTypes when selectFolder is true", async () => {
+    let capturedMimes = "";
+
+    window.gapi = {
+      load: (_mod: string, callbacks: { callback: () => void }) => {
+        callbacks.callback();
+      },
+    };
+
+    window.google = {
+      picker: {
+        ViewId: { DOCS: "docs" },
+        Action: { CANCEL: "cancel" },
+        Response: { ACTION: "action" },
+        DocsView: class {
+          setIncludeFolders() { return this; }
+          setSelectFolderEnabled() { return this; }
+          setMimeTypes(types: string) {
+            capturedMimes = types;
+            return this;
+          }
+        },
+        PickerBuilder: class {
+          setAppId() { return this; }
+          setOAuthToken() { return this; }
+          setDeveloperKey() { return this; }
+          setOrigin() { return this; }
+          addView() { return this; }
+          setLocale() { return this; }
+          setTitle() { return this; }
+          setCallback(cb: (data: Record<string, unknown>) => void) {
+            setTimeout(() => {
+              cb({ action: "cancel" });
+            }, 10);
+            return this;
+          }
+          build() {
+            return { setVisible: () => {} };
+          }
+        },
+      },
+    } as unknown as typeof window.google;
+
+    await openGooglePicker({
+      mimeTypes: "application/pdf",
+      selectFolder: true,
+      tokenManager: mockTokenManager,
+    });
+
+    expect(capturedMimes).toContain("application/pdf");
+    expect(capturedMimes).toContain("application/vnd.google-apps.folder");
+  });
 });

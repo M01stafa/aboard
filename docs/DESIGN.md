@@ -387,8 +387,16 @@ Known and accepted:
 html { background:var(--bg-body); color:var(--text-main); font-family:var(--font-sans); }
 :lang(ar) { letter-spacing:0 !important; }                  /* R6 */
 :focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }   /* R5 */
+[dir="rtl"] .icon-directional { transform: scaleX(-1); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-property:color, background-color, border-color !important; animation:none !important; }
+}
+
+/* Range input natural LTR operation in both LTR and RTL */
+input[type="range"],
+.range-wrapper,
+.range-input {
+  direction: ltr !important;
 }
 ```
 

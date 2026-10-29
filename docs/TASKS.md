@@ -284,7 +284,9 @@ Implement board to PDF by exporting the board with `exportToBlob` and appending 
 
 ---
 
-## Phase 9: Online PDF Tools (Release 2)
+## Phase 9: Online PDF Tools (Release 2) — CANCELLED (Dropped by owner)
+
+> **Note:** Phase 9 was dropped during the PDF phase completion cleanup to keep the PDF editor 100% client-side with zero server dependencies or Docker containers. All Stirling logic and gateway endpoints have been removed.
 
 ### Task 40: Deploy Stirling-PDF and the Gateway
 

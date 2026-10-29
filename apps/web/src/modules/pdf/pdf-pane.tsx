@@ -354,6 +354,7 @@ export function PdfPane({
                 }
 
                 const res = await openGooglePicker({
+                  mimeTypes: "application/pdf,application/vnd.google-apps.folder",
                   title: t("picker.addPdfFromDrive"),
                   parentId,
                   selectFolder: true,

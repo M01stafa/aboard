@@ -17,7 +17,6 @@ jobs:
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: "dummy-google-client-id"
       NEXT_PUBLIC_GOOGLE_API_KEY: "dummy-google-api-key"
       NEXT_PUBLIC_GOOGLE_APP_ID: "dummy-google-app-id"
-      NEXT_PUBLIC_PDF_API_URL: "https://pdf.example.com"
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
 
     steps:
