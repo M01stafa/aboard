@@ -17,7 +17,11 @@ export interface UsePdfPersistenceResult {
   isLoaded: boolean;
   hashingProgress: number | null; // 0 to 1, or null when idle
   saveLastPage: (page: number) => void;
-  addPdfFile: (file: File | Blob, name?: string) => Promise<void>;
+  addPdfFile: (
+    file: File | Blob,
+    name?: string,
+    initialAnnotationsJson?: string
+  ) => Promise<void>;
   error: string | null;
 }
 
@@ -127,7 +131,7 @@ export function usePdfPersistence({
 
   // Add a new PDF file from the device
   const addPdfFile = useCallback(
-    async (file: File | Blob, name?: string) => {
+    async (file: File | Blob, name?: string, initialAnnotationsJson?: string) => {
       setError(null);
       setHashingProgress(0);
       try {
@@ -158,6 +162,12 @@ export function usePdfPersistence({
           JSON.stringify(newPayload),
           docName
         );
+
+        if (initialAnnotationsJson) {
+          await ps.saveAnnotations(projectId, hash, initialAnnotationsJson).catch(() => {});
+          await ps.saveAnnotations(projectId, `pdf-${hash}`, initialAnnotationsJson).catch(() => {});
+          await ps.saveAnnotations(projectId, `anno-${itemId}`, initialAnnotationsJson).catch(() => {});
+        }
 
         payloadRef.current = newPayload;
         setPayload(newPayload);

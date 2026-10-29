@@ -22,13 +22,16 @@ export interface GoogleDocsView {
   setMimeTypes(mimeTypes: string): this;
   setIncludeFolders?(includeFolders: boolean): this;
   setSelectFolderEnabled?(selectFolder: boolean): this;
+  setParent?(parentId: string): this;
+  setInitialDir?(id: string): this;
 }
 
 export interface PickedFileResult {
   fileId: string;
   name: string;
   mimeType: string;
-  blob: Blob;
+  blob?: Blob;
+  isFolder?: boolean;
 }
 
 export interface OpenPickerOptions {
@@ -36,6 +39,8 @@ export interface OpenPickerOptions {
   locale?: string;
   title?: string;
   tokenManager?: DriveTokenManager;
+  parentId?: string;
+  selectFolder?: boolean;
 }
 
 declare global {
@@ -169,7 +174,14 @@ export async function openGooglePicker(
         docsView.setIncludeFolders(true);
       }
       if (typeof docsView.setSelectFolderEnabled === "function") {
-        docsView.setSelectFolderEnabled(false);
+        docsView.setSelectFolderEnabled(options.selectFolder ?? false);
+      }
+      if (options.parentId) {
+        if (typeof docsView.setParent === "function") {
+          docsView.setParent(options.parentId);
+        } else if (typeof docsView.setInitialDir === "function") {
+          docsView.setInitialDir(options.parentId);
+        }
       }
 
       if (options.mimeTypes) {
@@ -238,10 +250,25 @@ export async function openGooglePicker(
           const mimeType = String(
             doc[picker.Document.MIME_TYPE] || "application/octet-stream"
           );
+          const type = String((doc as Record<string, unknown>).type || "");
+          const isFolder =
+            mimeType === "application/vnd.google-apps.folder" ||
+            type === "folder" ||
+            Boolean((doc as Record<string, unknown>).isFolder);
+
+          if (isFolder) {
+            resolve({
+              fileId,
+              name,
+              mimeType: "application/vnd.google-apps.folder",
+              isFolder: true,
+            });
+            return;
+          }
 
           try {
             const blob = await downloadFileBlob(fileId, tm);
-            resolve({ fileId, name, mimeType, blob });
+            resolve({ fileId, name, mimeType, blob, isFolder: false });
           } catch (downloadErr) {
             reject(downloadErr);
           }

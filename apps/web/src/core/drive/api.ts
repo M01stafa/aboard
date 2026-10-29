@@ -10,7 +10,10 @@ export type AboardKind =
   | "annotations"
   | "file"
   | "exports"
-  | "export";
+  | "export"
+  | "export-folder"
+  | "export-pdf"
+  | "export-annotations";
 
 export interface AboardAppProperties {
   aboardKind: AboardKind;
@@ -597,6 +600,85 @@ export async function getOrCreateExportsFolder(
     rootFolderId,
     tokenManager
   );
+}
+
+/**
+ * Returns the Google Drive folder ID for Aboard/Exports/.
+ */
+export async function getExportsFolderId(
+  tokenManager?: DriveTokenManager
+): Promise<string> {
+  const root = await getOrCreateRootFolder(tokenManager);
+  const exportsFolder = await getOrCreateExportsFolder(root.id, tokenManager);
+  return exportsFolder.id;
+}
+
+/**
+ * Lists all active (non-trashed) files directly located inside a Google Drive folder.
+ */
+export async function listFilesInFolder(
+  folderId: string,
+  tokenManager?: DriveTokenManager
+): Promise<DriveFileMeta[]> {
+  const query = `'${folderId}' in parents and trashed = false`;
+  return findFiles(query, undefined, tokenManager);
+}
+
+/**
+ * Exports an editable PDF project to Google Drive by creating a dedicated folder in Aboard/Exports/<folderName>
+ * containing the original clean PDF and the annotations.json sidecar file.
+ */
+export async function exportPdfFolderToDrive(
+  folderName: string,
+  pdfBlob: Blob,
+  pdfFileName: string,
+  annotationsJson: string,
+  onProgress?: (progress: number) => void,
+  tokenManager?: DriveTokenManager
+): Promise<{ folderId: string; pdfFileId: string; annotationsFileId: string }> {
+  const root = await getOrCreateRootFolder(tokenManager);
+  const exportsFolder = await getOrCreateExportsFolder(root.id, tokenManager);
+
+  // 1. Create subfolder inside Aboard/Exports/
+  const createdFolder = await createFolder(
+    folderName,
+    { aboardKind: "export-folder" },
+    exportsFolder.id,
+    tokenManager
+  );
+
+  // 2. Upload original unmodified PDF into this folder
+  const pdfFile = await uploadFile(
+    {
+      name: pdfFileName.endsWith(".pdf") ? pdfFileName : `${pdfFileName}.pdf`,
+      mimeType: "application/pdf",
+      parents: [createdFolder.id],
+      appProperties: { aboardKind: "export-pdf" },
+    },
+    pdfBlob,
+    onProgress ? (p) => onProgress(p * 0.7) : undefined,
+    tokenManager
+  );
+
+  // 3. Upload annotations.json sidecar file into this folder
+  const jsonBlob = new Blob([annotationsJson], { type: "application/json" });
+  const jsonFile = await uploadFile(
+    {
+      name: "annotations.json",
+      mimeType: "application/json",
+      parents: [createdFolder.id],
+      appProperties: { aboardKind: "export-annotations" },
+    },
+    jsonBlob,
+    onProgress ? (p) => onProgress(0.7 + p * 0.3) : undefined,
+    tokenManager
+  );
+
+  return {
+    folderId: createdFolder.id,
+    pdfFileId: pdfFile.id,
+    annotationsFileId: jsonFile.id,
+  };
 }
 
 /**

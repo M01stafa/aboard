@@ -202,20 +202,25 @@ test.describe(".alpha Project Export (Task 31 / ALPHA-1, ALPHA-5, ALPHA-6, ALPHA
     const dialog = page.locator('[data-testid="alpha-export-dialog"]');
     await expect(dialog).toBeVisible();
 
-    // 1. PDF Export Section (Sharing / Printing without JSON clutter)
+    // 1. PDF Export Section (Folder or standard PDF exports to Drive)
     const pdfSection = dialog.locator('[data-testid="export-pdf-section"]');
     await expect(pdfSection).toBeVisible();
+    const folderInput = dialog.locator('[data-testid="export-folder-name-input"]');
+    await expect(folderInput).toBeVisible();
+    const editableRadio = dialog.locator('[data-testid="export-pdf-editable"]');
     const flattenedRadio = dialog.locator('[data-testid="export-pdf-flattened"]');
     const cleanRadio = dialog.locator('[data-testid="export-pdf-clean"]');
+    await expect(editableRadio).toBeVisible();
     await expect(flattenedRadio).toBeVisible();
     await expect(cleanRadio).toBeVisible();
-    await expect(flattenedRadio).toBeChecked();
+    await expect(editableRadio).toBeChecked();
+    await expect(flattenedRadio).not.toBeChecked();
     await expect(cleanRadio).not.toBeChecked();
 
     // Toggle to Clean PDF
     await cleanRadio.click();
     await expect(cleanRadio).toBeChecked();
-    await expect(flattenedRadio).not.toBeChecked();
+    await expect(editableRadio).not.toBeChecked();
 
     // 2. Project Backup (.alpha) Section
     const alphaSection = dialog.locator('[data-testid="export-alpha-section"]');

@@ -97,7 +97,8 @@ export function ExportDialog({
   const [isExporting, setIsExporting] = useState(false);
 
   // PDF-only Drive Export options
-  const [pdfExportType, setPdfExportType] = useState<"flattened" | "clean">("flattened");
+  const [pdfExportType, setPdfExportType] = useState<"editable" | "flattened" | "clean">("editable");
+  const [folderName, setFolderName] = useState("");
   const [isExportingDrive, setIsExportingDrive] = useState(false);
   const [driveSuccess, setDriveSuccess] = useState(false);
   const [projectPdfs, setProjectPdfs] = useState<ProjectPdfInfo[] | null>(null);
@@ -117,7 +118,12 @@ export function ExportDialog({
     (async () => {
       try {
         const pdfs = await getProjectPdfs(projectId, ps);
-        if (!cancelled) setProjectPdfs(pdfs);
+        if (!cancelled) {
+          setProjectPdfs(pdfs);
+          if (pdfs.length > 0) {
+            setFolderName((prev) => prev || pdfs[0].title.replace(/\.pdf$/i, ""));
+          }
+        }
       } catch {
         if (!cancelled) setProjectPdfs([]);
       }
@@ -221,6 +227,7 @@ export function ExportDialog({
 
     try {
       bus.emit("workspace:flush", {});
+      await new Promise((r) => setTimeout(r, 250));
       // 1. Flush save queue to ensure latest annotations are persisted
       await ps.flushNow?.();
 
@@ -233,22 +240,40 @@ export function ExportDialog({
       const { uploadExportToDrive } = await import("@/core/drive/api");
       const { driveTokenManager } = await import("@/core/drive/tokens");
 
-      // 3. Export each PDF according to selected type (flattened vs clean)
+      // 3. Export each PDF according to selected type (editable folder vs flattened vs clean)
       for (const pdfDoc of pdfs) {
         const rawBlob = await ps.getFile(projectId, pdfDoc.fileKey);
         if (!rawBlob) {
           throw new Error(`File content for "${pdfDoc.title}" could not be retrieved.`);
         }
-        const pdfBuffer = await rawBlob.arrayBuffer();
-
-        let finalBlob: Blob;
-        let fileName: string;
         const baseName = (pdfDoc.title || "document").replace(/\.pdf$/i, "");
 
-        if (pdfExportType === "flattened") {
+        if (pdfExportType === "editable") {
+          // Editable Folder: creates Aboard/Exports/<targetFolderName> with original PDF and annotations.json
+          const annotationsJson =
+            (await ps.readAnnotations(projectId, `pdf-${pdfDoc.fileKey}`).catch(() => "")) ||
+            (await ps.readAnnotations(projectId, pdfDoc.fileKey).catch(() => "")) ||
+            (await ps.readAnnotations(projectId, `anno-${pdfDoc.id}`).catch(() => "")) ||
+            (await ps.readAnnotations(projectId, pdfDoc.id).catch(() => "")) ||
+            "";
+
+          const { exportPdfFolderToDrive } = await import("@/core/drive/api");
+          const targetFolderName = folderName.trim() || baseName;
+          await exportPdfFolderToDrive(
+            targetFolderName,
+            rawBlob,
+            pdfDoc.title || `${baseName}.pdf`,
+            annotationsJson,
+            undefined,
+            driveTokenManager
+          );
+        } else if (pdfExportType === "flattened") {
+          const pdfBuffer = await rawBlob.arrayBuffer();
           // Flattened: read annotations and burn custom ink, stamps, highlights into PDF pages
           const annotationsJson =
+            (await ps.readAnnotations(projectId, `pdf-${pdfDoc.fileKey}`).catch(() => "")) ||
             (await ps.readAnnotations(projectId, pdfDoc.fileKey).catch(() => "")) ||
+            (await ps.readAnnotations(projectId, `anno-${pdfDoc.id}`).catch(() => "")) ||
             (await ps.readAnnotations(projectId, pdfDoc.id).catch(() => "")) ||
             "";
 
@@ -259,22 +284,30 @@ export function ExportDialog({
             projectId,
             ps
           );
-          finalBlob = new Blob([burnedBytes.buffer as ArrayBuffer], { type: "application/pdf" });
-          fileName = `${safeFileName(baseName)}-flattened.pdf`;
-        } else {
-          // Clean: original PDF document with all annotations stripped
-          finalBlob = new Blob([pdfBuffer], { type: "application/pdf" });
-          fileName = `${safeFileName(baseName)}-clean.pdf`;
-        }
+          const finalBlob = new Blob([burnedBytes.buffer as ArrayBuffer], { type: "application/pdf" });
+          const fileName = `${safeFileName(baseName)}-flattened.pdf`;
 
-        // Upload single standard PDF directly to Aboard/Exports/ in Google Drive (SEC-1, SEC-2, SEC-7)
-        await uploadExportToDrive(
-          fileName,
-          finalBlob,
-          undefined,
-          driveTokenManager,
-          "application/pdf"
-        );
+          await uploadExportToDrive(
+            fileName,
+            finalBlob,
+            undefined,
+            driveTokenManager,
+            "application/pdf"
+          );
+        } else {
+          const pdfBuffer = await rawBlob.arrayBuffer();
+          // Clean: original PDF document with all annotations stripped
+          const finalBlob = new Blob([pdfBuffer], { type: "application/pdf" });
+          const fileName = `${safeFileName(baseName)}-clean.pdf`;
+
+          await uploadExportToDrive(
+            fileName,
+            finalBlob,
+            undefined,
+            driveTokenManager,
+            "application/pdf"
+          );
+        }
       }
 
       setDriveSuccess(true);
@@ -398,7 +431,78 @@ export function ExportDialog({
             </p>
           </div>
 
-          {/* Option A: Flattened PDF */}
+          {/* Project Name / Folder Name Input */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+            <label
+              htmlFor="export-folder-name"
+              style={{
+                fontSize: "0.8125rem",
+                fontWeight: 500,
+                color: "var(--text-main)",
+              }}
+            >
+              {t("export.folderNameLabel")}
+            </label>
+            <input
+              id="export-folder-name"
+              type="text"
+              data-testid="export-folder-name-input"
+              value={folderName}
+              onChange={(e) => setFolderName(e.target.value)}
+              placeholder={t("export.folderNamePlaceholder")}
+              disabled={isExportingDrive || isExporting}
+              style={{
+                height: "var(--control-sm)",
+                paddingInline: "var(--space-2)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border-card)",
+                backgroundColor: "var(--bg-surface)",
+                color: "var(--text-main)",
+                fontSize: "0.875rem",
+                boxSizing: "border-box",
+                width: "100%",
+                outline: "none",
+              }}
+            />
+          </div>
+
+          {/* Option A: Editable Folder (PDF + JSON) */}
+          <label
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "var(--space-2)",
+              cursor: isExportingDrive || isExporting ? "not-allowed" : "pointer",
+              userSelect: "none",
+            }}
+          >
+            <input
+              type="radio"
+              name="pdf-export-mode"
+              data-testid="export-pdf-editable"
+              value="editable"
+              checked={pdfExportType === "editable"}
+              disabled={isExportingDrive || isExporting}
+              onChange={() => setPdfExportType("editable")}
+              style={{
+                width: "16px",
+                height: "16px",
+                marginBlockStart: "var(--space-0)",
+                accentColor: "var(--accent-text)",
+                cursor: "pointer",
+              }}
+            />
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-0)" }}>
+              <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "var(--text-main)" }}>
+                {t("export.pdfExportEditable")}
+              </span>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                {t("export.pdfExportEditableHint")}
+              </span>
+            </div>
+          </label>
+
+          {/* Option B: Flattened PDF */}
           <label
             style={{
               display: "flex",
@@ -434,7 +538,7 @@ export function ExportDialog({
             </div>
           </label>
 
-          {/* Option B: Clean PDF */}
+          {/* Option C: Clean PDF */}
           <label
             style={{
               display: "flex",

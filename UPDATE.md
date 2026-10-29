@@ -2032,3 +2032,25 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Server verified: deleted `.next`, restarted daemon outside sandbox, HTTP 200 on `http://localhost:3000`.
 **Related:** ALPHA-2, STORE-2, SEC-2, SEC-5
 **Open:** none.
+
+
+## 2026-10-29 — Export Editable PDFs as Drive Folders, Rename Folders, and Import by Folder Selection
+**Request:** Allow users to name project/export folders before exporting, add "Export as Editable Folder (PDF + JSON)" option to Drive export dialog, create dedicated subfolders under Aboard/Exports/ in Google Drive storing original PDF and annotations.json sidecar, configure Google Picker with setParent and setSelectFolderEnabled(true) to open inside Aboard/Exports and pick folders, and load folder contents restoring PDF with fully editable custom ink/stamps.
+**Changes:**
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added translation keys for folder name input and editable folder export option.
+- `apps/web/src/core/drive/api.ts` (changed): added `getExportsFolderId`, `listFilesInFolder`, and `exportPdfFolderToDrive` supporting folder creation and sidecar uploads under `Aboard/Exports/`.
+- `apps/web/src/core/drive/picker.ts` (changed): enabled folder selection and folder parent scoping on Google DocsView; updated callback to resolve folder metadata without attempting blob download.
+- `apps/web/src/core/drive/picker.test.ts` (changed): added tests for folder selection and parent scoping.
+- `apps/web/src/modules/pdf/use-pdf-persistence.ts` (changed): accepted optional `initialAnnotationsJson` in `addPdfFile` and saved annotations under document hash and item keys.
+- `apps/web/src/core/alpha/export-dialog.tsx` (changed): added "Project Name / Folder Name" input field, added "Export as Editable Folder (PDF + JSON)" radio default, and hooked up `exportPdfFolderToDrive`.
+- `apps/web/src/core/alpha/export-dialog.test.tsx` (changed): added tests verifying editable folder export and folder renaming.
+- `apps/web/src/modules/pdf/pdf-pane.tsx` (changed): updated Google Drive import flow to open in `Aboard/Exports`, support folder selection, and load both PDF and `annotations.json` into the editor.
+- `apps/web/e2e/alpha-export.spec.ts` & `apps/web/e2e/alpha-import.spec.ts` (changed): updated E2E tests and added end-to-end test verifying full roundtrip folder export, DB wipe, folder import, and annotation editability.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm test`: PASS (341/341 unit tests passing across 45 test files).
+- `pnpm test:e2e`: PASS (5/5 Playwright tests passing).
+**Related:** PDF-3, PDF-5, STORE-2, STORE-3, ALPHA-2, ALPHA-6
+**Open:** none.

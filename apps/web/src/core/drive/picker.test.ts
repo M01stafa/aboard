@@ -145,7 +145,7 @@ describe("Google Picker Integration (picker.ts / §10.11, PDF-1, ALPHA-2)", () =
     expect(result).not.toBeNull();
     expect(result?.fileId).toBe("drive-file-id-456");
     expect(result?.name).toBe("lecture_slides.pdf");
-    expect(result?.blob.size).toBeGreaterThan(0);
+    expect(result?.blob?.size).toBeGreaterThan(0);
   });
 
   it("normalizes .alpha extension to Drive zip/binary MIME types and enables folders", async () => {
@@ -258,5 +258,85 @@ describe("Google Picker Integration (picker.ts / §10.11, PDF-1, ALPHA-2)", () =
     });
 
     expect(result).toBeNull();
+  });
+
+  it("configures parentId and selectFolder and handles folder selection without downloading blob", async () => {
+    let capturedParentId = "";
+    let selectFolderEnabled = false;
+
+    window.gapi = {
+      load: (_mod: string, callbacks: { callback: () => void }) => {
+        callbacks.callback();
+      },
+    };
+
+    window.google = {
+      picker: {
+        ViewId: { DOCS: "docs" },
+        Action: { PICKED: "picked", CANCEL: "cancel" },
+        Response: { ACTION: "action", DOCUMENTS: "docs" },
+        Document: { ID: "id", NAME: "name", MIME_TYPE: "mimeType" },
+        DocsView: class {
+          setMimeTypes() { return this; }
+          setIncludeFolders() { return this; }
+          setSelectFolderEnabled(enabled: boolean) {
+            selectFolderEnabled = enabled;
+            return this;
+          }
+          setParent(parentId: string) {
+            capturedParentId = parentId;
+            return this;
+          }
+        },
+        PickerBuilder: class {
+          setAppId() { return this; }
+          setOAuthToken() { return this; }
+          setDeveloperKey() { return this; }
+          setOrigin() { return this; }
+          addView() { return this; }
+          setLocale() { return this; }
+          setTitle() { return this; }
+          setCallback(cb: (data: Record<string, unknown>) => void) {
+            setTimeout(() => {
+              cb({
+                action: "picked",
+                docs: [
+                  {
+                    id: "folder-xyz-123",
+                    name: "Physics Lecture",
+                    mimeType: "application/vnd.google-apps.folder",
+                  },
+                ],
+              });
+            }, 10);
+            return this;
+          }
+          build() {
+            return {
+              setVisible: () => {},
+            };
+          }
+        },
+      },
+    } as unknown as typeof window.google;
+
+    const apiModule = await import("./api");
+    const downloadSpy = vi.spyOn(apiModule, "downloadFileBlob");
+
+    const result = await openGooglePicker({
+      parentId: "exports-folder-id",
+      selectFolder: true,
+      tokenManager: mockTokenManager,
+    });
+
+    expect(capturedParentId).toBe("exports-folder-id");
+    expect(selectFolderEnabled).toBe(true);
+    expect(downloadSpy).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      fileId: "folder-xyz-123",
+      name: "Physics Lecture",
+      mimeType: "application/vnd.google-apps.folder",
+      isFolder: true,
+    });
   });
 });

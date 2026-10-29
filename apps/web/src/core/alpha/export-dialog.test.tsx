@@ -140,11 +140,17 @@ describe("ExportDialog UI (Task 31 / ALPHA-6)", () => {
       );
     });
 
+    const editableRadio = container.querySelector(
+      '[data-testid="export-pdf-editable"]'
+    ) as HTMLInputElement;
+    expect(editableRadio).not.toBeNull();
+    expect(editableRadio.checked).toBe(true);
+
     const flattenedRadio = container.querySelector(
       '[data-testid="export-pdf-flattened"]'
     ) as HTMLInputElement;
     expect(flattenedRadio).not.toBeNull();
-    expect(flattenedRadio.checked).toBe(true);
+    expect(flattenedRadio.checked).toBe(false);
 
     const cleanRadio = container.querySelector(
       '[data-testid="export-pdf-clean"]'
@@ -159,7 +165,70 @@ describe("ExportDialog UI (Task 31 / ALPHA-6)", () => {
     expect(driveBtn.textContent).toContain("Export to Drive");
   });
 
-  it("exports flattened PDF to Google Drive when clicking export-drive-btn", async () => {
+  it("exports editable folder (PDF + JSON) to Google Drive by default when clicking export-drive-btn", async () => {
+    const onClose = vi.fn();
+    const mockPdfBlob = new Blob([new Uint8Array([1, 2, 3])], { type: "application/pdf" });
+
+    const mockPs = {
+      openProject: vi.fn().mockResolvedValue({
+        items: [{ id: "pdf-1", kind: "pdf", title: "MyGuide.pdf", fileKey: "hash123" }],
+      }),
+      getFile: vi.fn().mockResolvedValue(mockPdfBlob),
+      readAnnotations: vi.fn().mockResolvedValue(JSON.stringify([{ type: "highlight" }])),
+      saveQueue: { flushNow: vi.fn().mockResolvedValue(undefined) },
+    };
+
+    const driveApi = await import("@/core/drive/api");
+    const exportFolderSpy = vi.spyOn(driveApi, "exportPdfFolderToDrive").mockResolvedValue({
+      folderId: "folder-1",
+      pdfFileId: "file-1",
+      annotationsFileId: "file-2",
+    });
+
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <ExportDialog
+            projectId="test-proj"
+            isOpen={true}
+            onClose={onClose}
+            projectService={mockPs as unknown as ProjectService}
+          />
+        </I18nProvider>
+      );
+    });
+
+    // Wait for projectPdfs effect to settle
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    const folderInput = container.querySelector(
+      '[data-testid="export-folder-name-input"]'
+    ) as HTMLInputElement;
+    expect(folderInput).not.toBeNull();
+    expect(folderInput.value).toBe("MyGuide");
+
+    const driveBtn = container.querySelector(
+      '[data-testid="export-drive-btn"]'
+    ) as HTMLButtonElement;
+
+    await act(async () => {
+      driveBtn.click();
+      await new Promise((r) => setTimeout(r, 350));
+    });
+
+    expect(exportFolderSpy).toHaveBeenCalledWith(
+      "MyGuide",
+      mockPdfBlob,
+      "MyGuide.pdf",
+      JSON.stringify([{ type: "highlight" }]),
+      undefined,
+      expect.anything()
+    );
+  });
+
+  it("exports flattened PDF to Google Drive when selecting flattened radio", async () => {
     const onClose = vi.fn();
     const mockPdfBlob = new Blob([new Uint8Array([1, 2, 3])], { type: "application/pdf" });
     const mockBurnedBytes = new Uint8Array([9, 8, 7]);
@@ -197,12 +266,21 @@ describe("ExportDialog UI (Task 31 / ALPHA-6)", () => {
       await new Promise((r) => setTimeout(r, 50));
     });
 
+    const flattenedRadio = container.querySelector(
+      '[data-testid="export-pdf-flattened"]'
+    ) as HTMLInputElement;
+    act(() => {
+      flattenedRadio.click();
+    });
+    expect(flattenedRadio.checked).toBe(true);
+
     const driveBtn = container.querySelector(
       '[data-testid="export-drive-btn"]'
     ) as HTMLButtonElement;
 
     await act(async () => {
       driveBtn.click();
+      await new Promise((r) => setTimeout(r, 350));
     });
 
     expect(burnSpy).toHaveBeenCalled();
@@ -265,6 +343,7 @@ describe("ExportDialog UI (Task 31 / ALPHA-6)", () => {
 
     await act(async () => {
       driveBtn.click();
+      await new Promise((r) => setTimeout(r, 350));
     });
 
     // Clean export should NOT burn annotations

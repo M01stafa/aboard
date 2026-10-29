@@ -343,11 +343,51 @@ export function PdfPane({
               e.stopPropagation();
               try {
                 const { openGooglePicker } = await import("@/core/drive/picker");
+                const { getExportsFolderId, listFilesInFolder, downloadFileBlob } = await import("@/core/drive/api");
+                const { driveTokenManager } = await import("@/core/drive/tokens");
+
+                let parentId: string | undefined;
+                try {
+                  parentId = await getExportsFolderId(driveTokenManager);
+                } catch {
+                  // Non-fatal if Aboard/Exports does not exist yet
+                }
+
                 const res = await openGooglePicker({
-                  mimeTypes: "application/pdf",
                   title: t("picker.addPdfFromDrive"),
+                  parentId,
+                  selectFolder: true,
+                  tokenManager: driveTokenManager,
                 });
-                if (res && res.blob) {
+
+                if (!res) return;
+
+                if (res.isFolder) {
+                  // Folder selected: list files inside folder
+                  const files = await listFilesInFolder(res.fileId, driveTokenManager);
+                  const pdfMeta = files.find(
+                    (f) => f.mimeType === "application/pdf" || (f.name ?? "").toLowerCase().endsWith(".pdf")
+                  );
+                  if (!pdfMeta) {
+                    throw new Error("No PDF file found in the selected folder.");
+                  }
+
+                  const pdfBlob = await downloadFileBlob(pdfMeta.id, driveTokenManager);
+
+                  const jsonMeta = files.find(
+                    (f) =>
+                      (f.name ?? "").toLowerCase() === "annotations.json" ||
+                      (f.name ?? "").toLowerCase().endsWith(".json")
+                  );
+                  let annotationsJson: string | undefined;
+                  if (jsonMeta) {
+                    const jsonBlob = await downloadFileBlob(jsonMeta.id, driveTokenManager);
+                    annotationsJson = await jsonBlob.text();
+                  }
+
+                  await addPdfFile(pdfBlob, pdfMeta.name ?? "document.pdf", annotationsJson);
+                } else if (res.blob) {
+                  // Single PDF file selected
                   await addPdfFile(res.blob, res.name);
                 }
               } catch (pickerErr) {
