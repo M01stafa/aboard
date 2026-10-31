@@ -2110,3 +2110,25 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `curl.exe -I http://localhost:3000`: HTTP 200 OK.
 **Related:** none
 **Open:** none.
+
+
+## 2026-10-31 — Save Status Reactivity & Offline Detection
+**Request:** Improve Save Status Indicator reactivity (max 3s update), add immediate offline detection (`offline` / `online` event listeners) to show "Waiting for connection", ensure all 5 WS-3 states function properly, verify via Playwright offline simulation, and restart dev server.
+**Changes:**
+- `apps/web/src/workspace/save-status.tsx`: reduced default debounce to 2000ms (max 3s reactivity); added immediate `offline` and `online` window event listeners to toggle `waiting-connection` and trigger immediate flush on reconnect; added 2s responsiveness check for queue dirty state.
+- `apps/web/src/core/storage/save-queue.ts`: added `isDirty()` check; added immediate offline transitions in `enqueue`, `flushNow`, and browser event listeners; ensured outbox is flushed upon reconnect before transitioning to `saved-drive`.
+- `apps/web/src/core/drive/drive-provider.ts`: added `navigator.onLine` checks in `writeItem` and `syncOutbox` to keep items queued safely in Dexie outbox during offline conditions.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts`: updated strings to match WS-3 spec ("Saved to Google Drive" / "Reconnect Google Drive" and Arabic equivalents).
+- `apps/web/src/workspace/save-status.test.tsx`: updated unit tests for 2s debounce, offline event detection, and all 5 WS-3 states.
+- `apps/web/src/core/storage/save-queue.test.ts`: added test cases for `isDirty()` and `handleOfflineTransition()`.
+- `apps/web/e2e/save-status-offline.spec.ts`: added Playwright E2E test verifying offline mode (`context.setOffline(true)`) immediately switches to "Waiting for connection", and reconnecting flushes to "Saved to Google Drive".
+**Checks:**
+- `pnpm test src/workspace/save-status.test.tsx`: PASS (4/4 tests).
+- `pnpm test src/core/storage/save-queue.test.ts`: PASS (8/8 tests).
+- `playwright test e2e/save-status-offline.spec.ts`: PASS (1/1 test).
+- `playwright test e2e/store-1-save-status.spec.ts`: PASS (1/1 test).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm lint`: PASS (0 errors, spacing 8-point compliant).
+- Dev server restarted and returned HTTP 200 on `http://localhost:3000`.
+**Related:** WS-3, STORE-1, STORE-5
+**Open:** none.

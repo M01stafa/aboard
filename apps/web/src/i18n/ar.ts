@@ -257,11 +257,11 @@ export const ar: TranslationDictionary = {
     backToLauncher: "العودة للوحة التشغيل",
   },
   saveStatus: {
-    savedDrive: "محفوظ في Drive",
+    savedDrive: "محفوظ في Google Drive",
     saving: "جارٍ الحفظ…",
     savedLocal: "محفوظ على هذا الجهاز",
     waitingConnection: "بانتظار الاتصال",
-    reconnectDrive: "أعد ربط Drive",
+    reconnectDrive: "أعد ربط Google Drive",
   },
   driveErrors: {
     reconnectBanner: "تم إلغاء أو انتهاء صلاحية الوصول إلى Google Drive. أعد الاتصال لاستئناف المزامنة.",

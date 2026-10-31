@@ -292,10 +292,13 @@ export class DriveProvider implements StorageProvider {
       });
     }
 
-    // 3. If Drive quota is exceeded or token is revoked, do not attempt upload now.
+    // 3. If Drive quota is exceeded, token is revoked, or offline, do not attempt upload now.
     // Local save is already guaranteed in Dexie and queued in outbox.
     const store = useDriveStore.getState();
     if (store.quotaExceeded || store.reconnectRequired) {
+      return;
+    }
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
       return;
     }
 
@@ -303,6 +306,9 @@ export class DriveProvider implements StorageProvider {
     try {
       await this.uploadItemToDrive(projectId, item, payload);
     } catch (err: unknown) {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        return;
+      }
       const isQuota =
         err instanceof StorageQuotaExceededError ||
         (err instanceof DriveApiError && err.isQuotaExceeded) ||
@@ -745,11 +751,17 @@ export class DriveProvider implements StorageProvider {
     if (store.quotaExceeded || store.reconnectRequired) {
       return;
     }
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      return;
+    }
 
     const db = this.resolveDb();
     const outboxEntries = await db.outbox.toArray();
 
     for (const entry of outboxEntries) {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        break;
+      }
       const item = await db.items.get(entry.itemId);
       if (!item || !item.payload) {
         if (entry.seq) await db.outbox.delete(entry.seq);
@@ -765,6 +777,9 @@ export class DriveProvider implements StorageProvider {
       try {
         await this.uploadItemToDrive(entry.projectId, storageItem, item.payload);
       } catch (err: unknown) {
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          break; // Stop further attempts while offline; items remain safe in outbox
+        }
         const isQuota =
           err instanceof StorageQuotaExceededError ||
           (err instanceof DriveApiError && err.isQuotaExceeded) ||

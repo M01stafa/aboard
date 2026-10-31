@@ -15,16 +15,32 @@ export interface SaveStatusIndicatorProps {
 /**
  * Purely informational save status indicator for the workspace top bar (WS-3).
  * Renders exactly five states via i18n keys, non-interactive with role="status".
- * Includes a debounce mechanism so that "Saved" status is only shown after
- * 10 seconds of inactivity to prevent UI flickering during continuous editing.
+ * Includes immediate offline detection (switching to "Waiting for connection") and
+ * reactive status updates within 3s.
  */
-export function SaveStatusIndicator({ debounceMs = 10000 }: SaveStatusIndicatorProps = {}) {
+export function SaveStatusIndicator({ debounceMs = 2000 }: SaveStatusIndicatorProps = {}) {
   const { t } = useI18n();
-  const [displayedStatus, setDisplayedStatus] = useState<SaveStatus>(() => saveQueue.getStatus());
+  const [displayedStatus, setDisplayedStatus] = useState<SaveStatus>(() => {
+    const initial = saveQueue.getStatus();
+    if (typeof navigator !== "undefined" && !navigator.onLine && !saveQueue.isLocalMode()) {
+      return "waiting-connection";
+    }
+    return initial;
+  });
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return saveQueue.subscribe((nextStatus) => {
+      // If offline in Drive mode, prioritize waiting-connection
+      if (typeof navigator !== "undefined" && !navigator.onLine && !saveQueue.isLocalMode()) {
+        if (pendingTimerRef.current) {
+          clearTimeout(pendingTimerRef.current);
+          pendingTimerRef.current = null;
+        }
+        setDisplayedStatus("waiting-connection");
+        return;
+      }
+
       // If a save is actively in progress or starting, show it immediately and cancel any pending "saved" transition
       if (nextStatus === "saving") {
         if (pendingTimerRef.current) {
@@ -57,6 +73,63 @@ export function SaveStatusIndicator({ debounceMs = 10000 }: SaveStatusIndicatorP
       setDisplayedStatus(nextStatus);
     });
   }, [debounceMs]);
+
+  // Immediate offline/online event listeners (Task 2 & STORE-5)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleOffline = () => {
+      if (!saveQueue.isLocalMode()) {
+        if (pendingTimerRef.current) {
+          clearTimeout(pendingTimerRef.current);
+          pendingTimerRef.current = null;
+        }
+        setDisplayedStatus("waiting-connection");
+      }
+    };
+
+    const handleOnline = () => {
+      if (!saveQueue.isLocalMode()) {
+        if (pendingTimerRef.current) {
+          clearTimeout(pendingTimerRef.current);
+          pendingTimerRef.current = null;
+        }
+        setDisplayedStatus("saving");
+        void saveQueue.flushNow();
+      }
+    };
+
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+    };
+  }, []);
+
+  // Periodic dirty / responsiveness check (Task 1: reactive updates max 3s)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const isDrive = !saveQueue.isLocalMode();
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+
+      if (isDrive && isOffline) {
+        const hasPending = saveQueue.isDirty() || (await saveQueue.hasUnsyncedDriveChanges());
+        if (hasPending && displayedStatus !== "waiting-connection") {
+          if (pendingTimerRef.current) {
+            clearTimeout(pendingTimerRef.current);
+            pendingTimerRef.current = null;
+          }
+          setDisplayedStatus("waiting-connection");
+        }
+      } else if (saveQueue.isDirty() && displayedStatus !== "saving") {
+        setDisplayedStatus("saving");
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [displayedStatus]);
 
   // Clean up timer on unmount
   useEffect(() => {

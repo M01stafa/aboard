@@ -128,6 +128,10 @@ export class SaveQueue {
     return this.projectService.getProvider().kind === "local";
   }
 
+  public isDirty(): boolean {
+    return this.pendingMap.size > 0 || this.hasUnsyncedDriveEntries;
+  }
+
   /**
    * Enqueues an item change notification from ProjectService.
    * Debounces writes at ~500 ms and coalesces rapid edits to the same item.
@@ -143,7 +147,11 @@ export class SaveQueue {
       queuedAt: Date.now(),
     });
 
-    this.setStatus("saving");
+    if (!this.isLocalMode() && typeof navigator !== "undefined" && !navigator.onLine) {
+      this.setStatus("waiting-connection");
+    } else {
+      this.setStatus("saving");
+    }
 
     // Debounce writes at ~500 ms
     if (this.debounceTimer) {
@@ -271,8 +279,24 @@ export class SaveQueue {
     }
 
     if (this.pendingMap.size === 0) {
+      if (!this.isLocalMode()) {
+        const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+        const hasOutbox = await this.hasUnsyncedDriveChanges();
+        if (hasOutbox && this.driveUploadHook) {
+          if (isOffline) {
+            this.setStatus("waiting-connection");
+            return;
+          }
+          this.setStatus("saving");
+          await this.driveUploadHook([]);
+        }
+      }
       if (this.status === "saving") {
-        this.setStatus(this.isLocalMode() ? "saved-local" : "saved-drive");
+        if (!this.isLocalMode() && typeof navigator !== "undefined" && !navigator.onLine) {
+          this.setStatus("waiting-connection");
+        } else {
+          this.setStatus(this.isLocalMode() ? "saved-local" : "saved-drive");
+        }
       }
       return;
     }
@@ -344,13 +368,21 @@ export class SaveQueue {
         void requestPersistenceSilently();
       }
     } else {
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
       const storeState = typeof window !== "undefined" ? useDriveStore.getState() : null;
       if (storeState?.reconnectRequired) {
         this.setStatus("reconnect-drive");
       } else if (storeState?.quotaExceeded) {
         this.setStatus("saved-local");
+      } else if (isOffline) {
+        this.setStatus("waiting-connection");
       } else {
-        this.setStatus("saved-drive");
+        const hasOutbox = await this.hasUnsyncedDriveChanges();
+        if (hasOutbox) {
+          this.setStatus("saving");
+        } else {
+          this.setStatus("saved-drive");
+        }
       }
     }
   }
@@ -393,10 +425,22 @@ export class SaveQueue {
     return false; // No dialog
   }
 
+  public async handleOfflineTransition(): Promise<void> {
+    if (this.isLocalMode()) return;
+    const isDirty =
+      this.pendingMap.size > 0 ||
+      this.hasUnsyncedDriveEntries ||
+      (await this.hasUnsyncedDriveChanges());
+    if (isDirty || this.status === "saving") {
+      this.setStatus("waiting-connection");
+    }
+  }
+
   /**
    * Attaches browser lifecycle flush hooks:
    * 1. tab close (beforeunload)
    * 2. page becomes hidden (visibilitychange)
+   * 3. network offline / online events (immediate offline detection)
    */
   public attachBrowserHooks(): () => void {
     if (typeof window === "undefined") {
@@ -417,12 +461,29 @@ export class SaveQueue {
       }
     };
 
+    const onOffline = () => {
+      if (!this.isLocalMode()) {
+        void this.handleOfflineTransition();
+      }
+    };
+
+    const onOnline = () => {
+      if (!this.isLocalMode()) {
+        this.setStatus("saving");
+        void this.flushNow();
+      }
+    };
+
     window.addEventListener("beforeunload", onBeforeUnload);
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("online", onOnline);
 
     this.detachBrowserListeners = () => {
       window.removeEventListener("beforeunload", onBeforeUnload);
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("online", onOnline);
       this.detachBrowserListeners = undefined;
     };
 

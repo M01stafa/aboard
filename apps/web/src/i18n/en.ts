@@ -255,11 +255,11 @@ export const en = {
     backToLauncher: "Back to Launcher",
   },
   saveStatus: {
-    savedDrive: "Saved to Drive",
+    savedDrive: "Saved to Google Drive",
     saving: "Saving…",
     savedLocal: "Saved on this device",
     waitingConnection: "Waiting for connection",
-    reconnectDrive: "Reconnect Drive",
+    reconnectDrive: "Reconnect Google Drive",
   },
   driveErrors: {
     reconnectBanner: "Google Drive access was revoked or expired. Reconnect to resume sync.",

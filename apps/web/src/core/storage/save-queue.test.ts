@@ -399,4 +399,32 @@ describe("SaveQueue (Task 21 / STORE-1, STORE-3, STORE-9, WS-3, WS-4)", () => {
     expect(alreadyResult).toBe(true);
     expect(alreadyPersist).not.toHaveBeenCalled();
   });
+
+  it("handles offline transitions and isDirty correctly in Drive mode", async () => {
+    const queue = new SaveQueue({
+      debounceMs: 500,
+      db: mockDb as unknown as AboardDatabase,
+    });
+
+    // In local mode, isDirty is false initially
+    expect(queue.isDirty()).toBe(false);
+
+    // Mock drive mode
+    vi.spyOn(queue, "isLocalMode").mockReturnValue(false);
+
+    // Enqueue an item
+    queue.enqueue("proj-drive", {
+      id: "item-offline",
+      projectId: "proj-drive",
+      kind: "board",
+      title: "Offline Test",
+      updatedAt: Date.now(),
+    }, "offline-payload");
+
+    expect(queue.isDirty()).toBe(true);
+
+    // Offline transition when dirty sets waiting-connection
+    await queue.handleOfflineTransition();
+    expect(queue.getStatus()).toBe("waiting-connection");
+  });
 });
