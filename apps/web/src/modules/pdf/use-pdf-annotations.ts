@@ -36,7 +36,10 @@ export interface UsePdfAnnotationsResult {
   handleSelectTool: (tool: AnnotationToolType) => void;
   handleUndo: () => void;
   handleRedo: () => void;
-  handleAddStamp: (file: File) => Promise<void>;
+  handleAddStamp: (
+    file: File,
+    options?: { pageIndex?: number; x?: number; y?: number }
+  ) => Promise<void>;
   customStrokes: Record<number, CustomInkStroke[]>;
   selectedStrokeIds: string[];
   setSelectedStrokeIds: (ids: string[]) => void;
@@ -225,8 +228,8 @@ export function usePdfAnnotations({
 
     const unsub = annotationScope.onActiveToolChange((tool) => {
       if (!tool) {
-        // If we are currently in custom ink draw mode, do NOT let EmbedPDF reset us to select
-        setActiveToolState((prev) => (prev === "ink" ? "ink" : "select"));
+        // If we are currently in custom ink draw mode or stamp mode, do NOT let EmbedPDF reset us to select
+        setActiveToolState((prev) => (prev === "ink" || prev === "stamp" ? prev : "select"));
       } else if (
         tool.id === "highlight" ||
         tool.id === "freeText" ||
@@ -301,15 +304,13 @@ export function usePdfAnnotations({
         annotationScope.deselectAnnotation();
       }
 
-      if (tool === "select" || tool === "ink") {
-        // Native EmbedPDF ink is completely eradicated; keep native tool inactive
+      if (tool === "select" || tool === "ink" || tool === "stamp") {
+        // Native EmbedPDF ink and stamp are handled via custom layers; keep native tool inactive
         annotationScope.setActiveTool(null);
       } else if (tool === "highlight") {
         annotationScope.setActiveTool("highlight");
       } else if (tool === "freeText") {
         annotationScope.setActiveTool("freeText");
-      } else if (tool === "stamp") {
-        annotationScope.setActiveTool("stamp");
       }
     },
     [annotationScope]
@@ -451,11 +452,11 @@ export function usePdfAnnotations({
   }, [historyScope, triggerDebouncedSave]);
 
   const handleAddStamp = useCallback(
-    async (file: File) => {
+    async (file: File, options?: { pageIndex?: number; x?: number; y?: number }) => {
       if (!annotationScope) return;
       try {
         const { buffer, width, height, mimeType } = await processStampImage(file);
-        const pageIdx = Math.max(0, currentPage - 1);
+        const pageIdx = typeof options?.pageIndex === "number" ? options.pageIndex : Math.max(0, currentPage - 1);
         const stampId =
           typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
             ? crypto.randomUUID()
@@ -465,12 +466,15 @@ export function usePdfAnnotations({
         const blobUrl = URL.createObjectURL(blob);
         stampBlobUrlCache.set(stampId, blobUrl);
 
+        const originX = typeof options?.x === "number" ? Math.round(options.x * 100) / 100 : 72;
+        const originY = typeof options?.y === "number" ? Math.round(options.y * 100) / 100 : 72;
+
         const stampAnno: PdfStampAnnoObject = {
           id: stampId,
           type: PdfAnnotationSubtype.STAMP,
           pageIndex: pageIdx,
           rect: {
-            origin: { x: 72, y: 72 },
+            origin: { x: originX, y: originY },
             size: { width, height },
           },
         };
@@ -506,7 +510,7 @@ export function usePdfAnnotations({
         flushAnnotations,
       };
     }
-  }, [annotationScope, historyScope, customStrokes, selectedStrokeIds, handleDeleteSelected]);
+  }, [annotationScope, historyScope, customStrokes, selectedStrokeIds, handleDeleteSelected, flushAnnotations]);
 
   return {
     activeTool,

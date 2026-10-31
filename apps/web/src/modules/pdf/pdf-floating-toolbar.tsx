@@ -49,24 +49,12 @@ export function PdfFloatingToolbar({
   isOperatingPage = false,
 }: PdfFloatingToolbarProps) {
   const { t } = useI18n();
-  const stampInputRef = useRef<HTMLInputElement>(null);
   const imagePageInputRef = useRef<HTMLInputElement>(null);
   const [showPageMenu, setShowPageMenu] = useState(false);
   const pageMenuRef = useRef<HTMLDivElement>(null);
 
   const handleStampClick = () => {
-    onSelectTool?.("stamp");
-    stampInputRef.current?.click();
-  };
-
-  const handleStampFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onAddStamp?.(file);
-    }
-    if (stampInputRef.current) {
-      stampInputRef.current.value = "";
-    }
+    onSelectTool?.(activeTool === "stamp" ? "select" : "stamp");
   };
 
   const handleImagePageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,16 +162,6 @@ export function PdfFloatingToolbar({
           overflow: "visible",
         }}
       >
-      {/* Hidden file input for stamp image selection */}
-      <input
-        type="file"
-        ref={stampInputRef}
-        onChange={handleStampFileChange}
-        accept="image/png,image/jpeg"
-        data-testid="pdf-stamp-input"
-        style={{ display: "none" }}
-      />
-
       {/* Hidden file input for image page insertion */}
       <input
         type="file"
@@ -211,6 +189,7 @@ export function PdfFloatingToolbar({
           style={getToolButtonStyle("select")}
           title={t("pdf.toolSelect")}
           aria-label={t("pdf.toolSelect")}
+          aria-pressed={activeTool === "select"}
           onMouseEnter={(e) => {
             if (activeTool !== "select") {
               e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
@@ -235,6 +214,7 @@ export function PdfFloatingToolbar({
           style={getToolButtonStyle("highlight")}
           title={t("pdf.toolHighlight")}
           aria-label={t("pdf.toolHighlight")}
+          aria-pressed={activeTool === "highlight"}
           onMouseEnter={(e) => {
             if (activeTool !== "highlight") {
               e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
@@ -260,6 +240,7 @@ export function PdfFloatingToolbar({
           style={getToolButtonStyle("ink")}
           title={t("pdf.toolInk")}
           aria-label={t("pdf.toolInk")}
+          aria-pressed={activeTool === "ink"}
           onMouseEnter={(e) => {
             if (activeTool !== "ink") {
               e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
@@ -285,6 +266,7 @@ export function PdfFloatingToolbar({
           style={getToolButtonStyle("freeText")}
           title={t("pdf.toolText")}
           aria-label={t("pdf.toolText")}
+          aria-pressed={activeTool === "freeText"}
           onMouseEnter={(e) => {
             if (activeTool !== "freeText") {
               e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
@@ -310,6 +292,7 @@ export function PdfFloatingToolbar({
           style={getToolButtonStyle("stamp")}
           title={t("pdf.toolStamp")}
           aria-label={t("pdf.toolStamp")}
+          aria-pressed={activeTool === "stamp"}
           onMouseEnter={(e) => {
             if (activeTool !== "stamp") {
               e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";

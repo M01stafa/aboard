@@ -231,8 +231,7 @@ describe("PdfFloatingToolbar (Floating Vertical Controls)", () => {
     expect(onSelectTool).toHaveBeenCalledWith("select");
   });
 
-  it("activates stamp file input and calls onAddStamp on file change", () => {
-    const onAddStamp = vi.fn();
+  it("selects stamp tool when clicking stamp button without opening file input directly", () => {
     const onSelectTool = vi.fn();
 
     act(() => {
@@ -241,35 +240,22 @@ describe("PdfFloatingToolbar (Floating Vertical Controls)", () => {
           <PdfFloatingToolbar
             {...defaultFloatingProps}
             onSelectTool={onSelectTool}
-            onAddStamp={onAddStamp}
           />
         </I18nProvider>
       );
     });
 
     const stampBtn = container.querySelector('[data-testid="pdf-tool-stamp"]') as HTMLButtonElement;
-    const fileInput = container.querySelector('[data-testid="pdf-stamp-input"]') as HTMLInputElement;
-
-    expect(fileInput).not.toBeNull();
-    const clickSpy = vi.spyOn(fileInput, "click");
+    expect(stampBtn).not.toBeNull();
 
     act(() => {
       stampBtn.click();
     });
 
+    // Clicking stamp tool activates "stamp" mode (cursor crosshair); file dialog waits for PDF page click
     expect(onSelectTool).toHaveBeenCalledWith("stamp");
-    expect(clickSpy).toHaveBeenCalledTimes(1);
-
-    const dummyFile = new File(["dummy png bytes"], "approved.png", { type: "image/png" });
-    act(() => {
-      Object.defineProperty(fileInput, "files", {
-        value: [dummyFile],
-        writable: true,
-      });
-      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-
-    expect(onAddStamp).toHaveBeenCalledWith(dummyFile);
+    const fileInput = container.querySelector('[data-testid="pdf-stamp-input"]');
+    expect(fileInput).toBeNull();
   });
 
   it("handles undo and redo buttons based on canUndo and canRedo props", () => {

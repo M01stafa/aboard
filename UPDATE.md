@@ -2159,3 +2159,24 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server restarted and returned HTTP 200 on `http://localhost:3000`.
 **Related:** WS-1, WS-2, WS-3, WS-4, PDF-1, STORE-1, STORE-5
 **Open:** none.
+
+## 2026-11-01 — Fix PDF Ink Scaling on Zoom & Refactor Stamp Tool Click Flow
+**Request:** Fix PDF custom ink layer scaling so strokes scale natively with zoom instead of shrinking/misaligning, and refactor the Stamp tool into a two-step flow (clicking Stamp icon selects the tool with crosshair cursor without opening the file dialog; clicking a location on the PDF page captures coordinates, opens the file dialog, and places the stamp at that location).
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-viewer.tsx`: imported `useDocumentState` and passed unscaled dimensions (`unscaledWidth`, `unscaledHeight` computed from `docState.document.pages[pageIndex].size` or scaled dimensions divided by zoom level) to `PdfCustomInkLayer` so SVG viewBox remains constant in unscaled PDF points; managed stamp file input and captured coordinates on PDF page click via `pendingStampRef`; passed `isStampMode={activeTool === "stamp"}` and `onStampClick`.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: added `isStampMode` and `onStampClick` props; updated pointer event handling and SVG styles (`pointerEvents: "auto"`, `cursor: "crosshair"`) when in stamp mode; intercepted clicks in stamp mode to emit exact unscaled PDF point coordinates `(x, y)` to `onStampClick`.
+- `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx`: updated `handleStampClick` to only toggle active tool between `"stamp"` and `"select"` without opening file picker; added `aria-pressed` attributes to all tool buttons; removed hidden stamp file input from toolbar (now owned by viewer).
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: updated `handleAddStamp` to accept placement options `{ pageIndex, x, y }` and place stamp at `(origin.x, origin.y)`; preserved active tool in `onActiveToolChange` when in stamp mode.
+- `apps/web/src/modules/pdf/pdf-toolbar.test.tsx`: updated unit test to verify clicking Stamp tool button selects "stamp" mode without opening file dialog.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added E2E test verifying ink strokes scale natively with page zoom and verifying two-step Stamp tool click placement.
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (34/34 tests across 7 files).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (2/2 tests).
+- `playwright test e2e/pdf-annotations.spec.ts`: PASS (2/2 tests).
+- `playwright test e2e/pdf-ink-objects.spec.ts`: PASS (2/2 tests).
+- `playwright test e2e/pdf-page-operations.spec.ts`: PASS (1/1 test).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm lint`: PASS (0 errors, spacing 8-point compliant).
+- Dev server restarted and returned HTTP 200 on `http://localhost:3000`.
+**Related:** PDF-1, PDF-3, PDF-4
+**Open:** none.

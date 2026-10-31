@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { EmbedPDF } from "@embedpdf/core/react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { EmbedPDF, useDocumentState } from "@embedpdf/core/react";
 import { usePdfiumEngine } from "@embedpdf/engines/react";
 import {
   PluginRegistry,
@@ -45,7 +45,11 @@ import { useI18n } from "@/i18n/provider";
 import { PdfToolbar } from "./pdf-toolbar";
 import { PdfFloatingToolbar } from "./pdf-floating-toolbar";
 import { usePdfAnnotations } from "./use-pdf-annotations";
-import { PdfCustomInkLayer, compositeCustomStrokesOnBlob } from "./pdf-custom-ink-layer";
+import {
+  PdfCustomInkLayer,
+  compositeCustomStrokesOnBlob,
+  type CustomInkPoint,
+} from "./pdf-custom-ink-layer";
 import {
   rotatePage,
   deletePage,
@@ -256,6 +260,34 @@ function ViewerInner({
     currentPage: displayPage || scrollState.currentPage || 1,
     projectServiceOverride,
   });
+
+  const docState = useDocumentState(documentId);
+  const stampFileInputRef = useRef<HTMLInputElement>(null);
+  const pendingStampRef = useRef<{ pageIndex: number; x: number; y: number } | null>(null);
+
+  const handlePageStampClick = useCallback(
+    (pageIndex: number, pt: CustomInkPoint) => {
+      pendingStampRef.current = { pageIndex, x: pt.x, y: pt.y };
+      stampFileInputRef.current?.click();
+    },
+    []
+  );
+
+  const handleStampFileInputChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      const pending = pendingStampRef.current;
+      if (file) {
+        await handleAddStamp(file, pending ?? undefined);
+      }
+      if (stampFileInputRef.current) {
+        stampFileInputRef.current.value = "";
+      }
+      pendingStampRef.current = null;
+      handleSelectTool("select");
+    },
+    [handleAddStamp, handleSelectTool]
+  );
 
   // Delete/Backspace shortcut for selected custom annotations and Undo/Redo shortcuts (PDF-3, PDF-4)
   useEffect(() => {
@@ -841,68 +873,83 @@ function ViewerInner({
           >
             <Scroller
               documentId={documentId}
-              renderPage={(page) => (
-                <PagePointerProvider
-                  key={page.pageIndex}
-                  documentId={documentId}
-                  pageIndex={page.pageIndex}
-                  data-testid={`pdf-page-${page.pageIndex + 1}`}
-                  style={{
-                    position: "relative",
-                    width: "100%",
-                    height: "100%",
-                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
-                    backgroundColor: "#ffffff",
-                    boxSizing: "border-box",
-                    direction: "ltr",
-                  }}
-                >
-                  <RenderLayer
+              renderPage={(page) => {
+                const docPage = docState?.document?.pages?.[page.pageIndex];
+                const docScale = docState?.scale ?? zoomState.currentZoomLevel ?? 1;
+                const docRotation = ((docPage?.rotation ?? 0) + (docState?.rotation ?? 0)) % 4;
+                const isRotated90or270 = docRotation % 2 === 1;
+                const unscaledWidth = docPage?.size
+                  ? (isRotated90or270 ? docPage.size.height : docPage.size.width)
+                  : (docScale > 0 ? page.rotatedWidth / docScale : (page.rotatedWidth || page.width));
+                const unscaledHeight = docPage?.size
+                  ? (isRotated90or270 ? docPage.size.width : docPage.size.height)
+                  : (docScale > 0 ? page.rotatedHeight / docScale : (page.rotatedHeight || page.height));
+
+                return (
+                  <PagePointerProvider
+                    key={page.pageIndex}
                     documentId={documentId}
                     pageIndex={page.pageIndex}
+                    data-testid={`pdf-page-${page.pageIndex + 1}`}
                     style={{
-                      display: "block",
+                      position: "relative",
                       width: "100%",
                       height: "100%",
-                      pointerEvents: "none",
-                      userSelect: "none",
-                    }}
-                  />
-                  <PdfTextLayer
-                    documentId={documentId}
-                    pageIndex={page.pageIndex}
-                    isAnnotating={activeTool !== "select"}
-                  />
-                  <SelectionLayer
-                    documentId={documentId}
-                    pageIndex={page.pageIndex}
-                  />
-                  <AnnotationLayer
-                    documentId={documentId}
-                    pageIndex={page.pageIndex}
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      pointerEvents: "none",
+                      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15)",
+                      backgroundColor: "#ffffff",
+                      boxSizing: "border-box",
                       direction: "ltr",
                     }}
-                  />
-                  <PdfCustomInkLayer
-                    pageIndex={page.pageIndex}
-                    pageWidth={page.rotatedWidth || page.width}
-                    pageHeight={page.rotatedHeight || page.height}
-                    isActive={activeTool === "ink"}
-                    isSelectMode={activeTool === "select"}
-                    strokes={customStrokes[page.pageIndex] || []}
-                    selectedStrokeIds={selectedStrokeIds}
-                    onSelectStrokes={setSelectedStrokeIds}
-                    onAddStroke={handleAddCustomStroke}
-                    onMoveStroke={handleMoveCustomStroke}
-                    onMoveStrokes={handleMoveCustomStrokes}
-                    annotationScope={annotationScope}
-                  />
-                </PagePointerProvider>
-              )}
+                  >
+                    <RenderLayer
+                      documentId={documentId}
+                      pageIndex={page.pageIndex}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        height: "100%",
+                        pointerEvents: "none",
+                        userSelect: "none",
+                      }}
+                    />
+                    <PdfTextLayer
+                      documentId={documentId}
+                      pageIndex={page.pageIndex}
+                      isAnnotating={activeTool !== "select"}
+                    />
+                    <SelectionLayer
+                      documentId={documentId}
+                      pageIndex={page.pageIndex}
+                    />
+                    <AnnotationLayer
+                      documentId={documentId}
+                      pageIndex={page.pageIndex}
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        pointerEvents: "none",
+                        direction: "ltr",
+                      }}
+                    />
+                    <PdfCustomInkLayer
+                      pageIndex={page.pageIndex}
+                      pageWidth={unscaledWidth}
+                      pageHeight={unscaledHeight}
+                      isActive={activeTool === "ink"}
+                      isSelectMode={activeTool === "select"}
+                      isStampMode={activeTool === "stamp"}
+                      onStampClick={handlePageStampClick}
+                      strokes={customStrokes[page.pageIndex] || []}
+                      selectedStrokeIds={selectedStrokeIds}
+                      onSelectStrokes={setSelectedStrokeIds}
+                      onAddStroke={handleAddCustomStroke}
+                      onMoveStroke={handleMoveCustomStroke}
+                      onMoveStrokes={handleMoveCustomStrokes}
+                      annotationScope={annotationScope}
+                    />
+                  </PagePointerProvider>
+                );
+              }}
             />
           </Viewport>
 
@@ -927,6 +974,16 @@ function ViewerInner({
             onDeletePage={handleDeletePage}
             onInsertImagePage={handleInsertImagePage}
             isOperatingPage={isOperatingPage}
+          />
+
+          {/* Hidden file input for stamp image selection triggered on PDF page click (PDF-3) */}
+          <input
+            ref={stampFileInputRef}
+            type="file"
+            accept="image/png,image/jpeg"
+            data-testid="pdf-stamp-input"
+            style={{ display: "none" }}
+            onChange={handleStampFileInputChange}
           />
         </div>
       </div>

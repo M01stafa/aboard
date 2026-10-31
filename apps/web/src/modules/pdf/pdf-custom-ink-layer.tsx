@@ -134,6 +134,9 @@ export interface PdfCustomInkLayerProps {
   isActive: boolean;
   /** Select tool active: strokes can be clicked and dragged, and marquee selection is enabled. */
   isSelectMode?: boolean;
+  /** Stamp tool active: clicking the page captures coordinates and triggers image picker. */
+  isStampMode?: boolean;
+  onStampClick?: (pageIndex: number, pt: CustomInkPoint) => void;
   strokes: CustomInkStroke[];
   selectedStrokeIds?: string[];
   onSelectStrokes?: (strokeIds: string[]) => void;
@@ -170,6 +173,8 @@ export function PdfCustomInkLayer({
   pageHeight,
   isActive,
   isSelectMode = false,
+  isStampMode = false,
+  onStampClick,
   strokes,
   selectedStrokeIds = [],
   onSelectStrokes,
@@ -194,6 +199,8 @@ export function PdfCustomInkLayer({
     pageHeight,
     isActive,
     isSelectMode,
+    isStampMode,
+    onStampClick,
     strokes,
     selectedStrokeIds,
     onSelectStrokes,
@@ -213,6 +220,8 @@ export function PdfCustomInkLayer({
       pageHeight,
       isActive,
       isSelectMode,
+      isStampMode,
+      onStampClick,
       strokes,
       selectedStrokeIds,
       onSelectStrokes,
@@ -260,7 +269,17 @@ export function PdfCustomInkLayer({
       if (e.button !== 0) return;
       const p = propsRef.current;
 
-      // 1. Draw mode
+      // 1. Stamp mode: click on page to place a stamp image at (x, y)
+      if (p.isStampMode) {
+        e.preventDefault();
+        e.stopPropagation();
+        const pt = toPagePoint(e.clientX, e.clientY);
+        if (!pt) return;
+        p.onStampClick?.(p.pageIndex, pt);
+        return;
+      }
+
+      // 2. Draw mode
       if (p.isActive) {
         e.preventDefault();
         e.stopPropagation();
@@ -628,11 +647,11 @@ export function PdfCustomInkLayer({
         inset: 0,
         width: "100%",
         height: "100%",
-        pointerEvents: isActive || isSelectMode ? "auto" : "none",
-        cursor: isActive ? "crosshair" : "default",
+        pointerEvents: isActive || isSelectMode || isStampMode ? "auto" : "none",
+        cursor: isActive || isStampMode ? "crosshair" : "default",
         zIndex: 15,
         overflow: "visible",
-        touchAction: isActive || isSelectMode ? "none" : "auto",
+        touchAction: isActive || isSelectMode || isStampMode ? "none" : "auto",
         userSelect: "none",
         WebkitUserSelect: "none",
         direction: "ltr",
