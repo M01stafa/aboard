@@ -2132,3 +2132,30 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server restarted and returned HTTP 200 on `http://localhost:3000`.
 **Related:** WS-3, STORE-1, STORE-5
 **Open:** none.
+
+
+## 2026-10-31 — Fix Save Trigger, Offline Indicator, Navigation Guard, Tab Close Button
+**Request:** Prevent PDF scroll/zoom viewport events from triggering "Saving…", ensure offline indicator reliably updates in Drive mode, add navigation confirmation dialog when leaving with unsaved changes, add tab close (X) button on active/hovered tabs, and restart dev server.
+**Changes:**
+- `apps/web/src/modules/pdf/use-pdf-persistence.ts`: updated `saveLastPage` to call `ps.savePdf` with `{ silent: true }`, ensuring viewport scroll/zoom page transitions do not dirty the SaveQueue or trigger "Saving…".
+- `apps/web/src/core/storage/project-service.ts`: added `{ silent?: boolean }` option to `savePdf` to update Dexie reading position silently; updated `openProject` and `setProvider` to ensure the project's actual storage mode (`drive` vs `local`) dynamically loads the matching provider and calls `saveQueue.updateStatusForProviderChange()`.
+- `apps/web/src/core/storage/save-queue.ts`: added `updateStatusForProviderChange()`; updated `handleBeforeUnload` to prompt when unsaved Drive changes or active save operations are pending.
+- `apps/web/src/workspace/save-status.tsx`: verified `navigator.onLine` and Drive mode checks on mount and on `offline`/`online` window events.
+- `apps/web/src/workspace/workspace-host.tsx`: switched to `DriveProvider` automatically when opening a Drive-stored project; added navigation guard on logo click and `popstate` browser navigation warning when unsaved changes exist ("You have unsaved changes. Are you sure you want to leave?"); added `.ws-tab-close-btn` SVG close icon visible on hovered/active tabs with 8-point grid tokens (`--space-1`, `--radius-sm`).
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts`: added `workspace.unsavedChangesWarning` translation keys.
+- `apps/web/src/workspace/add-tab-menu.test.tsx`: added unit test verifying closing a tab via 'X' removes it from the layout.
+- `apps/web/e2e/save-status-offline.spec.ts`: added E2E tests verifying navigation warning on unsaved changes and tab close button behavior.
+**Checks:**
+- `pnpm test src/workspace/save-status.test.tsx`: PASS (4/4 tests).
+- `pnpm test src/core/storage/save-queue.test.ts`: PASS (8/8 tests).
+- `pnpm test src/modules/pdf/use-pdf-persistence.test.tsx`: PASS (5/5 tests).
+- `pnpm test src/workspace/add-tab-menu.test.tsx`: PASS (7/7 tests).
+- `playwright test e2e/save-status-offline.spec.ts`: PASS (3/3 tests).
+- `playwright test e2e/store-1-save-status.spec.ts`: PASS (1/1 test).
+- `playwright test e2e/pdf-module.spec.ts`: PASS (1/1 test).
+- `playwright test e2e/pdf-annotations.spec.ts`: PASS (2/2 tests).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm lint`: PASS (0 errors, spacing 8-point compliant).
+- Dev server restarted and returned HTTP 200 on `http://localhost:3000`.
+**Related:** WS-1, WS-2, WS-3, WS-4, PDF-1, STORE-1, STORE-5
+**Open:** none.

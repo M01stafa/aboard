@@ -21,7 +21,7 @@ import {
 } from "@/integration/board-insertion";
 import { formatAlphaLink, parseAlphaLink } from "@/integration/alpha-link";
 import { appendBoardToPdf } from "@/integration/board-to-pdf";
-import { projectService as defaultProjectService, type AlphaManifest } from "@/core/storage";
+import { projectService as defaultProjectService, saveQueue, type AlphaManifest } from "@/core/storage";
 
 /*
  * Tab Bar & Divider Keyboard Interaction Map
@@ -206,6 +206,28 @@ export function WorkspaceHost({
     };
   }, [handleLeaveWorkspace]);
 
+  // Intercept browser back/forward navigation if unsaved changes exist
+  useEffect(() => {
+    const handlePopState = () => {
+      const hasUnsaved =
+        saveQueue.isDirty() ||
+        saveQueue.getStatus() === "saving" ||
+        saveQueue.hasUnsyncedDriveChangesSync();
+
+      if (hasUnsaved) {
+        const confirmMsg =
+          t("workspace.unsavedChangesWarning") ||
+          "You have unsaved changes. Are you sure you want to leave?";
+        if (!window.confirm(confirmMsg)) {
+          window.history.pushState(null, "", window.location.href);
+        }
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [t]);
+
   // Track tool presence and split eligibility
   const hasBoard = layout.tabs.some((t) => t.kind === "board");
   const hasPdf = layout.tabs.some((t) => t.kind === "pdf");
@@ -252,10 +274,20 @@ export function WorkspaceHost({
         if (db) {
           const row = await db.projects.get(currentId);
           if (row && !cancelled) {
+            const storageMode = (row.storage as "local" | "drive") || "local";
             setProjectInfo({
               title: row.title || "Project",
-              storage: (row.storage as "local" | "drive") || "local",
+              storage: storageMode,
             });
+
+            // Ensure projectService provider matches project's storage mode
+            if (storageMode === "drive" && defaultProjectService.getProvider().kind !== "drive") {
+              const { DriveProvider } = await import("@/core/drive/drive-provider");
+              defaultProjectService.setProvider(new DriveProvider());
+            } else if (storageMode === "local" && defaultProjectService.getProvider().kind !== "local") {
+              const { LocalProvider } = await import("@/core/storage");
+              defaultProjectService.setProvider(new LocalProvider());
+            }
 
             if (row.manifestJson && (!initialLayout?.tabs || initialLayout.tabs.length === 0)) {
               try {
@@ -1313,6 +1345,39 @@ export function WorkspaceHost({
           outline: 2px solid var(--focus-ring);
           outline-offset: -2px;
         }
+        .ws-tab-close-btn {
+          inline-size: 16px;
+          block-size: 16px;
+          border-radius: var(--radius-sm);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: transparent;
+          border: 0;
+          padding: 0;
+          margin-inline-start: var(--space-1);
+          color: var(--text-muted);
+          cursor: pointer;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity var(--motion-fast) var(--ease-standard),
+                      color var(--motion-fast) var(--ease-standard),
+                      background-color var(--motion-fast) var(--ease-standard);
+        }
+        .ws-tab-btn:hover .ws-tab-close-btn,
+        .ws-tab-btn[data-active="true"] .ws-tab-close-btn,
+        .ws-tab-close-btn:focus-visible {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .ws-tab-close-btn:hover {
+          color: var(--text-main);
+          background-color: rgba(255, 255, 255, 0.12);
+        }
+        .ws-tab-close-btn:focus-visible {
+          outline: 2px solid var(--focus-ring);
+          outline-offset: 1px;
+        }
         .ws-tool-btn {
           inline-size: var(--control-sm);
           block-size: var(--control-sm);
@@ -1406,6 +1471,21 @@ export function WorkspaceHost({
           <Link
             href="/"
             onClick={async (e) => {
+              const hasUnsaved =
+                saveQueue.isDirty() ||
+                saveQueue.getStatus() === "saving" ||
+                saveQueue.hasUnsyncedDriveChangesSync();
+
+              if (hasUnsaved) {
+                const confirmMsg =
+                  t("workspace.unsavedChangesWarning") ||
+                  "You have unsaved changes. Are you sure you want to leave?";
+                if (!window.confirm(confirmMsg)) {
+                  e.preventDefault();
+                  return;
+                }
+              }
+
               if (onNavigateHome) {
                 e.preventDefault();
                 await handleLeaveWorkspace();
@@ -1502,6 +1582,7 @@ export function WorkspaceHost({
                     <span
                       role="button"
                       tabIndex={0}
+                      className="ws-tab-close-btn"
                       aria-label={`${t("workspace.closeTab")} ${tab.title}`}
                       data-testid={`tab-close-${tabId}`}
                       onClick={(e) => {
@@ -1515,20 +1596,21 @@ export function WorkspaceHost({
                           closeTab(tabId);
                         }
                       }}
-                      style={{
-                        inlineSize: "16px",
-                        blockSize: "16px",
-                        borderRadius: "var(--radius-sm)",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "0.875rem",
-                        cursor: "pointer",
-                        color: "var(--text-muted)",
-                        marginInlineStart: "var(--space-1)",
-                      }}
                     >
-                      ×
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
                     </span>
                   )}
                 </button>

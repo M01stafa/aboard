@@ -67,6 +67,9 @@ export class ProjectService {
         await (provider as unknown as { syncOutbox: () => Promise<void> }).syncOutbox();
       });
     }
+    if (this.saveQueue) {
+      this.saveQueue.updateStatusForProviderChange();
+    }
   }
 
   getProvider(): StorageProvider {
@@ -84,6 +87,7 @@ export class ProjectService {
         await (this.provider as unknown as { syncOutbox: () => Promise<void> }).syncOutbox();
       });
     }
+    this.saveQueue.updateStatusForProviderChange();
   }
 
   getSaveQueue(): SaveQueue | undefined {
@@ -96,6 +100,20 @@ export class ProjectService {
    */
   async openProject(projectId: string): Promise<AlphaManifest> {
     this.activeProjectId = projectId;
+    try {
+      const { getDb } = await import("@/core/db");
+      const db = getDb();
+      if (db) {
+        const row = await db.projects.get(projectId);
+        if (row?.storage === "drive" && this.provider.kind !== "drive") {
+          this.setProvider(new DriveProvider());
+        } else if (row?.storage === "local" && this.provider.kind !== "local") {
+          this.setProvider(new LocalProvider());
+        }
+      }
+    } catch {
+      // Non-fatal if db lookup fails
+    }
     if (this.saveQueue) {
       await this.saveQueue.flushNow();
     }
@@ -458,7 +476,8 @@ export class ProjectService {
     projectId: string,
     itemId: string,
     payload: string,
-    title?: string
+    title?: string,
+    options?: { silent?: boolean }
   ): Promise<void> {
     let fileKey = "";
     try {
@@ -474,6 +493,23 @@ export class ProjectService {
       fileKey,
       updatedAt: Date.now(),
     };
+    if (options?.silent) {
+      // Viewport / reading position update only: silently update local Dexie item
+      // without dirtying SaveQueue or triggering "Saving…" UI status
+      try {
+        const { getDb } = await import("@/core/db");
+        const db = getDb();
+        if (db) {
+          await db.items.update(itemId, {
+            payload,
+            updatedAt: item.updatedAt,
+          });
+        }
+      } catch {
+        // Non-fatal
+      }
+      return;
+    }
     if (this.saveQueue) {
       this.saveQueue.enqueue(projectId, item, payload);
     } else {

@@ -121,7 +121,8 @@ export function usePdfPersistence({
         projectId,
         itemId,
         JSON.stringify(updated),
-        updated.name ?? titleRef.current
+        updated.name ?? titleRef.current,
+        { silent: true }
       ).catch((err) => {
         console.error("[usePdfPersistence] Error saving page position:", err);
       });

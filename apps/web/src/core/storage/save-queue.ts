@@ -132,6 +132,19 @@ export class SaveQueue {
     return this.pendingMap.size > 0 || this.hasUnsyncedDriveEntries;
   }
 
+  public updateStatusForProviderChange(): void {
+    if (this.isLocalMode()) {
+      this.setStatus("saved-local");
+    } else {
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (isOffline) {
+        this.setStatus("waiting-connection");
+      } else {
+        this.setStatus("saved-drive");
+      }
+    }
+  }
+
   /**
    * Enqueues an item change notification from ProjectService.
    * Debounces writes at ~500 ms and coalesces rapid edits to the same item.
@@ -416,8 +429,11 @@ export class SaveQueue {
     // 1. Flush immediately on tab close
     void this.flushNow();
 
-    // 2. Check if outbox holds unsynced Drive entries
-    if (this.hasUnsyncedDriveChangesSync()) {
+    // 2. Check if outbox holds unsynced Drive entries or pending writes (WS-4)
+    if (
+      this.hasUnsyncedDriveChangesSync() ||
+      (!this.isLocalMode() && (this.isDirty() || this.status === "saving"))
+    ) {
       event.preventDefault();
       event.returnValue = "";
       return true; // Dialog shown

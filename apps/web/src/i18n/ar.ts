@@ -147,6 +147,7 @@ export const ar: TranslationDictionary = {
     newTabMenu: "قائمة تبويب جديد",
     splitRequiresTwoTabs: "افتح أداة أخرى لتقسيم الشاشة",
     toolAlreadyOpen: "هذه الأداة مفتوحة بالفعل",
+    unsavedChangesWarning: "لديك تغييرات غير محفوظة. هل أنت متأكد من رغبتك في المغادرة؟",
   },
   circuit: {
     pauseWhenHidden: "إيقاف عند الإخفاء",

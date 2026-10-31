@@ -145,6 +145,7 @@ export const en = {
     newTabMenu: "New tab menu",
     splitRequiresTwoTabs: "Open another tool to split view",
     toolAlreadyOpen: "This tool is already open",
+    unsavedChangesWarning: "You have unsaved changes. Are you sure you want to leave?",
   },
   circuit: {
     pauseWhenHidden: "Pause when hidden",

@@ -264,4 +264,42 @@ describe("Workspace '+' New Tab Menu & Unique Tool Rule", () => {
     });
     expect(container.querySelector('[data-testid="add-tab-menu"]')).toBeNull();
   });
+
+  it("closes a tab when its close button (X) is clicked", async () => {
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <WorkspaceHost
+            projectId="test-proj"
+            initialLayout={{
+              tabs: [
+                { id: "tab-1", kind: "board", itemId: "item-1", title: "Board 1" },
+                { id: "tab-2", kind: "pdf", itemId: "item-2", title: "PDF 1" },
+              ],
+              tabBarOrder: ["tab-1", "tab-2"],
+              primary: "tab-1",
+              secondary: "tab-2",
+              split: "vertical",
+            }}
+          />
+        </I18nProvider>
+      );
+    });
+
+    const tabButtons = container.querySelectorAll(".ws-tab-btn");
+    expect(tabButtons.length).toBe(2);
+
+    // Find close button for tab-2 (PDF)
+    const closeBtnTab2 = container.querySelector('[data-testid="tab-close-tab-2"]') as HTMLElement;
+    expect(closeBtnTab2).toBeTruthy();
+
+    await act(async () => {
+      closeBtnTab2.click();
+    });
+
+    // Tab 2 is removed, only Tab 1 remains
+    const remainingTabs = container.querySelectorAll(".ws-tab-btn");
+    expect(remainingTabs.length).toBe(1);
+    expect(remainingTabs[0].textContent).toContain("Board 1");
+  });
 });

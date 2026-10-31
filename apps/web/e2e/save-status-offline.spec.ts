@@ -172,4 +172,75 @@ test.describe("WS-3 / STORE-5: Save Status Reactivity & Offline Detection", () =
     await expect(statusIndicator).toHaveText(/Saved to Google Drive/i, { timeout: 10000 });
     expect(await statusIndicator.getAttribute("data-status")).toBe("saved-drive");
   });
+
+  test("shows confirmation warning when leaving with unsaved changes", async ({ page }) => {
+    await mockSignIn(page, testUser);
+    await page.goto("/workspace?p=unsaved-warn-test");
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    // Switch to DriveProvider so unsaved changes persist in outbox / pending Drive sync
+    await page.evaluate(async () => {
+      const win = window as unknown as {
+        __aboard_projectService?: {
+          setProvider: (p: unknown) => void;
+          saveBoard: (pId: string, itemId: string, payload: string, title?: string) => Promise<void>;
+        };
+        __aboard_DriveProvider?: new () => unknown;
+      };
+      if (win.__aboard_projectService && win.__aboard_DriveProvider) {
+        win.__aboard_projectService.setProvider(new win.__aboard_DriveProvider());
+        await win.__aboard_projectService.saveBoard(
+          "unsaved-warn-test",
+          "board-unsaved",
+          JSON.stringify({ strokes: [1, 2, 3], time: Date.now() }),
+          "Dirty Board"
+        );
+      }
+    });
+
+    // Set up dialog handler before clicking
+    let dialogShown = false;
+    page.on("dialog", async (dialog) => {
+      dialogShown = true;
+      expect(dialog.message()).toContain("unsaved changes");
+      await dialog.dismiss(); // Cancel leave
+    });
+
+    // Click the Aboard logo to navigate home
+    const homeLink = page.locator('header a[href="/"]');
+    await homeLink.click();
+
+    expect(dialogShown).toBe(true);
+
+    // Still in workspace because we dismissed
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+  });
+
+  test("closes specific tab when clicking tab close button (X)", async ({ page }) => {
+    await mockSignIn(page, testUser);
+    await page.goto("/workspace?p=tab-close-test");
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    // Add a second tab (PDF)
+    const addTabBtn = page.locator('[data-testid="add-tab-btn"]');
+    await addTabBtn.click();
+    const pdfOption = page.locator('[data-testid="add-tab-pdf"]');
+    await pdfOption.click();
+
+    // Verify 2 tabs present
+    const tabs = page.locator(".ws-tab-btn");
+    await expect(tabs).toHaveCount(2);
+
+    // Locate close button for the second tab (PDF)
+    const closeBtn = page.locator(".ws-tab-close-btn").nth(1);
+    await expect(closeBtn).toBeAttached();
+
+    // Click tab close button
+    await closeBtn.click();
+
+    // Verify only 1 tab remains
+    await expect(page.locator(".ws-tab-btn")).toHaveCount(1);
+    await expect(page.locator(".ws-tab-btn")).toHaveText(/Whiteboard/i);
+  });
 });
+
