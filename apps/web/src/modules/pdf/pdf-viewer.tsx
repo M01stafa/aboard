@@ -251,6 +251,8 @@ function ViewerInner({
     selectedStrokeIds,
     setSelectedStrokeIds,
     handleDeleteSelected,
+    getObjectsForPage,
+    handleMoveObject,
     annotationScope,
   } = usePdfAnnotations({
     documentId,
@@ -287,6 +289,19 @@ function ViewerInner({
       handleSelectTool("select");
     },
     [handleAddStamp, handleSelectTool]
+  );
+
+  const renderCustomAnnotation = useCallback(
+    ({ annotation, children }: { annotation: { id: string; type?: number }; children: React.ReactNode }) => (
+      <div
+        data-annotation-id={annotation.id}
+        data-annotation-type={annotation.type}
+        style={{ width: "100%", height: "100%" }}
+      >
+        {children}
+      </div>
+    ),
+    []
   );
 
   // Delete/Backspace shortcut for selected custom annotations and Undo/Redo shortcuts (PDF-3, PDF-4)
@@ -924,6 +939,7 @@ function ViewerInner({
                     <AnnotationLayer
                       documentId={documentId}
                       pageIndex={page.pageIndex}
+                      customAnnotationRenderer={renderCustomAnnotation as any}
                       style={{
                         position: "absolute",
                         inset: 0,
@@ -945,6 +961,8 @@ function ViewerInner({
                       onAddStroke={handleAddCustomStroke}
                       onMoveStroke={handleMoveCustomStroke}
                       onMoveStrokes={handleMoveCustomStrokes}
+                      objects={getObjectsForPage(page.pageIndex)}
+                      onMoveObject={handleMoveObject}
                       annotationScope={annotationScope}
                     />
                   </PagePointerProvider>

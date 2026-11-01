@@ -2180,3 +2180,24 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server restarted and returned HTTP 200 on `http://localhost:3000`.
 **Related:** PDF-1, PDF-3, PDF-4
 **Open:** none.
+
+
+## 2026-11-01 — Enable Selection, Bounding Box, and Dragging for Stamps and Texts
+**Request:** Enable the Select tool to act as a universal object tool: unify object state for stamps and texts (`id`, `type`, `x`, `y`, `width`, `height`, `transform`), reuse pointerdown/move/up logic to show bounding box outline (`--accent-text`) with 4 corner handles, enable smooth dragging, persist new positions to `annotations.json` and Dexie across page reloads, verify via automated Playwright tests, and restart dev server.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: exported `CustomObjectType` and `CustomAnnotationObject`; added `objects` and `onMoveObject` props; derived reactive `pageObjects`; unified `handleDown` to capture strokes, stamps, and text objects; added real-time DOM translation feedback during pointer drag; committed new coordinates via `onMoveObject`; rendered transparent hit rect and universal bounding box with 4 corner handles (`var(--accent-text, #0b7ad6)`) for selected stamps (`data-testid="pdf-stamp-bbox"`) and text (`data-testid="pdf-text-bbox"`).
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: added `annotationsVersion` reactive state; implemented `getObjectsForPage(pageIndex)` extracting stamps and texts from `annotationScope`; implemented `handleMoveObject(pageIndex, id, newOrigin, type)` updating EmbedPDF annotation rect, incrementing version, and triggering debounced save to `annotations.json` in Dexie; extended `handleDeleteSelected` to remove selected stamps and texts on Delete/Backspace.
+- `apps/web/src/modules/pdf/custom-stamp-renderer.tsx`: added `data-annotation-id` and `data-annotation-type` attributes to container element.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx`: destructured `getObjectsForPage` and `handleMoveObject`; added `renderCustomAnnotation` callback on `<AnnotationLayer>` injecting `data-annotation-id`; passed `objects` and `onMoveObject` to `<PdfCustomInkLayer>`.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added E2E test verifying stamp and text placement, switching to Select tool, clicking to show bounding box, dragging by delta coordinates, persisting to Dexie, reloading page, and confirming annotations stay at new moved coordinates.
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (34/34 unit tests across 7 files).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (3/3 tests).
+- `playwright test e2e/pdf-ink-objects.spec.ts`: PASS (2/2 tests).
+- `playwright test e2e/pdf-annotations.spec.ts`: PASS (2/2 tests).
+- `playwright test e2e/pdf-page-operations.spec.ts`: PASS (1/1 test).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings, spacing 8-point compliant).
+- Dev server restarted and returned HTTP 200 on `http://localhost:3000`.
+**Related:** PDF-1, PDF-3, PDF-4
+**Open:** none.

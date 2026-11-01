@@ -83,6 +83,8 @@ export const customStampRenderer = createRenderer({
     return (
       <div
         data-testid={`stamp-container-${annotation.object.id}`}
+        data-annotation-id={annotation.object.id}
+        data-annotation-type={annotation.object.type}
         style={{
           position: "absolute",
           width: "100%",

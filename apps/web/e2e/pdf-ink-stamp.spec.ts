@@ -320,4 +320,230 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     // Verify active tool automatically cleared back to 'select'
     await expect(primaryPane.locator('[data-testid="pdf-tool-select"]')).toHaveAttribute("aria-pressed", "true");
   });
+
+  test("select tool enables universal selection, bounding box, and dragging for stamps and texts surviving reload", async ({ page }) => {
+    // 1. Generate test PDF
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Draggable Stamps and Text Objects Test", {
+      x: 50,
+      y: 750,
+      size: 20,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${projectId}-drag&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+
+    await fileInput.setInputFiles({
+      name: "test-drag-stamp-text.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+
+    const initialBox = await page1.boundingBox();
+    expect(initialBox).not.toBeNull();
+    if (!initialBox) return;
+
+    // 2. Add Stamp: Select Stamp tool -> Click page -> Choose file
+    await primaryPane.locator('[data-testid="pdf-tool-stamp"]').click();
+    await page.waitForTimeout(200);
+
+    const squarePngBase64 =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+    const fileChooserPromise = page.waitForEvent("filechooser");
+    const stampClickX = initialBox.x + 120;
+    const stampClickY = initialBox.y + 140;
+    await page.mouse.click(stampClickX, stampClickY);
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles({
+      name: "drag-test-stamp.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(squarePngBase64, "base64"),
+    });
+
+    // Wait for stamp to be added
+    await expect(primaryPane.locator('[data-testid="pdf-stamp-object"]').first()).toBeAttached({ timeout: 10000 });
+
+    // 3. Ensure Select tool is active
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await page.waitForTimeout(200);
+
+    // Initial stamp position
+    const initialStampOrigin = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const stamp = list.find((a: any) => a?.object?.type === 13);
+      return stamp ? { ...stamp.object.rect.origin } : null;
+    });
+    expect(initialStampOrigin).not.toBeNull();
+
+    // Verify stamp object hit rect is present and click it to show bounding box
+    const stampObject = primaryPane.locator('[data-testid="pdf-stamp-object"]').first();
+    const stampBox = await stampObject.boundingBox();
+    expect(stampBox).not.toBeNull();
+    if (!stampBox) return;
+
+    // Click stamp to select
+    await page.mouse.click(stampBox.x + stampBox.width / 2, stampBox.y + stampBox.height / 2);
+    await page.waitForTimeout(200);
+
+    // Verify stamp selection bounding box is displayed
+    const stampBbox = primaryPane.locator('[data-testid="pdf-stamp-bbox"]');
+    await expect(stampBbox).toBeVisible({ timeout: 5000 });
+
+    // Drag stamp by (+80px, +60px)
+    const dragDeltaX = 80;
+    const dragDeltaY = 60;
+    await page.mouse.move(stampBox.x + stampBox.width / 2, stampBox.y + stampBox.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        stampBox.x + stampBox.width / 2 + (dragDeltaX * i) / 10,
+        stampBox.y + stampBox.height / 2 + (dragDeltaY * i) / 10
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    // Verify stamp origin updated in store
+    const movedStampOrigin = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const stamp = list.find((a: any) => a?.object?.type === 13);
+      return stamp ? { ...stamp.object.rect.origin } : null;
+    });
+    expect(movedStampOrigin).not.toBeNull();
+    expect(movedStampOrigin!.x).toBeGreaterThan(initialStampOrigin!.x + 40);
+    expect(movedStampOrigin!.y).toBeGreaterThan(initialStampOrigin!.y + 30);
+
+    // 4. Add Text annotation
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    await page.waitForTimeout(200);
+
+    const textClickX = initialBox.x + 100;
+    const textClickY = initialBox.y + 300;
+    await page.mouse.click(textClickX, textClickY);
+    await page.waitForTimeout(500);
+
+    // Wait for FreeText annotation to be created
+    await expect.poll(async () => {
+      return await page.evaluate(() => {
+        const scope = (window as unknown as {
+          __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+        }).__aboard_pdfAnnotations?.scope;
+        const res = scope?.getAnnotations();
+        const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+        return list.some((a: any) => a?.object?.type === 3);
+      });
+    }, { timeout: 10000 }).toBe(true);
+
+    // Switch to Select tool
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await page.waitForTimeout(300);
+
+    // Get text object and position
+    await expect(primaryPane.locator('[data-testid="pdf-text-object"]').first()).toBeAttached({ timeout: 10000 });
+    const textObject = primaryPane.locator('[data-testid="pdf-text-object"]').first();
+    const textBox = await textObject.boundingBox();
+    expect(textBox).not.toBeNull();
+    if (!textBox) return;
+
+    const initialTextOrigin = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const textAnno = list.find((a: any) => a?.object?.type === 3);
+      return textAnno ? { ...textAnno.object.rect.origin } : null;
+    });
+    expect(initialTextOrigin).not.toBeNull();
+
+    // Click text to select
+    await page.mouse.click(textBox.x + textBox.width / 2, textBox.y + textBox.height / 2);
+    await page.waitForTimeout(200);
+
+    // Verify text selection bounding box is displayed
+    const textBbox = primaryPane.locator('[data-testid="pdf-text-bbox"]');
+    await expect(textBbox).toBeVisible({ timeout: 5000 });
+
+    // Drag text by (+70px, +50px)
+    const textDeltaX = 70;
+    const textDeltaY = 50;
+    await page.mouse.move(textBox.x + textBox.width / 2, textBox.y + textBox.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        textBox.x + textBox.width / 2 + (textDeltaX * i) / 10,
+        textBox.y + textBox.height / 2 + (textDeltaY * i) / 10
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    // Verify text origin updated in store
+    const movedTextOrigin = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const textAnno = list.find((a: any) => a?.object?.type === 3);
+      return textAnno ? { ...textAnno.object.rect.origin } : null;
+    });
+    expect(movedTextOrigin).not.toBeNull();
+    expect(movedTextOrigin!.x).toBeGreaterThan(initialTextOrigin!.x + 30);
+    expect(movedTextOrigin!.y).toBeGreaterThan(initialTextOrigin!.y + 20);
+
+    // Wait for debounced flush to Dexie
+    await page.waitForTimeout(1000);
+
+    // 5. Reload the page and confirm stamp and text render at their moved positions
+    await page.reload();
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible({ timeout: 15000 });
+    const reloadedPage1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(reloadedPage1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(1000);
+
+    // Verify restored annotations match moved positions
+    const restoredPositions = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const stamp = list.find((a: any) => a?.object?.type === 13);
+      const textAnno = list.find((a: any) => a?.object?.type === 3);
+      return {
+        stampOrigin: stamp ? stamp.object.rect.origin : null,
+        textOrigin: textAnno ? textAnno.object.rect.origin : null,
+      };
+    });
+
+    expect(restoredPositions.stampOrigin).not.toBeNull();
+    expect(restoredPositions.textOrigin).not.toBeNull();
+    expect(Math.abs(restoredPositions.stampOrigin.x - movedStampOrigin!.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs(restoredPositions.stampOrigin.y - movedStampOrigin!.y)).toBeLessThanOrEqual(2);
+    expect(Math.abs(restoredPositions.textOrigin.x - movedTextOrigin!.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs(restoredPositions.textOrigin.y - movedTextOrigin!.y)).toBeLessThanOrEqual(2);
+  });
 });

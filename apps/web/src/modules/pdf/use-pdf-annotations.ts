@@ -18,7 +18,12 @@ import {
 import { processStampImage } from "./image-stamp-utils";
 import { stampBlobUrlCache } from "./custom-stamp-renderer";
 import type { AnnotationToolType } from "./pdf-toolbar";
-import type { CustomInkStroke, CustomInkTransform } from "./pdf-custom-ink-layer";
+import type {
+  CustomInkStroke,
+  CustomInkTransform,
+  CustomAnnotationObject,
+  CustomObjectType,
+} from "./pdf-custom-ink-layer";
 
 export interface UsePdfAnnotationsOptions {
   documentId: string;
@@ -54,6 +59,13 @@ export interface UsePdfAnnotationsResult {
     pageIndex: number,
     moves: Array<{ strokeId: string; transform: CustomInkTransform }>
   ) => void;
+  getObjectsForPage: (pageIndex: number) => CustomAnnotationObject[];
+  handleMoveObject: (
+    pageIndex: number,
+    id: string,
+    newOrigin: { x: number; y: number },
+    type: CustomObjectType
+  ) => void;
   annotationScope: ReturnType<typeof useAnnotation>["provides"];
 }
 
@@ -78,6 +90,7 @@ export function usePdfAnnotations({
   const [activeTool, setActiveToolState] = useState<AnnotationToolType>("select");
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [annotationsVersion, setAnnotationsVersion] = useState(0);
 
   // Custom ink state (isolated completely from EmbedPDF to guarantee 1:1 mouse alignment)
   const [customStrokes, setCustomStrokes] = useState<Record<number, CustomInkStroke[]>>({});
@@ -191,6 +204,7 @@ export function usePdfAnnotations({
         const transferItems = await deserializeAnnotations(projectId, savedJson, ps);
         if (transferItems.length > 0) {
           scope.importAnnotations(transferItems);
+          setAnnotationsVersion((v) => v + 1);
         }
       } catch (err) {
         console.error("[usePdfAnnotations] Restore annotations failed:", err);
@@ -211,6 +225,7 @@ export function usePdfAnnotations({
     const unsub = annotationScope.onAnnotationEvent((event) => {
       if (isRestoringRef.current) return;
       if (event.type === "create" || event.type === "update" || event.type === "delete") {
+        setAnnotationsVersion((v) => v + 1);
         triggerDebouncedSave();
       }
     });
@@ -401,15 +416,17 @@ export function usePdfAnnotations({
 
     // 2. Delete selected EmbedPDF annotations (stamps, freeText, highlights)
     if (annotationScope) {
-      const selectedAnnoIds = annotationScope.getSelectedAnnotationIds();
-      if (selectedAnnoIds && selectedAnnoIds.length > 0) {
+      const selectedScopeIds = annotationScope.getSelectedAnnotationIds() || [];
+      const selectedAnnoIds = new Set([...selectedScopeIds, ...Array.from(selStrokes)]);
+      if (selectedAnnoIds.size > 0) {
         const allAnnos = annotationScope.getAnnotations();
         const toDelete = allAnnos
-          .filter((ta) => selectedAnnoIds.includes(ta.object.id))
+          .filter((ta) => selectedAnnoIds.has(ta.object.id))
           .map((ta) => ({ pageIndex: ta.object.pageIndex, id: ta.object.id }));
         if (toDelete.length > 0) {
           annotationScope.deleteAnnotations(toDelete);
           annotationScope.deselectAnnotation();
+          setAnnotationsVersion((v) => v + 1);
           triggerDebouncedSave();
           changed = true;
         }
@@ -418,6 +435,68 @@ export function usePdfAnnotations({
 
     return changed;
   }, [annotationScope, triggerDebouncedSave]);
+
+  const getObjectsForPage = useCallback(
+    (pageIndex: number): CustomAnnotationObject[] => {
+      if (!annotationScope) return [];
+      const annos = annotationScope.getAnnotations({ pageIndex }) || [];
+      const res: CustomAnnotationObject[] = [];
+      for (const a of annos) {
+        const o = a?.object;
+        if (!o || !o.rect) continue;
+        const type: CustomObjectType | null =
+          o.type === PdfAnnotationSubtype.STAMP
+            ? "stamp"
+            : o.type === PdfAnnotationSubtype.FREETEXT || o.type === PdfAnnotationSubtype.TEXT
+            ? "text"
+            : null;
+        if (type) {
+          res.push({
+            id: o.id,
+            type,
+            pageIndex: o.pageIndex ?? pageIndex,
+            x: o.rect.origin.x,
+            y: o.rect.origin.y,
+            width: o.rect.size.width,
+            height: o.rect.size.height,
+            transform: { x: 0, y: 0 },
+          });
+        }
+      }
+      return res;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [annotationScope, annotationsVersion]
+  );
+
+  const handleMoveObject = useCallback(
+    (
+      pageIndex: number,
+      id: string,
+      newOrigin: { x: number; y: number },
+      type: CustomObjectType
+    ) => {
+      if (!annotationScope) return;
+      try {
+        const pageAnnos = annotationScope.getAnnotations({ pageIndex }) || [];
+        const target = pageAnnos.find((a) => a.object.id === id);
+        if (target?.object?.rect) {
+          const origSize = target.object.rect.size;
+          annotationScope.updateAnnotation(pageIndex, id, {
+            rect: {
+              origin: { x: newOrigin.x, y: newOrigin.y },
+              size: origSize,
+            },
+          });
+          setAnnotationsVersion((v) => v + 1);
+          triggerDebouncedSave();
+        }
+      } catch (err) {
+        console.error("[usePdfAnnotations] Failed to move object:", err);
+      }
+    },
+    [annotationScope, triggerDebouncedSave]
+  );
 
   const handleUndo = useCallback(() => {
     if (customUndoStackRef.current.length > 0) {
@@ -527,6 +606,8 @@ export function usePdfAnnotations({
     handleAddCustomStroke,
     handleMoveCustomStroke,
     handleMoveCustomStrokes,
+    getObjectsForPage,
+    handleMoveObject,
     annotationScope,
   };
 }
