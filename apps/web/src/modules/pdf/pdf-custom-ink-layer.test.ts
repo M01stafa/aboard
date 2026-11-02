@@ -233,8 +233,8 @@ describe("pdf-custom-ink-layer", () => {
       expect(scaled[0].y).toBe(100);
 
       // Bottom-right point scales out proportionally
-      expect(scaled[1].x).toBeGreaterThan(200);
-      expect(scaled[1].y).toBeGreaterThan(200);
+      expect(scaled[1].x).toBe(310);
+      expect(scaled[1].y).toBe(310);
 
       // The new distance between points is bounds.width * 2 - 2 * pad = 220 - 10 = 210
       const newSpanX = scaled[1].x - scaled[0].x;
@@ -262,13 +262,13 @@ describe("pdf-custom-ink-layer", () => {
       const scaled = scaleStrokePoints(stroke.points, bounds, newRect);
       expect(scaled).toHaveLength(2);
 
-      // Bottom-right point remains at original coordinate (200, 200)
       expect(scaled[1].x).toBe(200);
       expect(scaled[1].y).toBe(200);
 
       // Top-left point moves up and left
       expect(scaled[0].x).toBeLessThan(100);
       expect(scaled[0].y).toBeLessThan(100);
+      expect(scaled[1].x - scaled[0].x).toBe(210);
     });
 
     it("incorporates existing transform offset when scaling points", () => {
@@ -294,7 +294,56 @@ describe("pdf-custom-ink-layer", () => {
 
       // First point absolute coordinate was 50 + 30 = 80; with top-left anchored it stays at 80
       expect(scaled[0].x).toBe(80);
-      expect(scaled[0].y).toBe(70); // 50 + 20
+      expect(scaled[0].y).toBe(70);
+      expect(scaled[1].x).toBe(235);
+      expect(scaled[1].y).toBe(225);
+      expect(scaled[1].x - scaled[0].x).toBe(155);
+    });
+
+    it("shrinks stroke points proportionally (0.5x scale)", () => {
+      const stroke: CustomInkStroke = {
+        id: "s-scale-4",
+        points: [
+          { x: 100, y: 100 },
+          { x: 300, y: 300 },
+        ],
+        color: "#000",
+        width: 2,
+        opacity: 1,
+      };
+      const bounds = getAbsoluteStrokeBounds(stroke);
+      const newRect = {
+        origin: { x: bounds.x, y: bounds.y },
+        size: { width: bounds.width * 0.5, height: bounds.height * 0.5 },
+      };
+
+      const scaled = scaleStrokePoints(stroke.points, bounds, newRect);
+      expect(scaled).toHaveLength(2);
+      expect(scaled[1].x - scaled[0].x).toBe(95);
+      expect(scaled[1].y - scaled[0].y).toBe(95);
+    });
+
+    it("handles non-uniform scaling (width * 2, height * 0.5)", () => {
+      const stroke: CustomInkStroke = {
+        id: "s-scale-5",
+        points: [
+          { x: 100, y: 100 },
+          { x: 200, y: 200 },
+        ],
+        color: "#000",
+        width: 2,
+        opacity: 1,
+      };
+      const bounds = getAbsoluteStrokeBounds(stroke);
+      const newRect = {
+        origin: { x: bounds.x, y: bounds.y },
+        size: { width: bounds.width * 2, height: bounds.height * 0.5 },
+      };
+
+      const scaled = scaleStrokePoints(stroke.points, bounds, newRect);
+      expect(scaled).toHaveLength(2);
+      expect(scaled[1].x - scaled[0].x).toBe(210);
+      expect(scaled[1].y - scaled[0].y).toBe(45);
     });
 
     it("returns empty array when points array is empty", () => {
