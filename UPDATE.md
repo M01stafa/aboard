@@ -2247,3 +2247,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
 **Related:** PDF-1, PDF-3, PDF-4
 **Open:** none.
+
+
+## 2026-11-02 — Enable Resizing (Scaling) for Ink Strokes via Select Tool
+**Request:** Enable resizing (scaling) for custom ink strokes via the Select tool. Render the 8 resize handles on ink strokes when selected, scale points dynamically with opposite corner anchored, maintain unscaled crisp handle sizing, update and persist scaled stroke coordinates to annotations.json / IndexedDB across page reloads, verify with Playwright E2E and unit tests, and restart dev server.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: exported `scaleStrokePoints(points, strokeBounds, newRect, transform)`; added ink stroke handle detection in `handleDown` (`data-object-type="stroke"`); applied real-time SVG scale transform `translate(dx, dy) scale(scaleX, scaleY)` on the stroke geometry inside `<g>` during resize while keeping the 8 resize handles and bounding box crisp in page coordinates; added Shift key support for aspect ratio locking.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: imported `getAbsoluteStrokeBounds` and `scaleStrokePoints`; handled `type === "stroke"` in `handleResizeObject`, scaling stroke points to match the target rect, resetting transform, pushing to undo stack, and persisting to Dexie via `triggerDebouncedSave()`.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.test.ts`: added unit tests for `scaleStrokePoints` testing corner anchoring (`se`, `nw`), transform offset inclusion, and empty array handling (20/20 unit tests pass).
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added Playwright E2E test verifying ink stroke selection, 8 resize handle display, southeast corner dragging with top-left origin anchored, dimension expansion, and persistence across reload (5/5 tests pass).
+**Checks:**
+- `pnpm test src/modules/pdf/pdf-custom-ink-layer.test.ts`: PASS (20/20 unit tests).
+- `pnpm test src/modules/pdf/`: PASS (54/54 tests across 8 files).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (5/5 tests passed in 41.2s).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings, spacing 8-point compliant).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-3, PDF-4
+**Open:** none.

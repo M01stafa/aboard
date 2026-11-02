@@ -6,6 +6,7 @@ import {
   getStrokeOffset,
   rectsIntersect,
   pointsToSvgPath,
+  scaleStrokePoints,
   type CustomInkStroke,
 } from "./pdf-custom-ink-layer";
 
@@ -202,6 +203,103 @@ describe("pdf-custom-ink-layer", () => {
       const clampedPosY = Math.max(0, Math.min(Math.max(0, pageHeight - textHeight), posY));
       expect(clampedPosX).toBe(612 - 100);
       expect(clampedPosY).toBe(792 - 40);
+    });
+  });
+
+  describe("scaleStrokePoints (Ink Resizing & Anchoring)", () => {
+    it("scales stroke points while keeping top-left anchor fixed (se handle resize)", () => {
+      const stroke: CustomInkStroke = {
+        id: "s-scale-1",
+        points: [
+          { x: 100, y: 100 },
+          { x: 200, y: 200 },
+        ],
+        color: "#E44234",
+        width: 2,
+        opacity: 1,
+      };
+      const bounds = getAbsoluteStrokeBounds(stroke);
+      // Double the width and height, anchored at top-left
+      const newRect = {
+        origin: { x: bounds.x, y: bounds.y },
+        size: { width: bounds.width * 2, height: bounds.height * 2 },
+      };
+
+      const scaled = scaleStrokePoints(stroke.points, bounds, newRect);
+      expect(scaled).toHaveLength(2);
+
+      // Top-left point remains at the original start coordinate
+      expect(scaled[0].x).toBe(100);
+      expect(scaled[0].y).toBe(100);
+
+      // Bottom-right point scales out proportionally
+      expect(scaled[1].x).toBeGreaterThan(200);
+      expect(scaled[1].y).toBeGreaterThan(200);
+
+      // The new distance between points is bounds.width * 2 - 2 * pad = 220 - 10 = 210
+      const newSpanX = scaled[1].x - scaled[0].x;
+      expect(Math.round(newSpanX)).toBe(210);
+    });
+
+    it("scales stroke points while keeping bottom-right anchor fixed (nw handle resize)", () => {
+      const stroke: CustomInkStroke = {
+        id: "s-scale-2",
+        points: [
+          { x: 100, y: 100 },
+          { x: 200, y: 200 },
+        ],
+        color: "#E44234",
+        width: 2,
+        opacity: 1,
+      };
+      const bounds = getAbsoluteStrokeBounds(stroke);
+      // Double width and height towards top-left, bottom-right fixed:
+      const newRect = {
+        origin: { x: bounds.x - bounds.width, y: bounds.y - bounds.height },
+        size: { width: bounds.width * 2, height: bounds.height * 2 },
+      };
+
+      const scaled = scaleStrokePoints(stroke.points, bounds, newRect);
+      expect(scaled).toHaveLength(2);
+
+      // Bottom-right point remains at original coordinate (200, 200)
+      expect(scaled[1].x).toBe(200);
+      expect(scaled[1].y).toBe(200);
+
+      // Top-left point moves up and left
+      expect(scaled[0].x).toBeLessThan(100);
+      expect(scaled[0].y).toBeLessThan(100);
+    });
+
+    it("incorporates existing transform offset when scaling points", () => {
+      const stroke: CustomInkStroke = {
+        id: "s-scale-3",
+        points: [
+          { x: 50, y: 50 },
+          { x: 150, y: 150 },
+        ],
+        transform: { x: 30, y: 20 },
+        color: "#E44234",
+        width: 2,
+        opacity: 1,
+      };
+      const bounds = getAbsoluteStrokeBounds(stroke);
+      const newRect = {
+        origin: { x: bounds.x, y: bounds.y },
+        size: { width: bounds.width * 1.5, height: bounds.height * 1.5 },
+      };
+
+      const scaled = scaleStrokePoints(stroke.points, bounds, newRect, stroke.transform);
+      expect(scaled).toHaveLength(2);
+
+      // First point absolute coordinate was 50 + 30 = 80; with top-left anchored it stays at 80
+      expect(scaled[0].x).toBe(80);
+      expect(scaled[0].y).toBe(70); // 50 + 20
+    });
+
+    it("returns empty array when points array is empty", () => {
+      const res = scaleStrokePoints([], { x: 0, y: 0, width: 100, height: 100 }, { origin: { x: 0, y: 0 }, size: { width: 200, height: 200 } });
+      expect(res).toEqual([]);
     });
   });
 });

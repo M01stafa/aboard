@@ -92,6 +92,57 @@ export function getAbsoluteStrokeBounds(stroke: CustomInkStroke): {
   };
 }
 
+export function scaleStrokePoints(
+  points: CustomInkPoint[],
+  strokeBounds: { x: number; y: number; width: number; height: number },
+  newRect: { origin: { x: number; y: number }; size: { width: number; height: number } },
+  transform?: CustomInkTransform
+): CustomInkPoint[] {
+  if (!points || points.length === 0) return [];
+  const ox = transform?.x ?? 0;
+  const oy = transform?.y ?? 0;
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const p of points) {
+    const ax = p.x + ox;
+    const ay = p.y + oy;
+    if (ax < minX) minX = ax;
+    if (ay < minY) minY = ay;
+    if (ax > maxX) maxX = ax;
+    if (ay > maxY) maxY = ay;
+  }
+
+  const spanX = Math.max(1, maxX - minX);
+  const spanY = Math.max(1, maxY - minY);
+
+  const padLeft = Math.max(0, minX - strokeBounds.x);
+  const padTop = Math.max(0, minY - strokeBounds.y);
+  const padRight = Math.max(0, strokeBounds.x + strokeBounds.width - maxX);
+  const padBottom = Math.max(0, strokeBounds.y + strokeBounds.height - maxY);
+
+  const targetMinX = newRect.origin.x + padLeft;
+  const targetMinY = newRect.origin.y + padTop;
+  const targetMaxX = Math.max(targetMinX, newRect.origin.x + newRect.size.width - padRight);
+  const targetMaxY = Math.max(targetMinY, newRect.origin.y + newRect.size.height - padBottom);
+
+  const targetSpanX = targetMaxX - targetMinX;
+  const targetSpanY = targetMaxY - targetMinY;
+
+  return points.map((p) => {
+    const ax = p.x + ox;
+    const ay = p.y + oy;
+    const u = (ax - minX) / spanX;
+    const v = (ay - minY) / spanY;
+    return {
+      x: Math.round((targetMinX + u * targetSpanX) * 100) / 100,
+      y: Math.round((targetMinY + v * targetSpanY) * 100) / 100,
+    };
+  });
+}
+
 export function rectsIntersect(
   r1: { x: number; y: number; width: number; height: number },
   r2: { x: number; y: number; width: number; height: number }
@@ -541,6 +592,24 @@ export function PdfCustomInkLayer({
           window.getSelection()?.removeAllRanges();
           capture(e.pointerId);
 
+          const stroke = p.strokes.find((s) => s.id === handleObjId);
+          if (stroke) {
+            const absBounds = getAbsoluteStrokeBounds(stroke);
+            interactionRef.current = {
+              kind: "resize",
+              objectId: handleObjId,
+              handle: handlePos,
+              startPoint: pt,
+              startRect: { x: absBounds.x, y: absBounds.y, width: absBounds.width, height: absBounds.height },
+              currentRect: { x: absBounds.x, y: absBounds.y, width: absBounds.width, height: absBounds.height },
+              objectType: "stroke",
+            };
+            setResizeRects({
+              [handleObjId]: { x: absBounds.x, y: absBounds.y, width: absBounds.width, height: absBounds.height },
+            });
+            return;
+          }
+
           const obj =
             (p.objects || []).find((o) => o.id === handleObjId) ||
             (() => {
@@ -761,8 +830,8 @@ export function PdfCustomInkLayer({
       } else if (it.kind === "resize") {
         const dx = pt.x - it.startPoint.x;
         const dy = pt.y - it.startPoint.y;
-        const isStamp = it.objectType === "stamp";
-        const newRect = computeResizedRect(it.startRect, it.handle, dx, dy, isStamp);
+        const lockAspect = it.objectType === "stamp" || (e.shiftKey && it.objectType === "stroke");
+        const newRect = computeResizedRect(it.startRect, it.handle, dx, dy, lockAspect);
         it.currentRect = newRect;
         setResizeRects({ [it.objectId]: newRect });
 
@@ -925,9 +994,9 @@ export function PdfCustomInkLayer({
 
         if (commit) {
           const pt = toPagePoint(e.clientX, e.clientY);
-          const isStamp = it.objectType === "stamp";
+          const lockAspect = it.objectType === "stamp" || (e.shiftKey && it.objectType === "stroke");
           const finalRect = pt
-            ? computeResizedRect(it.startRect, it.handle, pt.x - it.startPoint.x, pt.y - it.startPoint.y, isStamp)
+            ? computeResizedRect(it.startRect, it.handle, pt.x - it.startPoint.x, pt.y - it.startPoint.y, lockAspect)
             : it.currentRect;
 
           if (
@@ -1008,62 +1077,94 @@ export function PdfCustomInkLayer({
   const renderedStrokes = useMemo(
     () =>
       strokes.map((s) => {
-        const offset = dragOffsets[s.id] ?? getStrokeOffset(s);
+        const resizeRect = resizeRects[s.id];
+        const offset = resizeRect ? { x: 0, y: 0 } : (dragOffsets[s.id] ?? getStrokeOffset(s));
         const isSelected = isSelectMode && selectedSet.has(s.id);
         const bounds = getStrokeBounds(s);
         const handleSize = 8;
+
+        const curX = resizeRect ? resizeRect.x : bounds.x + offset.x;
+        const curY = resizeRect ? resizeRect.y : bounds.y + offset.y;
+        const curW = resizeRect ? resizeRect.width : bounds.width;
+        const curH = resizeRect ? resizeRect.height : bounds.height;
+
+        let strokeTransform: string | undefined = undefined;
+        let outerTransform: string | undefined = undefined;
+        if (resizeRect) {
+          const scaleX = bounds.width > 0 ? resizeRect.width / bounds.width : 1;
+          const scaleY = bounds.height > 0 ? resizeRect.height / bounds.height : 1;
+          const dx = resizeRect.x - scaleX * bounds.x;
+          const dy = resizeRect.y - scaleY * bounds.y;
+          strokeTransform = `translate(${dx}, ${dy}) scale(${scaleX}, ${scaleY})`;
+        } else if (offset.x !== 0 || offset.y !== 0) {
+          outerTransform = `translate(${offset.x}, ${offset.y})`;
+        }
+
+        const handles: Array<{ pos: ResizeHandlePosition; hx: number; hy: number }> = [
+          { pos: "nw", hx: curX, hy: curY },
+          { pos: "n", hx: curX + curW / 2, hy: curY },
+          { pos: "ne", hx: curX + curW, hy: curY },
+          { pos: "e", hx: curX + curW, hy: curY + curH / 2 },
+          { pos: "se", hx: curX + curW, hy: curY + curH },
+          { pos: "s", hx: curX + curW / 2, hy: curY + curH },
+          { pos: "sw", hx: curX, hy: curY + curH },
+          { pos: "w", hx: curX, hy: curY + curH / 2 },
+        ];
+
         return (
           <g
             key={s.id}
             data-ink-stroke-id={s.id}
             data-testid="pdf-custom-ink-stroke"
-            transform={offset.x !== 0 || offset.y !== 0 ? `translate(${offset.x}, ${offset.y})` : undefined}
+            transform={outerTransform}
           >
-            <rect
-              x={bounds.x}
-              y={bounds.y}
-              width={bounds.width}
-              height={bounds.height}
-              fill="transparent"
-              style={{
-                pointerEvents: isSelectMode ? "all" : "none",
-                cursor: isSelectMode ? "move" : "default",
-                touchAction: "none",
-              }}
-            />
-            <path
-              d={pointsToSvgPath(s.points)}
-              fill="none"
-              stroke={s.color}
-              strokeWidth={s.width}
-              strokeOpacity={s.opacity}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{ pointerEvents: "none" }}
-            />
-            <polyline
-              points={s.points.map((p) => `${p.x},${p.y}`).join(" ")}
-              fill="none"
-              stroke="transparent"
-              strokeWidth={Math.max(s.width, 16)}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                pointerEvents: isSelectMode ? "stroke" : "none",
-                cursor: isSelectMode ? "move" : "default",
-                touchAction: "none",
-              }}
-            />
+            {/* The stroke geometry with drag/resize transform */}
+            <g transform={strokeTransform}>
+              <rect
+                x={bounds.x}
+                y={bounds.y}
+                width={bounds.width}
+                height={bounds.height}
+                fill="transparent"
+                style={{
+                  pointerEvents: isSelectMode ? "all" : "none",
+                  cursor: isSelectMode ? "move" : "default",
+                  touchAction: "none",
+                }}
+              />
+              <path
+                d={pointsToSvgPath(s.points)}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={s.width}
+                strokeOpacity={s.opacity}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ pointerEvents: "none" }}
+              />
+              <polyline
+                points={s.points.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={Math.max(s.width, 16)}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  pointerEvents: isSelectMode ? "stroke" : "none",
+                  cursor: isSelectMode ? "move" : "default",
+                  touchAction: "none",
+                }}
+              />
+            </g>
+
+            {/* Selection Bounding Box & 8 Resize Handles */}
             {isSelected && (
-              <g
-                style={{ pointerEvents: isSelectMode ? "all" : "none" }}
-                data-testid="pdf-custom-ink-bbox"
-              >
+              <g data-testid="pdf-custom-ink-bbox">
                 <rect
-                  x={bounds.x}
-                  y={bounds.y}
-                  width={bounds.width}
-                  height={bounds.height}
+                  x={curX}
+                  y={curY}
+                  width={curW}
+                  height={curH}
                   fill="rgba(11, 122, 214, 0.04)"
                   stroke="var(--accent-text, #0b7ad6)"
                   strokeWidth={1.5}
@@ -1074,23 +1175,26 @@ export function PdfCustomInkLayer({
                     touchAction: "none",
                   }}
                 />
-                {[
-                  [bounds.x, bounds.y],
-                  [bounds.x + bounds.width, bounds.y],
-                  [bounds.x, bounds.y + bounds.height],
-                  [bounds.x + bounds.width, bounds.y + bounds.height],
-                ].map(([hx, hy], i) => (
+                {handles.map(({ pos, hx, hy }) => (
                   <rect
-                    key={i}
+                    key={pos}
+                    data-resize-handle={pos}
+                    data-object-id={s.id}
+                    data-object-type="stroke"
+                    data-testid={`pdf-ink-resize-handle-${pos}`}
                     x={hx - handleSize / 2}
                     y={hy - handleSize / 2}
                     width={handleSize}
                     height={handleSize}
-                    fill="#ffffff"
+                    fill="var(--bg-surface, #ffffff)"
                     stroke="var(--accent-text, #0b7ad6)"
                     strokeWidth={1.5}
                     vectorEffect="non-scaling-stroke"
-                    style={{ pointerEvents: "none" }}
+                    style={{
+                      cursor: getHandleCursor(pos),
+                      pointerEvents: isSelectMode ? "all" : "none",
+                      touchAction: "none",
+                    }}
                   />
                 ))}
               </g>
@@ -1098,7 +1202,7 @@ export function PdfCustomInkLayer({
           </g>
         );
       }),
-    [strokes, dragOffsets, isSelectMode, selectedSet]
+    [strokes, dragOffsets, resizeRects, isSelectMode, selectedSet]
   );
 
   const renderedObjects = useMemo(

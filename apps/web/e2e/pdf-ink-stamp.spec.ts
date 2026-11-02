@@ -1005,4 +1005,132 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     const reloadedText = primaryPane.locator('[data-testid="pdf-text-object"]').first();
     await expect(reloadedText).toBeVisible({ timeout: 5000 });
   });
+
+  test("resizes ink stroke via select tool with top-left origin anchored and persists across reload", async ({ page }) => {
+    // 1. Generate test PDF
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Ink Stroke Resize & Persist Test", {
+      x: 50,
+      y: 750,
+      size: 20,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${projectId}-ink-resize&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+
+    await fileInput.setInputFiles({
+      name: "test-ink-resize.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+
+    const initialBox = await page1.boundingBox();
+    expect(initialBox).not.toBeNull();
+    if (!initialBox) return;
+
+    // 2. Draw ink stroke
+    await primaryPane.locator('[data-testid="pdf-tool-ink"]').click();
+    await page.waitForTimeout(200);
+
+    const inkStartX = initialBox.x + 140;
+    const inkStartY = initialBox.y + 160;
+    const inkEndX = initialBox.x + 220;
+    const inkEndY = initialBox.y + 220;
+
+    await page.mouse.move(inkStartX, inkStartY);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        inkStartX + ((inkEndX - inkStartX) * i) / 10,
+        inkStartY + ((inkEndY - inkStartY) * i) / 10
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+
+    const inkStroke = primaryPane.locator('[data-testid="pdf-custom-ink-stroke"]').first();
+    await expect(inkStroke).toBeVisible({ timeout: 5000 });
+
+    // 3. Switch to Select tool
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await page.waitForTimeout(200);
+
+    // 4. Select the ink stroke
+    const strokeBoxBefore = await inkStroke.boundingBox();
+    expect(strokeBoxBefore).not.toBeNull();
+    if (!strokeBoxBefore) return;
+
+    await page.mouse.click(
+      strokeBoxBefore.x + strokeBoxBefore.width / 2,
+      strokeBoxBefore.y + strokeBoxBefore.height / 2
+    );
+    await page.waitForTimeout(200);
+
+    // 5. Verify bounding box and resize handles appear
+    const inkBbox = primaryPane.locator('[data-testid="pdf-custom-ink-bbox"]');
+    await expect(inkBbox).toBeVisible({ timeout: 5000 });
+
+    const resizeHandleSE = primaryPane.locator('[data-testid="pdf-ink-resize-handle-se"]');
+    await expect(resizeHandleSE).toBeVisible({ timeout: 5000 });
+
+    const seBox = await resizeHandleSE.boundingBox();
+    expect(seBox).not.toBeNull();
+    if (!seBox) return;
+
+    // 6. Drag the southeast resize handle (+70px, +50px)
+    await page.mouse.move(seBox.x + seBox.width / 2, seBox.y + seBox.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        seBox.x + seBox.width / 2 + (70 * i) / 10,
+        seBox.y + seBox.height / 2 + (50 * i) / 10
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    // 7. Verify scaled dimensions & anchor
+    const strokeBoxAfterResize = await inkStroke.boundingBox();
+    expect(strokeBoxAfterResize).not.toBeNull();
+    // Top-left origin must remain fixed within 3px
+    expect(Math.abs(strokeBoxAfterResize!.x - strokeBoxBefore.x)).toBeLessThanOrEqual(3);
+    expect(Math.abs(strokeBoxAfterResize!.y - strokeBoxBefore.y)).toBeLessThanOrEqual(3);
+    // Width and height must have increased
+    expect(strokeBoxAfterResize!.width).toBeGreaterThan(strokeBoxBefore.width + 30);
+    expect(strokeBoxAfterResize!.height).toBeGreaterThan(strokeBoxBefore.height + 20);
+
+    // 8. Wait for debounced flush and reload page
+    await page.waitForTimeout(1200);
+
+    await page.reload();
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible({ timeout: 15000 });
+    const reloadedPage1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(reloadedPage1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(1000);
+
+    // 9. Confirm resized dimensions and anchored position persist
+    const reloadedStroke = primaryPane.locator('[data-testid="pdf-custom-ink-stroke"]').first();
+    await expect(reloadedStroke).toBeVisible({ timeout: 10000 });
+    const reloadedBox = await reloadedStroke.boundingBox();
+    expect(reloadedBox).not.toBeNull();
+    // Origin remains anchored to original top-left
+    expect(Math.abs(reloadedBox!.x - strokeBoxBefore.x)).toBeLessThanOrEqual(3);
+    expect(Math.abs(reloadedBox!.y - strokeBoxBefore.y)).toBeLessThanOrEqual(3);
+    // Width and height persisted at the larger scaled size
+    expect(reloadedBox!.width).toBeGreaterThan(strokeBoxBefore.width + 30);
+    expect(reloadedBox!.height).toBeGreaterThan(strokeBoxBefore.height + 20);
+  });
 });

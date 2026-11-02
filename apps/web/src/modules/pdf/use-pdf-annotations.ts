@@ -18,11 +18,13 @@ import {
 import { processStampImage } from "./image-stamp-utils";
 import { stampBlobUrlCache } from "./custom-stamp-renderer";
 import type { AnnotationToolType } from "./pdf-toolbar";
-import type {
-  CustomInkStroke,
-  CustomInkTransform,
-  CustomAnnotationObject,
-  CustomObjectType,
+import {
+  type CustomInkStroke,
+  type CustomInkTransform,
+  type CustomAnnotationObject,
+  type CustomObjectType,
+  getAbsoluteStrokeBounds,
+  scaleStrokePoints,
 } from "./pdf-custom-ink-layer";
 
 export interface UsePdfAnnotationsOptions {
@@ -513,6 +515,35 @@ export function usePdfAnnotations({
       newRect: { origin: { x: number; y: number }; size: { width: number; height: number } },
       type: CustomObjectType
     ) => {
+      if (type === "stroke") {
+        setCustomStrokes((prev) => {
+          const pageStrokes = prev[pageIndex];
+          if (!pageStrokes) return prev;
+          const targetStroke = pageStrokes.find((s) => s.id === id);
+          if (!targetStroke) return prev;
+
+          const absBounds = getAbsoluteStrokeBounds(targetStroke);
+          if (absBounds.width <= 0 || absBounds.height <= 0) return prev;
+
+          const newPoints = scaleStrokePoints(targetStroke.points, absBounds, newRect, targetStroke.transform);
+
+          customUndoStackRef.current.push(prev);
+          customRedoStackRef.current = [];
+          const next = {
+            ...prev,
+            [pageIndex]: pageStrokes.map((s) =>
+              s.id === id ? { ...s, points: newPoints, transform: { x: 0, y: 0 } } : s
+            ),
+          };
+          customStrokesRef.current = next;
+          setCanUndo(true);
+          setCanRedo(false);
+          return next;
+        });
+        triggerDebouncedSave();
+        return;
+      }
+
       if (!annotationScope) return;
       try {
         const pageAnnos = annotationScope.getAnnotations({ pageIndex }) || [];
