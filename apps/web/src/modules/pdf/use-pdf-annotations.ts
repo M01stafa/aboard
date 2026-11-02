@@ -457,6 +457,8 @@ export function usePdfAnnotations({
             ? "stamp"
             : o.type === PdfAnnotationSubtype.FREETEXT || o.type === PdfAnnotationSubtype.TEXT
             ? "text"
+            : o.type === PdfAnnotationSubtype.HIGHLIGHT
+            ? "highlight"
             : null;
         if (type) {
           res.push({
@@ -484,7 +486,7 @@ export function usePdfAnnotations({
       newOrigin: { x: number; y: number },
       type: CustomObjectType
     ) => {
-      if (!annotationScope) return;
+      if (!annotationScope || type === "highlight") return;
       try {
         const pageAnnos = annotationScope.getAnnotations({ pageIndex }) || [];
         const target = pageAnnos.find((a) => a.object.id === id);
@@ -515,6 +517,7 @@ export function usePdfAnnotations({
       newRect: { origin: { x: number; y: number }; size: { width: number; height: number } },
       type: CustomObjectType
     ) => {
+      if (type === "highlight") return;
       if (type === "stroke") {
         setCustomStrokes((prev) => {
           const pageStrokes = prev[pageIndex];

@@ -1133,4 +1133,168 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(reloadedBox!.width).toBeGreaterThan(strokeBoxBefore.width + 30);
     expect(reloadedBox!.height).toBeGreaterThan(strokeBoxBefore.height + 20);
   });
+
+  test("locks highlights to text (no drag/resize, selectable for deletion) and scales text proportionally with polished handles", async ({ page }) => {
+    // 1. Generate test PDF
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Highlight Locking and Text Proportional Scaling Test", {
+      x: 50,
+      y: 750,
+      size: 20,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${projectId}-refine&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+
+    await fileInput.setInputFiles({
+      name: "test-refine.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+
+    // 2. Inject a Highlight annotation (type: 9)
+    await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: any };
+      }).__aboard_pdfAnnotations?.scope;
+      if (scope) {
+        scope.createAnnotation(0, {
+          id: "test-hl-lock",
+          type: 9,
+          pageIndex: 0,
+          rect: { origin: { x: 60, y: 120 }, size: { width: 180, height: 24 } },
+          segmentRects: [{ origin: { x: 60, y: 120 }, size: { width: 180, height: 24 } }],
+          color: "#ffe066",
+          opacity: 0.5,
+        });
+      }
+    });
+
+    // Also add a FreeText annotation (type: 3)
+    await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: any };
+      }).__aboard_pdfAnnotations?.scope;
+      if (scope) {
+        scope.createAnnotation(0, {
+          id: "test-text-prop",
+          type: 3,
+          pageIndex: 0,
+          contents: "Proportional Text Scaling",
+          fontSize: 16,
+          rect: { origin: { x: 60, y: 220 }, size: { width: 160, height: 40 } },
+        });
+      }
+    });
+    await page.waitForTimeout(300);
+
+    // Ensure Select tool is active
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await page.waitForTimeout(200);
+
+    // 3. Highlight Locking Verification
+    // A: Click on highlight to select it
+    const highlightObject = primaryPane.locator('[data-testid="pdf-highlight-object"]');
+    await expect(highlightObject).toBeVisible({ timeout: 5000 });
+    const hlBox = await highlightObject.boundingBox();
+    expect(hlBox).not.toBeNull();
+    if (hlBox) {
+      await page.mouse.click(hlBox.x + hlBox.width / 2, hlBox.y + hlBox.height / 2);
+      await page.waitForTimeout(200);
+
+      // B: Verify NO bounding box and NO resize handles exist for highlight
+      const hlBbox = primaryPane.locator('[data-testid="pdf-highlight-bbox"]');
+      await expect(hlBbox).toHaveCount(0);
+      const hlHandle = primaryPane.locator('[data-testid^="pdf-highlight-resize-handle"]');
+      await expect(hlHandle).toHaveCount(0);
+
+      // C: Try dragging highlight (+70px, +50px)
+      await page.mouse.move(hlBox.x + hlBox.width / 2, hlBox.y + hlBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(hlBox.x + hlBox.width / 2 + 70, hlBox.y + hlBox.height / 2 + 50);
+      await page.mouse.up();
+      await page.waitForTimeout(300);
+
+      // Verify highlight position was NOT modified (locked to text)
+      const hlOriginAfterDrag = await page.evaluate(() => {
+        const scope = (window as unknown as {
+          __aboard_pdfAnnotations?: { scope?: any };
+        }).__aboard_pdfAnnotations?.scope;
+        const list = scope?.getAnnotations() || [];
+        const hl = list.find((a: any) => a?.object?.id === "test-hl-lock");
+        return hl ? { ...hl.object.rect.origin } : null;
+      });
+      expect(hlOriginAfterDrag).toEqual({ x: 60, y: 120 });
+    }
+
+    // 4. Text Proportional Scaling Verification
+    const textObject = primaryPane.locator('[data-testid="pdf-text-object"]').first();
+    await expect(textObject).toBeVisible({ timeout: 5000 });
+    const textBox = await textObject.boundingBox();
+    expect(textBox).not.toBeNull();
+    if (textBox) {
+      await page.mouse.click(textBox.x + textBox.width / 2, textBox.y + textBox.height / 2);
+      await page.waitForTimeout(200);
+
+      // Verify bounding box and resize handles exist with polished styling
+      const textBbox = primaryPane.locator('[data-testid="pdf-text-bbox"] rect').first();
+      await expect(textBbox).toBeVisible({ timeout: 5000 });
+      await expect(textBbox).toHaveAttribute("stroke-dasharray", "4 3");
+
+      const handleSE = primaryPane.locator('[data-testid="pdf-text-resize-handle-se"]');
+      await expect(handleSE).toBeVisible({ timeout: 5000 });
+      await expect(handleSE).toHaveAttribute("width", "8");
+      await expect(handleSE).toHaveAttribute("rx", "1.5");
+
+      // Initial aspect ratio: 160 / 40 = 4.0
+      const initialTextRect = await page.evaluate(() => {
+        const scope = (window as unknown as {
+          __aboard_pdfAnnotations?: { scope?: any };
+        }).__aboard_pdfAnnotations?.scope;
+        const list = scope?.getAnnotations() || [];
+        const t = list.find((a: any) => a?.object?.id === "test-text-prop");
+        return t ? { ...t.object.rect.size } : null;
+      });
+      expect(initialTextRect).not.toBeNull();
+      const initialAspect = initialTextRect!.width / initialTextRect!.height;
+
+      // Drag SE handle (+80px, +20px)
+      const handleBox = await handleSE.boundingBox();
+      expect(handleBox).not.toBeNull();
+      if (handleBox) {
+        await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(handleBox.x + handleBox.width / 2 + 80, handleBox.y + handleBox.height / 2 + 20);
+        await page.mouse.up();
+        await page.waitForTimeout(400);
+
+        // Verify new dimensions maintain exact aspect ratio (proportional scaling)
+        const newTextRect = await page.evaluate(() => {
+          const scope = (window as unknown as {
+            __aboard_pdfAnnotations?: { scope?: any };
+          }).__aboard_pdfAnnotations?.scope;
+          const list = scope?.getAnnotations() || [];
+          const t = list.find((a: any) => a?.object?.id === "test-text-prop");
+          return t ? { ...t.object.rect.size } : null;
+        });
+        expect(newTextRect).not.toBeNull();
+        expect(newTextRect!.width).toBeGreaterThan(initialTextRect!.width + 20);
+        const newAspect = newTextRect!.width / newTextRect!.height;
+        expect(Math.abs(newAspect - initialAspect)).toBeLessThan(0.05);
+      }
+    }
+  });
 });

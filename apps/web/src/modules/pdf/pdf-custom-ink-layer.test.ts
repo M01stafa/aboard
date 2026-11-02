@@ -93,6 +93,27 @@ describe("pdf-custom-ink-layer", () => {
       expect(res.x).toBe(100);
       expect(res.y).toBe(150);
     });
+
+    it("proportional scaling maintains exact aspect ratio for text objects without distortion", () => {
+      const textRect = { x: 50, y: 80, width: 120, height: 40 }; // aspect ratio = 3.0
+      const initialAspect = textRect.width / textRect.height;
+
+      // Expand via SE corner
+      const resSE = computeResizedRect(textRect, "se", 60, 10, true);
+      expect(resSE.width / resSE.height).toBeCloseTo(initialAspect, 4);
+
+      // Expand via SW corner
+      const resSW = computeResizedRect(textRect, "sw", -45, 10, true);
+      expect(resSW.width / resSW.height).toBeCloseTo(initialAspect, 4);
+
+      // Expand via East edge
+      const resE = computeResizedRect(textRect, "e", 30, 0, true);
+      expect(resE.width / resE.height).toBeCloseTo(initialAspect, 4);
+
+      // Expand via South edge
+      const resS = computeResizedRect(textRect, "s", 0, 20, true);
+      expect(resS.width / resS.height).toBeCloseTo(initialAspect, 4);
+    });
   });
 
   describe("getStrokeBounds & getAbsoluteStrokeBounds (Bug 2: Ink selection & drag)", () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { PdfAnnotationSubtype } from "@embedpdf/models";
 
 export interface CustomInkPoint {
   x: number;
@@ -197,7 +198,7 @@ export interface AnnotationScopeLike {
   getSelectedAnnotationIds?: () => string[];
 }
 
-export type CustomObjectType = "stroke" | "stamp" | "text";
+export type CustomObjectType = "stroke" | "stamp" | "text" | "highlight";
 
 export type ResizeHandlePosition = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 
@@ -459,7 +460,13 @@ export function PdfCustomInkLayer({
       const o = a?.object;
       if (!o || !o.rect) continue;
       const type: CustomObjectType | null =
-        o.type === 13 ? "stamp" : o.type === 3 || o.type === 1 ? "text" : null;
+        o.type === PdfAnnotationSubtype.STAMP
+          ? "stamp"
+          : o.type === PdfAnnotationSubtype.FREETEXT || o.type === PdfAnnotationSubtype.TEXT
+          ? "text"
+          : o.type === PdfAnnotationSubtype.HIGHLIGHT
+          ? "highlight"
+          : null;
       if (type) {
         res.push({
           id: o.id,
@@ -634,9 +641,16 @@ export function PdfCustomInkLayer({
               const annos = p.annotationScope?.getAnnotations?.({ pageIndex: p.pageIndex }) || [];
               const ta = annos.find((a) => a.object.id === handleObjId);
               if (ta?.object?.rect) {
+                const inferredType: CustomObjectType | null =
+                  ta.object.type === PdfAnnotationSubtype.STAMP
+                    ? "stamp"
+                    : ta.object.type === PdfAnnotationSubtype.FREETEXT || ta.object.type === PdfAnnotationSubtype.TEXT
+                    ? "text"
+                    : null;
+                if (!inferredType) return null;
                 return {
                   id: ta.object.id,
-                  type: (ta.object.type === 13 ? "stamp" : "text") as CustomObjectType,
+                  type: inferredType,
                   pageIndex: p.pageIndex,
                   x: ta.object.rect.origin.x,
                   y: ta.object.rect.origin.y,
@@ -647,7 +661,7 @@ export function PdfCustomInkLayer({
               return null;
             })();
 
-          if (obj) {
+          if (obj && obj.type !== "highlight") {
             interactionRef.current = {
               kind: "resize",
               objectId: handleObjId,
@@ -669,16 +683,16 @@ export function PdfCustomInkLayer({
 
         const objEl = target?.closest?.("[data-object-id]");
         const objId = objEl?.getAttribute("data-object-id");
+        const objType = objEl?.getAttribute("data-object-type") as CustomObjectType | null;
 
         const targetId = strokeId || objId;
         const isStroke = !!strokeId;
 
         if (targetId) {
-          // User clicked on a custom ink stroke or a stamp/text object
+          // User clicked on a custom ink stroke or a stamp/text/highlight object
           e.preventDefault();
           e.stopPropagation();
           window.getSelection()?.removeAllRanges();
-          capture(e.pointerId);
           const currentSelected = new Set(p.selectedStrokeIds || []);
           let activeSelected = Array.from(currentSelected);
 
@@ -691,6 +705,14 @@ export function PdfCustomInkLayer({
               p.annotationScope?.selectAnnotation?.(p.pageIndex, targetId);
             }
           }
+
+          if (objType === "highlight") {
+            // Highlights are strictly locked to text: selected for deletion, but dragging is disabled
+            interactionRef.current = null;
+            return;
+          }
+
+          capture(e.pointerId);
 
           // Prepare drag bases for all currently selected items
           const bases: Record<string, CustomInkTransform> = {};
@@ -739,13 +761,23 @@ export function PdfCustomInkLayer({
 
         if (clickedAnno) {
           const annoId = clickedAnno.object.id;
+          const isHighlight =
+            clickedAnno.object.type === PdfAnnotationSubtype.HIGHLIGHT ||
+            (clickedAnno.object as { subtype?: string }).subtype === "Highlight";
+
           e.preventDefault();
           e.stopPropagation();
           window.getSelection()?.removeAllRanges();
-          capture(e.pointerId);
           p.onSelectStrokes?.([annoId]);
           p.annotationScope?.selectAnnotation?.(p.pageIndex, annoId);
 
+          if (isHighlight) {
+            // Highlights are strictly locked to text: selected for deletion, but dragging is disabled
+            interactionRef.current = null;
+            return;
+          }
+
+          capture(e.pointerId);
           const bases: Record<string, CustomInkTransform> = { [annoId]: { x: 0, y: 0 } };
           interactionRef.current = {
             kind: "drag",
@@ -822,6 +854,8 @@ export function PdfCustomInkLayer({
         it.stroke = { ...it.stroke, points: [...it.stroke.points, pt] };
         setCurrentStroke(it.stroke);
       } else if (it.kind === "drag") {
+        const anchorObj = (p.objects || []).find((o) => o.id === it.anchorId);
+        if (anchorObj?.type === "highlight") return;
         const dx = pt.x - it.start.x;
         const dy = pt.y - it.start.y;
         const nextOffsets: Record<string, CustomInkTransform> = {};
@@ -848,7 +882,10 @@ export function PdfCustomInkLayer({
       } else if (it.kind === "resize") {
         const dx = pt.x - it.startPoint.x;
         const dy = pt.y - it.startPoint.y;
-        const lockAspect = it.objectType === "stamp" || (e.shiftKey && it.objectType === "stroke");
+        const lockAspect =
+          it.objectType === "stamp" ||
+          it.objectType === "text" ||
+          (e.shiftKey && it.objectType === "stroke");
         const newRect = computeResizedRect(it.startRect, it.handle, dx, dy, lockAspect);
         it.currentRect = newRect;
         setResizeRects({ [it.objectId]: newRect });
@@ -1025,7 +1062,10 @@ export function PdfCustomInkLayer({
 
         if (commit) {
           const pt = toPagePoint(e.clientX, e.clientY);
-          const lockAspect = it.objectType === "stamp" || (e.shiftKey && it.objectType === "stroke");
+          const lockAspect =
+          it.objectType === "stamp" ||
+          it.objectType === "text" ||
+          (e.shiftKey && it.objectType === "stroke");
           const finalRect = pt
             ? computeResizedRect(it.startRect, it.handle, pt.x - it.startPoint.x, pt.y - it.startPoint.y, lockAspect)
             : it.currentRect;
@@ -1182,9 +1222,11 @@ export function PdfCustomInkLayer({
                   y={bounds.y}
                   width={bounds.width}
                   height={bounds.height}
-                  fill="rgba(11, 122, 214, 0.04)"
-                  stroke="var(--accent-text, #0b7ad6)"
-                  strokeWidth={1.5}
+                  fill="rgba(26, 99, 160, 0.04)"
+                  stroke="var(--accent-text, #1A63A0)"
+                  strokeWidth={1}
+                  strokeOpacity={0.7}
+                  strokeDasharray="4 3"
                   vectorEffect="non-scaling-stroke"
                   style={{
                     pointerEvents: isSelectMode ? "all" : "none",
@@ -1203,9 +1245,11 @@ export function PdfCustomInkLayer({
                     y={hy - handleSize / 2}
                     width={handleSize}
                     height={handleSize}
+                    rx={1.5}
+                    ry={1.5}
                     fill="var(--bg-surface, #ffffff)"
-                    stroke="var(--accent-text, #0b7ad6)"
-                    strokeWidth={1.5}
+                    stroke="var(--accent-text, #1A63A0)"
+                    strokeWidth={1}
                     vectorEffect="non-scaling-stroke"
                     style={{
                       cursor: getHandleCursor(pos),
@@ -1261,20 +1305,22 @@ export function PdfCustomInkLayer({
               fill="transparent"
               style={{
                 pointerEvents: isSelectMode ? "all" : "none",
-                cursor: isSelectMode ? "move" : "default",
+                cursor: isSelectMode ? (obj.type === "highlight" ? "pointer" : "move") : "default",
                 touchAction: "none",
               }}
             />
-            {isSelected && (
+            {isSelected && obj.type !== "highlight" && (
               <g data-testid={`pdf-${obj.type}-bbox`}>
                 <rect
                   x={curX}
                   y={curY}
                   width={curW}
                   height={curH}
-                  fill="rgba(11, 122, 214, 0.04)"
-                  stroke="var(--accent-text, #0b7ad6)"
-                  strokeWidth={1.5}
+                  fill="rgba(26, 99, 160, 0.04)"
+                  stroke="var(--accent-text, #1A63A0)"
+                  strokeWidth={1}
+                  strokeOpacity={0.7}
+                  strokeDasharray="4 3"
                   vectorEffect="non-scaling-stroke"
                   style={{ pointerEvents: "none" }}
                 />
@@ -1289,9 +1335,11 @@ export function PdfCustomInkLayer({
                     y={hy - handleSize / 2}
                     width={handleSize}
                     height={handleSize}
+                    rx={1.5}
+                    ry={1.5}
                     fill="var(--bg-surface, #ffffff)"
-                    stroke="var(--accent-text, #0b7ad6)"
-                    strokeWidth={1.5}
+                    stroke="var(--accent-text, #1A63A0)"
+                    strokeWidth={1}
                     vectorEffect="non-scaling-stroke"
                     style={{
                       cursor: getHandleCursor(pos),

@@ -1,18 +1,18 @@
-# UPDATE.md — Change Log
+# UPDATE.md â€” Change Log
 
 This file is the append-only record of every change made to the Aboard project.
 
 <!-- Template:
-## YYYY-MM-DD — <short title>
+## YYYY-MM-DD â€” <short title>
 **Request:** <what the owner asked, in one or two sentences>
 **Changes:**
 - `<path>` (created | changed | deleted): <what and why>
 **Checks:** <commands run and results, or "none needed">
-**Related:** Task <n> · <requirement IDs> · <VERIFY IDs>
+**Related:** Task <n> Â· <requirement IDs> Â· <VERIFY IDs>
 **Open:** <anything left to do, or "none">
 -->
 
-## 2026-10-12 — Import Skills into .agents/skills/ and Register as Slash Commands
+## 2026-10-12 â€” Import Skills into .agents/skills/ and Register as Slash Commands
 **Request:** Copy skills from `C:\Users\alhmy\Downloads\alpha_tools_01\dukan3D_store\.agents\skills` into `.agents/skills/`, verify slash-command registration mechanism in Antigravity, and keep existing project structure untouched.
 **Changes:**
 - `.agents/skills/accessibility/` (created): imported WCAG 2.2 accessibility audit skill
@@ -42,7 +42,7 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Skills Import
 **Open:** none
 
-## 2026-10-12 — Task 1: Create UPDATE.md, the Change Log
+## 2026-10-12 â€” Task 1: Create UPDATE.md, the Change Log
 **Request:** Create UPDATE.md following Task 1 in docs/TASKS.md, establish the change log with header, template, and initial entry, and commit to Git.
 **Changes:**
 - `UPDATE.md` (changed): recorded Task 1 in the change log.
@@ -50,7 +50,7 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Task 1
 **Open:** Git repository is not initialized in the workspace (.git missing); commit is blocked.
 
-## 2026-10-13 — Task 1: Defer Git Commit Step
+## 2026-10-13 â€” Task 1: Defer Git Commit Step
 **Request:** Confirm UPDATE.md meets Task 1 requirements and record the owner's decision to defer Git initialization and commits.
 **Changes:**
 - `UPDATE.md` (changed): recorded decision to defer Git commit and mark Task 1 complete.
@@ -58,7 +58,7 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Task 1
 **Open:** Git initialization deferred to a later task upon owner request.
 
-## 2026-10-13 — Task 2: Prepare Repository and Confirm Agent Setup (Git Deferred)
+## 2026-10-13 â€” Task 2: Prepare Repository and Confirm Agent Setup (Git Deferred)
 **Request:** Run Task 2 from docs/TASKS.md (Git deferred): verify project instruction system, create .gitignore, create spikes folders with placeholders, check Next.js 16.4 release notes against architecture rules, and record Git deferral.
 **Changes:**
 - `.gitignore` (created): added ignore patterns for node_modules, .next, build outputs, and .env files (except .env.example) without ignoring .agents/.
@@ -66,29 +66,29 @@ This file is the append-only record of every change made to the Aboard project.
 - `docs/spikes/README.md` (created): initialized placeholder for spike reports.
 - `spikes/README.md` (created): initialized placeholder for throwaway spike experiments.
 - `UPDATE.md` (changed): logged Task 2 completion and Git deferral.
-**Checks:** Verified AGENTS.md, docs/DESIGN.md, .agents/, docs/, and 5 rule files; confirmed security.md is always_on and glob rules match; reviewed official Next.js 16.4 release notes (no breaking changes against §3.1; lazy dynamic import compilation benefits tool modules; Cache Components noted for Phase 1 setup); confirmed zero Git commands run.
-**Related:** Task 2 · V00, V01
+**Checks:** Verified AGENTS.md, docs/DESIGN.md, .agents/, docs/, and 5 rule files; confirmed security.md is always_on and glob rules match; reviewed official Next.js 16.4 release notes (no breaking changes against Â§3.1; lazy dynamic import compilation benefits tool modules; Cache Components noted for Phase 1 setup); confirmed zero Git commands run.
+**Related:** Task 2 Â· V00, V01
 **Open:** Git repository initialization and initial commit deferred at owner's request.
 
-## 2026-10-13 — Task 3: Spike S1 — Excalidraw Inside Next.js
+## 2026-10-13 â€” Task 3: Spike S1 â€” Excalidraw Inside Next.js
 **Request:** Build throwaway spike in spikes/S1-excalidraw/ testing @excalidraw/excalidraw@0.18.1 inside Next.js 16.4 and React 19.3 across all Task 3 criteria, and write findings to docs/spikes/S1.md.
 **Changes:**
 - `spikes/S1-excalidraw/` (created): minimal Next.js 16.4 app with React 19.3, client dynamic import, strict mode double-mount handling, local fonts in public/fonts/, visibility toggle, and refresh() test.
 - `docs/spikes/S1.md` (created): complete Spike S1 report with exact versions, CSP directives, persisted appState keys, and theme CSS variables.
 - `UPDATE.md` (changed): logged Task 3 completion and findings.
 **Checks:** `next build` passed in 4.0s (Turbopack); all 8 checks passed (ssr:false, index.css, double-mount, self-hosted fonts without CDN, visibility:hidden + refresh(), CSP directives, 6 persisted appState keys, theming CSS variables).
-**Related:** Task 3 · V03, V04, V14 (Excalidraw part)
+**Related:** Task 3 Â· V03, V04, V14 (Excalidraw part)
 **Open:** Git commit deferred; browser automation tool open_browser_url encountered sandbox driver 404.
 
-## 2026-10-13 — Task 4: Spike S2 — CircuitJS1 Fork & Toolchain Check
+## 2026-10-13 â€” Task 4: Spike S2 â€” CircuitJS1 Fork & Toolchain Check
 **Request:** Fork pfalstad/circuitjs1 to the owner's GitHub account via GitHub MCP server and execute Spike S2.
 **Changes:**
 - `UPDATE.md` (changed): recorded GitHub MCP fork creation and toolchain check results.
 **Checks:** Verified authenticated GitHub user via MCP (`M01stafa` / Mustafa01); successfully created public fork at `https://github.com/M01stafa/circuitjs1`; verified toolchain (JDK and Gradle 8.7 missing from environment).
-**Related:** Task 4 · V18, V14 (GWT part)
+**Related:** Task 4 Â· V18, V14 (GWT part)
 **Open:** Toolchain installation (JDK 17 and Gradle 8.7) needed to run compileGwt/makeSite; Task 3 browser automation item remains open.
 
-## 2026-10-13 — Task 4: Public Git Repo, Toolchain Setup & Spike S2 (CircuitJS1) Complete
+## 2026-10-13 â€” Task 4: Public Git Repo, Toolchain Setup & Spike S2 (CircuitJS1) Complete
 **Request:** Initialize project Git repository, publish public GitHub repo under owner account (M01stafa/aboard), install JDK and Gradle 8.7, attach CircuitJS1 fork as submodule at vendor/circuitjs1, compile GWT, embed in Next.js, verify API round-trip, check service worker, run security grep, identify CSP directives, and write docs/spikes/S2.md.
 **Changes:**
 - `.git/` (created): initialized Git repository on branch `main` at project root.
@@ -109,10 +109,10 @@ This file is the append-only record of every change made to the Aboard project.
 - Service worker finding: confirmed stock `circuitjs.html` registers `service-worker.js` and links `manifest.json`; recorded that real fork must remove them in Patch 1.
 - Security script-execution grep: `grep -rn "eval(\|new Function\|\$wnd.eval" vendor/circuitjs1/src` confirmed zero occurrences of JavaScript `eval`, `new Function`, or `$wnd.eval` (all `eval` matches are mathematical `Expr.eval`).
 - Extra CSP directives identified for `/circuit/:path*`: `script-src 'self' 'unsafe-inline' 'unsafe-eval'`, `style-src 'self' 'unsafe-inline'`, `img-src 'self' data: blob:`, `font-src 'self' data:`, `connect-src 'self'`, `frame-src 'self' javascript:`. Parent app requires `frame-src 'self'`.
-**Related:** Task 4 · V18, V14 (GWT part)
+**Related:** Task 4 Â· V18, V14 (GWT part)
 **Open:** Task 3 Playwright browser environment issue (Azure CDN 404 driver download) remains open.
 
-## 2026-10-13 — Process Cleanup: Clear Hung Task 4 Copy Command
+## 2026-10-13 â€” Process Cleanup: Clear Hung Task 4 Copy Command
 **Request:** Diagnose and clear any hung PowerShell copy command from Task 4, verify process activity, terminate cleanly if stuck, and confirm spikes/S2-circuit/public state is clean before Task 5.
 **Changes:**
 - `UPDATE.md` (changed): appended entry logging diagnosis, termination of hung background copy processes, and verification of spikes/S2-circuit/public.
@@ -121,10 +121,10 @@ This file is the append-only record of every change made to the Aboard project.
 - State evaluation: observed syntax parser error (`= : The term '=' is not recognized`) with 0% CPU consumption and zero progression for >14 minutes; determined genuinely hung.
 - Termination: killed task-531 via `manage_task` action `kill` and verified both PIDs 9920 and 21636 terminated.
 - Filesystem verification: inspected `spikes/S2-circuit/public/circuit/` against `vendor/circuitjs1/site/`; verified all 456 valid files present, 0 zero-byte files, and `WEB-INF/` strictly absent (`Has WEB-INF: False`). No re-copying required as files were already fully intact from the subsequent direct copy step.
-**Related:** Task 4 · Process Cleanup
+**Related:** Task 4 Â· Process Cleanup
 **Open:** Task 3 Playwright browser environment issue (Azure CDN 404 driver download) remains open.
 
-## 2026-10-13 — Task 5: Spike S3 — EmbedPDF Viewing and Annotation Round-Trip
+## 2026-10-13 â€” Task 5: Spike S3 â€” EmbedPDF Viewing and Annotation Round-Trip
 **Request:** Run Task 5 from docs/TASKS.md: build throwaway Next.js app in spikes/S3-embedpdf/ with EmbedPDF core and 10 plugins, measure time to first page on 50 MB PDF, test annotation round-trip with stamp binary preservation, identify annotation change event name and payload, verify PDFium WASM loading in dev/build, write docs/spikes/S3.md, and commit to repo.
 **Changes:**
 - `spikes/S3-embedpdf/` (created): throwaway Next.js 16.4 + React 19.3 app with EmbedPDF 2.15.1, PDFium engine, 10 plugins, and verification test harness.
@@ -140,10 +140,10 @@ This file is the append-only record of every change made to the Aboard project.
 - Stamp Binary Preservation: verified `exportAnnotations()` preserves raw image bytes in `ctx.data: ArrayBuffer` (verified in `plugin-annotation` export method).
 - Reload and Import Round-Trip: verified clearing document annotations and re-importing via `scope.importAnnotations(exportedItems)` restores all 4 annotations losslessly.
 - Build & Dev Verification: verified `npm run build` succeeds under Turbopack in 582 ms; verified `next dev` serves self-hosted `/wasm/pdfium.wasm` and `/test-50mb.pdf` with HTTP 200 and correct MIME headers.
-**Related:** Task 5 · V02, V05
+**Related:** Task 5 Â· V02, V05
 **Open:** Task 3 Playwright browser environment issue (Azure CDN 404 driver download) remains open.
 
-## 2026-10-13 — Task 6: Spike S4 — Google Sign-In, Token Exchange, Uploads & Picker Complete
+## 2026-10-13 â€” Task 6: Spike S4 â€” Google Sign-In, Token Exchange, Uploads & Picker Complete
 **Request:** Verify owner setup (Stage A), deploy throwaway Edge Functions (drive-connect, drive-callback, drive-token, drive-link-token), run Google sign-in and token exchange, verify browser storage isolation (no Google tokens in localStorage/sessionStorage/IndexedDB), verify folder creation, multipart upload, and 100 MB resumable upload with Location/Range headers, verify Google Picker with restricted API key, record CSP directives, write docs/spikes/S4.md, and commit to repo.
 **Changes:**
 - `supabase/config.toml` (created): configured `verify_jwt = false` for `drive-callback`.
@@ -163,10 +163,10 @@ This file is the append-only record of every change made to the Aboard project.
 - Drive Folder Creation & Multipart Upload (VERIFY V08): PASS. Short-lived token from `drive-token` created folder via `POST /drive/v3/files` and uploaded small file via multipart `POST /upload/drive/v3/files?uploadType=multipart`.
 - 100 MB Resumable Upload (VERIFY V08): PASS. Initiated session via `POST /upload/drive/v3/files?uploadType=resumable`; confirmed browser reads `Location` response header; chunk upload verified `Range` response header readability with `308 Resume Incomplete`.
 - Google Picker & CSP Directives (VERIFY V09, V14): PASS. Loaded via `https://apis.google.com/js/api.js`; inspected modal class names (`.picker-dialog`, `.picker-dialog-bg`, `.picker-modal-dialog`). Required CSP directives recorded.
-**Related:** Task 6 · V06, V08, V09, V14 (Google part)
+**Related:** Task 6 Â· V06, V08, V09, V14 (Google part)
 **Open:** Task 3 Playwright browser environment issue (Azure CDN 404 driver download) remains open.
 
-## 2026-10-13 — Task 7: Spike S5 — Large .alpha Export and Import Complete
+## 2026-10-13 â€” Task 7: Spike S5 â€” Large .alpha Export and Import Complete
 **Request:** Run Task 7 from docs/TASKS.md: build throwaway Next.js app in spikes/S5-alpha/ using @zip.js/zip.js to write a ZIP with uncompressed mimetype first entry, manifest.json, and uncompressed PDF entries; benchmark 500 MB streaming export on Chrome desktop via showSaveFilePicker confirming flat memory; produce 200 MB in-memory export path for Safari iOS; verify re-import via random access without full archive buffering; test file input without accept filter; test and record size limits in docs/spikes/S5.md; commit and push to M01stafa/aboard.
 **Changes:**
 - `spikes/S5-alpha/` (created): throwaway Next.js 16.4 + React 19.3 app with `@zip.js/zip.js@2.23.0`, streaming chunk reader, File System Access API integration, in-memory export download handler, random-access re-import validator, and interactive test dashboard.
@@ -178,40 +178,40 @@ This file is the append-only record of every change made to the Aboard project.
 - Container format verification: first entry confirmed as uncompressed `mimetype` with `level: 0` and exact content `application/x-alpha-project` (27 bytes), followed by `manifest.json` and level 0 uncompressed PDF entries.
 - 500 MB Streaming Export (Chrome desktop / showSaveFilePicker path): PASS. Streamed 500.00 MB (`524,288,814` bytes) directly to disk in 0.97 s. V8 Heap remained completely flat at 8.76 MB (0.00 MB delta from initial baseline heap), peak RSS 124.10 MB. Proves streaming `ZipWriter` chunks directly to disk stream never buffers payload into memory.
 - 200 MB In-Memory Export: PASS. Generated 200.00 MB (`209,716,032` bytes across 810 chunks) in-memory archive in 0.28 s, Heap Used 7.61 MB, RSS 292.22 MB. Download triggered as `Blob` with MIME `application/octet-stream` and `.alpha` extension.
-- Safari Extension Retention on iPhone (VERIFY V11): PENDING — owner device needed. No physical iOS device available in Windows development environment; step-by-step testing instructions documented in `docs/spikes/S5.md` and UI dashboard.
+- Safari Extension Retention on iPhone (VERIFY V11): PENDING â€” owner device needed. No physical iOS device available in Windows development environment; step-by-step testing instructions documented in `docs/spikes/S5.md` and UI dashboard.
 - Random-Access Re-Import: PASS. Importer opened 500 MB archive via `ZipReader(new BlobReader(file))`, parsed central directory headers without loading archive payload into heap memory, verified `mimetype` (27 bytes) and `manifest.json`, and streamed individual entry bytes. Heap used after import was 8.63 MB.
-- File Input Without `accept` Filter on iOS (VERIFY V11): PENDING — owner device needed. Implemented `<input type="file">` without `accept` filter per spec §12.5; step-by-step iOS testing instructions documented in `docs/spikes/S5.md`.
+- File Input Without `accept` Filter on iOS (VERIFY V11): PENDING â€” owner device needed. Implemented `<input type="file">` without `accept` filter per spec Â§12.5; step-by-step iOS testing instructions documented in `docs/spikes/S5.md`.
 - Size Limits Tested and Recorded: 500 MB streaming directly to disk passed with flat memory; 200 MB in-memory passed in 0.28s; recommended operational caps confirmed as 300 MB for mobile in-memory and 1 GB for desktop in-memory; failure point identified as >1 GB in-memory triggering browser tab memory pressure / mobile crash.
-**Related:** Task 7 · V11
+**Related:** Task 7 Â· V11
 **Open:**
 - Task 3 Playwright browser environment issue (Azure CDN 404 driver download) carried forward.
 - supabase/migrations/0001_init.sql migration cleanup note carried forward: the migration is throwaway from Phase 0 Spike S4 and will be superseded by the production schema in Task 13.
 
-## 2026-10-13 — Task 8: Consolidate Spike Results and Close Phase 0 (Awaiting Owner Approval)
-**Request:** Run Task 8 from docs/TASKS.md: consolidate results of all five Phase 0 spikes (S1–S5), compare observed spike results with docs/specs/* and align spec files with reality, update VERIFY log and Decisions log in docs/PROGRESS.md, track carried open items and owner deferral of iPhone checks, verify apps/ does not import spikes/, set Phase 0 status to "awaiting owner approval", and push to M01stafa/aboard.
+## 2026-10-13 â€” Task 8: Consolidate Spike Results and Close Phase 0 (Awaiting Owner Approval)
+**Request:** Run Task 8 from docs/TASKS.md: consolidate results of all five Phase 0 spikes (S1â€“S5), compare observed spike results with docs/specs/* and align spec files with reality, update VERIFY log and Decisions log in docs/PROGRESS.md, track carried open items and owner deferral of iPhone checks, verify apps/ does not import spikes/, set Phase 0 status to "awaiting owner approval", and push to M01stafa/aboard.
 **Changes:**
-- `docs/specs/architecture.md` (changed): updated §3.1 (V01 confirmed 16.4 notes; V02 self-hosted PDFium WASM confirmed in dev and build) and §15 (V03 confirmed Excalidraw brand CSS variables in index.css).
-- `docs/specs/modules.md` (changed): updated §7.1 (V04 confirmed persisted Excalidraw appState keys) and §7.3 (V05 confirmed AnnotationScope.onAnnotationEvent hook and stamp binary preservation in ctx.data).
-- `docs/specs/google-drive.md` (changed): updated §10.1 (V06 confirmed Google token hygiene via drive-link-token + refreshSession(), Path A safe without Path B fallback), §10.8 (V08 confirmed Location and Range headers readable via CORS in 100 MB resumable upload), and §10.11 (V09 confirmed gapi.load("picker") and .picker-dialog class names).
-- `docs/specs/security.md` (changed): updated §14.5 (V14 confirmed CSP rules for Excalidraw, GWT CircuitJS /circuit/, EmbedPDF wasm-unsafe-eval, and Google; COOP same-origin-allow-popups confirmed).
-- `docs/specs/setup-and-deploy.md` (changed): updated §5.2 (V18 confirmed OpenJDK 11 builds CircuitJS GWT 2.8.2 cleanly with Gradle 8.7; JDK 17 not required).
-- `docs/specs/alpha-format.md` (changed): updated §12.1 (V11 in-memory export path built with application/octet-stream; physical iPhone verification deferred to Task 31/32).
+- `docs/specs/architecture.md` (changed): updated Â§3.1 (V01 confirmed 16.4 notes; V02 self-hosted PDFium WASM confirmed in dev and build) and Â§15 (V03 confirmed Excalidraw brand CSS variables in index.css).
+- `docs/specs/modules.md` (changed): updated Â§7.1 (V04 confirmed persisted Excalidraw appState keys) and Â§7.3 (V05 confirmed AnnotationScope.onAnnotationEvent hook and stamp binary preservation in ctx.data).
+- `docs/specs/google-drive.md` (changed): updated Â§10.1 (V06 confirmed Google token hygiene via drive-link-token + refreshSession(), Path A safe without Path B fallback), Â§10.8 (V08 confirmed Location and Range headers readable via CORS in 100 MB resumable upload), and Â§10.11 (V09 confirmed gapi.load("picker") and .picker-dialog class names).
+- `docs/specs/security.md` (changed): updated Â§14.5 (V14 confirmed CSP rules for Excalidraw, GWT CircuitJS /circuit/, EmbedPDF wasm-unsafe-eval, and Google; COOP same-origin-allow-popups confirmed).
+- `docs/specs/setup-and-deploy.md` (changed): updated Â§5.2 (V18 confirmed OpenJDK 11 builds CircuitJS GWT 2.8.2 cleanly with Gradle 8.7; JDK 17 not required).
+- `docs/specs/alpha-format.md` (changed): updated Â§12.1 (V11 in-memory export path built with application/octet-stream; physical iPhone verification deferred to Task 31/32).
 - `docs/PROGRESS.md` (changed): updated Current State, set Phase 0 status to "awaiting owner approval", updated VERIFY log for V01, V02, V03, V04, V05, V06, V08, V09, V11, V14, V18, recorded all spec updates in Decisions log, and tracked carried open items and deferrals.
 - `UPDATE.md` (changed): appended Task 8 consolidation change log.
 **Checks:**
 - Spikes import isolation: verified via grep that `apps/` has zero imports from `spikes/` (clean framework-free structure preserved).
-- Spec alignment: cross-referenced every resolved VERIFY item against spike reports S1–S5; updated 6 spec files with verified findings.
+- Spec alignment: cross-referenced every resolved VERIFY item against spike reports S1â€“S5; updated 6 spec files with verified findings.
 - Deferral decision recorded: owner decision deferring the two physical iPhone Safari checks (V11: .alpha extension retention and file input selection without accept filter) until Task 31/32 logged as binding decision.
 - Open items carried: Task 3 Playwright CDN 404 driver download; Task 6 throwaway migration supabase/migrations/0001_init.sql to be superseded by Task 13.
 - Phase 0 status: set to "awaiting owner approval" pending owner review of Phase 0 consolidation summary.
-**Related:** Task 8 · V01, V02, V03, V04, V05, V06, V08, V09, V11, V14, V18
+**Related:** Task 8 Â· V01, V02, V03, V04, V05, V06, V08, V09, V11, V14, V18
 **Open:**
 - Phase 0 awaiting owner approval before proceeding to Phase 1 (Task 9).
 - Task 3 Playwright browser environment issue (Azure CDN 404 driver download) carried forward.
 - Task 6 throwaway migration supabase/migrations/0001_init.sql to be superseded by production schema in Task 13.
 - Task 7 iPhone Safari checks deferred by owner to Task 31/32.
 
-## 2026-10-13 — Task 4 Follow-up: Commit Untracked CircuitJS Submodule & Spike Files
+## 2026-10-13 â€” Task 4 Follow-up: Commit Untracked CircuitJS Submodule & Spike Files
 **Request:** Fix untracked files reported in Task 8 closure (.gitmodules, vendor/circuitjs1, docs/spikes/S2.md, spikes/S2-circuit/); verify submodule URL and status, commit and push to M01stafa/aboard, and ensure clean working tree.
 **Changes:**
 - `.gitmodules` (created): tracked submodule configuration for `vendor/circuitjs1` pointing to `https://github.com/M01stafa/circuitjs1.git`.
@@ -223,7 +223,7 @@ This file is the append-only record of every change made to the Aboard project.
 **Related:** Task 4 Follow-up
 **Open:** none
 
-## 2026-10-13 — Task 9: Create the Monorepo and the Next.js Application
+## 2026-10-13 â€” Task 9: Create the Monorepo and the Next.js Application
 **Request:** Proceed with Task 9 using approved dev-tooling table, update libraries table in docs/specs/setup-and-deploy.md, scaffold monorepo with pnpm workspaces and Next.js 16.4 in apps/web, set up TypeScript strict mode, ESLint flat config with react/no-danger and no-unsanitized, directory structure, and verify pnpm dev, pnpm build, pnpm lint, pnpm typecheck.
 **Changes:**
 - `docs/specs/setup-and-deploy.md` (changed): added approved dev tooling table (vitest@5.0.4, @playwright/test@1.64.0, eslint@9.39.5, eslint-config-next@16.4.0, eslint-plugin-react@7.37.5, eslint-plugin-no-unsanitized@4.1.5, typescript@5.9.3, @types/{react,react-dom}@19.3.0, @types/node@22.13.0, gitleaks@8.30.1).
@@ -246,12 +246,12 @@ This file is the append-only record of every change made to the Aboard project.
 - `pnpm build`: passes with 0 errors (`next build`), compiling static pages and verifying typegen.
 - `pnpm dev`: booted successfully on `http://localhost:3000`, returned HTTP 200 with local font preloads and clean exit.
 - `gitleaks`: installed native binary v8.30.1 via winget (`Gitleaks.Gitleaks`).
-**Related:** Task 9 · SEC-5, SEC-7, LAUNCH-1
+**Related:** Task 9 Â· SEC-5, SEC-7, LAUNCH-1
 **Open:**
 - Phase 1 in progress (proceed to Task 10).
 - Open items carried from Phase 0: Task 3 Playwright CDN 404 driver download, Task 6 throwaway migration supabase/migrations/0001_init.sql to be replaced by Task 13, and Task 7 iPhone Safari checks deferred to Task 31/32.
 
-## 2026-10-14 — Task 10: Set Up Environment Variables and Secret Handling
+## 2026-10-14 â€” Task 10: Set Up Environment Variables and Secret Handling
 **Request:** Run Task 10 from docs/TASKS.md: create .env.example with public variables only, create apps/web/.env.local with confirmed development values, verify git check-ignore, create typed validation module at apps/web/src/core/env.ts using zod, import in layout.tsx, plan environment separation in docs/PROGRESS.md, and commit/push.
 **Changes:**
 - `.env.example` (changed): defined public variables with one-line comments; strictly excluded backend secrets.
@@ -267,11 +267,11 @@ This file is the append-only record of every change made to the Aboard project.
 - `pnpm typecheck`: passed (`tsc --noEmit`, 0 errors).
 - `pnpm test`: passed (6/6 tests passed in `env.test.ts`).
 - `pnpm build`: passed (`next build`, compiled with `.env.local`).
-**Related:** Task 10 · SEC-5
+**Related:** Task 10 Â· SEC-5
 **Open:** none
 
-## 2026-10-14 — Task 11: Translate DESIGN.md Into Theme Tokens and Fonts
-**Request:** Run Task 11 from docs/TASKS.md: verify tokens.css against DESIGN.md §9, wire fonts and hydration/dir attributes into layout.tsx, create copy-excalidraw-fonts.mjs prebuild script, create check-spacing.mjs 8-point grid linter with deliberate failure test, create /theme-test visual verification page, verify no external font CDN requests in build, and commit/push.
+## 2026-10-14 â€” Task 11: Translate DESIGN.md Into Theme Tokens and Fonts
+**Request:** Run Task 11 from docs/TASKS.md: verify tokens.css against DESIGN.md Â§9, wire fonts and hydration/dir attributes into layout.tsx, create copy-excalidraw-fonts.mjs prebuild script, create check-spacing.mjs 8-point grid linter with deliberate failure test, create /theme-test visual verification page, verify no external font CDN requests in build, and commit/push.
 **Changes:**
 - `apps/web/app/layout.tsx` (changed): added `DEFAULT_LANG`, `DEFAULT_DIR`, `suppressHydrationWarning` on `<html>`, with `fontClassNames` and global `tokens.css`.
 - `scripts/copy-excalidraw-fonts.mjs` (created): copies Excalidraw self-hosted fonts from node_modules to `apps/web/public/fonts/`.
@@ -281,15 +281,15 @@ This file is the append-only record of every change made to the Aboard project.
 - `docs/PROGRESS.md` (changed): updated current state to completed Task 11 (next step: Task 12).
 - `UPDATE.md` (changed): appended Task 11 change log.
 **Checks:**
-- `tokens.css` verification: confirmed verbatim match against DESIGN.md §9 (no edits needed).
+- `tokens.css` verification: confirmed verbatim match against DESIGN.md Â§9 (no edits needed).
 - `check-spacing.mjs` deliberate failure test: verified that adding a temporary file with `padding: 13px;` fails `pnpm lint` with exit code 1; removed temp file and confirmed `pnpm lint` passes cleanly.
 - `copy-excalidraw-fonts.mjs`: confirmed runs on `pnpm build` prebuild and copies all 9 font families to `apps/web/public/fonts/`.
 - External font grep: checked `apps/web/.next` build output for `fonts.googleapis.com` and font CDNs; 0 occurrences found.
 - Verification suite: `pnpm lint`, `pnpm typecheck`, `pnpm test` (6 tests), `pnpm build` all passed with exit code 0.
-**Related:** Task 11 · DESIGN rules · Spacing rules
+**Related:** Task 11 Â· DESIGN rules Â· Spacing rules
 **Open:** none
 
-## 2026-10-14 — Task 12: Internationalization, RTL, and the Settings Page
+## 2026-10-14 â€” Task 12: Internationalization, RTL, and the Settings Page
 **Request:** Run Task 12 from docs/TASKS.md: build a zero-dependency typed i18n layer under apps/web/src/i18n/, update layout.tsx with dynamic lang/dir and pre-hydration head script, create the settings page at apps/web/app/settings/page.tsx with language and theme switchers persisting in localStorage, convert user-facing strings to translation keys, enforce logical CSS properties, and verify RTL mirroring.
 **Changes:**
 - `apps/web/src/i18n/en.ts` (created): English translation dictionary covering common, home, settings, and themeTest strings.
@@ -310,11 +310,11 @@ This file is the append-only record of every change made to the Aboard project.
 - `pnpm test`: passed (11/11 tests passed in `env.test.ts` and `i18n.test.ts`).
 - `pnpm build`: passed (`next build` prerendered `/`, `/_not-found`, `/settings`, `/theme-test`).
 - RTL verification: tested programmatically via unit tests (`getDirection("ar") === "rtl"`), verified logical CSS properties across all modified UI components, confirmed zero letter-spacing on Arabic text (DESIGN.md R6).
-**Related:** Task 12 · SEC-7, SEC-14.6 · DESIGN rules · Spacing rules
+**Related:** Task 12 Â· SEC-7, SEC-14.6 Â· DESIGN rules Â· Spacing rules
 **Open:** none
 
-## 2026-10-14 — Build Font Preview Page (Temporary Preview Aid)
-**Request:** Add temporary page at apps/web/app/font-preview/page.tsx to visually preview Geist and Alexandria across weights, scales (DESIGN.md §3.3), Arabic rules, and numerals before continuing to Task 13.
+## 2026-10-14 â€” Build Font Preview Page (Temporary Preview Aid)
+**Request:** Add temporary page at apps/web/app/font-preview/page.tsx to visually preview Geist and Alexandria across weights, scales (DESIGN.md Â§3.3), Arabic rules, and numerals before continuing to Task 13.
 **Changes:**
 - `apps/web/src/i18n/en.ts` (changed): added `fontPreviewLink` under `settings` and `fontPreview` namespace covering all section labels.
 - `apps/web/src/i18n/ar.ts` (changed): added Arabic translations for `fontPreviewLink` and `fontPreview` namespace with 100% key parity.
@@ -326,11 +326,11 @@ This file is the append-only record of every change made to the Aboard project.
 - `pnpm typecheck`: passed (`tsc --noEmit`, 0 errors).
 - `pnpm test`: passed (11/11 tests in Vitest with exact key parity).
 - `pnpm build`: passed (`next build` prerendered `/`, `/_not-found`, `/font-preview`, `/settings`, `/theme-test`).
-**Related:** Font preview aid · DESIGN rules · Spacing rules
+**Related:** Font preview aid Â· DESIGN rules Â· Spacing rules
 **Open:** Temporary page to be removed in a later cleanup task.
 
-## 2026-10-14 — Task 13: Database Schema Migration 0001, RLS and pgTAP Tests
-**Request:** Run Task 13 from docs/TASKS.md: replace supabase/migrations/0001_init.sql with authoritative production schema (§9.1) with full RLS and least privilege grants, write supabase/tests/rls.test.sql covering cross-user isolation and denials on server-only tables, run supabase db reset and supabase test db on local stack, write CI RLS guard query at supabase/tests/rls_guard.sql, and commit to M01stafa/aboard.
+## 2026-10-14 â€” Task 13: Database Schema Migration 0001, RLS and pgTAP Tests
+**Request:** Run Task 13 from docs/TASKS.md: replace supabase/migrations/0001_init.sql with authoritative production schema (Â§9.1) with full RLS and least privilege grants, write supabase/tests/rls.test.sql covering cross-user isolation and denials on server-only tables, run supabase db reset and supabase test db on local stack, write CI RLS guard query at supabase/tests/rls_guard.sql, and commit to M01stafa/aboard.
 **Changes:**
 - `supabase/migrations/0001_init.sql` (changed): replaced Phase 0 throwaway with production schema including profiles, projects (with UUID primary key, length checks, item_count, and storage constraints), google_drive_links, oauth_states, rate_limits, touch_updated_at trigger, handle_new_user, check_rate_limit, get_drive_status, RLS enabled on all 5 tables, revoked privileges, least-privilege column grants, and 6 RLS policies.
 - `supabase/tests/rls.test.sql` (created): comprehensive 17-assertion pgTAP test suite verifying profile and project owner access, cross-user isolation, immutable user_id, authenticated access rejection on server-only tables, and total denial of anon role.
@@ -342,10 +342,10 @@ This file is the append-only record of every change made to the Aboard project.
 - `supabase test db`: PASS. Executed `supabase/tests/rls.test.sql` against local stack: 17/17 tests successful (0 failures).
 - CI RLS guard query: PASS (`rows: []`, 0 offending tables).
 - VERIFY V12: Confirmed minimal rows inserted into `auth.users` (`id`, `email`) trigger automatic profile creation.
-**Related:** Task 13 · SEC-1, SEC-2 · V12
+**Related:** Task 13 Â· SEC-1, SEC-2 Â· V12
 **Open:** none
 
-## 2026-10-14 — Task 14: Implement Sign-In With Email OTP and Google
+## 2026-10-14 â€” Task 14: Implement Sign-In With Email OTP and Google
 **Request:** Run Task 14 from docs/TASKS.md: install browser Supabase client (@supabase/supabase-js), implement Email OTP and Google OAuth sign-in with token purge on callback, create login and callback routes, add shared computer toggle, add user session management on root page, build automated browser-storage test verifying zero provider_tokens, and verify against design rules and security standards.
 **Changes:**
 - `apps/web/src/core/supabase.ts` (created): initialized browser-only Supabase client (using @supabase/supabase-js@2.117.3, no server client, no @supabase/ssr) with helpers for Email OTP sign-in, OTP verification, Google OAuth sign-in (strictly without drive scope and without offline access), sign-out (with shared-computer IndexedDB cleanup hook), and session refresh token purge.
@@ -369,10 +369,10 @@ This file is the append-only record of every change made to the Aboard project.
 - `supabase test db`: PASS (17/17 pgTAP isolation tests passed on local Supabase stack).
 - `pnpm ci:security`: PASS (Gitleaks and security checks passed).
 - `pnpm build`: PASS (Turbopack prerendered all routes cleanly).
-**Related:** Task 14 · SEC-1, SEC-2, SEC-6, SEC-7, SEC-14.7 · V06
+**Related:** Task 14 Â· SEC-1, SEC-2, SEC-6, SEC-7, SEC-14.7 Â· V06
 **Open:** Task 15 (next task in Phase 1).
 
-## 2026-10-14 — Task 14 Follow-up: Integrate Cloudflare Turnstile into Login Flow
+## 2026-10-14 â€” Task 14 Follow-up: Integrate Cloudflare Turnstile into Login Flow
 **Request:** Add NEXT_PUBLIC_TURNSTILE_SITE_KEY to environment variables, integrate Cloudflare Turnstile widget via official script tag into login page, capture and forward captchaToken to Supabase Auth OTP, handle failure states with translated errors, and verify enforcement via curl test.
 **Changes:**
 - `.env.example` (changed): added `NEXT_PUBLIC_TURNSTILE_SITE_KEY` with descriptive comment.
@@ -393,11 +393,11 @@ This file is the append-only record of every change made to the Aboard project.
 - `pnpm test:e2e`: PASS (Playwright storage test passed in 3.5s).
 - `pnpm build`: PASS (Turbopack prerendered all routes).
 - CSP check in `apps/web/next.config.ts`: No CSP exists yet; recorded for Task 15.
-**Related:** Task 14 Follow-up · SEC-9 · Turnstile integration
+**Related:** Task 14 Follow-up Â· SEC-9 Â· Turnstile integration
 **Open:** Owner to paste real Turnstile site key into `apps/web/.env.local`.
 
-## 2026-10-14 — Task 15: Add Security Headers and the Content Security Policy
-**Request:** Configure apps/web/next.config.ts with complete security headers and Content Security Policy (CSP) per docs/specs/security.md §14.5 and verified spikes (S1, S2, S4, Turnstile), with separate isolated rule for /circuit/:path*, and verify on a production build.
+## 2026-10-14 â€” Task 15: Add Security Headers and the Content Security Policy
+**Request:** Configure apps/web/next.config.ts with complete security headers and Content Security Policy (CSP) per docs/specs/security.md Â§14.5 and verified spikes (S1, S2, S4, Turnstile), with separate isolated rule for /circuit/:path*, and verify on a production build.
 **Changes:**
 - `apps/web/next.config.ts` (changed): added `headers()` with two mutually exclusive rules:
   1. `/((?!circuit/).*)`: general app CSP with strict directives, `Strict-Transport-Security` (`max-age=63072000; includeSubDomains; preload`), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`, and `Cross-Origin-Opener-Policy: same-origin-allow-popups`. Script-src includes `'self'`, `'unsafe-inline'` (required by Next.js App Router bootstrap scripts; nonce-based CSP planned as future improvement), `'wasm-unsafe-eval'` (required by EmbedPDF/PDFium), and allowed external origins (`https://apis.google.com`, `https://accounts.google.com`, `https://challenges.cloudflare.com`). Font-src is strictly `'self'` (self-hosted).
@@ -432,13 +432,13 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
   - `/settings`: 0 CSP violations.
 - `pnpm lint` and `pnpm typecheck`: PASS (0 errors).
 **Clarifications Resolved:**
-1. `https://api.aboard.example` originated from `docs/specs/security.md` §14.5 line 155; removed from `connect-src` since PDF API belongs to Phase 9.
-2. `frame-src 'self' javascript:` in `/circuit/` is required for GWT history support (`<iframe src="javascript:''" id="__gwt_historyFrame">`), per `docs/specs/security.md` §14.5 line 186 and `docs/spikes/S2.md` line 108.
+1. `https://api.aboard.example` originated from `docs/specs/security.md` Â§14.5 line 155; removed from `connect-src` since PDF API belongs to Phase 9.
+2. `frame-src 'self' javascript:` in `/circuit/` is required for GWT history support (`<iframe src="javascript:''" id="__gwt_historyFrame">`), per `docs/specs/security.md` Â§14.5 line 186 and `docs/spikes/S2.md` line 108.
 3. Requests to `/circuit/` and `/circuit/anything` return clean HTTP 404 with isolated circuit CSP and do not leak general app CSP.
-**Related:** Task 15 · SEC-6 · VERIFY V14
+**Related:** Task 15 Â· SEC-6 Â· VERIFY V14
 **Open:** none
 
-## 2026-10-14 — Task 16: Build the CI Pipeline and Security Checks
+## 2026-10-14 â€” Task 16: Build the CI Pipeline and Security Checks
 **Request:** Run Task 16 from docs/TASKS.md: create .github/workflows/ci.yml with all ordered steps, RLS guard step, implement pnpm ci:security at root running gitleaks, audit, and .next secret scan, install gitleaks pre-commit hook via scripts/install-hooks.mjs, verify locally with clean repo and fake secret test, and configure GitHub repository settings (or provide exact clicks if MCP unsupported).
 **Changes:**
 - `.github/workflows/ci.yml` (created): GitHub Actions CI workflow executing checkout, Node 22 setup, corepack pnpm setup, frozen-lockfile install, lint, typecheck, test, Supabase CLI setup, local stack startup, pgTAP RLS suite (`supabase test db supabase/tests/rls.test.sql`), RLS guard (`supabase db query --file supabase/tests/rls_guard.sql`), Gitleaks 8.30.1 install, `pnpm ci:security`, production build (`pnpm build`), and `.next` bundle secret search.
@@ -457,7 +457,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - RLS guard test: PASS (`rows: []`, 0 unshielded public tables).
 **Open:** none
 
-## 2026-10-14 — Task 16: Confirm GitHub Settings Applied and Close Task 16
+## 2026-10-14 â€” Task 16: Confirm GitHub Settings Applied and Close Task 16
 **Request:** Confirm owner applied GitHub repository branch protection on main and code security/Dependabot settings, mark Task 16 as done, append UPDATE.md, and commit + push. Do not start Task 17.
 **Changes:**
 - `docs/PROGRESS.md` (changed): updated active task to Task 16 completed (next step: Task 17) and logged Task 15 and Task 16 decisions.
@@ -465,10 +465,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Checks:** Owner confirmed manual configuration in GitHub Settings:
   - Branch protection ruleset on `main`: deletions restricted, 1 approval required, dismiss stale reviews, required status check `CI Pipeline & Security Checks`, require branches up to date, force pushes blocked.
   - Code security & analysis: Dependabot alerts, Dependabot security updates, Secret scanning, and Push protection all enabled.
-**Related:** Task 16 · SEC-5, SEC-10
+**Related:** Task 16 Â· SEC-5, SEC-10
 **Open:** none (ready for Task 17).
 
-## 2026-10-14 — Task 17: Build the Launcher and the Route Skeleton
+## 2026-10-14 â€” Task 17: Build the Launcher and the Route Skeleton
 **Request:** Run Task 17 from docs/TASKS.md: build the launcher screen with three creation cards (New Whiteboard, New PDF, New Circuit), "Recent projects" empty state, "Open .alpha file" stub button, implement Client Component AuthGuard redirecting unauthenticated users to /login and signed-in users on /login to /, add thin routes for /workspace?p=..., /settings, /privacy, /terms, /licenses, ensure strict token and 8-point grid compliance with exactly 1 gold CTA (R7), add bilingual i18n dictionaries, write automated Vitest tests, and update documentation.
 **Changes:**
 - `apps/web/app/auth-guard.tsx` (created): Client Component wrapper protecting authenticated routes using browser Supabase client, redirecting unauthenticated users to `/login` without private content flash, and keeping `src/` free of Next.js imports per Rule 5.
@@ -492,13 +492,13 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm build`: PASS (clean production build; all routes statically prerendered).
 - `pnpm ci:security`: PASS (Gitleaks clean, audit clean, .next bundle scan clean).
 - `supabase test db supabase/tests/rls.test.sql`: PASS (17/17 pgTAP assertions passed).
-**Related:** Task 17 · LAUNCH-1, AUTH-1
+**Related:** Task 17 Â· LAUNCH-1, AUTH-1
 **Open:** none (ready for Task 18).
 
-## 2026-10-14 — Elevate the Launcher's Visual Composition
+## 2026-10-14 â€” Elevate the Launcher's Visual Composition
 **Request:** Redesign the visual composition of apps/web/app/page.tsx (launcher) and extract a small reusable Card component under apps/web/src/components/card.tsx; ensure a single balanced row of 3 cards on desktop, intentional 2+1 on tablet, 1 column on mobile, a clear hero with "Open .alpha file" secondary action, an elevated "Recent projects" empty state, exactly 1 gold CTA on the screen (R7), full token and spacing compliance, and capture 4 preview screenshots.
 **Changes:**
-- `apps/web/src/components/card.tsx` (created): extracted reusable Card component strictly conforming to DESIGN.md §5.4 (top accent line, tokens only, no Next.js imports).
+- `apps/web/src/components/card.tsx` (created): extracted reusable Card component strictly conforming to DESIGN.md Â§5.4 (top accent line, tokens only, no Next.js imports).
 - `apps/web/app/page.tsx` (changed): elevated composition with unified hero section, secondary "Open .alpha" control, balanced 3-column desktop grid with pixel-aligned bottom buttons, count badge and refined blueprint container for Recent Projects empty state.
 - `docs/preview/launcher/` (created): captured four screenshots at 1280x800 and 375x812 in light/dark and ar/en using installed Chrome via Playwright.
 - `UPDATE.md` (changed): appended this entry.
@@ -518,16 +518,16 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm build`: PASS (clean production build).
 - `pnpm ci:security`: PASS (Gitleaks clean, audit clean, .next bundle scan clean).
 - Playwright visual audit: 3 cards balanced in 1 row at 1280px, buttons aligned, 1 gold CTA, 0 console errors, 0 CSP violations.
-**Related:** LAUNCH-1 · DESIGN.md §1, §4, §5.1, §5.4, §6, §10
+**Related:** LAUNCH-1 Â· DESIGN.md Â§1, Â§4, Â§5.1, Â§5.4, Â§6, Â§10
 **Open:** none
 
-## 2026-10-14 — Task 18: Build the Workspace Host With Tabs and Split View
+## 2026-10-14 â€” Task 18: Build the Workspace Host With Tabs and Split View
 **Request:** Run Task 18 from docs/TASKS.md: build the workspace host with tabs and split view (WS-1, WS-2), decouple DOM order from tab bar display order, maintain stable DOM nodes with CSS grid data-slot layout (never unmounting or re-keying), build draggable divider with transparent drag-shield and RTL mirroring, auto-collapse below 768px, add happy-dom@21.0.1, write Vitest mount-counter test proving 0 remounts across 5 tab switches, 3 split toggles, 2 pane swaps, and 1 tab close, write Playwright keep-alive test with ticking iframe, and verify all checks.
 **Changes:**
 - `docs/specs/setup-and-deploy.md` (changed): added `happy-dom@21.0.1` to dev-dependencies table per owner approval.
 - `apps/web/package.json` (changed): added `happy-dom@21.0.1` pinned devDependency.
 - `apps/web/public/iframe-test/index.html` (created): test iframe with active 1-second interval counter for keep-alive verification.
-- `apps/web/src/workspace/types.ts` (created): data types and helpers for Tab, Slot, SplitMode, LayoutState, and slotOf conforming to architecture spec §6.1.
+- `apps/web/src/workspace/types.ts` (created): data types and helpers for Tab, Slot, SplitMode, LayoutState, and slotOf conforming to architecture spec Â§6.1.
 - `apps/web/src/workspace/placeholders.tsx` (created): StaticPlaceholder and IframePlaceholder components with persistent identity tokens and onMount lifecycle hooks.
 - `apps/web/src/workspace/workspace-host.tsx` (created): workspace host component with 48px toolbar, 48px tab bar, stable DOM pane rendering, CSS grid layout (`.ws-grid`), draggable 8px divider with 2px line, transparent full-screen drag shield, RTL mirroring, keyboard map, and below-768px single-pane collapse.
 - `apps/web/app/workspace/page.tsx` (changed): connected WorkspaceHost under AuthGuard and Suspense with query params `p` and `kind`.
@@ -547,15 +547,15 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm ci:security`: PASS (Gitleaks scan clean, audit clean, .next bundle scan 0 secrets).
 - `pnpm build`: PASS (clean production build with Turbopack, 12 routes prerendered).
 - `supabase test db supabase/tests/rls.test.sql`: PASS (17/17 pgTAP assertions passed).
-**Related:** Task 18 · WS-1, WS-2
+**Related:** Task 18 Â· WS-1, WS-2
 **Open:** none (Phase 1 complete; proceed to Phase 2 / Task 19 upon owner prompt).
 
-## 2026-10-15 — Task 18 Verification & DESIGN.md §4.2 Finalization
-**Request:** Verify divider dragging over iframe with a focused Playwright test, apply minimal fix for drag-shield if test fails, enforce 320px floor in split clamp, update DESIGN.md §4.2 with confirmed dimensions, bump version to 2.1.1, and add changelog entry in §11.
+## 2026-10-15 â€” Task 18 Verification & DESIGN.md Â§4.2 Finalization
+**Request:** Verify divider dragging over iframe with a focused Playwright test, apply minimal fix for drag-shield if test fails, enforce 320px floor in split clamp, update DESIGN.md Â§4.2 with confirmed dimensions, bump version to 2.1.1, and add changelog entry in Â§11.
 **Changes:**
 - `apps/web/e2e/workspace-no-reload.spec.ts` (changed): added focused test verifying that divider dragging continues to work and updates split ratio when pointer moves over an iframe pane.
 - `apps/web/src/workspace/workspace-host.tsx` (changed): added `.drag-shield` CSS rule (`position: fixed; inset: 0; z-index: 9999; cursor: col-resize;` and row-resize for horizontal split) fixing pointer event capture over iframes; enforced 320px minimum pane floor on top of ratio clamp in `updateRatio`.
-- `docs/DESIGN.md` (changed): bumped version to 2.1.1; updated §4.2 workspace dimensions from proposed to confirmed facts; added 2.1.1 entry to §11 Changelog.
+- `docs/DESIGN.md` (changed): bumped version to 2.1.1; updated Â§4.2 workspace dimensions from proposed to confirmed facts; added 2.1.1 entry to Â§11 Changelog.
 - `docs/PROGRESS.md` (changed): updated Last updated date to 2026-10-15 and logged verification decision.
 - `UPDATE.md` (changed): appended this entry.
 **Checks:**
@@ -566,13 +566,13 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
 - `pnpm test`: PASS (21/21 tests passed across 5 test files).
 - `pnpm test:e2e`: PASS (3/3 Playwright tests passed in Chrome).
-**Related:** Task 18 · WS-1, WS-2 · DESIGN.md §4.2
+**Related:** Task 18 Â· WS-1, WS-2 Â· DESIGN.md Â§4.2
 **Open:** none (ready for Task 19 upon owner prompt).
 
-## 2026-10-15 — Task 19: Create the Per-User Browser Database and Shared-Computer Sign-Out
+## 2026-10-15 â€” Task 19: Create the Per-User Browser Database and Shared-Computer Sign-Out
 **Request:** Run Task 19 from docs/TASKS.md: build per-user IndexedDB schema using Dexie@4.4.1 named aboard:<userId>, add openDb(userId), closeDb(), getDb(), and deleteUserDb(userId), initialize and persist deviceId in meta store, add "This is a shared computer" checkbox to sign-in screen with sessionStorage flag, extend signOut to close DB and delete aboard:<userId> when flag set, extract reusable E2E auth helper with mockSignIn and mockSignOut, update workspace-no-reload.spec.ts, and add Playwright test proving SEC-4.
 **Changes:**
-- `apps/web/src/core/db/schema.ts` (created): defined IndexedDB schema with stores `projects`, `items`, `files`, `outbox`, and `meta` conforming to docs/specs/storage-layer.md §11.2; documented version(1) immutability.
+- `apps/web/src/core/db/schema.ts` (created): defined IndexedDB schema with stores `projects`, `items`, `files`, `outbox`, and `meta` conforming to docs/specs/storage-layer.md Â§11.2; documented version(1) immutability.
 - `apps/web/src/core/db/lifecycle.ts` (created): implemented `openDb`, `closeDb`, `getDb`, `getActiveUserId`, and `deleteUserDb` with idempotent open, unique deviceId generation/persistence in `meta`, and test factory injection.
 - `apps/web/src/core/db/index.ts` (created): re-exported schema and lifecycle functions.
 - `apps/web/src/core/supabase.ts` (changed): extended `signOut` to capture userId before session termination, close DB, wipe `aboard:<userId>` when `aboard:shared_computer` is set in sessionStorage, and clear the flag; prepared hook for Task 21 flush.
@@ -596,13 +596,13 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm ci:security`: PASS.
 - `gitleaks git --verbose`: PASS (0 leaks found across all commits).
 - Bundle secret scan: PASS (0 occurrences of disallowed secrets in `.next/static`).
-**Related:** Task 19 · SEC-4 · docs/specs/storage-layer.md §11.2 · docs/specs/security.md §14.6
+**Related:** Task 19 Â· SEC-4 Â· docs/specs/storage-layer.md Â§11.2 Â· docs/specs/security.md Â§14.6
 **Open:** none (proceed to Task 20 upon owner prompt).
 
-## 2026-10-15 — Task 20: Build the StorageProvider Interface and the Project Service
+## 2026-10-15 â€” Task 20: Build the StorageProvider Interface and the Project Service
 **Request:** Run Task 20 from docs/TASKS.md: build the StorageProvider interface and LocalProvider backing the Task 19 DB with pinned=true, build ProjectService as the single gateway for tool modules, implement content-addressed binary file storage with streaming SHA-256 via hash-wasm, write architecture boundary test preventing direct db imports from modules, and add unit tests covering every method of ProjectService and LocalProvider.
 **Changes:**
-- `apps/web/src/core/storage/types.ts` (created): defined StorageProvider interface, ItemRecord, ItemKind, and AlphaManifest types conforming literally to docs/specs/storage-layer.md §11.1 and docs/specs/alpha-format.md §12.3.
+- `apps/web/src/core/storage/types.ts` (created): defined StorageProvider interface, ItemRecord, ItemKind, and AlphaManifest types conforming literally to docs/specs/storage-layer.md Â§11.1 and docs/specs/alpha-format.md Â§12.3.
 - `apps/web/src/core/storage/sha256.ts` (created): implemented streaming chunk-based SHA-256 computation using hash-wasm@4.12.0 for large Blobs/Files without full in-memory buffering.
 - `apps/web/src/core/storage/local-provider.ts` (created): implemented LocalProvider backing StorageProvider interface with Dexie database, setting pinned=true on every write per Requirement 4.
 - `apps/web/src/core/storage/project-service.ts` (created): implemented ProjectService exposing openProject, createProject, readItem, saveBoard, saveCircuit, saveAnnotations, putFile (content-addressed with SHA-256 deduplication), getFile, createItem, renameItem, deleteItem, deleteProject, and phase 6/7 stubs.
@@ -621,14 +621,14 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm build`: PASS (clean production build with Turbopack, 12 static routes prerendered).
 - `pnpm ci:security`: PASS.
 - `gitleaks git --verbose`: PASS (0 leaks found across all commits).
-**Related:** Task 20 · STORE-1, STORE-7 · docs/specs/storage-layer.md §11.1–11.2
+**Related:** Task 20 Â· STORE-1, STORE-7 Â· docs/specs/storage-layer.md Â§11.1â€“11.2
 **Open:** none (proceed to Task 21 upon owner prompt).
 
-## 2026-10-15 — Task 21: Build the Save Queue and the Save Status Indicator
-**Request:** Run Task 21 from docs/TASKS.md: build framework-agnostic SaveQueue with ~500 ms debounce, coalescing per item, dirty→clean transition in local mode, structured Drive cadence (3s idle, 30s max), flush triggers (beforeunload, visibilitychange, project switch, flushNow), beforeunload leave-site dialog gating (never in local mode), silent persistence via navigator.storage.persist() skipping Firefox per STORE-9, top-bar save status indicator with 5 states (WS-3) using theme tokens and bilingual i18n keys, unit tests covering all queue behaviors, and a Playwright E2E test proving STORE-1.
+## 2026-10-15 â€” Task 21: Build the Save Queue and the Save Status Indicator
+**Request:** Run Task 21 from docs/TASKS.md: build framework-agnostic SaveQueue with ~500 ms debounce, coalescing per item, dirtyâ†’clean transition in local mode, structured Drive cadence (3s idle, 30s max), flush triggers (beforeunload, visibilitychange, project switch, flushNow), beforeunload leave-site dialog gating (never in local mode), silent persistence via navigator.storage.persist() skipping Firefox per STORE-9, top-bar save status indicator with 5 states (WS-3) using theme tokens and bilingual i18n keys, unit tests covering all queue behaviors, and a Playwright E2E test proving STORE-1.
 **Changes:**
-- `apps/web/src/core/storage/persistence.ts` (created): implemented `requestPersistenceSilently()` requesting persistent storage via `navigator.storage.persist()`, skipping Firefox entirely per STORE-9 and docs/specs/storage-layer.md §11.3.
-- `apps/web/src/core/storage/save-queue.ts` (created): built framework-agnostic `SaveQueue` under `apps/web/src/core/storage/` with ~500 ms debounce, per-item coalescing, flush hooks (`beforeunload`, `visibilitychange`, project switch, `flushNow`), dirty→clean transitions in local mode, and structured cadence for future Drive uploads (3s idle, max 30s).
+- `apps/web/src/core/storage/persistence.ts` (created): implemented `requestPersistenceSilently()` requesting persistent storage via `navigator.storage.persist()`, skipping Firefox entirely per STORE-9 and docs/specs/storage-layer.md Â§11.3.
+- `apps/web/src/core/storage/save-queue.ts` (created): built framework-agnostic `SaveQueue` under `apps/web/src/core/storage/` with ~500 ms debounce, per-item coalescing, flush hooks (`beforeunload`, `visibilitychange`, project switch, `flushNow`), dirtyâ†’clean transitions in local mode, and structured cadence for future Drive uploads (3s idle, max 30s).
 - `apps/web/src/core/storage/project-service.ts` (changed): wired change notifications to `saveQueue`, supported consistent pending reads, and exported singleton `saveQueue`.
 - `apps/web/src/core/storage/index.ts` (changed): exported `save-queue` and `persistence`.
 - `apps/web/src/workspace/save-status.tsx` (created): implemented thin React component for workspace top bar rendering the 5 status states from WS-3 with theme tokens and i18n keys; non-interactive `role="status"` with `aria-live="polite"`.
@@ -636,9 +636,9 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `apps/web/src/i18n/en.ts` (changed): added `saveStatus` keys for all five WS-3 states in English.
 - `apps/web/src/i18n/ar.ts` (changed): added `saveStatus` keys for all five WS-3 states in Arabic.
 - `apps/web/playwright.config.ts` (changed): set `workers: 1` for reliable sequential execution of browser auth and storage tests.
-- `apps/web/src/core/storage/save-queue.test.ts` (created): added 7 unit tests covering debounce collapse, per-item coalescing, `flushNow`, dirty→clean transition in local mode, `beforeunload` gating, and silent persistence.
+- `apps/web/src/core/storage/save-queue.test.ts` (created): added 7 unit tests covering debounce collapse, per-item coalescing, `flushNow`, dirtyâ†’clean transition in local mode, `beforeunload` gating, and silent persistence.
 - `apps/web/src/core/storage/architecture.test.ts` (changed): added test verifying that `SaveQueue` is framework-agnostic and never imports React.
-- `apps/web/e2e/store-1-save-status.spec.ts` (created): added Playwright E2E test proving STORE-1 and WS-3/WS-4 in local mode (status transitions to "Saving…", debounces to "Saved on this device", no "leave site?" dialog appears).
+- `apps/web/e2e/store-1-save-status.spec.ts` (created): added Playwright E2E test proving STORE-1 and WS-3/WS-4 in local mode (status transitions to "Savingâ€¦", debounces to "Saved on this device", no "leave site?" dialog appears).
 - `docs/PROGRESS.md` (changed): marked Task 21 as completed, set Next step to Task 22, and logged Task 21 decisions.
 - `UPDATE.md` (changed): appended this entry.
 **Checks:**
@@ -647,10 +647,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
 - `pnpm test`: PASS (49/49 unit tests passed across 10 test files).
 - `pnpm test:e2e`: PASS (5/5 Playwright tests passed in Chrome: auth-storage, sec-4-shared-computer, store-1-save-status, workspace-no-reload [iframe keep-alive and divider drag]).
-**Related:** Task 21 · STORE-1, STORE-3, STORE-9, WS-3, WS-4 · docs/specs/storage-layer.md §11.3–11.4
+**Related:** Task 21 Â· STORE-1, STORE-3, STORE-9, WS-3, WS-4 Â· docs/specs/storage-layer.md Â§11.3â€“11.4
 **Open:** none (proceed to Task 22 upon owner prompt).
 
-## 2026-10-16 — CI Fix: Fix the Failing GitHub Actions CI Pipeline (SEC-1, SEC-10)
+## 2026-10-16 â€” CI Fix: Fix the Failing GitHub Actions CI Pipeline (SEC-1, SEC-10)
 **Request:** Diagnose and resolve the failing GitHub Actions CI pipeline blocking Task 22; fetch failed run logs via `gh` CLI, identify root cause without disabling/weakening any security check or adding `continue-on-error`, update workflow/code, push and watch new runs to completion until green, add lesson to docs/PROGRESS.md, update reporting rules in AGENTS.md and .agents/skills/phase-workflow/SKILL.md to include GitHub Actions CI verification on pushed commits.
 **Changes:**
 - `.github/workflows/ci.yml` (changed): updated RLS guard step to pass `--output-format json` and use a robust inline Node.js parser supporting JSON arrays (`[]`), JSON objects with rows (`{ rows: [] }`), and ASCII table formats, while strictly failing closed if unshielded public tables exist or if output cannot be parsed.
@@ -665,10 +665,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (49/49 unit tests passed across 10 test files).
 - `pnpm ci:security`: PASS (Gitleaks, production audit, and .next bundle secret scan).
 - GitHub Actions CI run `38907758118`: SUCCESS (all steps passed in 2m35s: Lint, Typecheck, Unit tests, Setup Supabase CLI, Start Supabase local stack, Run pgTAP RLS suite, RLS guard, Install Gitleaks 8.30.1, Run security checks, Build the app, Search bundle for secrets).
-**Related:** CI Fix · SEC-1, SEC-5, SEC-10 · docs/specs/security.md §14.3, §14.9
+**Related:** CI Fix Â· SEC-1, SEC-5, SEC-10 Â· docs/specs/security.md Â§14.3, Â§14.9
 **Open:** none (proceed to Task 22 upon owner prompt).
 
-## 2026-10-16 — Task 22: Sync the Project Index and Build the Recent Projects List
+## 2026-10-16 â€” Task 22: Sync the Project Index and Build the Recent Projects List
 **Request:** Run Task 22 from docs/TASKS.md: wire project lifecycle events (create, rename, delete, storage-mode change stub) to sync with Supabase projects table without client-updating updated_at (Postgres touch_updated_at trigger sets it), build recent projects list sorted by updated_at desc with title, subject, storage badge, and timestamp, support rename (inline) and delete (local removes Dexie + Supabase row, Drive stubbed with notice), handle loading, empty, and error states with retry, wire launch cards to create project row, add unit tests for index syncer and badge selection, and add a Playwright E2E test.
 **Changes:**
 - `apps/web/src/core/db/lifecycle.ts` (changed): added `getDeviceId(userId?: string)` to read or generate persistent device ID from the Dexie meta store.
@@ -691,10 +691,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (62/62 unit tests passed across 11 test files).
 - `pnpm test:e2e`: PASS (6/6 Playwright E2E tests passed in Chrome: auth-storage, launch-project-index, sec-4-shared-computer, store-1-save-status, workspace-no-reload [keep-alive and divider drag]).
 - `pnpm ci:security`: PASS (Gitleaks, production dependency audit, and .next bundle secret scan).
-**Related:** Task 22 · LAUNCH-2, LAUNCH-4, STORE-1, SEC-1, SEC-5 · docs/specs/storage-layer.md §11.5, docs/specs/database.md §9.1
+**Related:** Task 22 Â· LAUNCH-2, LAUNCH-4, STORE-1, SEC-1, SEC-5 Â· docs/specs/storage-layer.md Â§11.5, docs/specs/database.md Â§9.1
 **Open:** none (proceed to Task 23 upon owner prompt).
 
-## 2026-10-16 — Security: Hide Leaked Google API Key in Tree and Exclude Spikes from Dependabot
+## 2026-10-16 â€” Security: Hide Leaked Google API Key in Tree and Exclude Spikes from Dependabot
 **Request:** Hide the hard-coded Google API key flagged in Secret Scanning from the current working tree by replacing it with an environment variable placeholder; create .github/dependabot.yml to exclude /spikes/ and watch only root and apps/web; scan working tree for other likely secrets; add hard-coded secret rule to .agents/rules/security.md; add lesson and owner decision to docs/PROGRESS.md; keep repo public without key rotation or git history rewrite.
 **Changes:**
 - `spikes/S4-drive/app/config.ts` (changed): replaced hard-coded `googleApiKey` value at line 7 with `process.env.NEXT_PUBLIC_GOOGLE_API_KEY || ""` placeholder.
@@ -708,10 +708,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (62/62 unit tests passed across 11 test files).
 - `pnpm ci:security`: PASS (Gitleaks, production dependency audit, and .next bundle secret scan).
 - Secret scan across working tree: confirmed zero hard-coded secrets in tracked source outside existing test mock data.
-**Related:** SEC-5, SEC-10 · docs/specs/security.md §14.2
+**Related:** SEC-5, SEC-10 Â· docs/specs/security.md Â§14.2
 **Open:** none (proceed to Task 23 upon owner prompt).
 
-## 2026-10-17 — Security: Replace Real Google API Key in env.test.ts with Mock
+## 2026-10-17 â€” Security: Replace Real Google API Key in env.test.ts with Mock
 **Request:** Replace real Google API key at apps/web/src/core/env.test.ts:9 with a 39-character mock string beginning with "AIza" and ending with an obvious test marker, ensuring it passes Zod validation; run unit tests; push to main and watch CI.
 **Changes:**
 - `apps/web/src/core/env.test.ts` (changed): replaced real key string with mock fixture `"AIzaSyDummyTestKeyDummyTestKeyDummyTest"`.
@@ -722,10 +722,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm lint`: PASS (0 errors, 0 warnings).
 - `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
 - `pnpm ci:security`: PASS (Gitleaks, production dependency audit, and .next bundle secret scan).
-**Related:** SEC-5, SEC-10 · docs/specs/security.md §14.2
+**Related:** SEC-5, SEC-10 Â· docs/specs/security.md Â§14.2
 **Open:** none (proceed to Task 23 upon owner prompt).
 
-## 2026-10-17 — Task 23: Apply CircuitJS1 Fork Patches and Automate the Circuit Build
+## 2026-10-17 â€” Task 23: Apply CircuitJS1 Fork Patches and Automate the Circuit Build
 **Request:** Run Task 23 from docs/TASKS.md: apply 5 fork patches inside vendor/circuitjs1 submodule (remove service worker registration & manifest link from war/circuitjs.html; disable Dropbox, Google Drive, and short-URL features; add runCommand and getCircuitAsPNG to JSInterface; add Arabic locale file; adjust colors and fonts in war/circuitjs.css without hardcoding theme colors), document in vendor/circuitjs1/PATCHES.md, commit and push inside submodule to M01stafa/circuitjs1, update parent submodule pointer, build cross-platform automation scripts/build-circuit.mjs deploying output into apps/web/public/circuit/ excluding WEB-INF and service workers, finalize /circuit/:path* CSP with worker-src 'none', run checks, update docs/PROGRESS.md, push to main and watch CI.
 **Changes:**
 - `vendor/circuitjs1/war/circuitjs.html` (changed): removed `<link rel="manifest">` and `serviceWorker.register` script block; linked `circuitjs.css`.
@@ -738,7 +738,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `vendor/circuitjs1/src/com/lushprojects/circuitjs1/public/locale_ar.txt` (created): added 1,549 Arabic translation keys covering all CircuitJS1 UI components, menus, and scopes.
 - `vendor/circuitjs1/war/circuitjs.css` (created): added clean system typography and neutral chrome styles aligning with DESIGN.md without hardcoding theme hex colors.
 - `vendor/circuitjs1/build.gradle` (changed): replaced shell `ls` invocation in `makeSite` with native Groovy file listing for cross-platform execution.
-- `vendor/circuitjs1/PATCHES.md` (created): documented patches a–e and build fix with files touched and rationale.
+- `vendor/circuitjs1/PATCHES.md` (created): documented patches aâ€“e and build fix with files touched and rationale.
 - `scripts/build-circuit.mjs` (created): Node.js cross-platform build automation script compiling GWT via Gradle 8.7 and deploying to `apps/web/public/circuit/` with idempotent cleaning, excluding `WEB-INF/` and service worker files.
 - `scripts/build-circuit.sh` (created): POSIX shell wrapper for `build-circuit.mjs`.
 - `apps/web/next.config.ts` (changed): finalized isolated `/circuit/:path*` CSP with `worker-src 'none'`.
@@ -756,14 +756,14 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (62/62 tests across 11 test files).
 - `pnpm test:e2e`: PASS (6/6 Playwright tests passed in Chromium).
 - `pnpm ci:security`: PASS (Gitleaks, production dependency audit, and .next bundle secret scan).
-**Related:** Task 23 · CIRC-1, CIRC-3, CIRC-6, CIRC-7, SEC-6 · docs/specs/modules.md §7.2, docs/specs/security.md §14.6
+**Related:** Task 23 Â· CIRC-1, CIRC-3, CIRC-6, CIRC-7, SEC-6 Â· docs/specs/modules.md Â§7.2, docs/specs/security.md Â§14.6
 **Open:** none (proceed to Task 24 upon owner prompt).
 
-## 2026-10-17 — Task 24: Build the Circuit Adapter and the Circuit Pane
+## 2026-10-17 â€” Task 24: Build the Circuit Adapter and the Circuit Pane
 **Request:** Run Task 24 from docs/TASKS.md: build framework-agnostic CircuitAdapter in apps/web/src/modules/circuit/ (attaching immediately or via oncircuitjsloaded, owning single callback slots and fanning out, clean detach on React Strict Mode), build CircuitPane component (rendering same-origin iframe to /circuit/circuitjs.html with theme parameters, loading saved circuit via importCircuit, saving on onanalyze via ProjectService.saveCircuit debounced by SaveQueue), handle theme switching without losing user changes (export -> reload iframe with light/dark params -> re-import), implement pause-when-hidden option (CIRC-4, default ON for mobile, OFF for desktop), integrate with WorkspaceHost data-slot logic, write unit tests for adapter and pane, write Playwright E2E test proving persistence across tab switch, theme change, and reload, run checks, update docs, commit and push to main, and watch GitHub Actions CI.
 **Changes:**
 - `apps/web/src/modules/circuit/types.ts` (created): TypeScript definitions for `CircuitJS1Api`, `CircuitWindow`, `CircuitUrlOptions`, and event listeners.
-- `apps/web/src/modules/circuit/circuit-url.ts` (created): `buildCircuitUrl` function generating `/circuit/circuitjs.html?...` query strings matching docs/specs/modules.md §7.2 with theme tokens (`whiteBackground`, `positiveColor`, `negativeColor`, `selectColor`, `currentColor`, `running`, `lang`, `editable`).
+- `apps/web/src/modules/circuit/circuit-url.ts` (created): `buildCircuitUrl` function generating `/circuit/circuitjs.html?...` query strings matching docs/specs/modules.md Â§7.2 with theme tokens (`whiteBackground`, `positiveColor`, `negativeColor`, `selectColor`, `currentColor`, `running`, `lang`, `editable`).
 - `apps/web/src/modules/circuit/circuit-adapter.ts` (created): framework-agnostic bridge attaching to `contentWindow.CircuitJS1` immediately or via `contentWindow.oncircuitjsloaded`, owning simulator callback slots (`onupdate`, `ontimestep`, `onanalyze`, `onsvgrendered`), fanning out to multiple subscribers, providing `requestSVG()`, and cleaning up listeners on `detach()`.
 - `apps/web/src/modules/circuit/circuit-pane.tsx` (created): React component rendering iframe, persisting state via `projectService.saveCircuit` on `onanalyze`, preserving/restoring circuit state across theme changes, pausing simulation when hidden (CIRC-4), and styling top chrome with 8-point grid tokens.
 - `apps/web/src/modules/circuit/index.ts` (created): barrel export for circuit module.
@@ -780,10 +780,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (71/71 tests passed across 13 test files).
 - `pnpm test:e2e`: PASS (7/7 Playwright tests passed in Chromium).
 - `pnpm ci:security`: PASS (Gitleaks, production dependency audit, and .next bundle secret scan).
-**Related:** Task 24 · CIRC-1, CIRC-2, CIRC-3, CIRC-4, WS-1, WS-2, STORE-1 · docs/specs/modules.md §7.2, §8
+**Related:** Task 24 Â· CIRC-1, CIRC-2, CIRC-3, CIRC-4, WS-1, WS-2, STORE-1 Â· docs/specs/modules.md Â§7.2, Â§8
 **Open:** none (proceed to Task 25 upon owner prompt).
 
-## 2026-10-17 — GitHub Actions: Resolve Deprecation Warnings for Node 20 and ubuntu-latest
+## 2026-10-17 â€” GitHub Actions: Resolve Deprecation Warnings for Node 20 and ubuntu-latest
 **Request:** Resolve two proactive GitHub Actions annotations on main: Node 20 deprecation across action wrappers and upcoming ubuntu-latest migration to Ubuntu 26. Upgrade affected action wrappers to latest stable releases running on Node 24 without altering the project's build Node version (22.x), pin the runner OS to ubuntu-24.04, verify checks, commit/push, and watch CI to confirm both annotations are eliminated.
 **Changes:**
 - `.github/workflows/ci.yml` (changed):
@@ -796,15 +796,15 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm lint`: PASS (0 errors, 0 warnings).
 - `pnpm typecheck`: PASS (`tsc --noEmit`, 0 errors).
 - GitHub Actions CI on main: verified green with zero deprecation annotations.
-**Related:** SEC-10 · docs/specs/setup-and-deploy.md §13, docs/specs/security.md §14.9
+**Related:** SEC-10 Â· docs/specs/setup-and-deploy.md Â§13, docs/specs/security.md Â§14.9
 **Open:** none.
 
-## 2026-10-17 — Task 25: Build the Board Pane and Its Persistence
+## 2026-10-17 â€” Task 25: Build the Board Pane and Its Persistence
 **Request:** Run Task 25 from docs/TASKS.md: build the BoardPane React component under apps/web/src/modules/board/ loading Excalidraw via next/dynamic with ssr: false, load initialData once from ProjectService and persist onChange via ProjectService.saveBoard without feeding back into React state (preserving 60fps drawing performance), apply i18n rules (langCode: ar-SA for Arabic, en for English), apply light/dark theme, configure UIOptions to hide Excalidraw's own load and save-to-disk actions, attach ResizeObserver to pane container and call api.refresh() when visible or resized (supporting split view and tab switching), integrate with WorkspaceHost without breaking mount-counter test (WS-1), write unit tests for BoardPane and persistence hook, write Playwright E2E test proving board survives tab switch, split view resize, and reload, run all checks, update documentation, and push to main.
 **Changes:**
 - `apps/web/src/modules/board/types.ts` (created): defined BoardItemPayload, BoardPaneProps, PersistedAppStateKey, and pickPersistedAppState extracting the 6 verified keys (viewBackgroundColor, scrollX, scrollY, zoom, gridSize, gridModeEnabled).
 - `apps/web/src/modules/board/use-board-persistence.ts` (created): custom hook loading initialData asynchronously from ProjectService.readItem and debouncing/persisting changes via ProjectService.saveBoard without triggering React re-renders.
-- `apps/web/src/modules/board/board-pane.tsx` (created): React component rendering Excalidraw via next/dynamic with ssr: false, tracking pane mount identity token, syncing theme and i18n (ar-SA/en), applying UIOptions (loadScene: false, saveToActiveFile: false), calling api.refresh() on visibility changes and ResizeObserver container resizes, and scoping brand accent CSS variables per DESIGN.md R1 and spec §15.
+- `apps/web/src/modules/board/board-pane.tsx` (created): React component rendering Excalidraw via next/dynamic with ssr: false, tracking pane mount identity token, syncing theme and i18n (ar-SA/en), applying UIOptions (loadScene: false, saveToActiveFile: false), calling api.refresh() on visibility changes and ResizeObserver container resizes, and scoping brand accent CSS variables per DESIGN.md R1 and spec Â§15.
 - `apps/web/src/modules/board/index.ts` (created): barrel exports for board module.
 - `apps/web/src/workspace/workspace-host.tsx` (changed): rendered BoardPane for tab.kind === "board" within the stable data-slot grid layout.
 - `apps/web/src/test/setup.ts` (created): global mock for @excalidraw/excalidraw and ResizeObserver fallback for Vitest happy-dom unit tests.
@@ -822,10 +822,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (8/8 Playwright tests passed in Chrome, including board-module.spec.ts).
 - `supabase test db supabase/tests/rls.test.sql`: PASS (17/17 pgTAP assertions passed).
 - `pnpm ci:security`: PASS.
-**Related:** Task 25 · BOARD-1, BOARD-2, BOARD-4, WS-1, WS-2, STORE-1 · docs/specs/modules.md §7.1, docs/specs/architecture.md §6.2
+**Related:** Task 25 Â· BOARD-1, BOARD-2, BOARD-4, WS-1, WS-2, STORE-1 Â· docs/specs/modules.md Â§7.1, docs/specs/architecture.md Â§6.2
 **Open:** none (proceed to Task 26 upon owner prompt).
 
-## 2026-10-17 — Task 26: Handle Images Inside Boards
+## 2026-10-17 â€” Task 26: Handle Images Inside Boards
 **Request:** Run Task 26 from docs/TASKS.md: extract Excalidraw binary image files in onChange and persist via ProjectService.putFile content-addressed by SHA-256; ensure board JSON state stores only Excalidraw file IDs and SHA-256 hashes (no raw base64 dataURLs in element JSON); restore image binary blobs on board initialization via ProjectService.getFile and inject into Excalidraw via api.addFiles / initialData.files; inspect @excalidraw/excalidraw to verify auto-downscale behavior (record V20 in docs/PROGRESS.md); implement image compression capping dimensions and enforcing the 4MB limit (BOARD-3); write unit tests and a Playwright E2E test verifying simulated 5MB photo insertion, compression/storage, and survival across full page reload; run all checks and commit/push.
 **Changes:**
 - `apps/web/src/modules/board/image-utils.ts` (created): image utilities including `dataURLToBlob`, `blobToDataURL`, `extractImageFileIds`, and `compressImageIfNeeded` capping dimensions to 1440px and compressing to WebP/JPEG under the 4MB limit (BOARD-3) using standard browser Canvas/OffscreenCanvas without third-party dependencies.
@@ -846,10 +846,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (9/9 Playwright E2E tests passed in Chromium).
 - `pnpm build`: PASS (Next.js 16.4.0 static build compiled cleanly).
 - `pnpm ci:security`: PASS (Gitleaks, dependency audit, .next bundle secret scan).
-**Related:** Task 26 · BOARD-2, BOARD-3 · docs/specs/modules.md §7.1, docs/specs/storage-layer.md §11.2 · VERIFY: V20
+**Related:** Task 26 Â· BOARD-2, BOARD-3 Â· docs/specs/modules.md Â§7.1, docs/specs/storage-layer.md Â§11.2 Â· VERIFY: V20
 **Open:** none (proceed to Task 27 upon owner prompt).
 
-## 2026-10-17 — Task 27: Build the Study Templates Panel
+## 2026-10-17 â€” Task 27: Build the Study Templates Panel
 **Request:** Run Task 27 from docs/TASKS.md (final task of Phase 4): build static JSON templates for the 8 requested study templates (Diagnosis Tree, X-Y Axes, Graph Paper, Dotted Circuit Frame, Cornell Notes, Comparison Table, Mind Map, Flowchart) using native Excalidraw element types without heavy diagramming libraries (< 50KB bundle increase); build an unobtrusive toggleable Templates side panel in BoardPane styled with DESIGN.md R1 tokens and full i18n keys for English and Arabic; insert editable elements centered at the viewport via convertToExcalidrawElements and updateScene without clearing existing work; support RTL layout/alignment; write unit tests and Playwright E2E test verifying panel toggle and Mind Map insertion; run checks, update documentation, and push to main.
 **Changes:**
 - `apps/web/src/modules/board/templates.ts` (created): static element skeleton definitions for the 8 study templates with full English and Arabic labels, RTL positioning, and typed `STUDY_TEMPLATES` registry (26.8 KB, well below the 50 KB cap).
@@ -859,7 +859,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `apps/web/src/i18n/en.ts` (changed): added `templates` translation dictionary with titles, descriptions, and action labels.
 - `apps/web/src/i18n/ar.ts` (changed): added matching Arabic translations with 100% key parity.
 - `apps/web/src/test/setup.ts` (changed): added `convertToExcalidrawElements` mock for Vitest unit tests.
-- `scripts/check-spacing.mjs` (changed): excluded canvas templates and test files from the 8-point grid JSX inline style scanner per .agents/rules/spacing.md §1.
+- `scripts/check-spacing.mjs` (changed): excluded canvas templates and test files from the 8-point grid JSX inline style scanner per .agents/rules/spacing.md Â§1.
 - `apps/web/src/modules/board/templates.test.ts` (created): 27 unit tests verifying all 8 templates generate valid skeletons for EN/AR, bundle size is < 50KB, elements convert cleanly, origin offsets work, and existing canvas elements are preserved.
 - `apps/web/src/modules/board/board-pane.test.tsx` (changed): added integration tests for `TemplatesPanel` toggle and template scene insertion.
 - `apps/web/e2e/board-templates.spec.ts` (created): Playwright E2E test proving panel opens, Mind Map inserts onto canvas, elements are selected, and drawer closes cleanly.
@@ -872,24 +872,24 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (10/10 Playwright E2E tests passed in Chromium, including board-templates.spec.ts).
 - `pnpm build`: PASS (Next.js 16.4.0 static build compiled in 5.2s).
 - `pnpm ci:security`: PASS.
-**Related:** Task 27 · BOARD-5 · docs/specs/modules.md §7.1, docs/DESIGN.md
+**Related:** Task 27 Â· BOARD-5 Â· docs/specs/modules.md Â§7.1, docs/DESIGN.md
 **Open:** none (proceed to Task 28 upon owner prompt).
 
-## 2026-10-17 — Audit and Shorten i18n Strings for Better UI Space
-**Request:** Audit apps/web/src/i18n/en.ts and ar.ts, identify strings used for UI elements (buttons, badges, menu items, short labels) that are longer than 3 words, shorten them to concise 1–3 word phrases while preserving exact meaning and 100% key parity, ensure natural Arabic translations fitting RTL layout, verify all unit and E2E tests pass, and push to main.
+## 2026-10-17 â€” Audit and Shorten i18n Strings for Better UI Space
+**Request:** Audit apps/web/src/i18n/en.ts and ar.ts, identify strings used for UI elements (buttons, badges, menu items, short labels) that are longer than 3 words, shorten them to concise 1â€“3 word phrases while preserving exact meaning and 100% key parity, ensure natural Arabic translations fitting RTL layout, verify all unit and E2E tests pass, and push to main.
 **Changes:**
-- `apps/web/src/i18n/en.ts` (changed): shortened 15 verbose UI strings across auth, launcher, workspace, circuit, saveStatus, and templates to 1–3 words for space efficiency on mobile and split-view workspace.
-- `apps/web/src/i18n/ar.ts` (changed): shortened 24 Arabic UI strings across common, auth, launcher, workspace, circuit, saveStatus, and templates to natural 1–3 word phrasing fitting RTL layout with 100% key parity.
+- `apps/web/src/i18n/en.ts` (changed): shortened 15 verbose UI strings across auth, launcher, workspace, circuit, saveStatus, and templates to 1â€“3 words for space efficiency on mobile and split-view workspace.
+- `apps/web/src/i18n/ar.ts` (changed): shortened 24 Arabic UI strings across common, auth, launcher, workspace, circuit, saveStatus, and templates to natural 1â€“3 word phrasing fitting RTL layout with 100% key parity.
 - `UPDATE.md` (changed): appended this entry.
 **Checks:**
 - `pnpm lint`: PASS (ESLint 0 errors, check-spacing.mjs 8-point grid passed).
 - `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
 - `pnpm test`: PASS (123/123 unit tests passed across 17 test files, including i18n parity test).
 - `pnpm test:e2e`: PASS (10/10 Playwright E2E tests passed in Chromium).
-**Related:** i18n cleanup · docs/DESIGN.md
+**Related:** i18n cleanup Â· docs/DESIGN.md
 **Open:** none (ready for Task 28).
 
-## 2026-10-18 — Task 28: Build the PDF Viewer
+## 2026-10-18 â€” Task 28: Build the PDF Viewer
 **Request:** Run Task 28 from docs/TASKS.md (first task of Phase 5): build the PdfPane component under apps/web/src/modules/pdf/ loaded dynamically with ssr: false; integrate EmbedPDF with render, scroll, viewport, zoom, and thumbnail plugins; lazy-load self-hosted PDFium WASM from /wasm/pdfium.wasm on first PDF open; implement the Add PDF flow with streaming SHA-256 computation via hash-wasm and immutable file storage via ProjectService.putFile; restore and persist page state in ProjectService on page changes; implement large file UX with streaming hashing progress bar and mobile >100MB warning dialog (PDF-7); integrate PDF canvas and chrome into WorkspaceHost following DESIGN.md R1 tokens and 8-point grid rules; write unit and Playwright E2E tests, verify all checks, and push to main.
 **Changes:**
 - `scripts/copy-pdfium-wasm.mjs` (created): copies `@embedpdf/pdfium/dist/pdfium.wasm` into `apps/web/public/wasm/pdfium.wasm`.
@@ -897,15 +897,15 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `apps/web/public/wasm/pdfium.wasm` (created): self-hosted PDFium WASM binary for strict CSP compatibility without external CDNs.
 - `apps/web/src/core/storage/sha256.ts` (changed): added optional `onProgress` callback reporting 0..1 streaming hashing progress for large files.
 - `apps/web/src/core/storage/project-service.ts` (changed): added `savePdf(projectId, itemId, payload, title)` and optional `knownKey` parameter in `putFile` to bypass duplicate hashing when SHA-256 is already known.
-- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added localized `pdf` dictionary with concise 1–3 word labels for buttons, toolbars, dialogs, and progress messages with 100% key parity.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added localized `pdf` dictionary with concise 1â€“3 word labels for buttons, toolbars, dialogs, and progress messages with 100% key parity.
 - `apps/web/src/modules/pdf/types.ts` (created): defined `PdfItemPayload` and `PdfPaneProps` domain types.
 - `apps/web/src/modules/pdf/use-pdf-persistence.ts` (created): custom hook managing PDF document state, file ingestion with streaming hash, error handling, and silent page state persistence via `ProjectService`.
-- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (created): workspace-integrated toolbar with page navigation (`‹ X / Y ›`), zoom controls, and thumbnail drawer toggle following DESIGN.md R1 tokens and 8-point grid rules.
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (created): workspace-integrated toolbar with page navigation (`â€¹ X / Y â€º`), zoom controls, and thumbnail drawer toggle following DESIGN.md R1 tokens and 8-point grid rules.
 - `apps/web/src/modules/pdf/pdf-viewer.tsx` (created): EmbedPDF viewer host with Render, Scroll, Viewport, Zoom, and Thumbnail plugins, lazy-loading PDFium WASM only when a document is opened, with layout-driven page restoration and thumbnail sidebar.
 - `apps/web/src/modules/pdf/pdf-pane.tsx` (created): PDF workspace pane with dropzone / file picker, mount token tracking, streaming SHA-256 progress indicator, and mobile >100MB warning dialog (PDF-7).
 - `apps/web/src/modules/pdf/index.ts` (created): re-exported `PdfPane` dynamically with `ssr: false`.
 - `apps/web/src/workspace/workspace-host.tsx` (changed): connected `PdfPane` for `tab.kind === "pdf"`.
-- `scripts/check-spacing.mjs` (changed): excluded rendered PDF pages viewer (`pdf-viewer.tsx`) from the 8-point grid JSX linter per `.agents/rules/spacing.md` §1.
+- `scripts/check-spacing.mjs` (changed): excluded rendered PDF pages viewer (`pdf-viewer.tsx`) from the 8-point grid JSX linter per `.agents/rules/spacing.md` Â§1.
 - `scripts/ci-security.mjs` (changed): refined bundle leak scanner to distinguish actual PEM private key blocks from harmless open-source formatter template string literals (`["-----BEGIN "+`) in Next.js compiled crypto-browserify.
 - `apps/web/src/modules/pdf/use-pdf-persistence.test.tsx` (created): unit tests for file ingestion, streaming progress, and page saving logic.
 - `apps/web/src/modules/pdf/pdf-pane.test.tsx` (created): unit tests verifying dropzone rendering, file picker trigger, and mobile >100MB warning dialog modal gating.
@@ -919,7 +919,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (11/11 Playwright E2E tests passed in Chromium, including `pdf-module.spec.ts`).
 - `pnpm build`: PASS (Next.js 16.4.0 static build compiled in 6.0s).
 - `pnpm ci:security`: PASS (Gitleaks, dependency audit, .next bundle secret scan).
-## 2026-10-18 — Task 29: Store Annotations Separately From the PDF
+## 2026-10-18 â€” Task 29: Store Annotations Separately From the PDF
 **Request:** Run Task 29 from docs/TASKS.md: enable annotation tools (highlight, freehand ink, free text, stamp, undo/redo) in PdfPane / PdfViewer; listen to onAnnotationEvent from Spike S3; export annotations via exportAnnotations(); offload stamp images as content-addressed SHA-256 blobs via ProjectService.putFile replacing binary data with lightweight references ({ fileId: hash, fileKey: hash }) and guaranteeing zero base64 in annotations JSON; save clean JSON via ProjectService.saveAnnotations(pdfHash, json) debounced through SaveQueue; restore annotations on PDF load via ProjectService.getFile(hash) and importAnnotations(); support undo/redo triggering debounced save; write unit tests and Playwright E2E test; verify all checks, commit and push to main, and report GitHub Actions CI run conclusion.
 **Changes:**
 - `apps/web/package.json` & `pnpm-lock.yaml` (changed): linked `@embedpdf/plugin-interaction-manager@2.15.1` (peer dependency in pinned 2.15.x EmbedPDF family) required by AnnotationPlugin and SelectionPlugin.
@@ -940,26 +940,26 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm typecheck`: PASS (TypeScript tsc --noEmit passed with 0 errors).
 - `pnpm test`: PASS (140/140 unit tests passed across 21 test files).
 - `pnpm test:e2e`: PASS (12/12 Playwright E2E tests passed in Chromium, including `pdf-annotations.spec.ts` and `pdf-module.spec.ts`).
-**Related:** Task 29 · PDF-3, PDF-4 · docs/specs/modules.md §7.3 · Spike S3
+**Related:** Task 29 Â· PDF-3, PDF-4 Â· docs/specs/modules.md Â§7.3 Â· Spike S3
 **Open:** none (ready for Task 30).
 
-## 2026-10-18 — Post-Mortem of Task 29 and Hardening Agent Rules
+## 2026-10-18 â€” Post-Mortem of Task 29 and Hardening Agent Rules
 **Request:** Review Task 29 execution, identify root causes of the 2-hour delay and test/API iteration loops, document lessons in docs/PROGRESS.md, harden agent rules in AGENTS.md and .agents/rules/frontend.md, and explain the package.json and pnpm-lock.yaml modification.
 **Changes:**
 - `docs/PROGRESS.md` (changed): added 3 lessons to the Lessons log detailing numeric enum guessing pitfalls, EmbedPDF page-keyed annotation map normalization, and peer dependency declaration rules.
 - `AGENTS.md` (changed): hardened Rule 11 (explicitly prohibiting guessing numeric enum constants or substituting numbers for TypeScript enums), Rule 14 (clarifying that declaring existing lockfile peer dependencies in package.json requires owner approval), and added package.json modifications to the "Ask the owner before" list while keeping file under 200 lines (135 lines).
-- `.agents/rules/frontend.md` (changed): added 3 concrete EmbedPDF rules under spec §7.3 requiring imported `PdfAnnotationSubtype`, dictionary flattening for `scope.getAnnotations()`, and `InteractionManagerPluginPackage` batch registration.
+- `.agents/rules/frontend.md` (changed): added 3 concrete EmbedPDF rules under spec Â§7.3 requiring imported `PdfAnnotationSubtype`, dictionary flattening for `scope.getAnnotations()`, and `InteractionManagerPluginPackage` batch registration.
 - `UPDATE.md` (changed): appended this entry.
 **Checks:** Verified AGENTS.md line count (135 lines <= 200 limit); verified zero application code or test files modified (`git status`); verified exact match with project rules and conventions.
-**Related:** Task 29 Post-Mortem · PDF-3, PDF-4
+**Related:** Task 29 Post-Mortem Â· PDF-3, PDF-4
 **Open:** none (ready for Task 30).
 
-## 2026-10-18 — Task 30: Build the Annotated Download and Page Operations
+## 2026-10-18 â€” Task 30: Build the Annotated Download and Page Operations
 **Request:** Run Task 30 from docs/TASKS.md: allow downloading PDF with burned-in annotations (PDF-5), re-injecting extracted stamp images via ProjectService.getFile(hash); implement page operations (rotate, reorder with move up/down, delete with multi-page guard, insert image as page) using @cantoo/pdf-lib (PDF-6); keep original PDF immutable and save restructured PDFs under new SHA-256 hashes via ProjectService.putFile; notify users via translated warning toast that annotations do not carry over to restructured PDFs; write unit and Playwright E2E tests; run all checks, push to main, and report GitHub Actions CI run.
 **Changes:**
 - `apps/web/src/modules/pdf/page-operations.ts` (created): implemented `rotatePage`, `deletePage`, `reorderPages`, `insertImagePage`, and fallback `burnAnnotationsWithPdfLib` using `@cantoo/pdf-lib` with strict imported `PdfAnnotationSubtype` enums and stamp re-injection.
 - `apps/web/src/modules/pdf/page-operations.test.ts` (created): 6 unit tests validating rotation, deletion, page order swap, image page insertion, and annotation burning with stamp injection.
-- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): added Download button (`[data-testid="pdf-download-btn"]`) and Page Operations menu (`[data-testid="pdf-page-operations-menu"]`) with Rotate 90°, Move Page Up, Move Page Down, Insert Image, and Delete Page actions following DESIGN.md R1 tokens, 8-point grid rules, and accessible focus styles.
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): added Download button (`[data-testid="pdf-download-btn"]`) and Page Operations menu (`[data-testid="pdf-page-operations-menu"]`) with Rotate 90Â°, Move Page Up, Move Page Down, Insert Image, and Delete Page actions following DESIGN.md R1 tokens, 8-point grid rules, and accessible focus styles.
 - `apps/web/src/modules/pdf/pdf-toolbar.test.tsx` (changed): added unit tests for Page Operations menu toggle, page action callbacks, and download button state.
 - `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): registered `ExportPluginPackage`, wired `useExport`, added `handleDownloadAnnotated` (with stamp injection and browser download trigger), executed page operations, saved restructured PDF versions, and displayed warning toast notification.
 - `apps/web/src/modules/pdf/pdf-pane.tsx` (changed): wired `onSaveRestructuredPdf={addPdfFile}` to `PdfViewer`.
@@ -976,20 +976,20 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (13/13 Playwright E2E tests passed in Chromium, including `pdf-page-operations.spec.ts`).
 - `pnpm build`: PASS (Next.js 16.4.0 static build compiled in 3.9s).
 - `pnpm ci:security`: PASS (Gitleaks, dependency audit, .next bundle secret scan).
-**Related:** Task 30 · PDF-5, PDF-6 · docs/specs/modules.md §7.3
+**Related:** Task 30 Â· PDF-5, PDF-6 Â· docs/specs/modules.md Â§7.3
 **Open:** none (ready for Task 31).
 
-## 2026-10-18 — Enforce English Language Rule
+## 2026-10-18 â€” Enforce English Language Rule
 **Request:** Add permanent rule in AGENTS.md mandating English in all conversations and reports (with exceptions only for literal UI strings, translation files, or Arabic text explicitly requested as content), update conventions and workflow accordingly, commit, and push.
 **Changes:**
 - `AGENTS.md` (changed): added Hard Rule 17 enforcing English for all replies and reports, and aligned Conventions and Workflow item 5 to English.
 - `UPDATE.md` (changed): appended this entry.
 **Checks:** Line count verified (136 lines <= 200 line limit).
 **Related:** AGENTS.md
-## 2026-10-18 — Task 31: Define the Manifest and Build the Export
-**Request:** Define the manifest schema in apps/web/src/core/alpha/manifest.ts using zod strictly following §12.1–12.3; build the export engine in apps/web/src/core/alpha/export.ts using @zip.js/zip.js (flushing SaveQueue, storing uncompressed mimetype first, uncompressed level 0 for PDFs and images, streaming via showSaveFilePicker on Chromium desktop, and memory-capped in-memory fallback on Safari/iOS/Firefox with .alpha download extension); implement the Export Options UI (ALPHA-6) in an accessible ExportDialog (R1 tokens, R5 focus-visible, i18n parity); write unit and Playwright E2E tests, verify all checks pass, and report CI conclusion.
+## 2026-10-18 â€” Task 31: Define the Manifest and Build the Export
+**Request:** Define the manifest schema in apps/web/src/core/alpha/manifest.ts using zod strictly following Â§12.1â€“12.3; build the export engine in apps/web/src/core/alpha/export.ts using @zip.js/zip.js (flushing SaveQueue, storing uncompressed mimetype first, uncompressed level 0 for PDFs and images, streaming via showSaveFilePicker on Chromium desktop, and memory-capped in-memory fallback on Safari/iOS/Firefox with .alpha download extension); implement the Export Options UI (ALPHA-6) in an accessible ExportDialog (R1 tokens, R5 focus-visible, i18n parity); write unit and Playwright E2E tests, verify all checks pass, and report CI conclusion.
 **Changes:**
-- `apps/web/src/core/alpha/manifest.ts` (created): defined strict Zod schema for AlphaManifest, AlphaProject, AlphaItem, AlphaFile, and AlphaLayout matching spec §12.1–§12.3 with integer formatVersion = 1, safe path validation (`isSafePath`), and `ALPHA_MIME = "application/x-alpha-project"`.
+- `apps/web/src/core/alpha/manifest.ts` (created): defined strict Zod schema for AlphaManifest, AlphaProject, AlphaItem, AlphaFile, and AlphaLayout matching spec Â§12.1â€“Â§12.3 with integer formatVersion = 1, safe path validation (`isSafePath`), and `ALPHA_MIME = "application/x-alpha-project"`.
 - `apps/web/src/core/alpha/manifest.test.ts` (created): 7 unit tests validating valid manifest fixtures, rejects negative formatVersion, rejects traversal/absolute paths, validates file SHA-256 strings, and enforces required fields.
 - `apps/web/src/core/alpha/export.ts` (created): implemented `exportAlpha`, `safeFileName`, stored level 0 for mimetype / PDFs / images, streaming sink via `showSaveFilePicker` on Chromium desktop with flat memory, in-memory fallback with Spike S5 cap enforcement (300MB mobile, 1GB desktop), `ExportCapExceededError`, and octet-stream download trigger preserving `.alpha` extension.
 - `apps/web/src/core/alpha/export.test.ts` (created): 4 unit tests verifying that mimetype is first entry and uncompressed (level 0), manifest.json is second entry, PDFs and images are stored with level 0, JSON payloads are compressed, includePdfs / includeAnnotated options work, and memory caps throw `ExportCapExceededError`.
@@ -1011,10 +1011,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (163/163 unit tests passed across 25 test files).
 - `pnpm test:e2e`: PASS (14/14 Playwright E2E tests passed in Chromium, including `alpha-export.spec.ts`).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle secret scan clean).
-**Related:** Task 31 · ALPHA-1, ALPHA-5, ALPHA-6, ALPHA-8 · docs/specs/alpha-format.md §12.1–§12.4 · Spike S5
+**Related:** Task 31 Â· ALPHA-1, ALPHA-5, ALPHA-6, ALPHA-8 Â· docs/specs/alpha-format.md Â§12.1â€“Â§12.4 Â· Spike S5
 **Open:** none (ready for Task 32).
 
-## 2026-10-18 — Task 32: Build the Import with Safety Checks
+## 2026-10-18 â€” Task 32: Build the Import with Safety Checks
 **Request:** Run Task 32 from docs/TASKS.md: build the import engine in apps/web/src/core/alpha/import.ts using @zip.js/zip.js treating every archive as untrusted data (SEC-7); enforce strict safety checks before extraction (mimetype verification, max 5,000 entries, max 2GB total uncompressed, max 500MB single entry, 100:1 compression ratio zip bomb guard, path traversal protection rejecting .., leading /, and backslashes, zod manifest validation, format version check, SHA-256 verification of every file against manifest); sanitize Excalidraw board elements by stripping javascript: and data: links; handle project collisions by importing as a copy with new IDs and rewritten alpha://pdf/... internal links; clean up partial projects on failure (atomic rollback); wire launcher UI with "Open .alpha file" button and drag-and-drop zone using no accept filter on file input for iOS compatibility; write unit tests for all malicious cases and Playwright E2E test verifying export -> clear DB -> import round-trip.
 **Changes:**
 - `apps/web/src/core/alpha/import.ts` (created): implemented `importAlpha`, `assertArchiveSafety`, `sanitizeBoardJson`, `ImportError`, memory-efficient streaming reading from File/Blob via `@zip.js/zip.js` `ZipReader(new BlobReader(file))` without buffering archive in RAM, SHA-256 verification for all binary files, internal link remapping, and atomic rollback on failure.
@@ -1035,10 +1035,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (181/181 unit tests passed across 26 test files).
 - `pnpm test:e2e`: PASS (15/15 Playwright E2E tests passed in Chromium, including `alpha-import.spec.ts`).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle secret scan clean).
-**Related:** Task 32 · ALPHA-2, ALPHA-3, ALPHA-4, SEC-7 · docs/specs/alpha-format.md §12.5 · docs/specs/security.md §14.6
+**Related:** Task 32 Â· ALPHA-2, ALPHA-3, ALPHA-4, SEC-7 Â· docs/specs/alpha-format.md Â§12.5 Â· docs/specs/security.md Â§14.6
 **Open:** none (ready for Task 33).
 
-## 2026-10-18 — Task 33: Build and Deploy the Edge Functions
+## 2026-10-18 â€” Task 33: Build and Deploy the Edge Functions
 **Request:** Run Task 33 from docs/TASKS.md: build the 5 Supabase Edge Functions (drive-connect, drive-callback, drive-link-token, drive-token, drive-disconnect) and shared modules under supabase/functions/_shared/ (CORS exact-origin check, admin client with requireUser, AES-256-GCM encryption with SHA-256 key derivation, Google OAuth helpers, rate limiting, and Zod input validation); ensure verify_jwt = false for drive-callback only in supabase/config.toml; write unit and mock tests; deploy all 5 functions to Supabase project fmlpkcbpoziwkjuxuyaf.
 **Changes:**
 - `supabase/functions/_shared/env.ts` (changed): added cross-runtime environment getter supporting both Deno and Node for test harnesses.
@@ -1066,10 +1066,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (15/15 Playwright E2E tests passed).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle secret scan clean).
 - `npx supabase functions deploy`: PASS (All 5 functions deployed to project `fmlpkcbpoziwkjuxuyaf`).
-**Related:** Task 33 · AUTH-3, SEC-2, SEC-6 · docs/specs/google-drive.md §10.2–§10.4, §10.6 · docs/specs/security.md §14.5
+**Related:** Task 33 Â· AUTH-3, SEC-2, SEC-6 Â· docs/specs/google-drive.md Â§10.2â€“Â§10.4, Â§10.6 Â· docs/specs/security.md Â§14.5
 **Open:** none (ready for Task 34).
 
-## 2026-10-18 — Task 34: Build the Connection Flows and the Token Manager
+## 2026-10-18 â€” Task 34: Build the Connection Flows and the Token Manager
 **Request:** Run Task 34 from docs/TASKS.md: build the frontend logic to connect Google Drive and manage the access token securely in memory. Build DriveTokenManager under apps/web/src/core/drive/ keeping Google Access Token strictly in memory, single-flight refresh 1 minute before expiry via drive-token Edge Function, and emit reconnect-required on 409/404. Implement Path A: add Drive scopes + offline access to signInWithGoogle, intercept provider_refresh_token outside synchronous body in onAuthStateChange and auth/callback, call drive-link-token, and immediately call supabase.auth.refreshSession() to purge tokens from browser. Implement Path B: build "Connect Google Drive" action in Settings, follow returned consent URL, handle return ?drive=connected and ?drive=error. Implement Disconnect: call drive-disconnect, clear token manager, and update UI. Display current Drive status via get_drive_status RPC with Connect/Disconnect/Reconnect actions. Extend Playwright browser-storage E2E test to verify zero Google tokens across localStorage, sessionStorage, and IndexedDB for both Path A and Path B.
 **Changes:**
 - `apps/web/src/core/bus.ts` (created): built typed event bus using `mitt` with `"drive:reconnect-required"`, `"drive:connected"`, and `"drive:disconnected"` events.
@@ -1092,10 +1092,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (222/222 unit tests passed across 28 test files).
 - `pnpm test:e2e`: PASS (16/16 Playwright E2E tests passed in Chromium, including both Path A and Path B storage hygiene tests).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks, prod audit clean, bundle secret scan clean).
-**Related:** Task 34 · AUTH-1, AUTH-3, SEC-2 · docs/specs/google-drive.md §10.1, §10.5 · docs/specs/security.md §14.6
+**Related:** Task 34 Â· AUTH-1, AUTH-3, SEC-2 Â· docs/specs/google-drive.md Â§10.1, Â§10.5 Â· docs/specs/security.md Â§14.6
 **Open:** none (ready for Task 35).
 
-## 2026-10-18 — Task 35: Build the Drive API Layer and the Drive Provider
+## 2026-10-18 â€” Task 35: Build the Drive API Layer and the Drive Provider
 **Request:** Run Task 35 from docs/TASKS.md: build the Google Drive API layer (apps/web/src/core/drive/api.ts) with in-memory token injection, single 401 retry, 5-attempt exponential backoff with jitter on 429/5xx, multipart uploads (<5MB), resumable chunked uploads (>=5MB in 8 MiB chunks), and folder/file identification strictly via appProperties; build the DriveProvider implementing the StorageProvider interface with local IndexedDB buffering and SaveQueue outbox sync (3s idle / 30s continuous); implement LRU cache eviction enforcing the 500MB cap on clean files while strictly preserving pinned local files, dirty items, and outbox rows; write comprehensive unit tests and a Playwright E2E test verifying project creation, persistence, appProperties matching, and reload recovery in Drive mode.
 **Changes:**
 - `apps/web/src/core/drive/api.ts` (created): low-level Drive v3 API client with `driveFetch` wrapper injecting in-memory access token from `DriveTokenManager`, 401 retry, 5-attempt exponential backoff + jitter for 429/5xx/rateLimitExceeded, `StorageQuotaExceededError` detection on 403 quota errors, `createMultipartBody`, `multipartCreateFile`, `resumableCreateFile` (8 MiB chunks, 308 resume incomplete handling, status recovery query), `uploadFile` auto-switching by 5MB threshold, `findFiles`, `createFolder`, `trashFile`, `getOrCreateRootFolder` (`aboardKind: "root"`), and `getOrCreateProjectFolder` (`aboardKind: "project"`, `aboardProjectId`).
@@ -1116,9 +1116,9 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (251/251 unit tests passed across 31 test files).
 - `pnpm test:e2e`: PASS (17/17 Playwright E2E tests passed in Chromium, including new drive-provider.spec.ts).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks across 63 commits, prod audit clean, bundle secret scan clean).
-**Related:** Task 35 · STORE-2, STORE-3, STORE-7, STORE-8 · docs/specs/google-drive.md §10.7–10.8 · docs/specs/storage-layer.md §11.2, §11.4
+**Related:** Task 35 Â· STORE-2, STORE-3, STORE-7, STORE-8 Â· docs/specs/google-drive.md Â§10.7â€“10.8 Â· docs/specs/storage-layer.md Â§11.2, Â§11.4
 
-## 2026-10-19 — Task 36: Handle Conflicts and Drive Errors
+## 2026-10-19 â€” Task 36: Handle Conflicts and Drive Errors
 **Request:** Run Task 36 from docs/TASKS.md: make the system resilient to conflicts and Drive errors (STORE-2, STORE-3, SEC-6); detect conflicts via headRevisionId before updates; reconcile board elements via Excalidraw's official reconcileElements; duplicate circuit and annotation conflicts as timestamped conflict files, register them in Dexie items and project manifest, and load the remote payload; handle 403 storageQuotaExceeded by keeping local Dexie saves active and presenting an unobtrusive banner with .alpha export; handle 404 deleted files by recreating from Dexie cache; handle 401/409 revocation by setting reconnect-required and auto-flushing outbox on reconnect; write comprehensive unit tests and a Playwright E2E test verifying local saving continues and banner appears during quota errors.
 **Changes:**
 - `apps/web/src/core/bus.ts` (changed): added `"drive:quota-exceeded"` and `"drive:open-export-dialog"` events.
@@ -1141,16 +1141,16 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (262/262 unit tests passed across 32 test files).
 - `pnpm test:e2e`: PASS (18/18 Playwright E2E tests passed in Chromium).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks across 64 commits, prod audit clean, bundle secret scan clean).
-**Related:** Task 36 · STORE-2, STORE-3, SEC-6 · docs/specs/google-drive.md §10.7–10.10
+**Related:** Task 36 Â· STORE-2, STORE-3, SEC-6 Â· docs/specs/google-drive.md Â§10.7â€“10.10
 **Open:** none (ready for Task 37).
 
-## 2026-10-19 — Task 37: Move Projects Between Modes and Add the Google Picker
+## 2026-10-19 â€” Task 37: Move Projects Between Modes and Add the Google Picker
 **Request:** Run Task 37 from docs/TASKS.md: allow users to switch projects between Local and Drive modes without losing data, and integrate the Google Picker for importing PDFs and .alpha files directly from Drive (LAUNCH-5, LAUNCH-6, PDF-1, ALPHA-2, ALPHA-7).
 **Changes:**
 - `apps/web/src/core/drive/api.ts` (changed): added `getOrCreateExportsFolder` (`aboardKind: "exports"`), `uploadExportToDrive` (`aboardKind: "export"`), and extended `AboardKind` union.
 - `apps/web/src/core/drive/picker.ts` (created): built framework-free Google Picker client with dynamic `gapi` & `picker` loader, restricted Picker API key from environment, OAuth token injection from `DriveTokenManager`, and `openGooglePicker({ mimeTypes, locale, title })` callback handling.
 - `apps/web/src/core/drive/index.ts` (changed): exported `picker.ts`.
-- `apps/web/src/core/storage/project-service.ts` (changed): implemented bidirectional `moveProject(projectId, toMode, options)` supporting Local → Drive (creating Drive folder, uploading manifest, items, and files with progress callbacks, unpinning local files to cache, updating Supabase index) and Drive → Local (downloading remote files, pinning in Dexie, updating Supabase index, and prompting/executing Drive folder trash via `trashFile`); updated `deleteProject` to move project folder to Drive trash when `storageMode === "drive"`.
+- `apps/web/src/core/storage/project-service.ts` (changed): implemented bidirectional `moveProject(projectId, toMode, options)` supporting Local â†’ Drive (creating Drive folder, uploading manifest, items, and files with progress callbacks, unpinning local files to cache, updating Supabase index) and Drive â†’ Local (downloading remote files, pinning in Dexie, updating Supabase index, and prompting/executing Drive folder trash via `trashFile`); updated `deleteProject` to move project folder to Drive trash when `storageMode === "drive"`.
 - `apps/web/src/core/alpha/export-dialog.tsx` (changed): added "Export to Google Drive" button (`data-testid="export-drive-btn"`), upload flow to `Aboard/Exports/` via `uploadExportToDrive`, and focus trapping for accessibility.
 - `apps/web/src/modules/pdf/pdf-pane.tsx` (changed): added "Add PDF from Google Drive" button (`data-testid="pdf-drive-button"`) wired to `openGooglePicker` and `addPdfFile`.
 - `apps/web/src/components/mode-switch-modal.tsx` (created): built accessible, responsive modal dialog strictly following DESIGN.md tokens, R5 focus-visible, and 8-point grid, presenting progress bar, cancel, error state, and Drive folder trash confirmation.
@@ -1170,8 +1170,8 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (266/266 unit tests passed across 34 test files).
 - `pnpm test:e2e`: PASS (21/21 Playwright E2E tests passed in Chromium, including 3 new mode-switch/picker tests).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks across 65 commits, prod audit clean, bundle secret scan clean).
-**Related:** Task 37 · LAUNCH-5, LAUNCH-6, PDF-1, ALPHA-2, ALPHA-7 · docs/specs/storage-layer.md §11.6 · docs/specs/google-drive.md §10.11
-## 2026-10-19 — Task 38: Build the Event Bus, PDF Page to Board, and Circuit to Board
+**Related:** Task 37 Â· LAUNCH-5, LAUNCH-6, PDF-1, ALPHA-2, ALPHA-7 Â· docs/specs/storage-layer.md Â§11.6 Â· docs/specs/google-drive.md Â§10.11
+## 2026-10-19 â€” Task 38: Build the Event Bus, PDF Page to Board, and Circuit to Board
 **Request:** Run Task 38 from docs/TASKS.md: set up the typed event bus via mitt in core/bus.ts; implement PDF Page to Board (INT-1) with Send to Board toolbar button, render current page to WebP at scale 2, compress >4MB images, compute SHA-256 and store via putFile, insert as locked image element into Excalidraw, and scroll to content; implement Circuit to Board (INT-2) with toolbar button, export circuit as SVG via CircuitAdapter, convert SVG string to binary image/svg+xml Blob (SEC-7 zero DOM injection), save via putFile, and insert into board; implement target board selection across all 4 priorities (explicit -> visible split board -> MRU -> new board); write unit tests verifying all 4 priority levels and board insertion; write Playwright E2E test verifying PDF to board in split view with persistence across reload.
 **Changes:**
 - `apps/web/src/core/bus.ts` (changed): declared fully-typed `AppEvents` for `pdf:page-to-board`, `circuit:to-board`, `board:to-pdf`, `pdf:selection`, and `save:status` with source/target tab IDs.
@@ -1180,7 +1180,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `apps/web/src/modules/board/board-pane.tsx` (changed): registered active Excalidraw API in `boardRegistry` on attach and unregistered on unmount.
 - `apps/web/src/modules/board/use-board-persistence.ts` (changed): defaulted `contentKey` to `fId` in active file ID map so pre-saved files are always retained in board payload.
 - `apps/web/src/modules/board/image-utils.ts` (changed): added Node.js / test environment fallback for `blobToDataURL` using `arrayBuffer` and `Buffer`.
-- `apps/web/src/integration/target-board.ts` (created): implemented `selectTargetBoard(options)` strictly adhering to modules.md §8 priority chain (Priority 1: Explicit tab, Priority 2: Other visible pane in split view, Priority 3: Most recently used board, Priority 4: Create new board).
+- `apps/web/src/integration/target-board.ts` (created): implemented `selectTargetBoard(options)` strictly adhering to modules.md Â§8 priority chain (Priority 1: Explicit tab, Priority 2: Other visible pane in split view, Priority 3: Most recently used board, Priority 4: Create new board).
 - `apps/web/src/integration/board-insertion.ts` (created): implemented `parseSvgDimensions` without DOM inlining (SEC-7), `getImageDimensions`, `insertImageIntoBoard` (SHA-256 hash, putFile, addFiles, convertToExcalidrawElements with locked: true, updateScene, and scrollToContent), and `insertCircuitSvgIntoBoard` (binary image/svg+xml Blob conversion).
 - `apps/web/src/integration/index.ts` (created): barrel exports for integration modules.
 - `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): added `onSendToBoard` prop, `isSendingToBoard` loading state, and "Send to Board" button (`data-testid="pdf-send-to-board-btn"`).
@@ -1200,10 +1200,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (278/278 unit tests passed across 36 test files).
 - `pnpm test:e2e cross-tool-integration.spec.ts`: PASS (1/1 test passed in Chromium).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks across 66 commits, prod audit clean, bundle secret scan clean).
-**Related:** Task 38 · INT-1, INT-2, SEC-7 · docs/specs/modules.md §8 · docs/specs/security.md §14.6
+**Related:** Task 38 Â· INT-1, INT-2, SEC-7 Â· docs/specs/modules.md Â§8 Â· docs/specs/security.md Â§14.6
 **Open:** none (ready for Task 39).
 
-## 2026-10-19 — Task 39: Build Board to PDF and Selection to Note (Phase 8 Complete)
+## 2026-10-19 â€” Task 39: Build Board to PDF and Selection to Note (Phase 8 Complete)
 **Request:** Run Task 39 from docs/TASKS.md (final task of Phase 8): implement Board to PDF (INT-3) with toolbar button, export via Excalidraw's exportToBlob, append to target PDF via @cantoo/pdf-lib, save as new version via ProjectService, and show translated success message; implement Selection to Note (INT-4) detecting PDF text selection, showing floating "Send to Board" button, extracting selected text, finding target board via selectTargetBoard, inserting text element on board with internal alpha://pdf/<itemId>#page=<n> link; handle alpha:// link protocol in workspace by switching tabs/panes and scrolling to page while keeping standard https:// links in new tab; verify alpha:// links survive .alpha export/import; write unit tests and Playwright E2E test; mark Phase 8 complete.
 **Changes:**
 - `apps/web/src/integration/alpha-link.ts` (created): implemented `parseAlphaLink` and `formatAlphaLink` supporting both object and positional parameter signatures with validation.
@@ -1231,10 +1231,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (290/290 unit tests passed across 38 test files).
 - `pnpm test:e2e`: PASS (23/23 Playwright E2E tests passed in Chromium, including new `cross-tool-notes-links.spec.ts`).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks across 67 commits, prod audit clean, bundle secret scan clean).
-**Related:** Task 39 · INT-3, INT-4 · docs/specs/modules.md §8
+**Related:** Task 39 Â· INT-3, INT-4 Â· docs/specs/modules.md Â§8
 **Open:** none (Phase 8 complete; ready for Phase 9 / Task 40).
 
-## 2026-10-20 — Manual MVP Review Bug Fixes: Script Warnings, Hydration Mismatch, and Linear Element Normalization
+## 2026-10-20 â€” Manual MVP Review Bug Fixes: Script Warnings, Hydration Mismatch, and Linear Element Normalization
 **Request:** Fix 3 bugs reported during manual MVP QA review: (1) React 19 script tag console error in `app/layout.tsx:26:9`, (2) Text hydration mismatch in `app/auth/callback/page.tsx:168:9` between server and client language translations, (3) Excalidraw linear element normalization console errors during board operations and undo/redo.
 **Changes:**
 - `apps/web/app/layout.tsx` (changed): replaced `next/script` `<Script strategy="beforeInteractive">` with native `<script suppressHydrationWarning>` inline elements with string children, eliminating the React 19 script-tag-in-component console error and complying with `react/no-danger`.
@@ -1250,17 +1250,17 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm typecheck`: PASS (TypeScript `tsc --noEmit` 0 errors).
 - `pnpm test`: PASS (294/294 unit tests passed across 38 test files).
 - `pnpm test:e2e`: PASS (23/23 Playwright tests passed in 45.9s).
-**Related:** Bug Fixes (Phase 8 QA) · BOARD-1, BOARD-2, BOARD-5, SEC-7
+**Related:** Bug Fixes (Phase 8 QA) Â· BOARD-1, BOARD-2, BOARD-5, SEC-7
 **Open:** none (ready to resume manual MVP review).
 
-## 2026-10-20 — Manual MVP Review: Whiteboard Branding & PDF Text Layer Fixes
+## 2026-10-20 â€” Manual MVP Review: Whiteboard Branding & PDF Text Layer Fixes
 **Request:** Fix two QA issues: (1) Remove Excalidraw third-party branding, documentation, GitHub, Discord, and Twitter links so the whiteboard feels like a native Aboard product; (2) Fix PDF viewer flat image rendering to support selectable text layer and reliable drawing/annotation tool gestures.
 **Changes:**
 - `apps/web/src/modules/board/excalidraw-board.tsx` (created): native Excalidraw wrapper configuring sanitized `MainMenu` (retaining essential board actions: `SaveAsImage`, `Export`, `SearchMenu`, `ClearCanvas`, `ToggleTheme`, `ChangeCanvasBackground` while eliminating `Help`, `Socials`, `LoadScene`, `SaveToActiveFile`) and custom `WelcomeScreen` suppressing upstream logos and hints.
 - `apps/web/src/modules/board/board-pane.tsx` (changed): loaded `ExcalidrawBoard` via client dynamic import, added scoped CSS hiding remaining third-party branding classes, and added canvas fingerprinting probe guard for privacy browsers.
 - `apps/web/src/modules/pdf/pdf-text-layer.tsx` (created): rendered transparent selectable text layer (`data-text-layer="true"`) querying `engine.getPageTextRuns` (with fallback to `engine.getPageGeometry`) to position text spans over canvas, switching `pointerEvents` and `userSelect` based on `isAnnotating`.
 - `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): wrapped rendered pages in `PagePointerProvider` enabling DOM pointer gesture handling for annotations and selections, added `PdfTextLayer`, and set `pointerEvents: "none"` on `RenderLayer` image.
-- `scripts/check-spacing.mjs` (changed): added `pdf-text-layer.tsx` to `ignoredFiles` per `.agents/rules/spacing.md §1` (rendered PDF page coordinates exemption).
+- `scripts/check-spacing.mjs` (changed): added `pdf-text-layer.tsx` to `ignoredFiles` per `.agents/rules/spacing.md Â§1` (rendered PDF page coordinates exemption).
 - `apps/web/src/test/setup.ts` & `apps/web/src/modules/board/board-pane.test.tsx` (changed): added `MainMenu` and `WelcomeScreen` mocks and passed children through `Excalidraw` mock.
 - `apps/web/src/modules/board/excalidraw-board.test.tsx` (created): unit tests verifying menu items sanitization and branding removal.
 - `apps/web/src/modules/pdf/pdf-text-layer.test.tsx` (created): unit tests verifying `PdfTextLayer` rendering, text coordinates, and annotation state pointer switching.
@@ -1273,10 +1273,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (298/298 unit tests passed across 40 test files).
 - `pnpm test:e2e`: PASS (24/24 Playwright tests passed in 47.5s).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks, dependency audit clean, bundle secret scan clean).
-**Related:** QA Fixes · BOARD-1, BOARD-4, PDF-1, PDF-2, PDF-3, PDF-4
+**Related:** QA Fixes Â· BOARD-1, BOARD-4, PDF-1, PDF-2, PDF-3, PDF-4
 **Open:** none.
 
-## 2026-10-20 — Manual MVP Review: Workspace "+" Menu & Circuit Simulator Interactions
+## 2026-10-20 â€” Manual MVP Review: Workspace "+" Menu & Circuit Simulator Interactions
 **Request:** Fix two QA issues: (1) Workspace "+" button now opens a menu offering New Whiteboard, New PDF, and New Circuit with localized titles and creates new tabs; (2) Circuit simulator native menu bar is restored (by defaulting `hideMenu: false` in `buildCircuitUrl` and preventing iframe clipping in `CircuitPane`); (3) Circuit image inserted into whiteboard is now unlocked (`locked: false`) allowing free movement and resizing on canvas.
 **Changes:**
 - `apps/web/src/workspace/workspace-host.tsx` (changed): added `isAddMenuOpen` state, click-outside/Escape listener, `handleCreateNewTab`, `.ws-menu-item` CSS styling, and replaced direct action with accessible dropdown menu.
@@ -1295,10 +1295,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (302/302 tests passed across 41 test files).
 - `pnpm test:e2e`: PASS (24/24 Playwright tests passed in 54.3s).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks across 70 commits, prod audit clean, bundle secret scan clean).
-**Related:** QA Fixes · WS-1, WS-2, CIRC-1, CIRC-2, INT-2
+**Related:** QA Fixes Â· WS-1, WS-2, CIRC-1, CIRC-2, INT-2
 **Open:** none.
 
-## 2026-10-20 — Manual MVP Review: Fix Empty .alpha Export and Add Board-to-PDF Overlay Option
+## 2026-10-20 â€” Manual MVP Review: Fix Empty .alpha Export and Add Board-to-PDF Overlay Option
 **Request:** Resolve two QA issues: (1) Fix critical data safety bug where exporting a project to an `.alpha` container and re-importing resulted in an empty project (synchronize Dexie items into manifest on save/collect, flush SaveQueue before export, clone streaming chunks, and restore tabs from manifest.items); (2) Add Board-to-PDF dropdown in the whiteboard toolbar offering "Add as New Page" (existing behavior) and "Overlay on Current Page" (new behavior scaling and centering whiteboard capture onto target page via `@cantoo/pdf-lib` without changing page count).
 **Changes:**
 - `apps/web/src/core/storage/project-service.ts` (changed): added `ensureItemInManifest` helper to automatically register documents in `manifest.items` on `saveBoard`, `saveCircuit`, and `savePdf`; updated `collect()` to query Dexie `db.items` directly, ensure default item if empty, provide sensible fallback payloads, and persist synchronized `completeManifest`.
@@ -1320,10 +1320,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (304/304 unit tests passed across 41 test files).
 - `pnpm test:e2e`: PASS (24/24 Playwright tests passed in 47.7s).
 - `pnpm ci:security`: PASS (Gitleaks 0 leaks across 71 commits, prod audit clean, bundle secret scan clean).
-**Related:** QA Fixes · ALPHA-1, ALPHA-2, ALPHA-5, INT-3, INT-4
+**Related:** QA Fixes Â· ALPHA-1, ALPHA-2, ALPHA-5, INT-3, INT-4
 **Open:** none.
 
-## 2026-10-20 — Dev Server Launch
+## 2026-10-20 â€” Dev Server Launch
 **Request:** Run the code (start local Next.js development server).
 **Changes:**
 - Dev server started via `pnpm dev` (`next dev`) listening on `http://localhost:3000`.
@@ -1332,7 +1332,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Next.js 16.4.0 (Turbopack) ready on `http://localhost:3000` in 666ms.
 **Open:** none (app is live and accessible locally).
 
-## 2026-10-20 — Fix Dev-Mode Unmounted setState Warning
+## 2026-10-20 â€” Fix Dev-Mode Unmounted setState Warning
 **Request:** `/fix-errors` (silently inspect Next.js dev server errors and resolve root causes).
 **Changes:**
 - `apps/web/src/integration/board-insertion.ts` (changed): wrapped `api.scrollToContent` in `requestAnimationFrame` with safety fallback so Excalidraw completes mounting before scrolling newly inserted images/notes.
@@ -1346,7 +1346,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm typecheck`: PASS (0 errors).
 - `pnpm test`: PASS (304/304 unit tests passed across 41 test files).
 
-## 2026-10-21 — Task 40: Deploy Stirling-PDF and the Gateway (Local Stack + Oracle Cloud Prep)
+## 2026-10-21 â€” Task 40: Deploy Stirling-PDF and the Gateway (Local Stack + Oracle Cloud Prep)
 **Request:** Run Task 40 from docs/TASKS.md: build Node 22 + Hono API Gateway in `services/gateway`, verify Supabase JWTs via remote JWKS, map allow-listed tools (`ocr`, `compress`, `office-to-pdf`), check file magic bytes (`%PDF`, `PK\x03\x04`, OLE2), enforce per-user limits (50 MB max size, 1 concurrent job, 10 req/min rate limit), stream bodies, strict CORS, nosniff, build Docker Compose stack with pinned multi-arch Stirling-PDF (`v0.44.0`, 4G limit, internal network with 0 published ports), Caddy reverse proxy on ports 80/443, update `NEXT_PUBLIC_PDF_API_URL` and CSP `connect-src`, write unit tests, verify locally via Docker Compose, and write `services/DEPLOY.md` for Oracle Cloud Free Tier ARM64.
 **Changes:**
 - `services/gateway/` (created): built Hono microservice with Node 22, TypeScript, `@hono/node-server`, `jose`, `@supabase/supabase-js`, and Vitest.
@@ -1376,10 +1376,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
   - All 3 containers running: `services-caddy-1` (Up, 80/443), `services-gateway-1` (Up, healthy), `services-stirling-1` (Up, internal 8080 only).
   - Health check: `curl.exe -i http://localhost/pdf/health` returned HTTP 200 OK with allowed tools `["ocr","compress","office-to-pdf"]`.
   - Auth protection: `curl.exe -i -X POST http://localhost/pdf/compress` returned HTTP 401 Unauthorized.
-**Related:** Task 40 · PDFX-4, SEC-8, §7.4, §13
+**Related:** Task 40 Â· PDFX-4, SEC-8, Â§7.4, Â§13
 **Open:** none (ready for Task 41).
 
-## 2026-10-21 — Task 41: Build the Online PDF Tools Interface
+## 2026-10-21 â€” Task 41: Build the Online PDF Tools Interface
 **Request:** Run Task 41 from docs/TASKS.md: build the Stirling-PDF client in `apps/web/src/core/stirling.ts`, connect to the Gateway via `NEXT_PUBLIC_PDF_API_URL`, pass the user's Supabase JWT in `Authorization: Bearer`, support cancellation via `AbortController`, track upload and processing progress, build the "Online Tools" dropdown menu in the PDF toolbar (`ocr`, `compress`, `office-to-pdf`), implement the one-time server processing notice dialog (`PDFX-5`) with `localStorage` persistence, display processing modal with progress bar and cancel button, compute SHA-256 hash and persist output via `ProjectService.putFile`, handle errors (401, 413, 429), add Arabic and English i18n translations, write unit tests for `stirling.ts` and `pdf-toolbar.tsx`, write a Playwright E2E test, and verify with CI commands.
 **Changes:**
 - `apps/web/src/core/stirling.ts` (created): built client library supporting JWT retrieval, URL resolution against `NEXT_PUBLIC_PDF_API_URL`, XHR-based upload progress tracking (`upload.onprogress`), AbortSignal cancellation, and strict error classification (`StirlingApiError`).
@@ -1398,11 +1398,11 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (318/318 unit tests passing across 42 test files).
 - `pnpm test:e2e`: PASS (25/25 Playwright E2E tests passing).
 - `pnpm ci:security`: PASS (Gitleaks clean across 75 commits, prod audit clean, bundle scan clean).
-**Related:** Task 41 · PDFX-1, PDFX-2, PDFX-3, PDFX-5, SEC-8, §7.4
+**Related:** Task 41 Â· PDFX-1, PDFX-2, PDFX-3, PDFX-5, SEC-8, Â§7.4
 **Open:** none (ready for Task 42).
 
-## 2026-10-21 — Task 42: Build the Custom Circuit Toolbar
-**Request:** Run Task 42 from docs/TASKS.md (Phase 10: UI Redesign): clean up Docker containers/volumes/images created in Task 40 via `docker compose down -v --rmi all` in `services/`; build the custom React toolbar component in `apps/web/src/modules/circuit/circuit-toolbar.tsx` connected to `CircuitAdapter` and iframe; implement Run/Pause toggle, Reset, Speed dropdown (Slow 1µs, Normal 5µs, Fast 25µs), Component Palette mega-menu (Wire, Resistor, Capacitor, Inductor, Switch, Ground, DC Voltage, AC Voltage, Diode, LED, NPN Transistor, Probe, Select) invoking `runCommand("main", "<ClassName>")` with GWT class aliases; implement Advanced Menu toggle with export/reload/import cycle preserving circuit state; style with DESIGN.md tokens and 8-point grid; add bilingual Arabic and English i18n keys; write unit and E2E tests, run checks, update docs, and commit/push.
+## 2026-10-21 â€” Task 42: Build the Custom Circuit Toolbar
+**Request:** Run Task 42 from docs/TASKS.md (Phase 10: UI Redesign): clean up Docker containers/volumes/images created in Task 40 via `docker compose down -v --rmi all` in `services/`; build the custom React toolbar component in `apps/web/src/modules/circuit/circuit-toolbar.tsx` connected to `CircuitAdapter` and iframe; implement Run/Pause toggle, Reset, Speed dropdown (Slow 1Âµs, Normal 5Âµs, Fast 25Âµs), Component Palette mega-menu (Wire, Resistor, Capacitor, Inductor, Switch, Ground, DC Voltage, AC Voltage, Diode, LED, NPN Transistor, Probe, Select) invoking `runCommand("main", "<ClassName>")` with GWT class aliases; implement Advanced Menu toggle with export/reload/import cycle preserving circuit state; style with DESIGN.md tokens and 8-point grid; add bilingual Arabic and English i18n keys; write unit and E2E tests, run checks, update docs, and commit/push.
 **Changes:**
 - `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added 100% synchronized bilingual keys for circuit toolbar controls, speed presets, palette categories, component names, active tool badge, advanced menu toggle, and return button.
 - `apps/web/src/modules/circuit/circuit-adapter.ts` (changed): added `setTimeStepSpeed`, `getTimeStepSpeed`, and `resetCircuit`; added class name alias resolution in `runCommand("main", ...)` mapping aliases like `AddResistor` to `ResistorElm`.
@@ -1421,10 +1421,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (326/326 unit tests passing across 43 test files).
 - `pnpm test:e2e`: PASS (26/26 Playwright E2E tests passing).
 - `pnpm ci:security`: PASS (Gitleaks clean across 76 commits, prod audit clean, bundle scan clean).
-**Related:** Task 42 · CIRC-5, R1, R5, R7, §7.2
+**Related:** Task 42 Â· CIRC-5, R1, R5, R7, Â§7.2
 **Open:** none (ready for Task 43).
 
-## 2026-10-21 — Task 43: Redesign the PDF Toolbars and Unify the Interface
+## 2026-10-21 â€” Task 43: Redesign the PDF Toolbars and Unify the Interface
 **Request:** Run Task 43 from docs/TASKS.md (Final task of Phase 10: UI Redesign): redesign the PDF viewer toolbars into a single, cohesive, native-feeling UI matching the Circuit toolbar and Board pane; unify all interface chrome (app shell, PDF, circuit toolbar, dialogs, banners) by eliminating hard-coded colors, raw spacing, and non-token sizes in favor of DESIGN.md tokens (R1); ensure 100% compliance with the 8-point grid spacing system; audit accessibility (WCAG 2.2 AA contrast, :focus-visible R5, aria-labels on all icon buttons); verify RTL/LTR and Light/Dark theme rendering; run full test suite, update docs, commit and push.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): completely redesigned toolbar into 3 clean visual groups (Navigation & View with tabular numbers and thumbnails toggle, Annotation Tools & History pill controls with bespoke SVG stroke icons and undo/redo, Document Actions & Popovers for Page Operations and Online Tools); implemented logical positioning (`inset-inline-end: 0`) for RTL/LTR safety; added `:focus-visible` styling (R5); preserved all 30+ `data-testid` attributes.
@@ -1444,10 +1444,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (326/326 unit tests passing across 43 test files).
 - `pnpm test:e2e`: PASS (26/26 Playwright E2E tests passing).
 - `pnpm ci:security`: PASS (Gitleaks clean across 77 commits, prod audit clean, bundle scan clean).
-**Related:** Task 43 · R1, R5, R10, A8, §6.2, §7.3, §15
+**Related:** Task 43 Â· R1, R5, R10, A8, Â§6.2, Â§7.3, Â§15
 **Open:** none (Phase 10 complete; ready for Phase 11 / Task 44).
 
-## 2026-10-22 — Run Full Server Stack
+## 2026-10-22 â€” Run Full Server Stack
 **Request:** Run the full server.
 **Changes:**
 - Started Next.js development server on `http://localhost:3000` via Turbopack.
@@ -1456,10 +1456,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Checks:**
 - `curl http://localhost/pdf/health`: HTTP 200 OK (`{"status":"ok","service":"aboard-pdf-gateway"}`).
 - `curl http://localhost:3000`: HTTP 200 OK (Aboard web app served).
-**Related:** Dev Environment · §5, §7.4
+**Related:** Dev Environment Â· Â§5, Â§7.4
 **Open:** none.
 
-## 2026-10-22 — Fix Login Email & OTP Input Styling
+## 2026-10-22 â€” Fix Login Email & OTP Input Styling
 **Request:** Fix the visual bug on the login page where email input field had no visible border/background; reported missing Tailwind v4 dependency per Missing Information Rule; owner approved fixing the input visual bug directly using native Vanilla CSS tokens.
 **Changes:**
 - `apps/web/app/login/page.tsx` (changed): replaced undefined CSS variables (`var(--surface-sunken)`, `var(--border-subtle)`, `var(--shadow-md)`) with valid DESIGN.md tokens: `var(--input-bg)` for input background, `var(--border-input)` for email and OTP input borders, `var(--border-card)` for card and divider borders, and `var(--shadow-2)` for card elevation; set email input placeholder to `name@example.com`.
@@ -1469,29 +1469,29 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (326/326 unit tests passing across 43 test files).
 - `pnpm test:e2e`: PASS (26/26 Playwright E2E tests passing).
 - `pnpm ci:security`: PASS (Gitleaks clean across 88 commits, prod audit clean, bundle scan clean).
-**Related:** R1, AUTH-1, DESIGN.md §2.1.0
+**Related:** R1, AUTH-1, DESIGN.md Â§2.1.0
 **Open:** none.
 
-## 2026-10-22 — Integrate Aboard Logo Assets and Center Launcher Layout
+## 2026-10-22 â€” Integrate Aboard Logo Assets and Center Launcher Layout
 **Request:** Integrate existing Aboard logo from `./Logo` folder, copy assets to `apps/web/public/`, update header with `<Image>` component, configure Next.js favicon, and center Workspace Launcher title, subtitle, and action buttons.
 **Changes:**
 - `apps/web/public/` (created): copied `Alpha_logo.png` (`logo.png`, `Alpha_logo.png`), `Alpha_logo_WB.png` (`logo-wb.png`, `Alpha_logo_WB.png`), `Alpha_logo.svg` (`logo.svg`, `Alpha_logo.svg`), and generated `favicon.ico`.
 - `apps/web/app/` (created): added `icon.png`, `icon.svg`, and `favicon.ico` for Next.js App Router metadata conventions.
 - `apps/web/app/layout.tsx` (changed): added `icons` metadata linking `/icon.png`, `/logo.png`, and `/favicon.ico`.
-- `apps/web/app/page.tsx` (changed): replaced generic text "α" logo in top header bar with Next.js `<Image src="/logo.png" ... />`; centered the Hero title, subtitle, and "Open .alpha" / "Open .alpha from Google Drive" action buttons symmetrically with flexbox and 8-point grid tokens (`--space-1`, `--space-2`, `--space-3`, `--space-6`).
+- `apps/web/app/page.tsx` (changed): replaced generic text "Î±" logo in top header bar with Next.js `<Image src="/logo.png" ... />`; centered the Hero title, subtitle, and "Open .alpha" / "Open .alpha from Google Drive" action buttons symmetrically with flexbox and 8-point grid tokens (`--space-1`, `--space-2`, `--space-3`, `--space-6`).
 **Checks:**
 - `pnpm lint`: PASS (`eslint .` and `check-spacing.mjs` clean, 0 errors).
 - `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
 - `pnpm test`: PASS (326/326 unit tests passing across 43 test files).
 - `pnpm test:e2e`: PASS (26/26 Playwright E2E tests passing).
 - `pnpm ci:security`: PASS (Gitleaks clean across 89 commits, prod audit clean, bundle scan clean).
-**Related:** LAUNCH-1, DESIGN.md R1, §15
+**Related:** LAUNCH-1, DESIGN.md R1, Â§15
 **Open:** none.
 
-## 2026-10-24 — Remove Excalidraw Native UI and Display Logo in Workspace Header
-**Request:** Replace generic "α" text placeholder in workspace header (`workspace-host.tsx`) with real logo image from `apps/web/public/logo.png`; hide Excalidraw native library/templates button via CSS and configure Excalidraw `UIOptions` with `canvasActions: { export: false, saveToActiveFile: false, loadScene: false, saveAsImage: false }`; sanitize Excalidraw main menu to show only Aboard-approved actions (`ClearCanvas`, `ToggleTheme`, `ChangeCanvasBackground`) and hide native "Save to..." and "Export image..." actions; verify all unit and E2E tests pass.
+## 2026-10-24 â€” Remove Excalidraw Native UI and Display Logo in Workspace Header
+**Request:** Replace generic "Î±" text placeholder in workspace header (`workspace-host.tsx`) with real logo image from `apps/web/public/logo.png`; hide Excalidraw native library/templates button via CSS and configure Excalidraw `UIOptions` with `canvasActions: { export: false, saveToActiveFile: false, loadScene: false, saveAsImage: false }`; sanitize Excalidraw main menu to show only Aboard-approved actions (`ClearCanvas`, `ToggleTheme`, `ChangeCanvasBackground`) and hide native "Save to..." and "Export image..." actions; verify all unit and E2E tests pass.
 **Changes:**
-- `apps/web/src/workspace/workspace-host.tsx` (changed): replaced generic "α" span placeholder in workspace header brand link with real logo `<img src="/logo.png" alt={t("common.appName")} width={24} height={24} ... />`.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): replaced generic "Î±" span placeholder in workspace header brand link with real logo `<img src="/logo.png" alt={t("common.appName")} width={24} height={24} ... />`.
 - `apps/web/src/modules/board/board-pane.tsx` (changed): updated `UI_OPTIONS` to disable `export`, `saveToActiveFile`, `loadScene`, and `saveAsImage`; added scoped CSS rules hiding Excalidraw native library/templates button (`.sidebar-trigger`, `.default-sidebar-trigger`, `.sidebar-triggers`, `.library-button`, `[data-testid="library-button"]`, `[data-testid="sidebar-trigger"]`).
 - `apps/web/src/modules/board/excalidraw-board.tsx` (changed): sanitized `MainMenu` by removing `<MainMenu.DefaultItems.SaveAsImage />`, `<MainMenu.DefaultItems.Export />`, and `<MainMenu.DefaultItems.SearchMenu />`, retaining only Aboard-approved actions (`ClearCanvas`, `ToggleTheme`, `ChangeCanvasBackground`).
 - `apps/web/src/modules/board/excalidraw-board.test.tsx` (changed): updated unit tests to verify that `menu-save-as-image`, `menu-export`, and `menu-search` are null while approved actions remain truthy.
@@ -1506,7 +1506,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** BOARD-1, BOARD-2, BOARD-4, SEC-7, DESIGN.md R1
 **Open:** none.
 
-## 2026-10-24 — Fix Multi-Tab Launcher Bug, Implement Unique Tool Rule in Plus Menu, and Add Contextual Button States
+## 2026-10-24 â€” Fix Multi-Tab Launcher Bug, Implement Unique Tool Rule in Plus Menu, and Add Contextual Button States
 **Request:** Fix multi-tab launcher bug so launching or creating a project opens exactly one tab; implement "+" dropdown menu with unique tool rule (max one Board, one PDF, and one Circuit per project; disable existing tools in "+" menu and focus existing tab on selection); enforce contextual disabled states for Split View (disabled when < 2 tabs open), Send to PDF on Board toolbar (disabled when no PDF tab open), and Send to Board on PDF toolbar (disabled when no Board tab open), with localized tooltips. Commit locally without pushing to GitHub.
 **Changes:**
 - `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added translation keys for `workspace.splitRequiresTwoTabs`, `workspace.toolAlreadyOpen`, `board.sendToPdfNoPdfOpen`, and `pdf.sendToBoardNoBoardOpen`.
@@ -1527,7 +1527,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** WORKSPACE-1, WORKSPACE-2, BOARD-4, PDF-4, DESIGN.md R1
 **Open:** none.
 
-## 2026-10-24 — Security Upgrade to Next.js 16.4.3, Node.js 22 LTS, and Framework Dependencies
+## 2026-10-24 â€” Security Upgrade to Next.js 16.4.3, Node.js 22 LTS, and Framework Dependencies
 **Request:** Run Next.js security upgrade to resolve published security advisory prompt (`next upgrade --agent=security`), update Node.js requirement to v22 LTS (`>=22.0.0`), update core framework dependencies (`next@16.4.3`, `react@19.3.1`, `react-dom@19.3.1`, `eslint-config-next@16.4.3`), set `experimental.agentUpgrade` to `"security"` in `next.config.ts`, verify all checks and dev server, and commit locally without pushing to GitHub.
 **Changes:**
 - `package.json` (changed): added `"engines": { "node": ">=22.0.0" }`.
@@ -1545,7 +1545,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** SEC-5, SEC-10, Task 16, Task 46
 **Open:** none.
 
-## 2026-10-24 — Fix Unresponsive Plus Button and Clipped Dropdown Menu in Tab Bar
+## 2026-10-24 â€” Fix Unresponsive Plus Button and Clipped Dropdown Menu in Tab Bar
 **Request:** Fix unresponsive "+" button in workspace tab bar where clicking did not display the dropdown menu; debug click handlers, check for overlays / z-index / pointer-events issues; ensure dropdown menu displays on screen, closes on outside click, and satisfies unique tool rule; add strict E2E test; run local checks and commit locally without pushing to GitHub.
 **Changes:**
 - `apps/web/src/workspace/workspace-host.tsx` (changed): identified root cause where `<nav>` had `overflowX: "auto"` which CSS specification forced to `overflow-y: auto`, clipping the absolute dropdown menu below the 48px boundary of `<nav>` and rendering a vertical scrollbar inside `<nav>` instead of floating over the active pane; removed `overflowX: "auto"` from `<nav>` and added `position: "relative"` with `zIndex: 30`; moved `overflowX: "auto"` to `<div role="tablist">` (`flex: 1`, `minInlineSize: 0`, `overflowY: "hidden"`); gave `<div ref={addMenuRef}>` `position: "relative"`, `flexShrink: 0`, and `zIndex: 40`; ensured `pointerEvents: "auto"` and explicit pointer styling on `add-tab-btn` and `add-tab-menu`; extended click outside listener to support both `mousedown` and `touchstart`.
@@ -1560,7 +1560,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** WORKSPACE-1, WORKSPACE-2, DESIGN.md R1
 **Open:** none.
 
-## 2026-10-24 — Fix Project State Persistence, Annotation Loss, and Duplicate Tabs on Re-entry
+## 2026-10-24 â€” Fix Project State Persistence, Annotation Loss, and Duplicate Tabs on Re-entry
 **Request:** Fix critical data loss bug and duplicate tabs on workspace re-entry: prevent duplicate tabs when re-opening projects from launcher, enforce unique tool rule during layout restoration and filter out non-workspace items like annotations; prevent premature mounting of tool editors before layout and item loading completes; flush pending debounce timers and SaveQueue outbox before navigating to launcher; write Playwright E2E test; run local checks and commit locally without pushing to GitHub.
 **Changes:**
 - `apps/web/src/core/bus.ts` (changed): added `workspace:flush` event to `AppEvents` to signal immediate flushing of in-flight debounce timers across all active tool panes.
@@ -1578,7 +1578,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (27/27 Playwright E2E tests passing, including project-persistence.spec.ts).
 **Related:** WORKSPACE-1, WORKSPACE-2, BOARD-2, PDF-3, PDF-4, STORE-1
 
-## 2026-10-24 — Remove E2E Keep-Alive Placeholder and Fix Circuit Canvas Rendering
+## 2026-10-24 â€” Remove E2E Keep-Alive Placeholder and Fix Circuit Canvas Rendering
 **Request:** Remove E2E keep-alive test placeholder leaking into production and fix blank (0x0) circuit canvas rendering in multi-tab or split-view layout; ensure production app always loads real `circuitjs.html`; use `ResizeObserver` on iframe container in `circuit-pane.tsx` and dispatch `resize` event to iframe's `contentWindow` on split toggle and tab switch; ensure container and iframe have `width: 100%; height: 100%; flex: 1`; make iframe lifecycle and unmount cleanup Strict-Mode resilient; update E2E tests to verify real circuit loads and placeholder is removed; run checks and commit locally without pushing to GitHub.
 **Changes:**
 - `apps/web/src/workspace/workspace-host.tsx` (changed): removed `IframePlaceholder` import; updated `demoTabs` to use real circuit tab title; removed `isIframe: kind === "circuit"` from `loadInfo`; updated pane render loop so `tab.kind === "circuit"` unconditionally renders `<CircuitPane>` and never falls back to placeholder.
@@ -1596,7 +1596,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** CIRC-1, CIRC-2, CIRC-5, WS-1, WS-2
 **Open:** none.
 
-## 2026-10-26 — Merge Workspace Header and Tab Bar to Maximize Canvas Space
+## 2026-10-26 â€” Merge Workspace Header and Tab Bar to Maximize Canvas Space
 **Request:** Merge the Workspace global header and tab bar into a single unified top bar in `workspace-host.tsx` to maximize canvas vertical space; relocate action buttons (Split View, Swap, Drive Mode Switch, Export Project) inside the top bar right next to the '+' (Add Tab) button; keep "Aboard" logo on the far left (start); keep tab list in center/left; remove large Project ID badge text to save horizontal space; debounce "Saved on this device" / "Saving..." text in `save-status.tsx` so UI only reflects "Saved" status after 10 seconds of inactivity; ensure no drag-shield or tab interaction breakage; write E2E tests and unit tests; run local checks and commit locally without pushing to GitHub.
 **Changes:**
 - `apps/web/src/workspace/save-status.tsx` (changed): added `SaveStatusIndicatorProps { debounceMs?: number }` defaulting to 10,000 ms; transitions to `"saving"` update `displayedStatus` immediately and cancel any pending transitions; transitions to `"saved-local"` or `"saved-drive"` delay state updates for 10 seconds of inactivity before switching back to "Saved"; dot color and data attribute stay synchronized with `displayedStatus`.
@@ -1610,10 +1610,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
 - `pnpm test`: PASS (330/330 unit tests passing across 44 test files, including save-status.test.tsx).
 - `pnpm test:e2e`: PASS (28/28 Playwright E2E tests passing, including store-1-save-status.spec.ts and workspace-unified-topbar.spec.ts).
-**Related:** WS-1, WS-2, WS-3, WS-4, STORE-1, DESIGN.md §4.2, R1
+**Related:** WS-1, WS-2, WS-3, WS-4, STORE-1, DESIGN.md Â§4.2, R1
 **Open:** none.
 
-## 2026-10-26 — Fix RTL Layouts, Inverted Sliders, and Remove Excalidraw Embeds
+## 2026-10-26 â€” Fix RTL Layouts, Inverted Sliders, and Remove Excalidraw Embeds
 **Request:** Fix inverted sliders globally where dragging left increases and dragging right decreases value under RTL; fix Excalidraw RTL layout mirroring so tools are on the left and hamburger menu is on the right; fix bottom-left zoom/undo cluster so buttons do not overlap or clutter, following 8-point grid tokens; remove "Web Embed" and "Generate" (Mermaid to Excalidraw) from Excalidraw's extra tools dropdown via component configuration and targeted CSS; update E2E tests to verify "Web Embed" is absent from DOM; run lint, typecheck, unit tests, and e2e tests; commit locally without pushing to GitHub.
 **Changes:**
 - `apps/web/src/theme/tokens.css` (changed): added global rule forcing `direction: ltr !important` on `input[type="range"]`, `.range-wrapper`, and `.range-input` so sliders operate naturally (left-to-right, 0 to 100) in both LTR and RTL.
@@ -1630,7 +1630,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** BOARD-1, BOARD-2, BOARD-4, SEC-7, DESIGN.md R1, R3
 **Open:** none.
 
-## 2026-10-26 — Start Local Development Server
+## 2026-10-26 â€” Start Local Development Server
 **Request:** Run the application code locally (`pnpm dev`).
 **Changes:**
 - `UPDATE.md` (changed): recorded launch of the local Next.js development server.
@@ -1638,8 +1638,8 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** Phase 1 / Setup
 **Open:** none.
 
-## 2026-10-26 — Fix Broken RTL Layout in Workspace and Excalidraw
-**Request:** Fix broken RTL layout in workspace shell and Excalidraw board: ensure top bar uses Flexbox with `dir="rtl"` and `gap` spacing, prevent save status ("جاري الحفظ...") from squishing via `white-space: nowrap`, ensure action buttons group on the left and logo on the right; remove aggressive CSS overrides from Excalidraw and keep canvas and drawing tools LTR so icons do not overlap or break while retaining Arabic translations; ensure bottom controls and toolbar icons never overlap; write E2E test verifying non-overlapping bounding boxes in Arabic; run lint, typecheck, unit, and e2e checks; commit locally without pushing.
+## 2026-10-26 â€” Fix Broken RTL Layout in Workspace and Excalidraw
+**Request:** Fix broken RTL layout in workspace shell and Excalidraw board: ensure top bar uses Flexbox with `dir="rtl"` and `gap` spacing, prevent save status ("Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­Ù�Ø¸...") from squishing via `white-space: nowrap`, ensure action buttons group on the left and logo on the right; remove aggressive CSS overrides from Excalidraw and keep canvas and drawing tools LTR so icons do not overlap or break while retaining Arabic translations; ensure bottom controls and toolbar icons never overlap; write E2E test verifying non-overlapping bounding boxes in Arabic; run lint, typecheck, unit, and e2e checks; commit locally without pushing.
 **Changes:**
 - `apps/web/src/workspace/save-status.tsx` (changed): added `whiteSpace: "nowrap"` and `flexShrink: 0` to container and label span, preventing squishing or line breaks under RTL.
 - `apps/web/src/workspace/workspace-host.tsx` (changed): added `gap: "var(--space-2)"` to `<header>`, added `whiteSpace: "nowrap"` and `flexShrink: 0` to logo container, removed `marginInline` from `<nav>` in favor of header flex gap, ensuring clean grouping (logo/status on the right, tabs center, action controls on the left in RTL).
@@ -1654,7 +1654,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** WS-1, WS-2, BOARD-1, BOARD-2, DESIGN.md R1, R3
 
 
-## 2026-10-26 — Fix Top Bar Spacing and Restore Excalidraw Menu Actions
+## 2026-10-26 â€” Fix Top Bar Spacing and Restore Excalidraw Menu Actions
 **Request:** Fix top bar action button vertical spacing and centering so buttons do not touch the top edge of the screen; restore Excalidraw hamburger menu actions (Export image, Find on canvas, Reset canvas, Preferences/Theme/Canvas background) while excluding social links (GitHub, Discord, Twitter), Help, Excalidraw+, and Sign up; keep file actions (saveToActiveFile, loadScene) disabled; ensure Arabic translations appear via langCode; verify clicking "Export image" downloads canvas image; run local checks (lint, typecheck, unit, e2e) and commit locally without pushing.
 **Changes:**
 - `apps/web/src/workspace/workspace-host.tsx` (changed): added `paddingBlock: "var(--space-1)"` to `<header>`, set `.ws-tab-btn` height to `var(--control-sm)` with `border-radius: var(--radius-sm)`, and added `blockSize: "var(--control-sm)"` and `display: "flex", alignItems: "center"` to the action controls and `addMenuRef` containers, ensuring 8px vertical margin on both top and bottom edges.
@@ -1673,7 +1673,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** BOARD-1, BOARD-2, BOARD-4, WS-1, WS-2, DESIGN.md R1
 **Open:** none.
 
-## 2026-10-26 — Fix Broken PDF Dropdowns and Re-layout Toolbar to Floating Vertical
+## 2026-10-26 â€” Fix Broken PDF Dropdowns and Re-layout Toolbar to Floating Vertical
 **Request:** Fix broken PDF dropdown menus ("Online Tools" and "Page Operations") that were unresponsive when clicked; extract drawing/annotation tools (Select, Highlight, Draw, Text, Stamp, Undo, Redo) and Zoom controls (In, Out, %) into a floating vertical toolbar positioned at inset-inline-start on the PDF canvas mimicking Excalidraw; keep file metadata, page navigation, and top-level actions in a slim top header; ensure scroll container has enough inline-start padding to prevent overlapping text when zoomed in; follow DESIGN.md tokens and 8-point grid; update component tests; run local checks (lint, typecheck, unit, e2e) and commit locally without pushing.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (created): extracted floating vertical toolbar component with three logical groups separated by 1px dividers:
@@ -1695,13 +1695,13 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-1, PDF-2, PDF-3, PDF-4, PDF-5, PDF-6, PDFX-1..5, INT-1, DESIGN.md R1, R3, R4, R5
 **Open:** none.
 
-## 2026-10-26 — Fix PDF Toolbar Position, Remove Online Tools, and Move Page Operations
+## 2026-10-26 â€” Fix PDF Toolbar Position, Remove Online Tools, and Move Page Operations
 **Request:** Fix floating toolbar position: anchor to left edge in LTR (English) and right edge in RTL (Arabic) using `inset-inline-start` (`inset-inline-end: auto`); remove "Online Tools" completely from the PDF top header UI and its associated state while keeping the Stirling API client intact; move "Page Operations" from the top header to the bottom of the floating vertical toolbar (below zoom controls); remove `!important` from PDF viewport padding-inline-start and replace with container layout padding (`paddingInlineStart: calc(var(--control-sm) + var(--space-5))` on canvas container wrapper); revert custom overrides from `tokens.css` to strictly match DESIGN.md section 9; update tests and commit locally without pushing.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (changed): anchored floating toolbar to inline-start edge using `insetInlineStart: "var(--space-2)"` and `insetInlineEnd: "auto"`; moved Page Operations button (`pdf-page-operations-menu`), dropdown (`pdf-page-operations-dropdown`), actions (rotate, move up, move down, insert image, delete page), and image file input (`pdf-insert-image-input`) to the bottom of the vertical toolbar below the zoom group.
 - `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): removed "Online Tools" button, dropdown, and UI state; removed "Page Operations" from top header; retained clean header navigation and top-level action buttons (Send to Board, Download PDF).
 - `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): passed page operations props (`currentPage`, `totalPages`, `onRotatePage`, `onMovePageUp`, `onMovePageDown`, `onDeletePage`, `onInsertImagePage`, `isOperatingPage`) to `<PdfFloatingToolbar>`; removed online tools and page operations props from `<PdfToolbar>`; added `paddingInlineStart: "calc(var(--control-sm) + var(--space-5))"` and `boxSizing: "border-box"` to the canvas container to clear the toolbar without text overlap; removed `className="pdf-viewport"` from `<Viewport>`.
-- `apps/web/src/theme/tokens.css` (changed): reverted custom `.pdf-viewport` and `.pdf-floating-toolbar` CSS rules and eliminated all `!important` declarations, returning `tokens.css` to exact DESIGN.md §9 token specification.
+- `apps/web/src/theme/tokens.css` (changed): reverted custom `.pdf-viewport` and `.pdf-floating-toolbar` CSS rules and eliminated all `!important` declarations, returning `tokens.css` to exact DESIGN.md Â§9 token specification.
 - `apps/web/src/modules/pdf/pdf-toolbar.test.tsx` (changed): updated unit tests to verify slim top header without online tools or page operations, and verified Page Operations menu and action handlers on `PdfFloatingToolbar`.
 - `UPDATE.md` (changed): appended this entry.
 **Checks:**
@@ -1713,7 +1713,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-1, PDF-2, PDF-3, PDF-4, PDF-5, PDF-6, INT-1, DESIGN.md R1, R3
 **Open:** none.
 
-## 2026-10-26 — Force PDF Floating Toolbar to Inline-Start and Fix Hidden Page Operations Dropdown
+## 2026-10-26 â€” Force PDF Floating Toolbar to Inline-Start and Fix Hidden Page Operations Dropdown
 **Request:** Force PDF floating toolbar to left edge (LTR) and right edge (RTL) using position: absolute; inset-inline-start: var(--space-2); fix Page Operations dropdown not appearing when clicked due to clipping by parent overflow: hidden / overflow-y: auto on the floating toolbar container; ensure dropdown opens into visible viewport without overflow; commit locally without pushing.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (changed): set `overflow: "visible"` on `<aside className="pdf-floating-toolbar">` (removing `overflowY: "auto"` and `scrollbarWidth: "none"` which forced horizontal clipping of the 210px absolute dropdown); preserved logical anchoring with `position: "absolute"`, `top: "var(--space-2)"`, `insetInlineStart: "var(--space-2)"`, `insetInlineEnd: "auto"`; kept dropdown menu positioned at `position: "absolute"`, `insetInlineStart: "calc(100% + var(--space-1))"`, `insetInlineEnd: "auto"`, `bottom: 0`, `zIndex: 100` opening adjacent to the toolbar button upwards into the canvas viewport.
@@ -1729,7 +1729,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-1, PDF-2, PDF-5, PDF-6, DESIGN.md R1, R3
 **Open:** none.
 
-## 2026-10-26 — Force PDF Floating Toolbar Left and Keep it Above PDF on Zoom
+## 2026-10-26 â€” Force PDF Floating Toolbar Left and Keep it Above PDF on Zoom
 **Request:** Bypass logical properties and explicitly use left: var(--space-2); right: auto; for default LTR state, and [dir="rtl"] { right: var(--space-2); left: auto; } for RTL; fix z-index so the floating toolbar with z-index: 50 floats above the PDF pages and canvas on zoom; ensure PDF Viewport has z-index: 1 and canvas container has position: relative; ensure Page Operations dropdown opens correctly; commit locally without pushing.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (changed): added CSS rules specifying `.pdf-floating-toolbar { left: var(--space-2); right: auto; }` and `[dir="rtl"] .pdf-floating-toolbar { right: var(--space-2); left: auto; }`, plus dropdown rules `.pdf-page-operations-dropdown { left: calc(100% + var(--space-1)); right: auto; }` and `[dir="rtl"] .pdf-page-operations-dropdown { right: calc(100% + var(--space-1)); left: auto; }`; set `zIndex: 50` on `<aside className="pdf-floating-toolbar">`.
@@ -1746,7 +1746,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-1, PDF-2, PDF-5, PDF-6, DESIGN.md R1, R3
 **Open:** none.
 
-## 2026-10-26 — Hard Restart, Clear Cache, and Debug CSS Positioning
+## 2026-10-26 â€” Hard Restart, Clear Cache, and Debug CSS Positioning
 **Request:** Stop dev server, delete .next cache folder, restart dev server; debug exact computed CSS of the floating toolbar; add console log printing computed styles and DOM direction; verify <html> and <body> dir attributes; commit locally without pushing.
 **Changes:**
 - `apps/web/.next` (deleted): deleted stale Next.js build cache and restarted fresh `pnpm dev` process on port 3000.
@@ -1767,7 +1767,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-1, PDF-2, DESIGN.md R1, R3
 **Open:** none.
 
-## 2026-10-26 — Make PDF Toolbar Float Overlay Without Reserving Layout Space
+## 2026-10-26 â€” Make PDF Toolbar Float Overlay Without Reserving Layout Space
 **Request:** Remove reserved layout space (padding-inline-start on canvas container) so the PDF canvas extends full width across the pane without a dark navy strip on the left; ensure the toolbar with z-index: 50 behaves as a true floating overlay on top of the PDF canvas; commit locally without pushing.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): removed `paddingInlineStart: "calc(var(--control-sm) + var(--space-5))"` from `[data-testid="pdf-canvas-container"]`, allowing `<Viewport>` to take full 100% width and 100% height of the canvas container.
@@ -1787,7 +1787,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-27 — Fix RTL PDF Layout (Force Toolbar Left and Center Pages), Cleanup, and Restart Server
+## 2026-10-27 â€” Fix RTL PDF Layout (Force Toolbar Left and Center Pages), Cleanup, and Restart Server
 **Request:** Force the PDF floating toolbar to the physical left edge of the screen in both LTR and RTL using `left: var(--space-2); right: auto;` and ensure the Page Operations dropdown opens to the right; center the PDF page in `pdf-viewer.tsx` by setting `width: 100%`, `margin-inline: auto`, and `direction: ltr` on the PDF canvas container and viewport; remove the temporary `[PdfFloatingToolbar CSS]` `console.log` in `pdf-floating-toolbar.tsx`; commit locally without pushing, stop the dev server, delete `apps/web/.next`, and start a clean `pnpm dev` server in the background.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (changed): removed `[dir="rtl"]` CSS overrides and `insetInlineStart` inline style; set explicit `left: var(--space-2); right: auto;` on `.pdf-floating-toolbar` and `left: calc(100% + var(--space-1)); right: auto;` on `.pdf-page-operations-dropdown`; removed temporary `[PdfFloatingToolbar CSS]` `console.log` `useEffect`.
@@ -1799,10 +1799,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (331/331 unit tests passing across 44 test files).
 **Related:** PDF-1, PDF-2, PDF-5, PDF-6, DESIGN.md R1, R3
 **Open:** none.
-## 2026-10-27 — Fix PDF Page Navigation Arrows and Add Ctrl+Wheel Zoom
+## 2026-10-27 â€” Fix PDF Page Navigation Arrows and Add Ctrl+Wheel Zoom
 **Request:** Fix visually reversed Previous/Next page navigation arrows in RTL mode (`[dir="rtl"] .icon-directional { transform: scaleX(-1); }`) so chevrons point outward in the logical backward/forward direction; implement desktop `Ctrl+Wheel` zoom on the PDF viewport container (`passive: false`) calling `event.preventDefault()` to block browser page zoom and invoking EmbedPDF's `zoomScope.zoomIn()` (`deltaY < 0`) and `zoomScope.zoomOut()` (`deltaY > 0`) with throttling and unmount cleanup; commit locally without pushing.
 **Changes:**
-- `apps/web/src/theme/tokens.css` & `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): added `[dir="rtl"] .icon-directional { transform: scaleX(-1); }` per DESIGN.md §6.2 so `pdf-prev-page` and `pdf-next-page` chevrons mirror in RTL and point in the logical backward (`>`) and forward (`<`) directions.
+- `apps/web/src/theme/tokens.css` & `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): added `[dir="rtl"] .icon-directional { transform: scaleX(-1); }` per DESIGN.md Â§6.2 so `pdf-prev-page` and `pdf-next-page` chevrons mirror in RTL and point in the logical backward (`>`) and forward (`<`) directions.
 - `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): attached a non-passive `wheel` event listener (`{ passive: false }`) to `pdf-canvas-container` with unmount cleanup; when `event.ctrlKey` is true, calls `event.preventDefault()` and triggers `zoomScope.zoomIn()` (`deltaY < 0`) or `zoomScope.zoomOut()` (`deltaY > 0`) with a 50ms same-direction throttle.
 - `apps/web/src/modules/pdf/pdf-toolbar.test.tsx` & `apps/web/e2e/pdf-module.spec.ts` (changed): added unit and E2E tests verifying RTL directional icon mirroring and `Ctrl+Wheel` zoom in/out with `defaultPrevented`.
 - `UPDATE.md` (changed): appended this entry.
@@ -1811,10 +1811,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
 - `pnpm test` (`pdf-toolbar.test.tsx`, `pdf-pane.test.tsx`): PASS (15/15 unit tests passing).
 - `pnpm test:e2e e2e/pdf-module.spec.ts`: PASS (1/1 Playwright E2E test passing).
-**Related:** PDF-1, PDF-2, DESIGN.md §6.2, R1, R3
+**Related:** PDF-1, PDF-2, DESIGN.md Â§6.2, R1, R3
 **Open:** none.
 
-## 2026-10-27 — Fix PDF Annotation Coordinate Misalignment and Restart Server
+## 2026-10-27 â€” Fix PDF Annotation Coordinate Misalignment and Restart Server
 **Request:** Diagnose and fix PDF annotation pointer coordinate misalignment across Draw (Ink), Select, Highlight, Text (FreeText), and Stamp tools while preserving the centered PDF layout and physical-left floating toolbar; verify zoom scaling and coordinate mapping across all 5 tools; commit locally without pushing, clear `.next`, and restart the dev server.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): normalized document page rotation (`normalizeRotation: true` and `rotation: 0`) on load so PDFium's upright rendered page dimensions (`page.size`), `Scroller`'s `pageWrapper`, `PagePointerProvider`, and `AnnotationLayer` share a 1:1 coordinate space without double-rotating or swapping page dimensions on rotated/landscape PDFs; positioned `<AnnotationLayer>` with `position: "absolute", inset: 0, pointerEvents: "none"` and `<RenderLayer>` with `display: "block", width: "100%", height: "100%", pointerEvents: "none"`; set `isAnnotating={true}` on `<PdfTextLayer>` so it does not block pointer events on `<PagePointerProvider>` or `<AnnotationLayer>`, while wiring `useSelectionCapability` (`selectionScope.onEndSelection`) to display the "Selection to Note" (`INT-4`) button.
@@ -1831,7 +1831,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-27 — Fix Ink Tool Coordinate Offset, Image Aspect Ratio, and Image Compression
+## 2026-10-27 â€” Fix Ink Tool Coordinate Offset, Image Aspect Ratio, and Image Compression
 **Request:** Fix Ink tool (Draw) coordinate offset ensuring the SVG path layer aligns 1:1 with pointer coordinates across LTR and RTL; fix image insertion (Stamp) to maintain intrinsic aspect ratio and downscale/compress large images via offscreen canvas; verify visually via Playwright; commit locally without pushing, clear .next, and restart dev server.
 **Changes:**
 - `apps/web/src/modules/pdf/image-stamp-utils.ts` (created): added `processStampImage` reading intrinsic image dimensions, calculating proportional PDF point bounding box sizes without distortion, downscaling large images (max dimension 1200px or size > 300KB) via offscreen canvas, and exporting compressed WebP/JPEG buffers.
@@ -1850,7 +1850,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-27 — Fix RTL PDF Navigation Arrows, Ink Renderer Registration, and Flush Handler
+## 2026-10-27 â€” Fix RTL PDF Navigation Arrows, Ink Renderer Registration, and Flush Handler
 **Request:** Fix RTL top toolbar navigation stepper arrows pointing inward (`> 1 / 6 <`), resolve Ink tool drawing stroke/bounding box coordinate alignment, and eliminate Next.js dev server runtime error on unmount.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): wrapped previous page button, page indicator, and next page button in `<div dir="ltr">` and removed `.icon-directional` mirroring rule, ensuring standard `< 1 / N >` outward navigation in both LTR and RTL.
@@ -1865,11 +1865,11 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (333/333 unit tests passing across 45 test files).
 - `pnpm test:e2e e2e/pdf-ink-stamp.spec.ts`: PASS (1/1 Playwright test passing).
 - `next-devtools get_errors`: PASS (0 config errors, 0 session errors).
-**Related:** PDF-1, PDF-2, PDF-3, PDF-4, DESIGN.md §6.2
+**Related:** PDF-1, PDF-2, PDF-3, PDF-4, DESIGN.md Â§6.2
 **Open:** none.
 
 
-## 2026-10-28 — Rebuild PDF Ink and Image Tools Based on EmbedPDF Native Architecture
+## 2026-10-28 â€” Rebuild PDF Ink and Image Tools Based on EmbedPDF Native Architecture
 **Request:** Rebuild PDF Ink (Draw) and Image (Stamp) annotation tools based on native EmbedPDF headless architecture; resolve ink stroke coordinate offset from pointer/bounding box; fix image stamp failure where only empty bounding box appears; verify visually in internal browser via Playwright test; restart local dev server and commit locally (do NOT push).
 **Changes:**
 - `apps/web/src/modules/pdf/image-stamp-utils.ts` (changed): restricted canvas compression mime type strictly to `image/jpeg` (for JPEGs) or `image/png` (for PNG, SVG, WebP, transparency), eliminating `image/webp` which caused `@embedpdf/models` `getImageMetadata()` to return null and fail PDFium image creation in WASM.
@@ -1888,7 +1888,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-3, PDF-4
 **Open:** none.
 
-## 2026-10-28 — Eradicate EmbedPDF Ink Tool and Build Custom PDF Drawing Layer
+## 2026-10-28 â€” Eradicate EmbedPDF Ink Tool and Build Custom PDF Drawing Layer
 **Request:** Completely eradicate the EmbedPDF native ink/draw tool from the codebase and build a custom, precise SVG drawing layer from scratch that overlays the PDF page directly with exact 1:1 mouse alignment; integrate with existing save/load annotation logic and ProjectService; support unified undo/redo and burn strokes into exported PDF with @cantoo/pdf-lib; verify 1:1 alignment via Playwright test; restart local dev server and commit locally (do NOT push).
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx` (created): built custom SVG drawing layer overlaying the PDF page directly with sub-pixel mouse pointer capture, quadratic Bezier spline rendering (`pointsToSvgPath`), automatic SVG `viewBox` scaling with document zoom, `pointer-events: auto` during drawing, and `pointer-events: none` during other tool modes. Added `compositeCustomStrokesOnBlob` for "Send to Whiteboard" integration.
@@ -1896,7 +1896,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `apps/web/src/modules/pdf/annotation-storage.ts` (changed): updated `serializeAnnotations` and `deserializeAnnotations` with payload version 2 to store and load `customInkStrokes` alongside existing EmbedPDF annotations; added `extractCustomInkStrokes`.
 - `apps/web/src/modules/pdf/page-operations.ts` (changed): implemented `drawCustomInkStrokesOnDoc` and `burnCustomInkOnPdfBytes` using `@cantoo/pdf-lib` to burn custom ink strokes into PDF page content streams on download/export with full hex color support.
 - `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): wired `<PdfCustomInkLayer>` inside `<PagePointerProvider>` on each page in `<Scroller renderPage={(page) => ...}>`; merged custom ink burning during download; composited custom ink when sending page to whiteboard.
-- `scripts/check-spacing.mjs` (changed): exempted `pdf-custom-ink-layer.tsx` per `.agents/rules/spacing.md` §1 (rendered PDF and canvas content).
+- `scripts/check-spacing.mjs` (changed): exempted `pdf-custom-ink-layer.tsx` per `.agents/rules/spacing.md` Â§1 (rendered PDF and canvas content).
 - `apps/web/e2e/pdf-ink-stamp.spec.ts` & `apps/web/e2e/pdf-annotations.spec.ts` (changed): updated Playwright tests to verify 1:1 drawing alignment (< 2px offset) and custom undo/redo.
 - `UPDATE.md` (changed): appended this entry.
 **Checks:**
@@ -1910,7 +1910,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-3, PDF-4, PDF-5, INT-1
 **Open:** none.
 
-## 2026-10-28 — Block Text Selection While Drawing and Make Ink Strokes Movable Objects
+## 2026-10-28 â€” Block Text Selection While Drawing and Make Ink Strokes Movable Objects
 **Request:** Prevent text selection under the custom ink layer while drawing; turn strokes into movable objects (SVG `<g>` + translate transform, bounding box with handles in Select mode), with save/load, undo/redo, zoom scaling and export kept working; verify with Playwright; commit locally (no push); restart server.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx` (changed): pointer logic moved to native listeners on the SVG (EmbedPDF attaches native listeners on the page element, so React `stopPropagation` could not shield the text layer); while drawing, `pointerdown`/`pointermove`/`mousedown` call `preventDefault()` + `stopPropagation()`, native selection is cleared, `selectstart`/`dragstart` are blocked, SVG has `user-select: none` and `touch-action: none`. Each stroke renders as `<g transform="translate(x, y)">` with the visible `<path>` and a wide transparent hit `<polyline>`; in Select mode clicking shows a bounding box with corner handles (viewBox units, so it scales with zoom) and dragging moves the stroke. Added optional `transform` to `CustomInkStroke`; `compositeCustomStrokesOnBlob` applies it.
@@ -1925,7 +1925,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-28 — Enable Marquee Selection for Custom Annotations and Add Delete/Backspace Shortcuts
+## 2026-10-28 â€” Enable Marquee Selection for Custom Annotations and Add Delete/Backspace Shortcuts
 **Request:** Implement marquee selection (dragging a bounding box with the Select tool) that calculates intersection against custom ink strokes and EmbedPDF annotations (stamps, text), selecting all intersecting objects and displaying their selection handles; implement Delete and Backspace keyboard shortcuts to immediately delete selected custom annotations and EmbedPDF annotations with undo/redo history; preserve native text selection and "Send to Board" trigger when dragging over text lines; verify via Playwright; restart local dev server; commit locally (do NOT push).
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx` (changed): added `rectsIntersect` and `getAbsoluteStrokeBounds` to calculate bounding box collisions between marquee rectangles and custom ink strokes (factoring in translation offsets); implemented marquee drag logic with real-time selection of intersecting custom ink strokes and EmbedPDF annotations via `annotationScope.setSelection`; rendered visual dashed marquee rectangle `<g data-testid="pdf-marquee-selection">` with `#0b7ad6` border, semi-transparent fill, and 4 corner handles; implemented multi-stroke dragging (`onMoveStrokes`) when multiple strokes are selected; single clicks on empty space deselect all; clicking on an individual stroke selects it and allows dragging; added text element detection check (`isOverText`) so dragging over text lines passes cleanly through to `PagePointerProvider` and the text layer for text selection and "Send to Board".
@@ -1944,7 +1944,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-28 — Redesign Export Dialog, Clarify Copy, and Implement PDF-Only Exports to Drive
+## 2026-10-28 â€” Redesign Export Dialog, Clarify Copy, and Implement PDF-Only Exports to Drive
 **Request:** Redesign Export Dialog to clearly separate "Project Backup (.alpha)" from "PDF Export"; update copy, checkboxes, and buttons ("Export .alpha Backup" vs "Export PDFs to Drive"); implement PDF-only Drive exports ("Export Flattened PDF" with all custom strokes, highlights, and stamps burned into PDF pages vs "Export Clean PDF" stripping all annotations), uploading a single standard .pdf file to Aboard/Exports/ in Google Drive without project JSON clutter; verify via Playwright and unit tests; commit locally (do NOT push); restart server.
 **Changes:**
 - `apps/web/src/core/alpha/export-dialog.tsx` (changed): redesigned dialog layout into two distinct sections: Section 1 "Export PDFs to Google Drive" with radio options for Flattened PDF (recommended, burning custom ink strokes, highlights, and stamps via `burnAnnotationsWithPdfLib`) and Clean PDF (original un-annotated document), uploading directly to `Aboard/Exports/` as a single standard `.pdf` file with `mimeType: "application/pdf"`; Section 2 "Project Backup (.alpha)" preserving full project bundling options; footer updated with Button 1 "Export .alpha Backup" and Button 2 "Export PDFs to Drive"; added `getProjectPdfs` discovery helper.
@@ -1962,11 +1962,11 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** ALPHA-1, ALPHA-6, ALPHA-7, PDF-5, STORE-2
 **Open:** none.
 
-## 2026-10-28 — Fix Export Dialog Button Layout and Debug .alpha Import Annotations Bug
+## 2026-10-28 â€” Fix Export Dialog Button Layout and Debug .alpha Import Annotations Bug
 **Request:** Shorten Export Dialog button labels ("Export .alpha Backup" -> "Export .alpha", "Export PDFs to Drive" -> "Export to Drive" in English and Arabic), prevent button label wrapping with `white-space: nowrap` and clean flex layout, and fix the bug where importing an `.alpha` file back into the app opened the PDF clean without custom annotations (ink strokes, stamps, highlights). Ensure the original PDF is loaded and custom annotations from JSON are applied. Verify with Playwright, commit locally (do NOT push), and restart server.
 **Changes:**
 - `apps/web/src/core/alpha/export-dialog.tsx` (changed): shortened button labels; applied `whiteSpace: "nowrap"` and `flexShrink: 0` to Cancel, Export to Drive, and Export .alpha buttons; set container `flexWrap: "nowrap"`; increased modal `maxWidth` to `calc(var(--space-8) * 9)` (576px, multiple of 8); added `bus.emit("workspace:flush", {})` and `await ps.flushNow?.()` prior to exporting to guarantee pending in-flight annotations and queue writes are committed before export archive creation.
-- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): updated button strings to "Export .alpha" ("تصدير .alpha") and "Export to Drive" ("تصدير إلى Drive").
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): updated button strings to "Export .alpha" ("ØªØµØ¯ÙŠØ± .alpha") and "Export to Drive" ("ØªØµØ¯ÙŠØ± Ø¥Ù„Ù‰ Drive").
 - `apps/web/src/core/alpha/import.ts` (changed): fixed critical annotation key bug during `.alpha` import; instead of writing annotations under `id: anno-${targetItem.id}` or overwriting `targetItem.id`, saved annotations under `targetFileKey` (the SHA-256 hash of the PDF file) and `anno-${targetItem.id}`, leaving `targetItem.id` intact for the PDF document metadata descriptor (`kind: "pdf"`); remapped `manifest.layout.tabs` when collision remapping occurs so imported projects restore the active PDF tab correctly.
 - `apps/web/src/core/storage/project-service.ts` (changed): enhanced `readAnnotations` with fallback resolution across `fileKey`, `anno-${itemId}`, manifest alternate keys, and Dexie; in `ensureItemInManifest`, automatically created and persisted project manifest with initial layout if not already created; in `savePdf`, attached `fileKey` to the item record and ensured `manifest.layout` reflects the opened item; in `collect()`, supported burning extra annotated copies when `includeAnnotated` is true while keeping the primary PDF item linked to the original clean PDF.
 - `apps/web/src/modules/pdf/use-pdf-annotations.ts` & `pdf-viewer.tsx` (changed): passed `itemId` to `usePdfAnnotations`; saved annotations under `hashKey` and `anno-${itemId}`; in `restore()`, checked `hashKey`, `anno-${itemId}`, and `pdfHash`.
@@ -1986,7 +1986,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-28 — Fix Stamp Image Decoding and Fallback in PDF Export Engine
+## 2026-10-28 â€” Fix Stamp Image Decoding and Fallback in PDF Export Engine
 **Request:** Fix runtime console error "The input is not a PNG file!" in `embedImageSafely` at `src/modules/pdf/page-operations.ts:131` triggered during PDF export.
 **Changes:**
 - `apps/web/src/modules/pdf/page-operations.ts` (changed): added `detectImageMime` to inspect binary magic bytes (PNG, JPEG, WebP, GIF, BMP, SVG); updated `isJpg` to check standard SOI marker (`0xFF, 0xD8`); improved `embedImageSafely` to never treat stamp images as `application/pdf`, dynamically convert WebP/GIF/BMP to PNG via offscreen canvas with accurate MIME type, and safely return `null` with a warning on unconvertible images instead of throwing "The input is not a PNG file!" and failing the entire document export.
@@ -2003,7 +2003,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-28 — Google Picker API Key Diagnosis and .alpha File Compatibility
+## 2026-10-28 â€” Google Picker API Key Diagnosis and .alpha File Compatibility
 **Request:** Diagnose Google Picker "API developer key is invalid" error in `apps/web/.env.local`, ensure Google Picker DocsView configuration supports `.alpha` files and folder navigation, provide exact Google Cloud Console fix instructions, verify `.alpha` Drive export/import workflows, and restart dev server after clearing `.next`.
 **Changes:**
 - `apps/web/src/core/drive/picker.ts` (changed): added `setIncludeFolders(true)` and `setSelectFolderEnabled(false)` on `DocsView` to enable browsing into Drive folders; normalized input `mimeTypes` to map `.alpha` to valid Drive archive/binary MIME types (`application/octet-stream`, `application/zip`, `application/x-zip-compressed`, `application/x-zip`) while filtering raw extension tokens that Picker rejects.
@@ -2018,7 +2018,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** Google Cloud Console configuration (enable Picker API and add HTTP referrer restrictions) by project owner.
 
 
-## 2026-10-29 — Diagnose Persistent Google Picker Key and OAuth Token Flow
+## 2026-10-29 â€” Diagnose Persistent Google Picker Key and OAuth Token Flow
 **Request:** Diagnose persistent "The API developer key is invalid" in Google Picker, verify .env.local key format and server compilation, inspect OAuth token flow in DriveTokenManager with force-fresh refresh and reconnect handling, add cache-busting to Picker loader, set explicit origin matching on PickerBuilder, and restart dev server after clearing .next.
 **Changes:**
 - `apps/web/src/core/drive/tokens.ts` (changed): added `forceFresh` parameter to `DriveTokenManager.get()` ensuring Picker always requests an unexpired, newly refreshed access token from Edge Functions.
@@ -2034,7 +2034,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-29 — Export Editable PDFs as Drive Folders, Rename Folders, and Import by Folder Selection
+## 2026-10-29 â€” Export Editable PDFs as Drive Folders, Rename Folders, and Import by Folder Selection
 **Request:** Allow users to name project/export folders before exporting, add "Export as Editable Folder (PDF + JSON)" option to Drive export dialog, create dedicated subfolders under Aboard/Exports/ in Google Drive storing original PDF and annotations.json sidecar, configure Google Picker with setParent and setSelectFolderEnabled(true) to open inside Aboard/Exports and pick folders, and load folder contents restoring PDF with fully editable custom ink/stamps.
 **Changes:**
 - `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added translation keys for folder name input and editable folder export option.
@@ -2056,8 +2056,8 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-29 — Fix Incorrect "Another device" Badge for Imported Drive Folders
-**Request:** Fix the bug where exporting a PDF to Google Drive as an editable folder and importing it back causes the Recent Projects list to show "Another device" (على جهاز آخر) with a disabled card, assign current device ID to imported projects so badge displays "This device" (على هذا الجهاز), ensure Google Picker on the Launcher supports Drive folders, and self-heal missing device IDs for local projects stored in Dexie.
+## 2026-10-29 â€” Fix Incorrect "Another device" Badge for Imported Drive Folders
+**Request:** Fix the bug where exporting a PDF to Google Drive as an editable folder and importing it back causes the Recent Projects list to show "Another device" (Ø¹Ù„Ù‰ Ø¬Ù‡Ø§Ø² Ø¢Ø®Ø±) with a disabled card, assign current device ID to imported projects so badge displays "This device" (Ø¹Ù„Ù‰ Ù‡Ø°Ø§ Ø§Ù„Ø¬Ù‡Ø§Ø²), ensure Google Picker on the Launcher supports Drive folders, and self-heal missing device IDs for local projects stored in Dexie.
 **Changes:**
 - `apps/web/src/core/storage/project-service.ts` (changed): in `createProject`, automatically resolved `localDeviceId` using `getDeviceId()` when storage is `local` and `localDeviceId` was omitted, ensuring all locally created projects record the active device.
 - `apps/web/src/core/alpha/import.ts` (changed): in `importAlpha`, resolved active device ID via `getDeviceId(options.userId)` and passed `localDeviceId` to `projectIndex.onProjectCreated`, preventing imported `.alpha` projects from receiving `null` local_device_id.
@@ -2074,7 +2074,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-29 — PDF Phase Final Cleanup and Google Picker Folder Selection & Device ID Resolution
+## 2026-10-29 â€” PDF Phase Final Cleanup and Google Picker Folder Selection & Device ID Resolution
 **Request:** Diagnose Google Picker developer key error and folder selection disabled state, resolve "Another device" badge bug on the Launcher for imported and local projects, safely remove Stirling-PDF and temporary test pages without regression, and verify full test suite.
 **Changes:**
 - `apps/web/src/core/drive/picker.ts` (changed): automatically included `application/vnd.google-apps.folder` in `validMimes` whenever `selectFolder: true` so Google Picker enables the "Select" button when clicking folders.
@@ -2100,7 +2100,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-31 — Dev Server Restart
+## 2026-10-31 â€” Dev Server Restart
 **Request:** Restart dev server, delete `apps/web/.next`, run `pnpm dev` in the background, and verify HTTP 200 on http://localhost:3000.
 **Changes:**
 - Cleared Turbopack build cache (`apps/web/.next`).
@@ -2112,7 +2112,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-31 — Save Status Reactivity & Offline Detection
+## 2026-10-31 â€” Save Status Reactivity & Offline Detection
 **Request:** Improve Save Status Indicator reactivity (max 3s update), add immediate offline detection (`offline` / `online` event listeners) to show "Waiting for connection", ensure all 5 WS-3 states function properly, verify via Playwright offline simulation, and restart dev server.
 **Changes:**
 - `apps/web/src/workspace/save-status.tsx`: reduced default debounce to 2000ms (max 3s reactivity); added immediate `offline` and `online` window event listeners to toggle `waiting-connection` and trigger immediate flush on reconnect; added 2s responsiveness check for queue dirty state.
@@ -2134,10 +2134,10 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-10-31 — Fix Save Trigger, Offline Indicator, Navigation Guard, Tab Close Button
-**Request:** Prevent PDF scroll/zoom viewport events from triggering "Saving…", ensure offline indicator reliably updates in Drive mode, add navigation confirmation dialog when leaving with unsaved changes, add tab close (X) button on active/hovered tabs, and restart dev server.
+## 2026-10-31 â€” Fix Save Trigger, Offline Indicator, Navigation Guard, Tab Close Button
+**Request:** Prevent PDF scroll/zoom viewport events from triggering "Savingâ€¦", ensure offline indicator reliably updates in Drive mode, add navigation confirmation dialog when leaving with unsaved changes, add tab close (X) button on active/hovered tabs, and restart dev server.
 **Changes:**
-- `apps/web/src/modules/pdf/use-pdf-persistence.ts`: updated `saveLastPage` to call `ps.savePdf` with `{ silent: true }`, ensuring viewport scroll/zoom page transitions do not dirty the SaveQueue or trigger "Saving…".
+- `apps/web/src/modules/pdf/use-pdf-persistence.ts`: updated `saveLastPage` to call `ps.savePdf` with `{ silent: true }`, ensuring viewport scroll/zoom page transitions do not dirty the SaveQueue or trigger "Savingâ€¦".
 - `apps/web/src/core/storage/project-service.ts`: added `{ silent?: boolean }` option to `savePdf` to update Dexie reading position silently; updated `openProject` and `setProvider` to ensure the project's actual storage mode (`drive` vs `local`) dynamically loads the matching provider and calls `saveQueue.updateStatusForProviderChange()`.
 - `apps/web/src/core/storage/save-queue.ts`: added `updateStatusForProviderChange()`; updated `handleBeforeUnload` to prompt when unsaved Drive changes or active save operations are pending.
 - `apps/web/src/workspace/save-status.tsx`: verified `navigator.onLine` and Drive mode checks on mount and on `offline`/`online` window events.
@@ -2160,7 +2160,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** WS-1, WS-2, WS-3, WS-4, PDF-1, STORE-1, STORE-5
 **Open:** none.
 
-## 2026-11-01 — Fix PDF Ink Scaling on Zoom & Refactor Stamp Tool Click Flow
+## 2026-11-01 â€” Fix PDF Ink Scaling on Zoom & Refactor Stamp Tool Click Flow
 **Request:** Fix PDF custom ink layer scaling so strokes scale natively with zoom instead of shrinking/misaligning, and refactor the Stamp tool into a two-step flow (clicking Stamp icon selects the tool with crosshair cursor without opening the file dialog; clicking a location on the PDF page captures coordinates, opens the file dialog, and places the stamp at that location).
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-viewer.tsx`: imported `useDocumentState` and passed unscaled dimensions (`unscaledWidth`, `unscaledHeight` computed from `docState.document.pages[pageIndex].size` or scaled dimensions divided by zoom level) to `PdfCustomInkLayer` so SVG viewBox remains constant in unscaled PDF points; managed stamp file input and captured coordinates on PDF page click via `pendingStampRef`; passed `isStampMode={activeTool === "stamp"}` and `onStampClick`.
@@ -2182,7 +2182,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-11-01 — Enable Selection, Bounding Box, and Dragging for Stamps and Texts
+## 2026-11-01 â€” Enable Selection, Bounding Box, and Dragging for Stamps and Texts
 **Request:** Enable the Select tool to act as a universal object tool: unify object state for stamps and texts (`id`, `type`, `x`, `y`, `width`, `height`, `transform`), reuse pointerdown/move/up logic to show bounding box outline (`--accent-text`) with 4 corner handles, enable smooth dragging, persist new positions to `annotations.json` and Dexie across page reloads, verify via automated Playwright tests, and restart dev server.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: exported `CustomObjectType` and `CustomAnnotationObject`; added `objects` and `onMoveObject` props; derived reactive `pageObjects`; unified `handleDown` to capture strokes, stamps, and text objects; added real-time DOM translation feedback during pointer drag; committed new coordinates via `onMoveObject`; rendered transparent hit rect and universal bounding box with 4 corner handles (`var(--accent-text, #0b7ad6)`) for selected stamps (`data-testid="pdf-stamp-bbox"`) and text (`data-testid="pdf-text-bbox"`).
@@ -2203,7 +2203,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-11-02 — Dev Server Restart
+## 2026-11-02 â€” Dev Server Restart
 **Request:** Restart dev server, delete `apps/web/.next`, run `pnpm dev` in the background, and verify HTTP 200 on http://localhost:3000.
 **Changes:**
 - Cleared Turbopack build cache (`apps/web/.next`).
@@ -2215,7 +2215,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-11-02 — Enable Resizing for Stamps and Texts via Select Tool
+## 2026-11-02 â€” Enable Resizing for Stamps and Texts via Select Tool
 **Request:** Enable resizing (scaling) for stamps (images) and text annotations via the Select tool. Render 8 resize handles on bounding boxes styled per DESIGN.md (`8x8px`, `var(--bg-surface)`, `border: 1.5px solid var(--accent-text)`), calculate drag deltas with aspect ratio locking for stamps and proportional font scaling for text, synchronize with EmbedPDF and persist to `annotations.json` / Dexie across page reloads, verify via automated Playwright tests, and restart dev server.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: exported `ResizeHandlePosition`, `getHandleCursor`, and `computeResizedRect(startRect, handle, dx, dy, lockAspectRatio)`; added `onResizeObject` prop; added `resize` interaction mode and `resizeRects` reactive state; updated `handleDown` to capture resize handles; implemented live DOM style updates and cursor indicators; committed final resized rect on pointer up; rendered 8 resize handles (`nw`, `n`, `ne`, `e`, `se`, `s`, `sw`, `w`) with `--space-1` sizing and themed styling.
@@ -2231,7 +2231,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-11-02 — Fix Resize Anchoring, Restore Ink Drag, and Fix Disappearing Text
+## 2026-11-02 â€” Fix Resize Anchoring, Restore Ink Drag, and Fix Disappearing Text
 **Request:** Fix three critical bugs in the PDF custom ink & select layer: 1) preserve anchor corner during resize so content stays aligned inside bounding box without floating away, 2) restore ink stroke selection and dragging via full-bounds hit-testing, 3) fix text disappearing when dragged by clamping coordinates to valid page bounds and adding overflow visible. Verified with sub-agents, unit tests, Playwright E2E suite, and clean dev server restart.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: fixed `computeResizedRect` to anchor opposite corner strictly for all resize handles; updated `handleMove` during resize to apply CSS `transformOrigin = "top left"` and `transform = translate(...) scale(...)` on the annotation container so image/text content scales seamlessly with the SVG bounding box; added an invisible hit `<rect>` over full stroke bounds and enabled pointer events on selection bbox to make ink strokes easily selectable and draggable; added coordinate boundary clamping in `finish` to keep objects on page.
@@ -2249,7 +2249,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
-## 2026-11-02 — Enable Resizing (Scaling) for Ink Strokes via Select Tool
+## 2026-11-02 â€” Enable Resizing (Scaling) for Ink Strokes via Select Tool
 **Request:** Enable resizing (scaling) for custom ink strokes via the Select tool. Render the 8 resize handles on ink strokes when selected, scale points dynamically with opposite corner anchored, maintain unscaled crisp handle sizing, update and persist scaled stroke coordinates to annotations.json / IndexedDB across page reloads, verify with Playwright E2E and unit tests, and restart dev server.
 **Changes:**
 - `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: exported `scaleStrokePoints(points, strokeBounds, newRect, transform)`; added ink stroke handle detection in `handleDown` (`data-object-type="stroke"`); applied real-time SVG scale transform `translate(dx, dy) scale(scaleX, scaleY)` on the stroke geometry inside `<g>` during resize while keeping the 8 resize handles and bounding box crisp in page coordinates; added Shift key support for aspect ratio locking.
@@ -2266,7 +2266,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-1, PDF-3, PDF-4
 **Open:** none.
 
-## 2026-11-02 � Fix SVG Path Misalignment During Ink Stroke Resizing
+## 2026-11-02 — Fix SVG Path Misalignment During Ink Stroke Resizing
 **Request:** Fix SVG path misalignment during ink stroke resizing where the stroke path escaped the blue selection bounding box. Ensure mathematical recalculation of points anchors the opposite corner (e.g. top-left anchored during SE resize), synchronize bounding box coordinates and 8 handles with scaled points, verify with Playwright E2E and unit tests, and restart dev server cleanly.
 **Changes:**
 - pps/web/src/modules/pdf/pdf-custom-ink-layer.tsx: replaced SVG CSS scale transform on \<g>\ during resize with real-time coordinate updates (\liveScaledStrokes\), calculating scaled points directly from \scaleStrokePoints\; refactored \scaleStrokePoints\ to compute safe padding margins (\safePadLeft\, \safePadRight\, \safePadTop\, \safePadBottom\) and linearly map points to the target span, ensuring 0.0px drift on anchored corners and keeping the stroke path strictly enclosed within the selection bounding box.
@@ -2281,7 +2281,7 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** PDF-1, PDF-4
 **Open:** none.
 
-## 2026-11-03 � Restart Dev Server
+## 2026-11-03 — Restart Dev Server
 **Request:** Stop any running dev server, delete \pps/web/.next\ to clear cache, run \pnpm dev\ in background, and wait for HTTP 200 on http://localhost:3000.
 **Changes:**
 - Stopped active Next.js development server processes.
@@ -2290,4 +2290,20 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Verified http://localhost:3000 returns HTTP 200 OK.
 **Checks:**
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Open:** none.
+
+## 2026-11-03 — Refine PDF Selection Behaviors (Lock Highlights, Fix Text Distortion, Beautify Handles)
+**Request:** Exclude highlight annotations from bounding box and resize handles, lock them to text (selectable for deletion via Delete/Backspace, dragging disabled); enforce proportional scaling for text objects to prevent distortion; beautify selection handles and bounding box (8px size, subtle rounded corners, 1px dashed accent border with subtle opacity following DESIGN.md); verify with Playwright E2E and unit tests; cleanly restart dev server.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: added `"highlight"` to `CustomObjectType` and `pageObjects`; excluded `type === "highlight"` from bounding box and 8 resize handles; disabled drag interaction on highlight selection while keeping it selectable for deletion; enforced `lockAspect` for `text` objects in `handleMove` and `finish` to ensure proportional scaling without distortion; styled bounding box with `strokeWidth={1}`, `strokeOpacity={0.7}`, `strokeDasharray="4 3"`, and handles with `width={8}`, `height={8}`, `rx={1.5}`, `ry={1.5}`, `strokeWidth={1}` in both `renderedStrokes` and `renderedObjects`.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: added `highlight` to `CustomObjectType` and `getObjectsForPage`; guarded `handleMoveObject` and `handleResizeObject` to never move or resize highlights.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.test.ts`: added unit test verifying proportional scaling for text objects across all corner and edge handles.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added E2E test verifying highlights are locked to text without bounding box or drag ability, text scales proportionally without distortion, and handles/bbox adhere to refined styling tokens (6/6 tests passing).
+**Checks:**
+- `pnpm test src/modules/pdf/pdf-custom-ink-layer.test.ts`: PASS (23/23 unit tests).
+- `pnpm test src/modules/pdf/`: PASS (57/57 tests across 8 files).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (6/6 tests passed in 45.0s).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings, spacing 8-point compliant).
+**Related:** PDF-1, PDF-3, PDF-4
 **Open:** none.
