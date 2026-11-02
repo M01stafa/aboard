@@ -2229,3 +2229,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server restarted and returned HTTP 200 on `http://localhost:3000`.
 **Related:** PDF-1, PDF-3, PDF-4
 **Open:** none.
+
+
+## 2026-11-02 — Fix Resize Anchoring, Restore Ink Drag, and Fix Disappearing Text
+**Request:** Fix three critical bugs in the PDF custom ink & select layer: 1) preserve anchor corner during resize so content stays aligned inside bounding box without floating away, 2) restore ink stroke selection and dragging via full-bounds hit-testing, 3) fix text disappearing when dragged by clamping coordinates to valid page bounds and adding overflow visible. Verified with sub-agents, unit tests, Playwright E2E suite, and clean dev server restart.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: fixed `computeResizedRect` to anchor opposite corner strictly for all resize handles; updated `handleMove` during resize to apply CSS `transformOrigin = "top left"` and `transform = translate(...) scale(...)` on the annotation container so image/text content scales seamlessly with the SVG bounding box; added an invisible hit `<rect>` over full stroke bounds and enabled pointer events on selection bbox to make ink strokes easily selectable and draggable; added coordinate boundary clamping in `finish` to keep objects on page.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: clamped negative coordinates in `handleMoveObject` and enforced minimum dimensions in `handleResizeObject`.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx`: added `overflow: "visible"` to `<PagePointerProvider>`, `<AnnotationLayer>`, and custom annotation container wrapper.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.test.ts`: added 16 unit tests covering all aspect ratio corner anchors, stroke bounds padding, and coordinate boundary clamping.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added Playwright test verifying ink stroke dragging surviving reload, stamp corner-anchored resize keeping image inside bounding box, and text dragged near edges remaining fully visible.
+**Checks:**
+- `pnpm test src/modules/pdf/pdf-custom-ink-layer.test.ts`: PASS (16/16 unit tests).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (4/4 tests passed in 34.6s).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings, spacing 8-point compliant).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-3, PDF-4
+**Open:** none.

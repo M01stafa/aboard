@@ -54,6 +54,9 @@ export function getStrokeBounds(stroke: CustomInkStroke): {
   width: number;
   height: number;
 } {
+  if (!stroke.points || stroke.points.length === 0) {
+    return { x: 0, y: 0, width: 0, height: 0 };
+  }
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -64,12 +67,12 @@ export function getStrokeBounds(stroke: CustomInkStroke): {
     if (p.x > maxX) maxX = p.x;
     if (p.y > maxY) maxY = p.y;
   }
-  const pad = (stroke.width || 2) / 2 + 4;
+  const pad = Math.max(4, (stroke.width || 2) / 2 + 4);
   return {
     x: minX - pad,
     y: minY - pad,
-    width: maxX - minX + pad * 2,
-    height: maxY - minY + pad * 2,
+    width: Math.max(8, maxX - minX + pad * 2),
+    height: Math.max(8, maxY - minY + pad * 2),
   };
 }
 
@@ -157,26 +160,35 @@ export function computeResizedRect(
   const minW = 20;
   const minH = 15;
   const aspectRatio = startRect.width / Math.max(1, startRect.height);
+  const minAspectW = Math.max(minW, minH * aspectRatio);
 
   if (lockAspectRatio) {
     switch (handle) {
       case "se": {
-        const newW = Math.max(minW, startRect.width + dx);
+        // Dragging bottom-right: anchor is top-left (startRect.x, startRect.y)
+        const effDx = Math.abs(dx) > Math.abs(dy * aspectRatio) ? dx : dy * aspectRatio;
+        const newW = Math.max(minAspectW, startRect.width + effDx);
         const newH = newW / aspectRatio;
         return { x: startRect.x, y: startRect.y, width: newW, height: newH };
       }
       case "sw": {
-        const newW = Math.max(minW, startRect.width - dx);
+        // Dragging bottom-left: anchor is top-right (startRect.x + startRect.width, startRect.y)
+        const effChange = Math.abs(-dx) > Math.abs(dy * aspectRatio) ? -dx : dy * aspectRatio;
+        const newW = Math.max(minAspectW, startRect.width + effChange);
         const newH = newW / aspectRatio;
         return { x: startRect.x + (startRect.width - newW), y: startRect.y, width: newW, height: newH };
       }
       case "ne": {
-        const newW = Math.max(minW, startRect.width + dx);
+        // Dragging top-right: anchor is bottom-left (startRect.x, startRect.y + startRect.height)
+        const effChange = Math.abs(dx) > Math.abs(-dy * aspectRatio) ? dx : -dy * aspectRatio;
+        const newW = Math.max(minAspectW, startRect.width + effChange);
         const newH = newW / aspectRatio;
         return { x: startRect.x, y: startRect.y + (startRect.height - newH), width: newW, height: newH };
       }
       case "nw": {
-        const newW = Math.max(minW, startRect.width - dx);
+        // Dragging top-left: anchor is bottom-right (startRect.x + startRect.width, startRect.y + startRect.height)
+        const effChange = Math.abs(-dx) > Math.abs(-dy * aspectRatio) ? -dx : -dy * aspectRatio;
+        const newW = Math.max(minAspectW, startRect.width + effChange);
         const newH = newW / aspectRatio;
         return {
           x: startRect.x + (startRect.width - newW),
@@ -186,12 +198,12 @@ export function computeResizedRect(
         };
       }
       case "e": {
-        const newW = Math.max(minW, startRect.width + dx);
+        const newW = Math.max(minAspectW, startRect.width + dx);
         const newH = newW / aspectRatio;
         return { x: startRect.x, y: startRect.y + (startRect.height - newH) / 2, width: newW, height: newH };
       }
       case "w": {
-        const newW = Math.max(minW, startRect.width - dx);
+        const newW = Math.max(minAspectW, startRect.width - dx);
         const newH = newW / aspectRatio;
         return {
           x: startRect.x + (startRect.width - newW),
@@ -221,6 +233,7 @@ export function computeResizedRect(
   let { x, y, width, height } = startRect;
   switch (handle) {
     case "se":
+      // Top-left anchor is fixed
       width = Math.max(minW, startRect.width + dx);
       height = Math.max(minH, startRect.height + dy);
       break;
@@ -231,6 +244,7 @@ export function computeResizedRect(
       width = Math.max(minW, startRect.width + dx);
       break;
     case "ne":
+      // Bottom-left anchor is fixed
       width = Math.max(minW, startRect.width + dx);
       height = Math.max(minH, startRect.height - dy);
       y = startRect.y + (startRect.height - height);
@@ -240,6 +254,7 @@ export function computeResizedRect(
       y = startRect.y + (startRect.height - height);
       break;
     case "nw":
+      // Bottom-right anchor is fixed
       width = Math.max(minW, startRect.width - dx);
       height = Math.max(minH, startRect.height - dy);
       x = startRect.x + (startRect.width - width);
@@ -250,6 +265,7 @@ export function computeResizedRect(
       x = startRect.x + (startRect.width - width);
       break;
     case "sw":
+      // Top-right anchor is fixed
       width = Math.max(minW, startRect.width - dx);
       height = Math.max(minH, startRect.height + dy);
       x = startRect.x + (startRect.width - width);
@@ -325,6 +341,7 @@ type Interaction =
       handle: ResizeHandlePosition;
       startPoint: CustomInkPoint;
       startRect: { x: number; y: number; width: number; height: number };
+      currentRect: { x: number; y: number; width: number; height: number };
       objectType: CustomObjectType;
     }
   | {
@@ -550,6 +567,7 @@ export function PdfCustomInkLayer({
               handle: handlePos,
               startPoint: pt,
               startRect: { x: obj.x, y: obj.y, width: obj.width, height: obj.height },
+              currentRect: { x: obj.x, y: obj.y, width: obj.width, height: obj.height },
               objectType: obj.type,
             };
             setResizeRects({
@@ -745,6 +763,7 @@ export function PdfCustomInkLayer({
         const dy = pt.y - it.startPoint.y;
         const isStamp = it.objectType === "stamp";
         const newRect = computeResizedRect(it.startRect, it.handle, dx, dy, isStamp);
+        it.currentRect = newRect;
         setResizeRects({ [it.objectId]: newRect });
 
         // Real-time visual transform on underlying AnnotationLayer DOM elements
@@ -755,10 +774,12 @@ export function PdfCustomInkLayer({
             (annoEl.closest("[data-no-interaction] > div") as HTMLElement | null) ||
             (annoEl.parentElement as HTMLElement | null);
           if (containerEl) {
-            containerEl.style.left = `${newRect.x * docScale}px`;
-            containerEl.style.top = `${newRect.y * docScale}px`;
-            containerEl.style.width = `${newRect.width * docScale}px`;
-            containerEl.style.height = `${newRect.height * docScale}px`;
+            const scaleX = it.startRect.width > 0 ? newRect.width / it.startRect.width : 1;
+            const scaleY = it.startRect.height > 0 ? newRect.height / it.startRect.height : 1;
+            const dxOrigin = (newRect.x - it.startRect.x) * docScale;
+            const dyOrigin = (newRect.y - it.startRect.y) * docScale;
+            containerEl.style.transformOrigin = "top left";
+            containerEl.style.transform = `translate(${dxOrigin}px, ${dyOrigin}px) scale(${scaleX}, ${scaleY})`;
             containerEl.style.transition = "none";
           }
         }
@@ -870,7 +891,11 @@ export function PdfCustomInkLayer({
                   const dy = cur.y - base.y;
                   const newX = Math.round((obj.x + dx) * 100) / 100;
                   const newY = Math.round((obj.y + dy) * 100) / 100;
-                  p.onMoveObject(p.pageIndex, id, { x: newX, y: newY }, obj.type);
+                  const maxX = Math.max(0, p.pageWidth - obj.width);
+                  const maxY = Math.max(0, p.pageHeight - obj.height);
+                  const clampedX = Math.max(0, Math.min(maxX, newX));
+                  const clampedY = Math.max(0, Math.min(maxY, newY));
+                  p.onMoveObject(p.pageIndex, id, { x: clampedX, y: clampedY }, obj.type);
                 }
               }
             }
@@ -892,20 +917,18 @@ export function PdfCustomInkLayer({
             (annoEl.closest("[data-no-interaction] > div") as HTMLElement | null) ||
             (annoEl.parentElement as HTMLElement | null);
           if (containerEl) {
-            containerEl.style.left = "";
-            containerEl.style.top = "";
-            containerEl.style.width = "";
-            containerEl.style.height = "";
+            containerEl.style.transform = "";
+            containerEl.style.transformOrigin = "";
             containerEl.style.transition = "";
           }
         }
 
         if (commit) {
-          const pt = toPagePoint(e.clientX, e.clientY) || it.startPoint;
-          const dx = pt.x - it.startPoint.x;
-          const dy = pt.y - it.startPoint.y;
+          const pt = toPagePoint(e.clientX, e.clientY);
           const isStamp = it.objectType === "stamp";
-          const finalRect = computeResizedRect(it.startRect, it.handle, dx, dy, isStamp);
+          const finalRect = pt
+            ? computeResizedRect(it.startRect, it.handle, pt.x - it.startPoint.x, pt.y - it.startPoint.y, isStamp)
+            : it.currentRect;
 
           if (
             Math.abs(finalRect.width - it.startRect.width) > 1 ||
@@ -987,15 +1010,27 @@ export function PdfCustomInkLayer({
       strokes.map((s) => {
         const offset = dragOffsets[s.id] ?? getStrokeOffset(s);
         const isSelected = isSelectMode && selectedSet.has(s.id);
-        const bounds = isSelected ? getStrokeBounds(s) : null;
+        const bounds = getStrokeBounds(s);
         const handleSize = 8;
         return (
           <g
             key={s.id}
             data-ink-stroke-id={s.id}
             data-testid="pdf-custom-ink-stroke"
-            transform={`translate(${offset.x}, ${offset.y})`}
+            transform={offset.x !== 0 || offset.y !== 0 ? `translate(${offset.x}, ${offset.y})` : undefined}
           >
+            <rect
+              x={bounds.x}
+              y={bounds.y}
+              width={bounds.width}
+              height={bounds.height}
+              fill="transparent"
+              style={{
+                pointerEvents: isSelectMode ? "all" : "none",
+                cursor: isSelectMode ? "move" : "default",
+                touchAction: "none",
+              }}
+            />
             <path
               d={pointsToSvgPath(s.points)}
               fill="none"
@@ -1019,8 +1054,11 @@ export function PdfCustomInkLayer({
                 touchAction: "none",
               }}
             />
-            {bounds && (
-              <g style={{ pointerEvents: "none" }} data-testid="pdf-custom-ink-bbox">
+            {isSelected && (
+              <g
+                style={{ pointerEvents: isSelectMode ? "all" : "none" }}
+                data-testid="pdf-custom-ink-bbox"
+              >
                 <rect
                   x={bounds.x}
                   y={bounds.y}
@@ -1030,6 +1068,11 @@ export function PdfCustomInkLayer({
                   stroke="var(--accent-text, #0b7ad6)"
                   strokeWidth={1.5}
                   vectorEffect="non-scaling-stroke"
+                  style={{
+                    pointerEvents: isSelectMode ? "all" : "none",
+                    cursor: isSelectMode ? "move" : "default",
+                    touchAction: "none",
+                  }}
                 />
                 {[
                   [bounds.x, bounds.y],
@@ -1047,6 +1090,7 @@ export function PdfCustomInkLayer({
                     stroke="var(--accent-text, #0b7ad6)"
                     strokeWidth={1.5}
                     vectorEffect="non-scaling-stroke"
+                    style={{ pointerEvents: "none" }}
                   />
                 ))}
               </g>
@@ -1060,9 +1104,9 @@ export function PdfCustomInkLayer({
   const renderedObjects = useMemo(
     () =>
       pageObjects.map((obj) => {
-        const offset = dragOffsets[obj.id] ?? obj.transform ?? { x: 0, y: 0 };
-        const isSelected = isSelectMode && selectedSet.has(obj.id);
         const resizeRect = resizeRects[obj.id];
+        const offset = resizeRect ? { x: 0, y: 0 } : (dragOffsets[obj.id] ?? obj.transform ?? { x: 0, y: 0 });
+        const isSelected = isSelectMode && selectedSet.has(obj.id);
         const curX = resizeRect ? resizeRect.x : obj.x;
         const curY = resizeRect ? resizeRect.y : obj.y;
         const curW = resizeRect ? resizeRect.width : obj.width;
@@ -1086,7 +1130,7 @@ export function PdfCustomInkLayer({
             data-object-id={obj.id}
             data-object-type={obj.type}
             data-testid={`pdf-${obj.type}-object`}
-            transform={`translate(${offset.x}, ${offset.y})`}
+            transform={offset.x !== 0 || offset.y !== 0 ? `translate(${offset.x}, ${offset.y})` : undefined}
           >
             <rect
               x={curX}

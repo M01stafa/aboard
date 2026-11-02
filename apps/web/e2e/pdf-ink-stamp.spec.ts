@@ -364,9 +364,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
 
     const fileChooserPromise = page.waitForEvent("filechooser");
-    const stampClickX = initialBox.x + 120;
-    const stampClickY = initialBox.y + 140;
-    await page.mouse.click(stampClickX, stampClickY);
+    await page1.click({ position: { x: 140, y: 160 } });
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles({
       name: "drag-test-stamp.png",
@@ -601,6 +599,29 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(resizedStampSize!.width).toBeGreaterThan(initialStampSize!.width + 20);
     expect(resizedStampSize!.height).toBeGreaterThan(initialStampSize!.height + 10);
 
+    // Verify stamp top-left origin stays anchored
+    const resizedStampOrigin = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const stamp = list.find((a: any) => a?.object?.type === 13);
+      return stamp ? { ...stamp.object.rect.origin } : null;
+    });
+    expect(resizedStampOrigin).not.toBeNull();
+    expect(Math.abs(resizedStampOrigin!.x - restoredPositions.stampOrigin.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs(resizedStampOrigin!.y - restoredPositions.stampOrigin.y)).toBeLessThanOrEqual(2);
+
+    // Verify stamp content (image) remains aligned with stamp bounding box without floating away
+    const currentStampBbox = await stampBbox.boundingBox();
+    const stampImageElement = primaryPane.locator('[data-testid^="stamp-container-"] img, img[alt="stamp"]').first();
+    const stampImgBox = await stampImageElement.boundingBox();
+    expect(currentStampBbox).not.toBeNull();
+    expect(stampImgBox).not.toBeNull();
+    expect(Math.abs(currentStampBbox!.x - stampImgBox!.x)).toBeLessThanOrEqual(6);
+    expect(Math.abs(currentStampBbox!.y - stampImgBox!.y)).toBeLessThanOrEqual(6);
+
     // Now select the text
     const reloadedText = primaryPane.locator('[data-testid="pdf-text-object"]').first();
     const reloadedTextBox = await reloadedText.boundingBox();
@@ -684,5 +705,304 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(Math.abs(persistedSizes.stampSize.height - resizedStampSize!.height)).toBeLessThanOrEqual(2);
     expect(Math.abs(persistedSizes.textSize.width - resizedTextSize!.width)).toBeLessThanOrEqual(2);
     expect(Math.abs(persistedSizes.textSize.height - resizedTextSize!.height)).toBeLessThanOrEqual(2);
+  });
+
+  test("drag ink stroke updates and persists across reload, stamp 'se' resize anchors origin and keeps content aligned, and text near edges remains visible", async ({ page }) => {
+    // 1. Generate test PDF
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Ink Drag, Anchor SE Resize & Text Edge Visibility Test", {
+      x: 50,
+      y: 750,
+      size: 20,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${projectId}-ink-anchored&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+
+    await fileInput.setInputFiles({
+      name: "test-ink-anchored.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+
+    const initialBox = await page1.boundingBox();
+    expect(initialBox).not.toBeNull();
+    if (!initialBox) return;
+
+    // --- CHECK 1: DRAW INK STROKE, SELECT IT, CLICK BBOX/PATH, DRAG IT, AND PERSIST ACROSS RELOAD ---
+    // A. Draw ink stroke
+    await primaryPane.locator('[data-testid="pdf-tool-ink"]').click();
+    await page.waitForTimeout(200);
+
+    const inkStartX = initialBox.x + 150;
+    const inkStartY = initialBox.y + 180;
+    const inkEndX = initialBox.x + 220;
+    const inkEndY = initialBox.y + 240;
+
+    await page.mouse.move(inkStartX, inkStartY);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        inkStartX + ((inkEndX - inkStartX) * i) / 10,
+        inkStartY + ((inkEndY - inkStartY) * i) / 10
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+
+    const inkStroke = primaryPane.locator('[data-testid="pdf-custom-ink-stroke"]').first();
+    await expect(inkStroke).toBeVisible({ timeout: 5000 });
+    const strokeBoxBefore = await inkStroke.boundingBox();
+    expect(strokeBoxBefore).not.toBeNull();
+    if (!strokeBoxBefore) return;
+
+    // B. Switch to select tool
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await page.waitForTimeout(200);
+
+    // C. Click on the ink stroke (bbox/path) to select it
+    await page.mouse.click(
+      strokeBoxBefore.x + strokeBoxBefore.width / 2,
+      strokeBoxBefore.y + strokeBoxBefore.height / 2
+    );
+    await page.waitForTimeout(200);
+
+    const inkBbox = primaryPane.locator('[data-testid="pdf-custom-ink-bbox"]');
+    await expect(inkBbox).toBeVisible({ timeout: 5000 });
+
+    // D. Drag the ink stroke to a new location (+80px, +60px)
+    const dragDeltaX = 80;
+    const dragDeltaY = 60;
+    await page.mouse.move(
+      strokeBoxBefore.x + strokeBoxBefore.width / 2,
+      strokeBoxBefore.y + strokeBoxBefore.height / 2
+    );
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        strokeBoxBefore.x + strokeBoxBefore.width / 2 + (dragDeltaX * i) / 10,
+        strokeBoxBefore.y + strokeBoxBefore.height / 2 + (dragDeltaY * i) / 10
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    // Verify stroke position updated
+    const strokeBoxAfterDrag = await inkStroke.boundingBox();
+    expect(strokeBoxAfterDrag).not.toBeNull();
+    expect(strokeBoxAfterDrag!.x).toBeGreaterThan(strokeBoxBefore.x + 40);
+    expect(strokeBoxAfterDrag!.y).toBeGreaterThan(strokeBoxBefore.y + 30);
+
+    const transformAttr = await inkStroke.getAttribute("transform");
+    expect(transformAttr).toContain("translate");
+
+    // --- CHECK 2: DRAG STAMP BY 'SE' HANDLE: TOP-LEFT ANCHORED & CONTENT ALIGNED ---
+    // A. Insert a stamp
+    await primaryPane.locator('[data-testid="pdf-tool-stamp"]').click();
+    await page.waitForTimeout(200);
+
+    const squarePngBase64 =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+    const fileChooserPromise = page.waitForEvent("filechooser");
+    await page1.click({ position: { x: 280, y: 280 } });
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles({
+      name: "se-anchor-stamp.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(squarePngBase64, "base64"),
+    });
+
+    await expect(primaryPane.locator('[data-testid="pdf-stamp-object"]').first()).toBeAttached({ timeout: 10000 });
+
+    // Ensure Select tool is active
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await page.waitForTimeout(200);
+
+    // Select the stamp
+    const stampObject = primaryPane.locator('[data-testid="pdf-stamp-object"]').first();
+    const stampBox = await stampObject.boundingBox();
+    expect(stampBox).not.toBeNull();
+    if (!stampBox) return;
+
+    await page.mouse.click(stampBox.x + stampBox.width / 2, stampBox.y + stampBox.height / 2);
+    await page.waitForTimeout(200);
+
+    const stampBbox = primaryPane.locator('[data-testid="pdf-stamp-bbox"]');
+    await expect(stampBbox).toBeVisible({ timeout: 5000 });
+
+    // Get initial origin and size from annotation store
+    const initialStampData = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const stamp = list.find((a: any) => a?.object?.type === 13);
+      return stamp ? { origin: { ...stamp.object.rect.origin }, size: { ...stamp.object.rect.size } } : null;
+    });
+    expect(initialStampData).not.toBeNull();
+
+    // Check SE resize handle
+    const stampResizeHandleSE = primaryPane.locator('[data-testid="pdf-stamp-resize-handle-se"]');
+    await expect(stampResizeHandleSE).toBeVisible({ timeout: 5000 });
+    const seBox = await stampResizeHandleSE.boundingBox();
+    expect(seBox).not.toBeNull();
+    if (!seBox) return;
+
+    // Drag the southeast resize handle (+60px, +60px)
+    await page.mouse.move(seBox.x + seBox.width / 2, seBox.y + seBox.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        seBox.x + seBox.width / 2 + (60 * i) / 10,
+        seBox.y + seBox.height / 2 + (60 * i) / 10
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    // Verify top-left origin stays strictly anchored in store
+    const resizedStampData = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const stamp = list.find((a: any) => a?.object?.type === 13);
+      return stamp ? { origin: { ...stamp.object.rect.origin }, size: { ...stamp.object.rect.size } } : null;
+    });
+    expect(resizedStampData).not.toBeNull();
+    expect(Math.abs(resizedStampData!.origin.x - initialStampData!.origin.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs(resizedStampData!.origin.y - initialStampData!.origin.y)).toBeLessThanOrEqual(2);
+    expect(resizedStampData!.size.width).toBeGreaterThan(initialStampData!.size.width + 20);
+
+    // Verify stamp content (image) stays aligned inside bounding box without floating away
+    const currentStampBbox = await stampBbox.boundingBox();
+    const stampImg = primaryPane.locator('[data-testid^="stamp-container-"] img, img[alt="stamp"]').first();
+    const stampImgBox = await stampImg.boundingBox();
+    expect(currentStampBbox).not.toBeNull();
+    expect(stampImgBox).not.toBeNull();
+    // Bounding box top-left and image top-left match within 6px
+    expect(Math.abs(currentStampBbox!.x - stampImgBox!.x)).toBeLessThanOrEqual(6);
+    expect(Math.abs(currentStampBbox!.y - stampImgBox!.y)).toBeLessThanOrEqual(6);
+
+    // --- CHECK 3: DRAGGING TEXT ANNOTATION NEAR PAGE EDGES (REMAINS VISIBLE, NOT CLIPPED) ---
+    // A. Add text annotation
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    await page.waitForTimeout(200);
+
+    const textClickX = initialBox.x + 120;
+    const textClickY = initialBox.y + 200;
+    await page.mouse.click(textClickX, textClickY);
+    await page.waitForTimeout(500);
+
+    // Wait for FreeText annotation
+    await expect.poll(async () => {
+      return await page.evaluate(() => {
+        const scope = (window as unknown as {
+          __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+        }).__aboard_pdfAnnotations?.scope;
+        const res = scope?.getAnnotations();
+        const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+        return list.some((a: any) => a?.object?.type === 3);
+      });
+    }, { timeout: 10000 }).toBe(true);
+
+    // Switch to Select tool
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await page.waitForTimeout(200);
+
+    const textObject = primaryPane.locator('[data-testid="pdf-text-object"]').first();
+    await expect(textObject).toBeVisible({ timeout: 5000 });
+    const textBox = await textObject.boundingBox();
+    expect(textBox).not.toBeNull();
+    if (!textBox) return;
+
+    // Click text to select
+    await page.mouse.click(textBox.x + textBox.width / 2, textBox.y + textBox.height / 2);
+    await page.waitForTimeout(200);
+
+    // Drag text close to the top-left edge of the page (towards page boundary)
+    const toEdgeDx = -(textBox.x - initialBox.x - 8);
+    const toEdgeDy = -(textBox.y - initialBox.y - 8);
+    await page.mouse.move(textBox.x + textBox.width / 2, textBox.y + textBox.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        textBox.x + textBox.width / 2 + (toEdgeDx * i) / 10,
+        textBox.y + textBox.height / 2 + (toEdgeDy * i) / 10
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    // Verify text remains visible and not clipped
+    const textAfterDrag = primaryPane.locator('[data-testid="pdf-text-object"]').first();
+    await expect(textAfterDrag).toBeVisible();
+    const textContainer = primaryPane.locator('[data-annotation-type="3"]').first();
+    await expect(textContainer).toBeVisible();
+
+    const isTextVisible = await textContainer.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return (
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        parseFloat(style.opacity || "1") > 0 &&
+        rect.width > 0 &&
+        rect.height > 0
+      );
+    });
+    expect(isTextVisible).toBe(true);
+
+    // Verify text origin coordinates in store are clamped safely within page bounds (>= 0)
+    const textOriginData = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const textAnno = list.find((a: any) => a?.object?.type === 3);
+      return textAnno ? textAnno.object.rect.origin : null;
+    });
+    expect(textOriginData).not.toBeNull();
+    expect(textOriginData!.x).toBeGreaterThanOrEqual(0);
+    expect(textOriginData!.y).toBeGreaterThanOrEqual(0);
+
+    // --- CHECK 4: RELOAD PAGE AND CONFIRM INK STROKE PERSISTENCE ---
+    // Wait for debounced flush to Dexie
+    await page.waitForTimeout(1200);
+
+    await page.reload();
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible({ timeout: 15000 });
+    const reloadedPage1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(reloadedPage1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(1000);
+
+    // Verify ink stroke persists at its moved position
+    const reloadedInkStroke = primaryPane.locator('[data-testid="pdf-custom-ink-stroke"]').first();
+    await expect(reloadedInkStroke).toBeVisible({ timeout: 10000 });
+    const reloadedStrokeBox = await reloadedInkStroke.boundingBox();
+    expect(reloadedStrokeBox).not.toBeNull();
+    expect(Math.abs(reloadedStrokeBox!.x - strokeBoxAfterDrag!.x)).toBeLessThanOrEqual(3);
+    expect(Math.abs(reloadedStrokeBox!.y - strokeBoxAfterDrag!.y)).toBeLessThanOrEqual(3);
+
+    // Verify text annotation is still visible near the edge after reload
+    const reloadedText = primaryPane.locator('[data-testid="pdf-text-object"]').first();
+    await expect(reloadedText).toBeVisible({ timeout: 5000 });
   });
 });

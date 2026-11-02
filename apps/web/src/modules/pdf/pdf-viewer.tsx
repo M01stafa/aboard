@@ -297,7 +297,7 @@ function ViewerInner({
       <div
         data-annotation-id={annotation.id}
         data-annotation-type={annotation.type}
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "100%", overflow: "visible" }}
       >
         {children}
       </div>
@@ -915,6 +915,7 @@ function ViewerInner({
                       backgroundColor: "#ffffff",
                       boxSizing: "border-box",
                       direction: "ltr",
+                      overflow: "visible",
                     }}
                   >
                     <RenderLayer
@@ -946,6 +947,7 @@ function ViewerInner({
                         inset: 0,
                         pointerEvents: "none",
                         direction: "ltr",
+                        overflow: "visible",
                       }}
                     />
                     <PdfCustomInkLayer

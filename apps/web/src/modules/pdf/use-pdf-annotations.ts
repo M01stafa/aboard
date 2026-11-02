@@ -488,9 +488,11 @@ export function usePdfAnnotations({
         const target = pageAnnos.find((a) => a.object.id === id);
         if (target?.object?.rect) {
           const origSize = target.object.rect.size;
+          const safeX = Math.max(0, newOrigin.x);
+          const safeY = Math.max(0, newOrigin.y);
           annotationScope.updateAnnotation(pageIndex, id, {
             rect: {
-              origin: { x: newOrigin.x, y: newOrigin.y },
+              origin: { x: safeX, y: safeY },
               size: origSize,
             },
           });
@@ -519,12 +521,12 @@ export function usePdfAnnotations({
           const patch: Record<string, unknown> = {
             rect: {
               origin: {
-                x: Math.round(newRect.origin.x * 100) / 100,
-                y: Math.round(newRect.origin.y * 100) / 100,
+                x: Math.max(0, Math.round(newRect.origin.x * 100) / 100),
+                y: Math.max(0, Math.round(newRect.origin.y * 100) / 100),
               },
               size: {
-                width: Math.round(newRect.size.width * 100) / 100,
-                height: Math.round(newRect.size.height * 100) / 100,
+                width: Math.max(10, Math.round(newRect.size.width * 100) / 100),
+                height: Math.max(10, Math.round(newRect.size.height * 100) / 100),
               },
             },
           };
