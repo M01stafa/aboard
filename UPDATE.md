@@ -2201,3 +2201,15 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server restarted and returned HTTP 200 on `http://localhost:3000`.
 **Related:** PDF-1, PDF-3, PDF-4
 **Open:** none.
+
+
+## 2026-11-02 — Dev Server Restart
+**Request:** Restart dev server, delete `apps/web/.next`, run `pnpm dev` in the background, and verify HTTP 200 on http://localhost:3000.
+**Changes:**
+- Cleared Turbopack build cache (`apps/web/.next`).
+- Started dev server daemon via `pnpm.cmd dev`.
+- Verified HTTP 200 OK response on `http://localhost:3000`.
+**Checks:**
+- `curl.exe -I http://localhost:3000`: HTTP 200 OK.
+**Related:** none
+**Open:** none.
