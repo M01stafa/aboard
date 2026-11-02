@@ -128,6 +128,137 @@ export interface AnnotationScopeLike {
 
 export type CustomObjectType = "stroke" | "stamp" | "text";
 
+export type ResizeHandlePosition = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+
+export function getHandleCursor(pos: ResizeHandlePosition): string {
+  switch (pos) {
+    case "nw":
+    case "se":
+      return "nwse-resize";
+    case "ne":
+    case "sw":
+      return "nesw-resize";
+    case "n":
+    case "s":
+      return "ns-resize";
+    case "e":
+    case "w":
+      return "ew-resize";
+  }
+}
+
+export function computeResizedRect(
+  startRect: { x: number; y: number; width: number; height: number },
+  handle: ResizeHandlePosition,
+  dx: number,
+  dy: number,
+  lockAspectRatio: boolean = false
+): { x: number; y: number; width: number; height: number } {
+  const minW = 20;
+  const minH = 15;
+  const aspectRatio = startRect.width / Math.max(1, startRect.height);
+
+  if (lockAspectRatio) {
+    switch (handle) {
+      case "se": {
+        const newW = Math.max(minW, startRect.width + dx);
+        const newH = newW / aspectRatio;
+        return { x: startRect.x, y: startRect.y, width: newW, height: newH };
+      }
+      case "sw": {
+        const newW = Math.max(minW, startRect.width - dx);
+        const newH = newW / aspectRatio;
+        return { x: startRect.x + (startRect.width - newW), y: startRect.y, width: newW, height: newH };
+      }
+      case "ne": {
+        const newW = Math.max(minW, startRect.width + dx);
+        const newH = newW / aspectRatio;
+        return { x: startRect.x, y: startRect.y + (startRect.height - newH), width: newW, height: newH };
+      }
+      case "nw": {
+        const newW = Math.max(minW, startRect.width - dx);
+        const newH = newW / aspectRatio;
+        return {
+          x: startRect.x + (startRect.width - newW),
+          y: startRect.y + (startRect.height - newH),
+          width: newW,
+          height: newH,
+        };
+      }
+      case "e": {
+        const newW = Math.max(minW, startRect.width + dx);
+        const newH = newW / aspectRatio;
+        return { x: startRect.x, y: startRect.y + (startRect.height - newH) / 2, width: newW, height: newH };
+      }
+      case "w": {
+        const newW = Math.max(minW, startRect.width - dx);
+        const newH = newW / aspectRatio;
+        return {
+          x: startRect.x + (startRect.width - newW),
+          y: startRect.y + (startRect.height - newH) / 2,
+          width: newW,
+          height: newH,
+        };
+      }
+      case "s": {
+        const newH = Math.max(minH, startRect.height + dy);
+        const newW = newH * aspectRatio;
+        return { x: startRect.x + (startRect.width - newW) / 2, y: startRect.y, width: newW, height: newH };
+      }
+      case "n": {
+        const newH = Math.max(minH, startRect.height - dy);
+        const newW = newH * aspectRatio;
+        return {
+          x: startRect.x + (startRect.width - newW) / 2,
+          y: startRect.y + (startRect.height - newH),
+          width: newW,
+          height: newH,
+        };
+      }
+    }
+  }
+
+  let { x, y, width, height } = startRect;
+  switch (handle) {
+    case "se":
+      width = Math.max(minW, startRect.width + dx);
+      height = Math.max(minH, startRect.height + dy);
+      break;
+    case "s":
+      height = Math.max(minH, startRect.height + dy);
+      break;
+    case "e":
+      width = Math.max(minW, startRect.width + dx);
+      break;
+    case "ne":
+      width = Math.max(minW, startRect.width + dx);
+      height = Math.max(minH, startRect.height - dy);
+      y = startRect.y + (startRect.height - height);
+      break;
+    case "n":
+      height = Math.max(minH, startRect.height - dy);
+      y = startRect.y + (startRect.height - height);
+      break;
+    case "nw":
+      width = Math.max(minW, startRect.width - dx);
+      height = Math.max(minH, startRect.height - dy);
+      x = startRect.x + (startRect.width - width);
+      y = startRect.y + (startRect.height - height);
+      break;
+    case "w":
+      width = Math.max(minW, startRect.width - dx);
+      x = startRect.x + (startRect.width - width);
+      break;
+    case "sw":
+      width = Math.max(minW, startRect.width - dx);
+      height = Math.max(minH, startRect.height + dy);
+      x = startRect.x + (startRect.width - width);
+      break;
+  }
+
+  return { x, y, width, height };
+}
+
 export interface CustomAnnotationObject {
   id: string;
   type: CustomObjectType;
@@ -167,6 +298,12 @@ export interface PdfCustomInkLayerProps {
     newOrigin: { x: number; y: number },
     type: CustomObjectType
   ) => void;
+  onResizeObject?: (
+    pageIndex: number,
+    id: string,
+    newRect: { origin: { x: number; y: number }; size: { width: number; height: number } },
+    type: CustomObjectType
+  ) => void;
   annotationScope?: AnnotationScopeLike | null;
   strokeColor?: string;
   strokeWidth?: number;
@@ -181,6 +318,14 @@ type Interaction =
       start: CustomInkPoint;
       bases: Record<string, CustomInkTransform>;
       currentOffsets: Record<string, CustomInkTransform>;
+    }
+  | {
+      kind: "resize";
+      objectId: string;
+      handle: ResizeHandlePosition;
+      startPoint: CustomInkPoint;
+      startRect: { x: number; y: number; width: number; height: number };
+      objectType: CustomObjectType;
     }
   | {
       kind: "marquee";
@@ -204,6 +349,7 @@ export function PdfCustomInkLayer({
   onMoveStrokes,
   objects,
   onMoveObject,
+  onResizeObject,
   annotationScope,
   strokeColor = "#E44234",
   strokeWidth = 2.5,
@@ -212,6 +358,9 @@ export function PdfCustomInkLayer({
   const svgRef = useRef<SVGSVGElement>(null);
   const [currentStroke, setCurrentStroke] = useState<CustomInkStroke | null>(null);
   const [dragOffsets, setDragOffsets] = useState<Record<string, CustomInkTransform>>({});
+  const [resizeRects, setResizeRects] = useState<
+    Record<string, { x: number; y: number; width: number; height: number }>
+  >({});
   const [marquee, setMarquee] = useState<MarqueeRect | null>(null);
   const interactionRef = useRef<Interaction | null>(null);
 
@@ -258,6 +407,7 @@ export function PdfCustomInkLayer({
     onMoveStrokes,
     objects: pageObjects,
     onMoveObject,
+    onResizeObject,
     annotationScope,
     strokeColor,
     strokeWidth,
@@ -281,6 +431,7 @@ export function PdfCustomInkLayer({
       onMoveStrokes,
       objects: pageObjects,
       onMoveObject,
+      onResizeObject,
       annotationScope,
       strokeColor,
       strokeWidth,
@@ -362,6 +513,52 @@ export function PdfCustomInkLayer({
         if (!pt) return;
 
         const target = e.target as Element | null;
+        const handleEl = target?.closest?.("[data-resize-handle]");
+        const handlePos = handleEl?.getAttribute("data-resize-handle") as ResizeHandlePosition | null;
+        const handleObjId = handleEl?.getAttribute("data-object-id");
+
+        if (handlePos && handleObjId) {
+          // User clicked on a resize handle!
+          e.preventDefault();
+          e.stopPropagation();
+          window.getSelection()?.removeAllRanges();
+          capture(e.pointerId);
+
+          const obj =
+            (p.objects || []).find((o) => o.id === handleObjId) ||
+            (() => {
+              const annos = p.annotationScope?.getAnnotations?.({ pageIndex: p.pageIndex }) || [];
+              const ta = annos.find((a) => a.object.id === handleObjId);
+              if (ta?.object?.rect) {
+                return {
+                  id: ta.object.id,
+                  type: (ta.object.type === 13 ? "stamp" : "text") as CustomObjectType,
+                  pageIndex: p.pageIndex,
+                  x: ta.object.rect.origin.x,
+                  y: ta.object.rect.origin.y,
+                  width: ta.object.rect.size.width,
+                  height: ta.object.rect.size.height,
+                };
+              }
+              return null;
+            })();
+
+          if (obj) {
+            interactionRef.current = {
+              kind: "resize",
+              objectId: handleObjId,
+              handle: handlePos,
+              startPoint: pt,
+              startRect: { x: obj.x, y: obj.y, width: obj.width, height: obj.height },
+              objectType: obj.type,
+            };
+            setResizeRects({
+              [handleObjId]: { x: obj.x, y: obj.y, width: obj.width, height: obj.height },
+            });
+            return;
+          }
+        }
+
         const strokeEl = target?.closest?.("[data-ink-stroke-id]");
         const strokeId = strokeEl?.getAttribute("data-ink-stroke-id");
 
@@ -543,6 +740,28 @@ export function PdfCustomInkLayer({
             }
           }
         }
+      } else if (it.kind === "resize") {
+        const dx = pt.x - it.startPoint.x;
+        const dy = pt.y - it.startPoint.y;
+        const isStamp = it.objectType === "stamp";
+        const newRect = computeResizedRect(it.startRect, it.handle, dx, dy, isStamp);
+        setResizeRects({ [it.objectId]: newRect });
+
+        // Real-time visual transform on underlying AnnotationLayer DOM elements
+        const docScale = svg.getBoundingClientRect().width / p.pageWidth;
+        const annoEl = document.querySelector(`[data-annotation-id="${it.objectId}"]`) as HTMLElement | null;
+        if (annoEl) {
+          const containerEl =
+            (annoEl.closest("[data-no-interaction] > div") as HTMLElement | null) ||
+            (annoEl.parentElement as HTMLElement | null);
+          if (containerEl) {
+            containerEl.style.left = `${newRect.x * docScale}px`;
+            containerEl.style.top = `${newRect.y * docScale}px`;
+            containerEl.style.width = `${newRect.width * docScale}px`;
+            containerEl.style.height = `${newRect.height * docScale}px`;
+            containerEl.style.transition = "none";
+          }
+        }
       } else if (it.kind === "marquee") {
         it.current = pt;
         const mx = Math.min(it.start.x, pt.x);
@@ -562,8 +781,8 @@ export function PdfCustomInkLayer({
           const intersectingObjectIds = (p.objects || [])
             .filter((o) =>
               rectsIntersect(box, {
-                x: o.x + (it.currentOffsets[o.id]?.x ?? 0),
-                y: o.y + (it.currentOffsets[o.id]?.y ?? 0),
+                x: o.x,
+                y: o.y,
                 width: o.width,
                 height: o.height,
               })
@@ -665,6 +884,51 @@ export function PdfCustomInkLayer({
           }
         }
         setDragOffsets({});
+      } else if (it.kind === "resize") {
+        // Reset temporary DOM element styles
+        const annoEl = document.querySelector(`[data-annotation-id="${it.objectId}"]`) as HTMLElement | null;
+        if (annoEl) {
+          const containerEl =
+            (annoEl.closest("[data-no-interaction] > div") as HTMLElement | null) ||
+            (annoEl.parentElement as HTMLElement | null);
+          if (containerEl) {
+            containerEl.style.left = "";
+            containerEl.style.top = "";
+            containerEl.style.width = "";
+            containerEl.style.height = "";
+            containerEl.style.transition = "";
+          }
+        }
+
+        if (commit) {
+          const pt = toPagePoint(e.clientX, e.clientY) || it.startPoint;
+          const dx = pt.x - it.startPoint.x;
+          const dy = pt.y - it.startPoint.y;
+          const isStamp = it.objectType === "stamp";
+          const finalRect = computeResizedRect(it.startRect, it.handle, dx, dy, isStamp);
+
+          if (
+            Math.abs(finalRect.width - it.startRect.width) > 1 ||
+            Math.abs(finalRect.height - it.startRect.height) > 1
+          ) {
+            p.onResizeObject?.(
+              p.pageIndex,
+              it.objectId,
+              {
+                origin: {
+                  x: Math.round(finalRect.x * 100) / 100,
+                  y: Math.round(finalRect.y * 100) / 100,
+                },
+                size: {
+                  width: Math.round(finalRect.width * 100) / 100,
+                  height: Math.round(finalRect.height * 100) / 100,
+                },
+              },
+              it.objectType
+            );
+          }
+        }
+        setResizeRects({});
       } else if (it.kind === "marquee") {
         const mx = Math.min(it.start.x, it.current.x);
         const my = Math.min(it.start.y, it.current.y);
@@ -798,7 +1062,24 @@ export function PdfCustomInkLayer({
       pageObjects.map((obj) => {
         const offset = dragOffsets[obj.id] ?? obj.transform ?? { x: 0, y: 0 };
         const isSelected = isSelectMode && selectedSet.has(obj.id);
+        const resizeRect = resizeRects[obj.id];
+        const curX = resizeRect ? resizeRect.x : obj.x;
+        const curY = resizeRect ? resizeRect.y : obj.y;
+        const curW = resizeRect ? resizeRect.width : obj.width;
+        const curH = resizeRect ? resizeRect.height : obj.height;
         const handleSize = 8;
+
+        const handles: Array<{ pos: ResizeHandlePosition; hx: number; hy: number }> = [
+          { pos: "nw", hx: curX, hy: curY },
+          { pos: "n", hx: curX + curW / 2, hy: curY },
+          { pos: "ne", hx: curX + curW, hy: curY },
+          { pos: "e", hx: curX + curW, hy: curY + curH / 2 },
+          { pos: "se", hx: curX + curW, hy: curY + curH },
+          { pos: "s", hx: curX + curW / 2, hy: curY + curH },
+          { pos: "sw", hx: curX, hy: curY + curH },
+          { pos: "w", hx: curX, hy: curY + curH / 2 },
+        ];
+
         return (
           <g
             key={obj.id}
@@ -808,10 +1089,10 @@ export function PdfCustomInkLayer({
             transform={`translate(${offset.x}, ${offset.y})`}
           >
             <rect
-              x={obj.x}
-              y={obj.y}
-              width={obj.width}
-              height={obj.height}
+              x={curX}
+              y={curY}
+              width={curW}
+              height={curH}
               fill="transparent"
               style={{
                 pointerEvents: isSelectMode ? "all" : "none",
@@ -820,33 +1101,38 @@ export function PdfCustomInkLayer({
               }}
             />
             {isSelected && (
-              <g style={{ pointerEvents: "none" }} data-testid={`pdf-${obj.type}-bbox`}>
+              <g data-testid={`pdf-${obj.type}-bbox`}>
                 <rect
-                  x={obj.x}
-                  y={obj.y}
-                  width={obj.width}
-                  height={obj.height}
+                  x={curX}
+                  y={curY}
+                  width={curW}
+                  height={curH}
                   fill="rgba(11, 122, 214, 0.04)"
                   stroke="var(--accent-text, #0b7ad6)"
                   strokeWidth={1.5}
                   vectorEffect="non-scaling-stroke"
+                  style={{ pointerEvents: "none" }}
                 />
-                {[
-                  [obj.x, obj.y],
-                  [obj.x + obj.width, obj.y],
-                  [obj.x, obj.y + obj.height],
-                  [obj.x + obj.width, obj.y + obj.height],
-                ].map(([hx, hy], i) => (
+                {handles.map(({ pos, hx, hy }) => (
                   <rect
-                    key={i}
+                    key={pos}
+                    data-resize-handle={pos}
+                    data-object-id={obj.id}
+                    data-object-type={obj.type}
+                    data-testid={`pdf-${obj.type}-resize-handle-${pos}`}
                     x={hx - handleSize / 2}
                     y={hy - handleSize / 2}
                     width={handleSize}
                     height={handleSize}
-                    fill="#ffffff"
+                    fill="var(--bg-surface, #ffffff)"
                     stroke="var(--accent-text, #0b7ad6)"
                     strokeWidth={1.5}
                     vectorEffect="non-scaling-stroke"
+                    style={{
+                      cursor: getHandleCursor(pos),
+                      pointerEvents: isSelectMode ? "all" : "none",
+                      touchAction: "none",
+                    }}
                   />
                 ))}
               </g>
@@ -854,7 +1140,7 @@ export function PdfCustomInkLayer({
           </g>
         );
       }),
-    [pageObjects, dragOffsets, isSelectMode, selectedSet]
+    [pageObjects, dragOffsets, resizeRects, isSelectMode, selectedSet]
   );
 
   return (

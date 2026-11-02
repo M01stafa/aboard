@@ -253,6 +253,7 @@ function ViewerInner({
     handleDeleteSelected,
     getObjectsForPage,
     handleMoveObject,
+    handleResizeObject,
     annotationScope,
   } = usePdfAnnotations({
     documentId,
@@ -963,6 +964,7 @@ function ViewerInner({
                       onMoveStrokes={handleMoveCustomStrokes}
                       objects={getObjectsForPage(page.pageIndex)}
                       onMoveObject={handleMoveObject}
+                      onResizeObject={handleResizeObject}
                       annotationScope={annotationScope}
                     />
                   </PagePointerProvider>

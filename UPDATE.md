@@ -2213,3 +2213,19 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `curl.exe -I http://localhost:3000`: HTTP 200 OK.
 **Related:** none
 **Open:** none.
+
+
+## 2026-11-02 — Enable Resizing for Stamps and Texts via Select Tool
+**Request:** Enable resizing (scaling) for stamps (images) and text annotations via the Select tool. Render 8 resize handles on bounding boxes styled per DESIGN.md (`8x8px`, `var(--bg-surface)`, `border: 1.5px solid var(--accent-text)`), calculate drag deltas with aspect ratio locking for stamps and proportional font scaling for text, synchronize with EmbedPDF and persist to `annotations.json` / Dexie across page reloads, verify via automated Playwright tests, and restart dev server.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: exported `ResizeHandlePosition`, `getHandleCursor`, and `computeResizedRect(startRect, handle, dx, dy, lockAspectRatio)`; added `onResizeObject` prop; added `resize` interaction mode and `resizeRects` reactive state; updated `handleDown` to capture resize handles; implemented live DOM style updates and cursor indicators; committed final resized rect on pointer up; rendered 8 resize handles (`nw`, `n`, `ne`, `e`, `se`, `s`, `sw`, `w`) with `--space-1` sizing and themed styling.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: added `handleResizeObject(pageIndex, id, newRect, type)` to interface and implementation, updating rect dimensions in EmbedPDF, scaling `fontSize` proportionally for text annotations, incrementing annotation version, and triggering debounced save to Dexie.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx`: destructured `handleResizeObject` and passed `onResizeObject={handleResizeObject}` to `<PdfCustomInkLayer />`.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added Playwright test steps verifying resize handles appear when selecting stamps and text, dragging `se` handle resizes objects with aspect ratio preservation for stamps, and reloading the page retains the new dimensions.
+**Checks:**
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings, spacing 8-point compliant).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (3/3 tests passed in 25.8s).
+- Dev server restarted and returned HTTP 200 on `http://localhost:3000`.
+**Related:** PDF-1, PDF-3, PDF-4
+**Open:** none.

@@ -66,6 +66,12 @@ export interface UsePdfAnnotationsResult {
     newOrigin: { x: number; y: number },
     type: CustomObjectType
   ) => void;
+  handleResizeObject: (
+    pageIndex: number,
+    id: string,
+    newRect: { origin: { x: number; y: number }; size: { width: number; height: number } },
+    type: CustomObjectType
+  ) => void;
   annotationScope: ReturnType<typeof useAnnotation>["provides"];
 }
 
@@ -498,6 +504,46 @@ export function usePdfAnnotations({
     [annotationScope, triggerDebouncedSave]
   );
 
+  const handleResizeObject = useCallback(
+    (
+      pageIndex: number,
+      id: string,
+      newRect: { origin: { x: number; y: number }; size: { width: number; height: number } },
+      type: CustomObjectType
+    ) => {
+      if (!annotationScope) return;
+      try {
+        const pageAnnos = annotationScope.getAnnotations({ pageIndex }) || [];
+        const target = pageAnnos.find((a) => a.object.id === id);
+        if (target?.object?.rect) {
+          const patch: Record<string, unknown> = {
+            rect: {
+              origin: {
+                x: Math.round(newRect.origin.x * 100) / 100,
+                y: Math.round(newRect.origin.y * 100) / 100,
+              },
+              size: {
+                width: Math.round(newRect.size.width * 100) / 100,
+                height: Math.round(newRect.size.height * 100) / 100,
+              },
+            },
+          };
+          const textObj = target.object as { fontSize?: number };
+          if (type === "text" && textObj.fontSize && target.object.rect.size.height > 0) {
+            const scaleRatio = newRect.size.height / target.object.rect.size.height;
+            patch.fontSize = Math.max(8, Math.min(120, Math.round(textObj.fontSize * scaleRatio * 10) / 10));
+          }
+          annotationScope.updateAnnotation(pageIndex, id, patch);
+          setAnnotationsVersion((v) => v + 1);
+          triggerDebouncedSave();
+        }
+      } catch (err) {
+        console.error("[usePdfAnnotations] Failed to resize object:", err);
+      }
+    },
+    [annotationScope, triggerDebouncedSave]
+  );
+
   const handleUndo = useCallback(() => {
     if (customUndoStackRef.current.length > 0) {
       const prev = customUndoStackRef.current.pop()!;
@@ -608,6 +654,7 @@ export function usePdfAnnotations({
     handleMoveCustomStrokes,
     getObjectsForPage,
     handleMoveObject,
+    handleResizeObject,
     annotationScope,
   };
 }

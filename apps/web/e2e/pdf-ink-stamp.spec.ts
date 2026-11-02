@@ -545,5 +545,144 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(Math.abs(restoredPositions.stampOrigin.y - movedStampOrigin!.y)).toBeLessThanOrEqual(2);
     expect(Math.abs(restoredPositions.textOrigin.x - movedTextOrigin!.x)).toBeLessThanOrEqual(2);
     expect(Math.abs(restoredPositions.textOrigin.y - movedTextOrigin!.y)).toBeLessThanOrEqual(2);
+
+    // 6. Test Resizing Stamp and Text using the Select Tool
+    // Select the stamp
+    const reloadedStamp = primaryPane.locator('[data-testid="pdf-stamp-object"]').first();
+    const reloadedStampBox = await reloadedStamp.boundingBox();
+    expect(reloadedStampBox).not.toBeNull();
+    if (!reloadedStampBox) return;
+
+    await page.mouse.click(reloadedStampBox.x + reloadedStampBox.width / 2, reloadedStampBox.y + reloadedStampBox.height / 2);
+    await page.waitForTimeout(200);
+
+    // Verify resize handles appear on the stamp bounding box
+    const stampResizeHandleSE = primaryPane.locator('[data-testid="pdf-stamp-resize-handle-se"]');
+    await expect(stampResizeHandleSE).toBeVisible({ timeout: 5000 });
+
+    const initialStampSize = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const stamp = list.find((a: any) => a?.object?.type === 13);
+      return stamp ? { ...stamp.object.rect.size } : null;
+    });
+    expect(initialStampSize).not.toBeNull();
+
+    // Drag the southeast resize handle of the stamp (+60px, +60px)
+    const seBox = await stampResizeHandleSE.boundingBox();
+    expect(seBox).not.toBeNull();
+    if (!seBox) return;
+
+    await page.mouse.move(seBox.x + seBox.width / 2, seBox.y + seBox.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        seBox.x + seBox.width / 2 + (60 * i) / 10,
+        seBox.y + seBox.height / 2 + (60 * i) / 10
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    // Verify stamp size increased in store while maintaining aspect ratio
+    const resizedStampSize = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const stamp = list.find((a: any) => a?.object?.type === 13);
+      return stamp ? { ...stamp.object.rect.size } : null;
+    });
+    expect(resizedStampSize).not.toBeNull();
+    expect(resizedStampSize!.width).toBeGreaterThan(initialStampSize!.width + 20);
+    expect(resizedStampSize!.height).toBeGreaterThan(initialStampSize!.height + 10);
+
+    // Now select the text
+    const reloadedText = primaryPane.locator('[data-testid="pdf-text-object"]').first();
+    const reloadedTextBox = await reloadedText.boundingBox();
+    expect(reloadedTextBox).not.toBeNull();
+    if (!reloadedTextBox) return;
+
+    await page.mouse.click(reloadedTextBox.x + reloadedTextBox.width / 2, reloadedTextBox.y + reloadedTextBox.height / 2);
+    await page.waitForTimeout(200);
+
+    // Verify resize handles appear on the text bounding box
+    const textResizeHandleSE = primaryPane.locator('[data-testid="pdf-text-resize-handle-se"]');
+    await expect(textResizeHandleSE).toBeVisible({ timeout: 5000 });
+
+    const initialTextSize = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const textAnno = list.find((a: any) => a?.object?.type === 3);
+      return textAnno ? { ...textAnno.object.rect.size } : null;
+    });
+    expect(initialTextSize).not.toBeNull();
+
+    // Drag the southeast resize handle of the text (+80px, +40px)
+    const textSeBox = await textResizeHandleSE.boundingBox();
+    expect(textSeBox).not.toBeNull();
+    if (!textSeBox) return;
+
+    await page.mouse.move(textSeBox.x + textSeBox.width / 2, textSeBox.y + textSeBox.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        textSeBox.x + textSeBox.width / 2 + (80 * i) / 10,
+        textSeBox.y + textSeBox.height / 2 + (40 * i) / 10
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    // Verify text size increased
+    const resizedTextSize = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const textAnno = list.find((a: any) => a?.object?.type === 3);
+      return textAnno ? { ...textAnno.object.rect.size } : null;
+    });
+    expect(resizedTextSize).not.toBeNull();
+    expect(resizedTextSize!.width).toBeGreaterThan(initialTextSize!.width + 20);
+
+    // Wait for debounced flush to Dexie
+    await page.waitForTimeout(1000);
+
+    // 7. Reload page and confirm resized dimensions persisted across reload
+    await page.reload();
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible({ timeout: 15000 });
+    const finalPage1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(finalPage1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(1000);
+
+    const persistedSizes = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const stamp = list.find((a: any) => a?.object?.type === 13);
+      const textAnno = list.find((a: any) => a?.object?.type === 3);
+      return {
+        stampSize: stamp ? stamp.object.rect.size : null,
+        textSize: textAnno ? textAnno.object.rect.size : null,
+      };
+    });
+
+    expect(persistedSizes.stampSize).not.toBeNull();
+    expect(persistedSizes.textSize).not.toBeNull();
+    expect(Math.abs(persistedSizes.stampSize.width - resizedStampSize!.width)).toBeLessThanOrEqual(2);
+    expect(Math.abs(persistedSizes.stampSize.height - resizedStampSize!.height)).toBeLessThanOrEqual(2);
+    expect(Math.abs(persistedSizes.textSize.width - resizedTextSize!.width)).toBeLessThanOrEqual(2);
+    expect(Math.abs(persistedSizes.textSize.height - resizedTextSize!.height)).toBeLessThanOrEqual(2);
   });
 });
