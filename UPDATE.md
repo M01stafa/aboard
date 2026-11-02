@@ -2265,3 +2265,18 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
 **Related:** PDF-1, PDF-3, PDF-4
 **Open:** none.
+
+## 2026-11-02 — Fix SVG Path Misalignment During Ink Stroke Resizing
+**Request:** Fix SVG path misalignment during ink stroke resizing where the stroke path escaped the blue selection bounding box. Ensure mathematical recalculation of points anchors the opposite corner (e.g. top-left anchored during SE resize), synchronize bounding box coordinates and 8 handles with scaled points, verify with Playwright E2E and unit tests, and restart dev server cleanly.
+**Changes:**
+- pps/web/src/modules/pdf/pdf-custom-ink-layer.tsx: replaced SVG CSS scale transform on \<g>\ during resize with real-time coordinate updates (\liveScaledStrokes\), calculating scaled points directly from \scaleStrokePoints\; refactored \scaleStrokePoints\ to compute safe padding margins (\safePadLeft\, \safePadRight\, \safePadTop\, \safePadBottom\) and linearly map points to the target span, ensuring 0.0px drift on anchored corners and keeping the stroke path strictly enclosed within the selection bounding box.
+- pps/web/src/modules/pdf/pdf-custom-ink-layer.test.ts: updated test suite to verify SE/NW corner anchor invariance, margin offsets, shrinking (0.5x), non-uniform scaling, and empty array edge cases (22/22 tests passing).
+- pps/web/e2e/pdf-ink-stamp.spec.ts: verified Playwright E2E test passes with stroke path strictly inside bounding box and top-left anchored across resize and reload.
+**Checks:**
+- \pnpm test src/modules/pdf/pdf-custom-ink-layer.test.ts\: PASS (22/22 unit tests).
+- \playwright test e2e/pdf-ink-stamp.spec.ts\: PASS (5/5 tests passed in 42.1s).
+- \pnpm typecheck\: PASS (\	sc --noEmit\ clean, 0 errors).
+- \pnpm lint\: PASS (0 errors, 0 warnings, spacing 8-point compliant).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-4
+**Open:** none.
