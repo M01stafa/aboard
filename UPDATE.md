@@ -2307,3 +2307,26 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm lint`: PASS (0 errors, 0 warnings, spacing 8-point compliant).
 **Related:** PDF-1, PDF-3, PDF-4
 **Open:** none.
+
+
+## 2026-11-03 — Implement Native Sticky Notes Tool for PDF Editor
+**Request:** Implement native Sticky Note tool for PDF editor without third-party dependencies (strictly no `react-stickies`): add "Sticky Note" tool icon in `pdf-floating-toolbar.tsx` below Stamp; implement click-to-place logic on PDF canvas; render and edit sticky notes natively via SVG `<foreignObject>` with classic soft yellow card, header bar, and `<textarea>` (pointer-events isolated for drag/select vs editing); enable moving, resizing, and deleting via existing Select tool; persist `x, y, width, height, text, color` in `annotations.json` / IndexedDB across page reloads; verify with Playwright E2E and unit tests; cleanly restart dev server.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx`: added `"sticky"` to `AnnotationToolType`.
+- `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx`: added Sticky Note tool button below Stamp with `data-testid="pdf-tool-sticky"` and lucide-style note SVG icon.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts`: added `toolSticky` translation strings in English and Arabic.
+- `apps/web/src/modules/pdf/annotation-storage.ts`: defined `CustomStickyNote` interface, added `customStickyNotes` to `SerializedAnnotationsPayload`, updated `serializeAnnotations`, and exported `extractCustomStickyNotes`.
+- `apps/web/src/modules/pdf/annotation-storage.test.ts`: added unit test verifying sticky notes serialization and extraction.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: added `"sticky"` to `CustomObjectType` and `CustomAnnotationObject`; added `isStickyMode`, `onAddSticky`, `onUpdateStickyText` props; added click-to-place in `handleDown`; rendered sticky notes with SVG `<foreignObject>` card containing header bar and `<textarea>` with double-click to edit state; integrated with 8 resize handles, bounding box, and drag movement.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: added `customStickyNotes` state/refs; integrated sticky notes into `flushAnnotations` serialization and `restore()`; included sticky notes in `getObjectsForPage`; added `handleMoveObject` and `handleResizeObject` handlers for `"sticky"`; added `handleAddSticky` and `handleUpdateStickyText`; supported deleting sticky notes in `handleDeleteSelected`; exposed on `window.__aboard_pdfAnnotations`.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx`: connected `activeTool === "sticky"` to `isStickyMode`, `onAddSticky`, and `onUpdateStickyText` on `<PdfCustomInkLayer>`.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added Playwright E2E test verifying sticky note creation, text editing, dragging, resizing, and persistence across page reload (7/7 tests passing).
+**Checks:**
+- `pnpm test src/modules/pdf/annotation-storage.test.ts`: PASS (4/4 unit tests).
+- `pnpm test src/modules/pdf/`: PASS (58/58 tests across 8 files).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (7/7 tests passed in 53.1s).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings, spacing 8-point compliant).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-4
+**Open:** none.

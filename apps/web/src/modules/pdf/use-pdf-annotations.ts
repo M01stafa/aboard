@@ -14,6 +14,8 @@ import {
   serializeAnnotations,
   deserializeAnnotations,
   extractCustomInkStrokes,
+  extractCustomStickyNotes,
+  type CustomStickyNote,
 } from "./annotation-storage";
 import { processStampImage } from "./image-stamp-utils";
 import { stampBlobUrlCache } from "./custom-stamp-renderer";
@@ -47,6 +49,12 @@ export interface UsePdfAnnotationsResult {
     file: File,
     options?: { pageIndex?: number; x?: number; y?: number }
   ) => Promise<void>;
+  customStickyNotes: Record<number, CustomStickyNote[]>;
+  handleAddSticky: (
+    pageIndex: number,
+    coords: { x: number; y: number; width?: number; height?: number; text?: string; color?: string }
+  ) => void;
+  handleUpdateStickyText: (pageIndex: number, id: string, text: string) => void;
   customStrokes: Record<number, CustomInkStroke[]>;
   selectedStrokeIds: string[];
   setSelectedStrokeIds: (ids: string[]) => void;
@@ -106,6 +114,13 @@ export function usePdfAnnotations({
   useEffect(() => {
     customStrokesRef.current = customStrokes;
   }, [customStrokes]);
+
+  // Custom sticky notes state (native React + SVG foreignObject with JSON persistence)
+  const [customStickyNotes, setCustomStickyNotes] = useState<Record<number, CustomStickyNote[]>>({});
+  const customStickyNotesRef = useRef<Record<number, CustomStickyNote[]>>({});
+  useEffect(() => {
+    customStickyNotesRef.current = customStickyNotes;
+  }, [customStickyNotes]);
   const [selectedStrokeIds, setSelectedStrokeIds] = useState<string[]>([]);
   const selectedStrokeIdsRef = useRef<string[]>([]);
   useEffect(() => {
@@ -150,7 +165,8 @@ export function usePdfAnnotations({
         hashKey,
         items,
         ps,
-        customStrokesRef.current
+        customStrokesRef.current,
+        customStickyNotesRef.current
       );
       await ps.saveAnnotations(projectId, hashKey, serialized);
       if (itemId) {
@@ -207,6 +223,10 @@ export function usePdfAnnotations({
         const restoredStrokes = extractCustomInkStrokes(savedJson);
         setCustomStrokes(restoredStrokes);
         customStrokesRef.current = restoredStrokes;
+
+        const restoredStickies = extractCustomStickyNotes(savedJson);
+        setCustomStickyNotes(restoredStickies);
+        customStickyNotesRef.current = restoredStickies;
 
         isRestoringRef.current = true;
         const transferItems = await deserializeAnnotations(projectId, savedJson, ps);
@@ -422,7 +442,30 @@ export function usePdfAnnotations({
       }
     }
 
-    // 2. Delete selected EmbedPDF annotations (stamps, freeText, highlights)
+    // 2. Delete selected custom sticky notes
+    const prevStickies = customStickyNotesRef.current;
+    if (selStrokes.size > 0 && prevStickies) {
+      const nextStickies: Record<number, CustomStickyNote[]> = {};
+      let stickiesRemoved = false;
+      for (const [pStr, list] of Object.entries(prevStickies)) {
+        const pIdx = parseInt(pStr, 10);
+        const filtered = list.filter((s) => !selStrokes.has(s.id));
+        if (filtered.length !== list.length) {
+          stickiesRemoved = true;
+          changed = true;
+        }
+        nextStickies[pIdx] = filtered;
+      }
+      if (stickiesRemoved) {
+        customStickyNotesRef.current = nextStickies;
+        setCustomStickyNotes(nextStickies);
+        selectedStrokeIdsRef.current = [];
+        setSelectedStrokeIds([]);
+        triggerDebouncedSave();
+      }
+    }
+
+    // 3. Delete selected EmbedPDF annotations (stamps, freeText, highlights)
     if (annotationScope) {
       const selectedScopeIds = annotationScope.getSelectedAnnotationIds() || [];
       const selectedAnnoIds = new Set([...selectedScopeIds, ...Array.from(selStrokes)]);
@@ -473,10 +516,27 @@ export function usePdfAnnotations({
           });
         }
       }
+
+      const stickies = customStickyNotes[pageIndex] || [];
+      for (const st of stickies) {
+        res.push({
+          id: st.id,
+          type: "sticky",
+          pageIndex,
+          x: st.x,
+          y: st.y,
+          width: st.width,
+          height: st.height,
+          transform: st.transform ?? { x: 0, y: 0 },
+          text: st.text,
+          color: st.color,
+        });
+      }
+
       return res;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [annotationScope, annotationsVersion]
+    [annotationScope, annotationsVersion, customStickyNotes]
   );
 
   const handleMoveObject = useCallback(
@@ -486,7 +546,29 @@ export function usePdfAnnotations({
       newOrigin: { x: number; y: number },
       type: CustomObjectType
     ) => {
-      if (!annotationScope || type === "highlight") return;
+      if (type === "highlight") return;
+      if (type === "sticky") {
+        setCustomStickyNotes((prev) => {
+          const list = prev[pageIndex] || [];
+          const nextList = list.map((st) =>
+            st.id === id
+              ? {
+                  ...st,
+                  x: Math.max(0, newOrigin.x),
+                  y: Math.max(0, newOrigin.y),
+                  transform: { x: 0, y: 0 },
+                }
+              : st
+          );
+          const next = { ...prev, [pageIndex]: nextList };
+          customStickyNotesRef.current = next;
+          return next;
+        });
+        setAnnotationsVersion((v) => v + 1);
+        triggerDebouncedSave();
+        return;
+      }
+      if (!annotationScope) return;
       try {
         const pageAnnos = annotationScope.getAnnotations({ pageIndex }) || [];
         const target = pageAnnos.find((a) => a.object.id === id);
@@ -543,6 +625,30 @@ export function usePdfAnnotations({
           setCanRedo(false);
           return next;
         });
+        triggerDebouncedSave();
+        return;
+      }
+
+      if (type === "sticky") {
+        setCustomStickyNotes((prev) => {
+          const list = prev[pageIndex] || [];
+          const nextList = list.map((st) =>
+            st.id === id
+              ? {
+                  ...st,
+                  x: Math.max(0, Math.round(newRect.origin.x * 100) / 100),
+                  y: Math.max(0, Math.round(newRect.origin.y * 100) / 100),
+                  width: Math.max(80, Math.round(newRect.size.width * 100) / 100),
+                  height: Math.max(60, Math.round(newRect.size.height * 100) / 100),
+                  transform: { x: 0, y: 0 },
+                }
+              : st
+          );
+          const next = { ...prev, [pageIndex]: nextList };
+          customStickyNotesRef.current = next;
+          return next;
+        });
+        setAnnotationsVersion((v) => v + 1);
         triggerDebouncedSave();
         return;
       }
@@ -659,6 +765,58 @@ export function usePdfAnnotations({
     [annotationScope, currentPage, triggerDebouncedSave]
   );
 
+  const handleAddSticky = useCallback(
+    (
+      pageIndex: number,
+      coords: { x: number; y: number; width?: number; height?: number; text?: string; color?: string }
+    ) => {
+      const stickyId =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `sticky-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+      const newSticky: CustomStickyNote = {
+        id: stickyId,
+        pageIndex,
+        x: Math.round(coords.x * 100) / 100,
+        y: Math.round(coords.y * 100) / 100,
+        width: coords.width ?? 200,
+        height: coords.height ?? 200,
+        text: coords.text ?? "",
+        color: coords.color ?? "#FEF3C7",
+        transform: { x: 0, y: 0 },
+      };
+
+      setCustomStickyNotes((prev) => {
+        const list = prev[pageIndex] || [];
+        const next = { ...prev, [pageIndex]: [...list, newSticky] };
+        customStickyNotesRef.current = next;
+        return next;
+      });
+
+      setActiveToolState("select");
+      setSelectedStrokeIds([stickyId]);
+      selectedStrokeIdsRef.current = [stickyId];
+      setAnnotationsVersion((v) => v + 1);
+      triggerDebouncedSave();
+    },
+    [triggerDebouncedSave]
+  );
+
+  const handleUpdateStickyText = useCallback(
+    (pageIndex: number, id: string, text: string) => {
+      setCustomStickyNotes((prev) => {
+        const list = prev[pageIndex] || [];
+        const nextList = list.map((st) => (st.id === id ? { ...st, text } : st));
+        const next = { ...prev, [pageIndex]: nextList };
+        customStickyNotesRef.current = next;
+        return next;
+      });
+      triggerDebouncedSave();
+    },
+    [triggerDebouncedSave]
+  );
+
   // Expose on window for E2E testing in browser environments
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -666,12 +824,23 @@ export function usePdfAnnotations({
         scope: annotationScope,
         history: historyScope,
         customStrokes: customStrokesRef.current,
+        customStickyNotes: customStickyNotesRef.current,
+        addSticky: handleAddSticky,
         selectedStrokeIds: selectedStrokeIdsRef.current,
         deleteSelected: handleDeleteSelected,
         flushAnnotations,
       };
     }
-  }, [annotationScope, historyScope, customStrokes, selectedStrokeIds, handleDeleteSelected, flushAnnotations]);
+  }, [
+    annotationScope,
+    historyScope,
+    customStrokes,
+    customStickyNotes,
+    handleAddSticky,
+    selectedStrokeIds,
+    handleDeleteSelected,
+    flushAnnotations,
+  ]);
 
   return {
     activeTool,
@@ -681,6 +850,9 @@ export function usePdfAnnotations({
     handleUndo,
     handleRedo,
     handleAddStamp,
+    customStickyNotes,
+    handleAddSticky,
+    handleUpdateStickyText,
     customStrokes,
     selectedStrokeIds,
     setSelectedStrokeIds,

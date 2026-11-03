@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import {
   serializeAnnotations,
   deserializeAnnotations,
+  extractCustomStickyNotes,
+  type CustomStickyNote,
 } from "./annotation-storage";
 import type { ProjectService } from "@/core/storage/project-service";
 import { PdfAnnotationSubtype, type PdfAnnotationObject } from "@embedpdf/models";
@@ -134,5 +136,42 @@ describe("annotation-storage (PDF-4)", () => {
     expect(await deserializeAnnotations(projectId, "", mockProjectService)).toEqual([]);
     expect(await deserializeAnnotations(projectId, "{}", mockProjectService)).toEqual([]);
     expect(await deserializeAnnotations(projectId, "invalid-json", mockProjectService)).toEqual([]);
+  });
+
+  it("serializes and extracts custom sticky notes seamlessly", async () => {
+    const mockProjectService = {
+      putFile: vi.fn(),
+      getFile: vi.fn(),
+    } as unknown as ProjectService;
+
+    const stickies: Record<number, CustomStickyNote[]> = {
+      0: [
+        {
+          id: "sticky-1",
+          pageIndex: 0,
+          x: 100,
+          y: 150,
+          width: 200,
+          height: 200,
+          text: "Meeting notes for hardware design review",
+          color: "#FEF3C7",
+        },
+      ],
+    };
+
+    const json = await serializeAnnotations(
+      projectId,
+      pdfHash,
+      [],
+      mockProjectService,
+      {},
+      stickies
+    );
+
+    const extracted = extractCustomStickyNotes(json);
+    expect(extracted[0]).toHaveLength(1);
+    expect(extracted[0][0].id).toBe("sticky-1");
+    expect(extracted[0][0].text).toBe("Meeting notes for hardware design review");
+    expect(extracted[0][0].width).toBe(200);
   });
 });

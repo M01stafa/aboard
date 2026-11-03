@@ -218,6 +218,7 @@ export const ar: TranslationDictionary = {
     toolInk: "رسم",
     toolText: "نص",
     toolStamp: "ختم",
+    toolSticky: "ملاحظة لاصقة",
     undo: "تراجع",
     redo: "إعادة",
     downloadAnnotated: "تحميل PDF",

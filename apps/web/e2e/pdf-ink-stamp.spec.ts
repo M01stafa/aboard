@@ -1297,4 +1297,118 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
       }
     }
   });
+
+  test("creates native sticky note, edits text, drags, resizes, and persists across reload", async ({ page }) => {
+    // 1. Generate test PDF
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([600, 800]);
+    p1.drawText("Sticky Note Verification Page", {
+      x: 50,
+      y: 720,
+      size: 18,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${projectId}-sticky&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+
+    await fileInput.setInputFiles({
+      name: "test-sticky.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // 2. Click Sticky Note icon in floating toolbar
+    const stickyToolBtn = primaryPane.locator('[data-testid="pdf-tool-sticky"]');
+    await expect(stickyToolBtn).toBeVisible({ timeout: 5000 });
+    await stickyToolBtn.click();
+    await page.waitForTimeout(200);
+
+    // 3. Click on the PDF to place sticky note
+    const clickX = page1Box.x + 100;
+    const clickY = page1Box.y + 120;
+    await page.mouse.click(clickX, clickY);
+    await page.waitForTimeout(400);
+
+    // 4. Verify sticky note card and textarea rendered
+    const stickyCard = primaryPane.locator('[data-testid^="pdf-sticky-card-"]');
+    await expect(stickyCard).toBeVisible({ timeout: 5000 });
+
+    const textarea = primaryPane.locator('[data-testid^="pdf-sticky-textarea-"]');
+    await expect(textarea).toBeAttached();
+
+    // Double-click to edit text
+    await page.mouse.dblclick(clickX + 50, clickY + 50);
+    await page.waitForTimeout(200);
+    await textarea.fill("Native Sticky Note Verified!");
+    await page.waitForTimeout(200);
+
+    // Click outside to blur
+    await page.mouse.click(page1Box.x + 30, page1Box.y + 30);
+    await page.waitForTimeout(300);
+
+    // 5. Verify Select tool can select, drag, and resize sticky note
+    const stickyBbox = primaryPane.locator('[data-testid="pdf-sticky-bbox"]');
+    // Click sticky note to select it
+    await page.mouse.click(clickX + 40, clickY + 40);
+    await page.waitForTimeout(200);
+    await expect(stickyBbox).toBeVisible({ timeout: 5000 });
+
+    // Drag sticky note
+    await page.mouse.move(clickX + 40, clickY + 40);
+    await page.mouse.down();
+    await page.mouse.move(clickX + 100, clickY + 80);
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    // Resize sticky note via bottom-right (se) handle
+    const handleSE = primaryPane.locator('[data-testid="pdf-sticky-resize-handle-se"]');
+    await expect(handleSE).toBeVisible({ timeout: 5000 });
+    const handleBox = await handleSE.boundingBox();
+    expect(handleBox).not.toBeNull();
+    if (handleBox) {
+      await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(handleBox.x + handleBox.width / 2 + 50, handleBox.y + handleBox.height / 2 + 40);
+      await page.mouse.up();
+      await page.waitForTimeout(500);
+    }
+
+    // Flush annotations to persistence
+    await page.evaluate(async () => {
+      const api = (window as unknown as {
+        __aboard_pdfAnnotations?: { flushAnnotations?: () => Promise<void> };
+      }).__aboard_pdfAnnotations;
+      if (api?.flushAnnotations) {
+        await api.flushAnnotations();
+      }
+    });
+    await page.waitForTimeout(600);
+
+    // 6. Reload page and confirm persistence
+    await page.reload();
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+
+    // Sticky note must be restored with text
+    const reloadedTextarea = primaryPane.locator('[data-testid^="pdf-sticky-textarea-"]');
+    await expect(reloadedTextarea).toBeAttached({ timeout: 10000 });
+    await expect(reloadedTextarea).toHaveValue("Native Sticky Note Verified!");
+  });
 });

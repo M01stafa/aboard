@@ -198,7 +198,7 @@ export interface AnnotationScopeLike {
   getSelectedAnnotationIds?: () => string[];
 }
 
-export type CustomObjectType = "stroke" | "stamp" | "text" | "highlight";
+export type CustomObjectType = "stroke" | "stamp" | "text" | "highlight" | "sticky";
 
 export type ResizeHandlePosition = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 
@@ -353,6 +353,8 @@ export interface CustomAnnotationObject {
   width: number;
   height: number;
   transform?: CustomInkTransform;
+  text?: string;
+  color?: string;
 }
 
 export interface PdfCustomInkLayerProps {
@@ -366,6 +368,13 @@ export interface PdfCustomInkLayerProps {
   /** Stamp tool active: clicking the page captures coordinates and triggers image picker. */
   isStampMode?: boolean;
   onStampClick?: (pageIndex: number, pt: CustomInkPoint) => void;
+  /** Sticky note tool active: clicking the page places a sticky note */
+  isStickyMode?: boolean;
+  onAddSticky?: (
+    pageIndex: number,
+    coords: { x: number; y: number; width?: number; height?: number; text?: string; color?: string }
+  ) => void;
+  onUpdateStickyText?: (pageIndex: number, id: string, text: string) => void;
   strokes: CustomInkStroke[];
   selectedStrokeIds?: string[];
   onSelectStrokes?: (strokeIds: string[]) => void;
@@ -427,6 +436,9 @@ export function PdfCustomInkLayer({
   isSelectMode = false,
   isStampMode = false,
   onStampClick,
+  isStickyMode = false,
+  onAddSticky,
+  onUpdateStickyText,
   strokes,
   selectedStrokeIds = [],
   onSelectStrokes,
@@ -448,6 +460,7 @@ export function PdfCustomInkLayer({
     Record<string, { x: number; y: number; width: number; height: number }>
   >({});
   const [liveScaledStrokes, setLiveScaledStrokes] = useState<Record<string, CustomInkPoint[]>>({});
+  const [editingStickyId, setEditingStickyId] = useState<string | null>(null);
   const [marquee, setMarquee] = useState<MarqueeRect | null>(null);
   const interactionRef = useRef<Interaction | null>(null);
 
@@ -492,6 +505,9 @@ export function PdfCustomInkLayer({
     isSelectMode,
     isStampMode,
     onStampClick,
+    isStickyMode,
+    onAddSticky,
+    onUpdateStickyText,
     strokes,
     selectedStrokeIds,
     onSelectStrokes,
@@ -516,6 +532,9 @@ export function PdfCustomInkLayer({
       isSelectMode,
       isStampMode,
       onStampClick,
+      isStickyMode,
+      onAddSticky,
+      onUpdateStickyText,
       strokes,
       selectedStrokeIds,
       onSelectStrokes,
@@ -573,6 +592,21 @@ export function PdfCustomInkLayer({
         const pt = toPagePoint(e.clientX, e.clientY);
         if (!pt) return;
         p.onStampClick?.(p.pageIndex, pt);
+        return;
+      }
+
+      // 1b. Sticky note mode: click on page to place a sticky note at (x, y)
+      if (p.isStickyMode) {
+        e.preventDefault();
+        e.stopPropagation();
+        const pt = toPagePoint(e.clientX, e.clientY);
+        if (!pt) return;
+        p.onAddSticky?.(p.pageIndex, {
+          x: pt.x,
+          y: pt.y,
+          width: 200,
+          height: 200,
+        });
         return;
       }
 
@@ -1297,6 +1331,90 @@ export function PdfCustomInkLayer({
             data-testid={`pdf-${obj.type}-object`}
             transform={offset.x !== 0 || offset.y !== 0 ? `translate(${offset.x}, ${offset.y})` : undefined}
           >
+            {obj.type === "sticky" && (
+              <foreignObject
+                x={curX}
+                y={curY}
+                width={curW}
+                height={curH}
+                style={{
+                  overflow: "visible",
+                  pointerEvents: "auto",
+                }}
+              >
+                <div
+                  data-testid={`pdf-sticky-card-${obj.id}`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    backgroundColor: obj.color || "#FEF3C7",
+                    border: "1px solid #FCD34D",
+                    borderRadius: "var(--radius-sm, 4px)",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.12)",
+                    display: "flex",
+                    flexDirection: "column",
+                    overflow: "hidden",
+                    boxSizing: "border-box",
+                  }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setEditingStickyId(obj.id);
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "22px",
+                      backgroundColor: "#FDE68A",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "0 8px",
+                      cursor: isSelectMode ? "move" : "default",
+                      userSelect: "none",
+                      borderBottom: "1px solid #FCD34D",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        color: "#92400E",
+                        fontFamily: "system-ui, sans-serif",
+                      }}
+                    >
+                      Note
+                    </span>
+                  </div>
+                  <textarea
+                    data-testid={`pdf-sticky-textarea-${obj.id}`}
+                    value={obj.text ?? ""}
+                    placeholder="Type a note..."
+                    onChange={(e) => {
+                      onUpdateStickyText?.(pageIndex, obj.id, e.target.value);
+                    }}
+                    onBlur={() => {
+                      setEditingStickyId(null);
+                    }}
+                    autoFocus={editingStickyId === obj.id}
+                    style={{
+                      flex: 1,
+                      width: "100%",
+                      resize: "none",
+                      border: "none",
+                      outline: "none",
+                      backgroundColor: "transparent",
+                      padding: "8px",
+                      fontFamily: "system-ui, sans-serif",
+                      fontSize: "13px",
+                      lineHeight: "1.4",
+                      color: "#78350F",
+                      pointerEvents: editingStickyId === obj.id ? "auto" : "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              </foreignObject>
+            )}
             <rect
               x={curX}
               y={curY}
@@ -1304,10 +1422,19 @@ export function PdfCustomInkLayer({
               height={curH}
               fill="transparent"
               style={{
-                pointerEvents: isSelectMode ? "all" : "none",
+                pointerEvents:
+                  isSelectMode && (!editingStickyId || editingStickyId !== obj.id) ? "all" : "none",
                 cursor: isSelectMode ? (obj.type === "highlight" ? "pointer" : "move") : "default",
                 touchAction: "none",
               }}
+              onDoubleClick={
+                obj.type === "sticky"
+                  ? (e) => {
+                      e.stopPropagation();
+                      setEditingStickyId(obj.id);
+                    }
+                  : undefined
+              }
             />
             {isSelected && obj.type !== "highlight" && (
               <g data-testid={`pdf-${obj.type}-bbox`}>
@@ -1353,7 +1480,16 @@ export function PdfCustomInkLayer({
           </g>
         );
       }),
-    [pageObjects, dragOffsets, resizeRects, isSelectMode, selectedSet]
+    [
+      pageObjects,
+      dragOffsets,
+      resizeRects,
+      isSelectMode,
+      selectedSet,
+      editingStickyId,
+      onUpdateStickyText,
+      pageIndex,
+    ]
   );
 
   return (
@@ -1366,11 +1502,11 @@ export function PdfCustomInkLayer({
         inset: 0,
         width: "100%",
         height: "100%",
-        pointerEvents: isActive || isSelectMode || isStampMode ? "auto" : "none",
-        cursor: isActive || isStampMode ? "crosshair" : "default",
+        pointerEvents: isActive || isSelectMode || isStampMode || isStickyMode ? "auto" : "none",
+        cursor: isActive || isStampMode || isStickyMode ? "crosshair" : "default",
         zIndex: 15,
         overflow: "visible",
-        touchAction: isActive || isSelectMode || isStampMode ? "none" : "auto",
+        touchAction: isActive || isSelectMode || isStampMode || isStickyMode ? "none" : "auto",
         userSelect: "none",
         WebkitUserSelect: "none",
         direction: "ltr",

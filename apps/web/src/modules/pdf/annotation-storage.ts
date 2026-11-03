@@ -16,10 +16,23 @@ export interface SerializedAnnotationItem {
   };
 }
 
+export interface CustomStickyNote {
+  id: string;
+  pageIndex: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+  color?: string;
+  transform?: { x: number; y: number };
+}
+
 export interface SerializedAnnotationsPayload {
   version?: number;
   items: SerializedAnnotationItem[];
   customInkStrokes?: Record<number, CustomInkStroke[]>;
+  customStickyNotes?: Record<number, CustomStickyNote[]>;
 }
 
 /**
@@ -38,7 +51,8 @@ export async function serializeAnnotations(
   _pdfHash: string,
   items: AnnotationTransferItem[],
   projectService: ProjectService,
-  customInkStrokes?: Record<number, CustomInkStroke[]>
+  customInkStrokes?: Record<number, CustomInkStroke[]>,
+  customStickyNotes?: Record<number, CustomStickyNote[]>
 ): Promise<string> {
   const serializedItems: SerializedAnnotationItem[] = [];
 
@@ -99,11 +113,15 @@ export async function serializeAnnotations(
     });
   }
 
-  if (customInkStrokes && Object.values(customInkStrokes).some((arr) => arr.length > 0)) {
+  const hasInk = customInkStrokes && Object.values(customInkStrokes).some((arr) => arr.length > 0);
+  const hasSticky = customStickyNotes && Object.values(customStickyNotes).some((arr) => arr.length > 0);
+
+  if (hasInk || hasSticky) {
     const payload: SerializedAnnotationsPayload = {
       version: 2,
       items: serializedItems,
-      customInkStrokes,
+      customInkStrokes: customInkStrokes || {},
+      customStickyNotes: customStickyNotes || {},
     };
     return JSON.stringify(payload);
   }
@@ -201,6 +219,20 @@ export function extractCustomInkStrokes(json: string): Record<number, CustomInkS
     const parsed = JSON.parse(json);
     if (parsed && typeof parsed === "object" && "customInkStrokes" in parsed) {
       return (parsed as SerializedAnnotationsPayload).customInkStrokes || {};
+    }
+  } catch {}
+  return {};
+}
+
+/**
+ * Extracts custom sticky notes from serialized JSON, returning an empty map if none found.
+ */
+export function extractCustomStickyNotes(json: string): Record<number, CustomStickyNote[]> {
+  if (!json || json.trim() === "") return {};
+  try {
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed === "object" && "customStickyNotes" in parsed) {
+      return (parsed as SerializedAnnotationsPayload).customStickyNotes || {};
     }
   } catch {}
   return {};

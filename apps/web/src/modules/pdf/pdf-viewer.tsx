@@ -244,6 +244,8 @@ function ViewerInner({
     handleUndo,
     handleRedo,
     handleAddStamp,
+    handleAddSticky,
+    handleUpdateStickyText,
     customStrokes,
     handleAddCustomStroke,
     handleMoveCustomStroke,
@@ -958,6 +960,9 @@ function ViewerInner({
                       isSelectMode={activeTool === "select"}
                       isStampMode={activeTool === "stamp"}
                       onStampClick={handlePageStampClick}
+                      isStickyMode={activeTool === "sticky"}
+                      onAddSticky={handleAddSticky}
+                      onUpdateStickyText={handleUpdateStickyText}
                       strokes={customStrokes[page.pageIndex] || []}
                       selectedStrokeIds={selectedStrokeIds}
                       onSelectStrokes={setSelectedStrokeIds}

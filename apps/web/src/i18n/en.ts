@@ -216,6 +216,7 @@ export const en = {
     toolInk: "Draw",
     toolText: "Text",
     toolStamp: "Stamp",
+    toolSticky: "Sticky Note",
     undo: "Undo",
     redo: "Redo",
     downloadAnnotated: "Download PDF",
