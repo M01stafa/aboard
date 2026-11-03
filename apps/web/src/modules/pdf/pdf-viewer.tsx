@@ -246,6 +246,8 @@ function ViewerInner({
     handleAddStamp,
     handleAddSticky,
     handleUpdateStickyText,
+    handleDeleteSticky,
+    customStickyNotes,
     customStrokes,
     handleAddCustomStroke,
     handleMoveCustomStroke,
@@ -616,8 +618,8 @@ function ViewerInner({
         const task = exportScope.saveAsCopy();
         const arrayBuffer = await task.toPromise();
         pdfBytes = new Uint8Array(arrayBuffer);
-        // Burn custom ink strokes onto the exported PDF
-        pdfBytes = await burnCustomInkOnPdfBytes(pdfBytes, customStrokes);
+        // Burn custom ink strokes and custom sticky notes onto the exported PDF
+        pdfBytes = await burnCustomInkOnPdfBytes(pdfBytes, customStrokes, customStickyNotes);
       } else {
         // 2. Standalone burning fallback using @cantoo/pdf-lib
         const curBuffer = await blob.arrayBuffer();
@@ -929,6 +931,7 @@ function ViewerInner({
                         height: "100%",
                         pointerEvents: "none",
                         userSelect: "none",
+                        overflow: "visible",
                       }}
                     />
                     <PdfTextLayer
@@ -963,6 +966,7 @@ function ViewerInner({
                       isStickyMode={activeTool === "sticky"}
                       onAddSticky={handleAddSticky}
                       onUpdateStickyText={handleUpdateStickyText}
+                      onDeleteSticky={handleDeleteSticky}
                       strokes={customStrokes[page.pageIndex] || []}
                       selectedStrokeIds={selectedStrokeIds}
                       onSelectStrokes={setSelectedStrokeIds}

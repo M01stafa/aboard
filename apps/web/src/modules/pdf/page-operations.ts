@@ -1,7 +1,12 @@
-import { PDFDocument, degrees, rgb, StandardFonts, type PDFImage } from "@cantoo/pdf-lib";
+import { PDFDocument, degrees, rgb, StandardFonts, type PDFImage, type PDFFont } from "@cantoo/pdf-lib";
 import { PdfAnnotationSubtype } from "@embedpdf/models";
 import type { ProjectService } from "@/core/storage/project-service";
-import { deserializeAnnotations, extractCustomInkStrokes } from "./annotation-storage";
+import {
+  deserializeAnnotations,
+  extractCustomInkStrokes,
+  extractCustomStickyNotes,
+  type CustomStickyNote,
+} from "./annotation-storage";
 import type { CustomInkStroke } from "./pdf-custom-ink-layer";
 
 function parseStrokeColor(hex?: string): { r: number; g: number; b: number } {
@@ -18,6 +23,23 @@ function parseStrokeColor(hex?: string): { r: number; g: number; b: number } {
   return { r: 0.89, g: 0.26, b: 0.20 };
 }
 
+/**
+ * Checks whether an element's bounding box is completely outside the page boundaries.
+ */
+export function isRectCompletelyOutOfBounds(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  pageWidth: number,
+  pageHeight: number
+): boolean {
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) {
+    return true;
+  }
+  return x + w <= 0 || y + h <= 0 || x >= pageWidth || y >= pageHeight;
+}
+
 export function drawCustomInkStrokesOnDoc(
   pdfDoc: PDFDocument,
   customInkStrokes: Record<number, CustomInkStroke[]>
@@ -27,6 +49,7 @@ export function drawCustomInkStrokesOnDoc(
     const pageIdx = parseInt(pageIdxStr, 10);
     if (pageIdx < 0 || pageIdx >= pages.length) continue;
     const page = pages[pageIdx];
+    const pageWidth = page.getWidth();
     const pageHeight = page.getHeight();
 
     for (const stroke of strokes) {
@@ -37,13 +60,128 @@ export function drawCustomInkStrokesOnDoc(
       for (let i = 0; i < stroke.points.length - 1; i++) {
         const p1 = stroke.points[i];
         const p2 = stroke.points[i + 1];
-        page.drawLine({
-          start: { x: p1.x + ox, y: pageHeight - (p1.y + oy) },
-          end: { x: p2.x + ox, y: pageHeight - (p2.y + oy) },
-          thickness: stroke.width || 2,
-          color: rgb(c.r, c.g, c.b),
-          opacity: stroke.opacity ?? 1,
+        const x1 = p1.x + ox;
+        const y1 = p1.y + oy;
+        const x2 = p2.x + ox;
+        const y2 = p2.y + oy;
+
+        if (
+          !Number.isFinite(x1) ||
+          !Number.isFinite(y1) ||
+          !Number.isFinite(x2) ||
+          !Number.isFinite(y2)
+        ) {
+          continue;
+        }
+
+        // If both start and end points of a segment are outside page bounds on the same side, skip
+        if (
+          (x1 < 0 && x2 < 0) ||
+          (x1 > pageWidth && x2 > pageWidth) ||
+          (y1 < 0 && y2 < 0) ||
+          (y1 > pageHeight && y2 > pageHeight)
+        ) {
+          continue;
+        }
+
+        try {
+          page.drawLine({
+            start: { x: x1, y: pageHeight - y1 },
+            end: { x: x2, y: pageHeight - y2 },
+            thickness: stroke.width || 2,
+            color: rgb(c.r, c.g, c.b),
+            opacity: stroke.opacity ?? 1,
+          });
+        } catch (err) {
+          console.warn("[page-operations] Error drawing ink stroke segment:", err);
+        }
+      }
+    }
+  }
+}
+
+export function drawCustomStickyNotesOnDoc(
+  pdfDoc: PDFDocument,
+  customStickyNotes: Record<number, CustomStickyNote[]>,
+  font?: PDFFont
+): void {
+  const pages = pdfDoc.getPages();
+  for (const [pageIdxStr, stickies] of Object.entries(customStickyNotes)) {
+    const pageIdx = parseInt(pageIdxStr, 10);
+    if (pageIdx < 0 || pageIdx >= pages.length) continue;
+    const page = pages[pageIdx];
+    const pageWidth = page.getWidth();
+    const pageHeight = page.getHeight();
+
+    for (const note of stickies) {
+      if (!note) continue;
+      const ox = note.transform?.x ?? 0;
+      const oy = note.transform?.y ?? 0;
+      const x = note.x + ox;
+      const y = note.y + oy;
+      const width = note.width || 200;
+      const height = note.height || 200;
+
+      if (isRectCompletelyOutOfBounds(x, y, width, height, pageWidth, pageHeight)) {
+        continue;
+      }
+
+      try {
+        const pdfY = pageHeight > y + height ? pageHeight - y - height : y;
+
+        // Draw note card background (yellow #FEF08A)
+        page.drawRectangle({
+          x,
+          y: pdfY,
+          width,
+          height,
+          color: rgb(0.996, 0.941, 0.541),
+          borderColor: rgb(0.85, 0.8, 0.35),
+          borderWidth: 1,
+          opacity: 0.95,
         });
+
+        // Draw header bar (#FDE047)
+        const headerHeight = Math.min(24, Math.max(14, height * 0.16));
+        page.drawRectangle({
+          x,
+          y: pdfY + height - headerHeight,
+          width,
+          height: headerHeight,
+          color: rgb(0.992, 0.878, 0.278),
+          opacity: 1,
+        });
+
+        if (font) {
+          // Draw "Note" header title
+          page.drawText("Note", {
+            x: x + 6,
+            y: pdfY + height - headerHeight + (headerHeight - 8) / 2,
+            size: 9,
+            font,
+            color: rgb(0.47, 0.21, 0.06),
+          });
+
+          // Draw note text lines
+          if (note.text && note.text.trim()) {
+            const lines = note.text.split("\n");
+            let lineY = pdfY + height - headerHeight - 12;
+            for (const line of lines) {
+              if (lineY < pdfY + 6) break;
+              const cleanLine = line.slice(0, 80);
+              page.drawText(cleanLine, {
+                x: x + 6,
+                y: lineY,
+                size: 9,
+                font,
+                color: rgb(0.47, 0.21, 0.06),
+              });
+              lineY -= 12;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[page-operations] Error drawing sticky note:", err);
       }
     }
   }
@@ -324,6 +462,7 @@ export async function burnAnnotationsWithPdfLib(
     if (pageIdx < 0 || pageIdx >= pages.length) continue;
 
     const page = pages[pageIdx];
+    const pageWidth = page.getWidth();
     const pageHeight = page.getHeight();
 
     // 1. STAMP: Re-inject image bytes and draw onto the page
@@ -332,16 +471,21 @@ export async function burnAnnotationsWithPdfLib(
       if (rawData) {
         const u8 = rawData instanceof Uint8Array ? rawData : new Uint8Array(rawData as ArrayBuffer);
         try {
-          const embeddedImg = await embedImageSafely(pdfDoc, u8, ctx?.mimeType);
-          if (!embeddedImg) {
-            continue;
-          }
-
           const rect = annotation.rect;
           const x = rect?.origin?.x ?? 72;
           const rectY = rect?.origin?.y ?? 72;
           const w = rect?.size?.width ?? 144;
           const h = rect?.size?.height ?? 96;
+
+          // If element is completely outside page boundaries, skip it
+          if (isRectCompletelyOutOfBounds(x, rectY, w, h, pageWidth, pageHeight)) {
+            continue;
+          }
+
+          const embeddedImg = await embedImageSafely(pdfDoc, u8, ctx?.mimeType);
+          if (!embeddedImg) {
+            continue;
+          }
 
           // Convert EmbedPDF top-origin coordinates to PDF bottom-origin coordinates if needed
           const y = pageHeight > rectY + h ? pageHeight - rectY - h : rectY;
@@ -360,68 +504,120 @@ export async function burnAnnotationsWithPdfLib(
 
     // 2. HIGHLIGHT: Draw translucent highlight rectangles
     if (annotation.type === PdfAnnotationSubtype.HIGHLIGHT) {
-      const rects = (annotation as unknown as { rects?: Array<{ origin: { x: number; y: number }; size: { width: number; height: number } }> }).rects ??
-        (annotation.rect ? [annotation.rect] : []);
+      try {
+        const rects = (annotation as unknown as { rects?: Array<{ origin: { x: number; y: number }; size: { width: number; height: number } }> }).rects ??
+          (annotation.rect ? [annotation.rect] : []);
 
-      for (const r of rects) {
-        const x = r.origin.x;
-        const h = r.size.height;
-        const w = r.size.width;
-        const y = pageHeight > r.origin.y + h ? pageHeight - r.origin.y - h : r.origin.y;
+        for (const r of rects) {
+          const x = r.origin.x;
+          const rectY = r.origin.y;
+          const h = r.size.height;
+          const w = r.size.width;
 
-        page.drawRectangle({
-          x,
-          y,
-          width: w,
-          height: h,
-          color: rgb(1, 0.9, 0.2), // Yellow highlight
-          opacity: 0.4,
-        });
+          // If element is completely outside page boundaries, skip it
+          if (isRectCompletelyOutOfBounds(x, rectY, w, h, pageWidth, pageHeight)) {
+            continue;
+          }
+
+          const y = pageHeight > rectY + h ? pageHeight - rectY - h : rectY;
+
+          page.drawRectangle({
+            x,
+            y,
+            width: w,
+            height: h,
+            color: rgb(1, 0.9, 0.2), // Yellow highlight
+            opacity: 0.4,
+          });
+        }
+      } catch (err) {
+        console.error("[page-operations] Failed to draw highlight:", err);
       }
     }
 
     // 3. FREETEXT: Draw text annotations
     if (annotation.type === PdfAnnotationSubtype.FREETEXT) {
-      const anyAnno = annotation as unknown as { contents?: string; fontSize?: number };
-      const text = anyAnno.contents ?? "";
-      if (text) {
-        const rect = annotation.rect;
-        const x = rect?.origin?.x ?? 50;
-        const rectY = rect?.origin?.y ?? 50;
-        const h = rect?.size?.height ?? 16;
-        const y = pageHeight > rectY + h ? pageHeight - rectY - h : rectY;
-        const fontSize = anyAnno.fontSize ?? 12;
+      try {
+        const anyAnno = annotation as unknown as { contents?: string; fontSize?: number };
+        const text = anyAnno.contents ?? "";
+        if (text) {
+          const rect = annotation.rect;
+          const x = rect?.origin?.x ?? 50;
+          const rectY = rect?.origin?.y ?? 50;
+          const h = rect?.size?.height ?? 16;
+          const w = rect?.size?.width ?? 100;
 
-        page.drawText(text, {
-          x,
-          y,
-          size: fontSize,
-          font,
-          color: rgb(0.1, 0.1, 0.1),
-        });
+          // If element is completely outside page boundaries, skip it
+          if (isRectCompletelyOutOfBounds(x, rectY, w, h, pageWidth, pageHeight)) {
+            continue;
+          }
+
+          const y = pageHeight > rectY + h ? pageHeight - rectY - h : rectY;
+          const fontSize = anyAnno.fontSize ?? 12;
+
+          page.drawText(text, {
+            x,
+            y,
+            size: fontSize,
+            font,
+            color: rgb(0.1, 0.1, 0.1),
+          });
+        }
+      } catch (err) {
+        console.error("[page-operations] Failed to draw freetext:", err);
       }
     }
   }
 
-  // 4. CUSTOM INK: Burn custom ink strokes into page content streams
-  const customInkStrokes = extractCustomInkStrokes(annotationsJson);
-  drawCustomInkStrokesOnDoc(pdfDoc, customInkStrokes);
+  // 4. STICKY NOTES: Burn custom sticky notes into page content streams
+  try {
+    const customStickyNotes = extractCustomStickyNotes(annotationsJson);
+    drawCustomStickyNotesOnDoc(pdfDoc, customStickyNotes, font);
+  } catch (err) {
+    console.error("[page-operations] Failed to draw sticky notes:", err);
+  }
+
+  // 5. CUSTOM INK: Burn custom ink strokes into page content streams
+  try {
+    const customInkStrokes = extractCustomInkStrokes(annotationsJson);
+    drawCustomInkStrokesOnDoc(pdfDoc, customInkStrokes);
+  } catch (err) {
+    console.error("[page-operations] Failed to draw custom ink:", err);
+  }
 
   return await pdfDoc.save();
 }
 
 /**
- * Burns custom ink strokes directly onto an existing PDF byte array.
+ * Burns custom ink strokes and custom sticky notes directly onto an existing PDF byte array.
  * Used after live exportScope.saveAsCopy() to merge custom strokes seamlessly.
  */
 export async function burnCustomInkOnPdfBytes(
   pdfBytes: Uint8Array,
-  customInkStrokes: Record<number, CustomInkStroke[]>
+  customInkStrokes: Record<number, CustomInkStroke[]>,
+  customStickyNotes?: Record<number, CustomStickyNote[]>
 ): Promise<Uint8Array> {
-  const hasStrokes = Object.values(customInkStrokes).some((arr) => arr && arr.length > 0);
-  if (!hasStrokes) return pdfBytes;
+  const hasStrokes = Object.values(customInkStrokes || {}).some((arr) => arr && arr.length > 0);
+  const hasStickies =
+    customStickyNotes &&
+    Object.values(customStickyNotes || {}).some((arr) => arr && arr.length > 0);
+  if (!hasStrokes && !hasStickies) return pdfBytes;
 
-  const pdfDoc = await PDFDocument.load(pdfBytes);
-  drawCustomInkStrokesOnDoc(pdfDoc, customInkStrokes);
-  return await pdfDoc.save();
+  try {
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    if (hasStrokes) {
+      drawCustomInkStrokesOnDoc(pdfDoc, customInkStrokes);
+    }
+    if (hasStickies && customStickyNotes) {
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      drawCustomStickyNotesOnDoc(pdfDoc, customStickyNotes, font);
+    }
+    return await pdfDoc.save();
+  } catch (err) {
+    console.error(
+      "[page-operations] burnCustomInkOnPdfBytes failed, returning original pdfBytes:",
+      err
+    );
+    return pdfBytes;
+  }
 }

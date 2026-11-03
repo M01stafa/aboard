@@ -3,8 +3,10 @@ import {
   serializeAnnotations,
   deserializeAnnotations,
   extractCustomStickyNotes,
+  extractCustomInkStrokes,
   type CustomStickyNote,
 } from "./annotation-storage";
+import type { CustomInkStroke } from "./pdf-custom-ink-layer";
 import type { ProjectService } from "@/core/storage/project-service";
 import { PdfAnnotationSubtype, type PdfAnnotationObject } from "@embedpdf/models";
 import type { AnnotationTransferItem } from "@embedpdf/plugin-annotation";
@@ -173,5 +175,68 @@ describe("annotation-storage (PDF-4)", () => {
     expect(extracted[0][0].id).toBe("sticky-1");
     expect(extracted[0][0].text).toBe("Meeting notes for hardware design review");
     expect(extracted[0][0].width).toBe(200);
+  });
+
+  it("preserves raw negative and out-of-bounds coordinates without clamping", async () => {
+    const mockProjectService = {
+      putFile: vi.fn(),
+      getFile: vi.fn(),
+    } as unknown as ProjectService;
+
+    const outOfBoundsStrokes: Record<number, CustomInkStroke[]> = {
+      0: [
+        {
+          id: "overflow-stroke-1",
+          points: [
+            { x: -150.5, y: -220.25 },
+            { x: -80.0, y: 15.0 },
+            { x: 3200.75, y: 4500.5 },
+          ],
+          color: "#E44234",
+          width: 3,
+          opacity: 0.9,
+          transform: { x: -50, y: 1200 },
+        },
+      ],
+    };
+
+    const outOfBoundsStickies: Record<number, CustomStickyNote[]> = {
+      0: [
+        {
+          id: "overflow-sticky-1",
+          pageIndex: 0,
+          x: -280.5,
+          y: -190.25,
+          width: 250,
+          height: 220,
+          text: "Off-canvas side annotation",
+          color: "#FEF08A",
+          transform: { x: -20, y: 1500 },
+        },
+      ],
+    };
+
+    const json = await serializeAnnotations(
+      projectId,
+      pdfHash,
+      [],
+      mockProjectService,
+      outOfBoundsStrokes,
+      outOfBoundsStickies
+    );
+
+    // Verify raw values survive JSON serialization without being clamped
+    const extractedStrokes = extractCustomInkStrokes(json);
+    const extractedStickies = extractCustomStickyNotes(json);
+
+    expect(extractedStrokes[0]).toHaveLength(1);
+    expect(extractedStrokes[0][0].points[0]).toEqual({ x: -150.5, y: -220.25 });
+    expect(extractedStrokes[0][0].points[2]).toEqual({ x: 3200.75, y: 4500.5 });
+    expect(extractedStrokes[0][0].transform).toEqual({ x: -50, y: 1200 });
+
+    expect(extractedStickies[0]).toHaveLength(1);
+    expect(extractedStickies[0][0].x).toBe(-280.5);
+    expect(extractedStickies[0][0].y).toBe(-190.25);
+    expect(extractedStickies[0][0].transform).toEqual({ x: -20, y: 1500 });
   });
 });

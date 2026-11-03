@@ -55,6 +55,7 @@ export interface UsePdfAnnotationsResult {
     coords: { x: number; y: number; width?: number; height?: number; text?: string; color?: string }
   ) => void;
   handleUpdateStickyText: (pageIndex: number, id: string, text: string) => void;
+  handleDeleteSticky: (pageIndex: number, id: string) => void;
   customStrokes: Record<number, CustomInkStroke[]>;
   selectedStrokeIds: string[];
   setSelectedStrokeIds: (ids: string[]) => void;
@@ -554,8 +555,8 @@ export function usePdfAnnotations({
             st.id === id
               ? {
                   ...st,
-                  x: Math.max(0, newOrigin.x),
-                  y: Math.max(0, newOrigin.y),
+                  x: Math.round(newOrigin.x * 100) / 100,
+                  y: Math.round(newOrigin.y * 100) / 100,
                   transform: { x: 0, y: 0 },
                 }
               : st
@@ -574,8 +575,8 @@ export function usePdfAnnotations({
         const target = pageAnnos.find((a) => a.object.id === id);
         if (target?.object?.rect) {
           const origSize = target.object.rect.size;
-          const safeX = Math.max(0, newOrigin.x);
-          const safeY = Math.max(0, newOrigin.y);
+          const safeX = Math.round(newOrigin.x * 100) / 100;
+          const safeY = Math.round(newOrigin.y * 100) / 100;
           annotationScope.updateAnnotation(pageIndex, id, {
             rect: {
               origin: { x: safeX, y: safeY },
@@ -636,8 +637,8 @@ export function usePdfAnnotations({
             st.id === id
               ? {
                   ...st,
-                  x: Math.max(0, Math.round(newRect.origin.x * 100) / 100),
-                  y: Math.max(0, Math.round(newRect.origin.y * 100) / 100),
+                  x: Math.round(newRect.origin.x * 100) / 100,
+                  y: Math.round(newRect.origin.y * 100) / 100,
                   width: Math.max(80, Math.round(newRect.size.width * 100) / 100),
                   height: Math.max(60, Math.round(newRect.size.height * 100) / 100),
                   transform: { x: 0, y: 0 },
@@ -661,8 +662,8 @@ export function usePdfAnnotations({
           const patch: Record<string, unknown> = {
             rect: {
               origin: {
-                x: Math.max(0, Math.round(newRect.origin.x * 100) / 100),
-                y: Math.max(0, Math.round(newRect.origin.y * 100) / 100),
+                x: Math.round(newRect.origin.x * 100) / 100,
+                y: Math.round(newRect.origin.y * 100) / 100,
               },
               size: {
                 width: Math.max(10, Math.round(newRect.size.width * 100) / 100),
@@ -817,6 +818,26 @@ export function usePdfAnnotations({
     [triggerDebouncedSave]
   );
 
+  const handleDeleteSticky = useCallback(
+    (pageIndex: number, id: string) => {
+      setCustomStickyNotes((prev) => {
+        const list = prev[pageIndex] || [];
+        const nextList = list.filter((st) => st.id !== id);
+        const next = { ...prev, [pageIndex]: nextList };
+        customStickyNotesRef.current = next;
+        return next;
+      });
+      setSelectedStrokeIds((prev) => {
+        const next = prev.filter((item) => item !== id);
+        selectedStrokeIdsRef.current = next;
+        return next;
+      });
+      setAnnotationsVersion((v) => v + 1);
+      triggerDebouncedSave();
+    },
+    [triggerDebouncedSave]
+  );
+
   // Expose on window for E2E testing in browser environments
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -826,6 +847,8 @@ export function usePdfAnnotations({
         customStrokes: customStrokesRef.current,
         customStickyNotes: customStickyNotesRef.current,
         addSticky: handleAddSticky,
+        handleDeleteSticky,
+        deleteSticky: handleDeleteSticky,
         selectedStrokeIds: selectedStrokeIdsRef.current,
         deleteSelected: handleDeleteSelected,
         flushAnnotations,
@@ -837,6 +860,7 @@ export function usePdfAnnotations({
     customStrokes,
     customStickyNotes,
     handleAddSticky,
+    handleDeleteSticky,
     selectedStrokeIds,
     handleDeleteSelected,
     flushAnnotations,
@@ -853,6 +877,7 @@ export function usePdfAnnotations({
     customStickyNotes,
     handleAddSticky,
     handleUpdateStickyText,
+    handleDeleteSticky,
     customStrokes,
     selectedStrokeIds,
     setSelectedStrokeIds,

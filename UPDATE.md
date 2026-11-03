@@ -2330,3 +2330,28 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
 **Related:** PDF-1, PDF-4
 **Open:** none.
+
+
+## 2026-11-03 — Fix Sticky Note UX, Enable Canvas Overflow, and Update Export Logic (Multi-Agent)
+**Request:** Implement three features via multi-agent execution:
+1. Sub-Agent 1 (Sticky Note UI & Editing): Make sticky notes editable on double-click with auto-focusing `<textarea>`, single-click select/drag, and style like `react-stickies` (yellow card `#FEF08A`, drop shadow, top header bar with "Note" title and close "X" button to delete note) without new packages.
+2. Sub-Agent 2 (Canvas Overflow): Expand SVG layer to 300% covering negative and > pageWidth coordinates into surrounding gray empty space, update `toPagePoint` mapping math, remove coordinate clamping on drag/move and resizing.
+3. Sub-Agent 3 (Export Clipping & Review): Safely skip/clip completely out-of-bounds annotations/ink in `burnAnnotationsWithPdfLib`, ensure raw coordinates persist in JSON and `.alpha`, review integration across sub-agents, and run Playwright E2E verification.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: Sub-Agent 1 updated sticky notes inside `<foreignObject>` with header bar, "Note" label, close "X" button (`pdf-sticky-delete-btn`), double-click edit mode with auto-focusing `<textarea>`, and isolated pointer events. Sub-Agent 2 expanded SVG canvas to `width: 300%`, `height: 300%`, `top: -100%`, `left: -100%`, `viewBox="-pageWidth -pageHeight 3*pageWidth 3*pageHeight"`, updated `toPagePoint` for 300% canvas, and relaxed outer drag clamping. Sub-Agent 3 polished double-click event handling and close button pointer capture bypass.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: added `handleDeleteSticky`, relaxed coordinate clamping in `handleMoveObject` and `handleResizeObject`, exposed `handleDeleteSticky` and `deleteSticky` on `window.__aboard_pdfAnnotations`.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx`: passed `onDeleteSticky` to `<PdfCustomInkLayer>`, ensured `RenderLayer` has `overflow: "visible"`, passed `customStickyNotes` to `burnCustomInkOnPdfBytes` on annotated download.
+- `apps/web/src/modules/pdf/page-operations.ts`: implemented `isRectCompletelyOutOfBounds`, added bounds checking to skip off-page stamps, highlights, and freetext; added custom ink stroke segment clipping for out-of-bounds lines; added `drawCustomStickyNotesOnDoc` to burn visible sticky notes and skip off-page notes; updated `burnCustomInkOnPdfBytes` to accept and burn sticky notes.
+- `apps/web/src/modules/pdf/annotation-storage.test.ts`: added test confirming negative and overflow coordinates survive JSON serialization and extraction.
+- `apps/web/src/modules/pdf/page-operations.test.ts`: added unit tests for `isRectCompletelyOutOfBounds`, skipping out-of-bounds annotations in `burnAnnotationsWithPdfLib`, and sticky note burning.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.test.ts`: updated `toPagePoint` unit tests for 300% canvas and outer clamping.
+- `apps/web/src/modules/pdf/pdf-sticky-notes.test.tsx`: created unit test suite verifying sticky note header bar, double-click edit, auto-focus, close button deletion, text updating, escape key, and outside coordinates.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added Playwright E2E tests verifying sticky note double-click editing, close "X" deletion, drawing in the overflow canvas (negative X coordinates), preserving raw coordinates in JSON, and generating clean, uncorrupted flattened PDF exports.
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (71/71 tests passed across 9 test files).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (8/8 tests passed in 1.0m).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings, spacing 8-point compliant).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-4
+**Open:** none.

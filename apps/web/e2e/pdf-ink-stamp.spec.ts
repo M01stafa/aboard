@@ -1410,5 +1410,190 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     const reloadedTextarea = primaryPane.locator('[data-testid^="pdf-sticky-textarea-"]');
     await expect(reloadedTextarea).toBeAttached({ timeout: 10000 });
     await expect(reloadedTextarea).toHaveValue("Native Sticky Note Verified!");
+
+    // 7. Double-click restored sticky note to edit: verify textarea can receive edits
+    const reloadedStickyCard = primaryPane.locator('[data-testid^="pdf-sticky-card-"]');
+    const cardBox = await reloadedStickyCard.boundingBox();
+    expect(cardBox).not.toBeNull();
+    if (cardBox) {
+      await page.mouse.dblclick(cardBox.x + 50, cardBox.y + 50);
+      await page.waitForTimeout(300);
+      await reloadedTextarea.fill("Native Sticky Note Verified! - edited text");
+      await expect(reloadedTextarea).toHaveValue("Native Sticky Note Verified! - edited text");
+    }
+
+    // 8. Delete sticky note via header bar close "X" button
+    const deleteBtn = primaryPane.locator('[data-testid="pdf-sticky-delete-btn"]');
+    await expect(deleteBtn).toBeVisible();
+    await deleteBtn.click();
+    await page.waitForTimeout(300);
+
+    // Verify sticky note card is removed from DOM
+    await expect(reloadedStickyCard).toHaveCount(0);
+
+    // Flush and reload to confirm deletion persists
+    await page.evaluate(async () => {
+      const api = (window as unknown as {
+        __aboard_pdfAnnotations?: { flushAnnotations?: () => Promise<void> };
+      }).__aboard_pdfAnnotations;
+      if (api?.flushAnnotations) {
+        await api.flushAnnotations();
+      }
+    });
+    await page.waitForTimeout(600);
+
+    await page.reload();
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+
+    await expect(primaryPane.locator('[data-testid^="pdf-sticky-card-"]')).toHaveCount(0);
+  });
+
+  test("draws stroke outside page boundary into overflow area, preserves raw coordinates in JSON, and exports flattened PDF cleanly", async ({ page }) => {
+    // 1. Generate test PDF
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Overflow Canvas & Export Clipping Test", {
+      x: 50,
+      y: 750,
+      size: 20,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${projectId}-overflow&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+
+    await fileInput.setInputFiles({
+      name: "test-overflow.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // 2. Select Ink tool and draw in overflow area outside the page boundary
+    await primaryPane.locator('[data-testid="pdf-tool-ink"]').click();
+    await page.waitForTimeout(200);
+
+    // Draw in the gray margin to the left of the page (negative X coordinate)
+    const outStartX = page1Box.x - 40;
+    const outStartY = page1Box.y + 150;
+    const outEndX = page1Box.x - 10;
+    const outEndY = page1Box.y + 190;
+
+    await page.mouse.move(outStartX, outStartY);
+    await page.mouse.down();
+    for (let i = 1; i <= 5; i++) {
+      await page.mouse.move(
+        outStartX + ((outEndX - outStartX) * i) / 5,
+        outStartY + ((outEndY - outStartY) * i) / 5
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+
+    // Verify custom ink path is rendered in the layer
+    const customInkPath = primaryPane.locator('[data-testid="pdf-custom-ink-layer-1"] path');
+    await expect(customInkPath).toHaveCount(1, { timeout: 5000 });
+
+    // Verify coordinates in state are negative (outside page boundary)
+    const strokePoints = await page.evaluate(() => {
+      const api = (window as unknown as {
+        __aboard_pdfAnnotations?: { customStrokes?: Record<number, Array<{ points: Array<{ x: number; y: number }> }>> };
+      }).__aboard_pdfAnnotations;
+      const strokes = api?.customStrokes?.[0] || [];
+      return strokes[0]?.points || [];
+    });
+    expect(strokePoints.length).toBeGreaterThan(0);
+    expect(strokePoints.some((p: { x: number; y: number }) => p.x < 0 || p.y < 0)).toBe(true);
+
+    // 3. Add an out-of-bounds sticky note via the API
+    await page.evaluate(() => {
+      const api = (window as unknown as {
+        __aboard_pdfAnnotations?: {
+          addSticky?: (pageIndex: number, coords: { x: number; y: number; text: string }) => void;
+        };
+      }).__aboard_pdfAnnotations;
+      api?.addSticky?.(0, {
+        x: -180,
+        y: -120,
+        text: "Out-of-bounds Overflow Note",
+      });
+    });
+    await page.waitForTimeout(300);
+
+    // Flush annotations to persistence
+    await page.evaluate(async () => {
+      const api = (window as unknown as {
+        __aboard_pdfAnnotations?: { flushAnnotations?: () => Promise<void> };
+      }).__aboard_pdfAnnotations;
+      if (api?.flushAnnotations) {
+        await api.flushAnnotations();
+      }
+    });
+    await page.waitForTimeout(600);
+
+    // Verify stored JSON preserves raw out-of-bounds coordinates without clamping
+    const rawSavedJson = await page.evaluate(async ({ pid }) => {
+      const ps = (window as unknown as {
+        __aboard_projectService?: {
+          readAnnotations: (id: string, hash: string) => Promise<string | null>;
+          readItem?: (id: string, itemId: string) => Promise<string>;
+        };
+      }).__aboard_projectService;
+
+      if (!ps) return null;
+      let raw = await ps.readAnnotations(pid, "test-overflow.pdf");
+      if (!raw) {
+        const pdfItem = await ps.readItem?.(pid, "item-1");
+        if (pdfItem) {
+          const pdfState = JSON.parse(pdfItem);
+          const hash = pdfState.fileKey as string;
+          raw = (await ps.readAnnotations(pid, hash)) || (await ps.readAnnotations(pid, "anno-item-1"));
+        }
+      }
+      return raw;
+    }, { pid: `${projectId}-overflow` });
+    expect(rawSavedJson).toBeDefined();
+    expect(rawSavedJson).toContain('"x":-'); // Contains negative coordinate
+
+    // 4. Test Flattened PDF Export completes without errors
+    const downloadPromise = page.waitForEvent("download");
+    const downloadBtn = primaryPane.locator('[data-testid="pdf-download-btn"]');
+    await expect(downloadBtn).toBeVisible({ timeout: 5000 });
+    await downloadBtn.click();
+
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toContain("-annotated.pdf");
+
+    // Read exported PDF stream and verify it is a valid, uncorrupted PDF document
+    const downloadStream = await download.createReadStream();
+    expect(downloadStream).not.toBeNull();
+    if (downloadStream) {
+      const chunks: Buffer[] = [];
+      for await (const chunk of downloadStream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      const exportedBytes = Buffer.concat(chunks);
+      expect(exportedBytes.length).toBeGreaterThan(0);
+
+      // Verify PDF parses cleanly
+      const exportedPdfDoc = await PDFDocument.load(exportedBytes);
+      expect(exportedPdfDoc.getPageCount()).toBe(1);
+    }
   });
 });

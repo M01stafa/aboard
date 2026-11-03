@@ -7,6 +7,8 @@ import {
   reorderPages,
   insertImagePage,
   burnAnnotationsWithPdfLib,
+  burnCustomInkOnPdfBytes,
+  isRectCompletelyOutOfBounds,
   detectImageMime,
   isPng,
   isJpg,
@@ -201,5 +203,160 @@ describe("page-operations (@cantoo/pdf-lib)", () => {
     const doc = await PDFDocument.load(burnedBytes);
     expect(doc.getPageCount()).toBe(1);
     expect(burnedBytes.byteLength).toBeGreaterThan(0);
+  });
+
+  it("isRectCompletelyOutOfBounds accurately determines page boundaries", () => {
+    const pageWidth = 500;
+    const pageHeight = 700;
+
+    // Inside
+    expect(isRectCompletelyOutOfBounds(50, 50, 100, 100, pageWidth, pageHeight)).toBe(false);
+    // Partially inside on left
+    expect(isRectCompletelyOutOfBounds(-20, 50, 100, 100, pageWidth, pageHeight)).toBe(false);
+    // Completely left (x + width <= 0)
+    expect(isRectCompletelyOutOfBounds(-150, 50, 100, 100, pageWidth, pageHeight)).toBe(true);
+    // Completely above (y + height <= 0)
+    expect(isRectCompletelyOutOfBounds(50, -120, 100, 100, pageWidth, pageHeight)).toBe(true);
+    // Completely right (x >= pageWidth)
+    expect(isRectCompletelyOutOfBounds(550, 50, 100, 100, pageWidth, pageHeight)).toBe(true);
+    // Completely below (y >= pageHeight)
+    expect(isRectCompletelyOutOfBounds(50, 750, 100, 100, pageWidth, pageHeight)).toBe(true);
+  });
+
+  it("burnAnnotationsWithPdfLib cleanly skips out-of-bounds annotations without throwing or corrupting PDF", async () => {
+    const originalPdf = await createTestPdf(1);
+    const mockProjectService = {
+      getFile: vi.fn(),
+    } as unknown as ProjectService;
+
+    // Payload containing completely out-of-bounds annotations across all types:
+    // 1. Stamp completely negative x/y
+    // 2. Highlight completely beyond page height
+    // 3. FreeText completely beyond page width
+    // 4. Sticky note completely out-of-bounds (negative x/y)
+    // 5. Sticky note inside bounds
+    // 6. Custom ink stroke with segments completely out-of-bounds and partially in bounds
+    const payload = {
+      version: 2,
+      items: [
+        {
+          annotation: {
+            id: "oob-stamp",
+            pageIndex: 0,
+            type: PdfAnnotationSubtype.STAMP,
+            rect: { origin: { x: -300, y: -200 }, size: { width: 100, height: 80 } },
+          },
+          ctx: { fileId: "some-hash", mimeType: "image/png" },
+        },
+        {
+          annotation: {
+            id: "oob-hl",
+            pageIndex: 0,
+            type: PdfAnnotationSubtype.HIGHLIGHT,
+            rect: { origin: { x: 50, y: 1500 }, size: { width: 200, height: 20 } },
+          },
+        },
+        {
+          annotation: {
+            id: "oob-text",
+            pageIndex: 0,
+            type: PdfAnnotationSubtype.FREETEXT,
+            contents: "Offpage Text",
+            rect: { origin: { x: 1200, y: 100 }, size: { width: 150, height: 16 } },
+          },
+        },
+      ],
+      customStickyNotes: {
+        0: [
+          {
+            id: "oob-sticky",
+            pageIndex: 0,
+            x: -250,
+            y: -300,
+            width: 200,
+            height: 200,
+            text: "Completely off page",
+          },
+          {
+            id: "inbounds-sticky",
+            pageIndex: 0,
+            x: 60,
+            y: 80,
+            width: 180,
+            height: 120,
+            text: "Visible sticky note content",
+          },
+        ],
+      },
+      customInkStrokes: {
+        0: [
+          {
+            id: "oob-stroke",
+            points: [
+              { x: -500, y: -400 },
+              { x: -300, y: -200 },
+              { x: 50, y: 50 },
+              { x: 1500, y: 2000 },
+            ],
+            color: "#E44234",
+            width: 3,
+            opacity: 1,
+          },
+        ],
+      },
+    };
+
+    const burnedBytes = await burnAnnotationsWithPdfLib(
+      originalPdf,
+      JSON.stringify(payload),
+      "proj-oob",
+      mockProjectService
+    );
+
+    expect(burnedBytes).toBeDefined();
+    expect(burnedBytes.byteLength).toBeGreaterThan(0);
+
+    const doc = await PDFDocument.load(burnedBytes);
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  it("burnCustomInkOnPdfBytes cleanly handles out-of-bounds strokes and sticky notes", async () => {
+    const originalPdf = await createTestPdf(1);
+
+    const customStrokes = {
+      0: [
+        {
+          id: "stroke-1",
+          points: [
+            { x: -200, y: -100 },
+            { x: -150, y: -50 },
+          ],
+          color: "#000000",
+          width: 2,
+          opacity: 1,
+        },
+      ],
+    };
+
+    const customStickies = {
+      0: [
+        {
+          id: "sticky-oob",
+          pageIndex: 0,
+          x: 1000,
+          y: 2000,
+          width: 200,
+          height: 200,
+          text: "Far away",
+        },
+      ],
+    };
+
+    const burned = await burnCustomInkOnPdfBytes(originalPdf, customStrokes, customStickies);
+    expect(burned).toBeDefined();
+    expect(burned.byteLength).toBeGreaterThan(0);
+
+    const doc = await PDFDocument.load(burned);
+    expect(doc.getPageCount()).toBe(1);
   });
 });

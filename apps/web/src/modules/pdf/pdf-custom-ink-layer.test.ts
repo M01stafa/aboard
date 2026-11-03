@@ -202,28 +202,66 @@ describe("pdf-custom-ink-layer", () => {
     });
   });
 
-  describe("Text coordinate clamping (Bug 3: Disappearing text)", () => {
-    it("clamps text within page boundaries", () => {
-      const pageWidth = 612;
-      const pageHeight = 792;
-      const textWidth = 100;
-      const textHeight = 40;
+  describe("Canvas Overflow and Coordinate Clamping", () => {
+    const pageWidth = 600;
+    const pageHeight = 800;
 
-      // Negative drag attempt
-      const negX = -25;
-      const negY = -10;
-      const clampedNegX = Math.max(0, Math.min(Math.max(0, pageWidth - textWidth), negX));
-      const clampedNegY = Math.max(0, Math.min(Math.max(0, pageHeight - textHeight), negY));
-      expect(clampedNegX).toBe(0);
-      expect(clampedNegY).toBe(0);
+    it("allows negative coordinates and coordinates beyond page width within outer canvas bounds", () => {
+      const minX = -pageWidth;
+      const maxX = 2 * pageWidth;
+      const minY = -pageHeight;
+      const maxY = 2 * pageHeight;
 
-      // Beyond page boundary attempt
-      const posX = 700;
-      const posY = 900;
-      const clampedPosX = Math.max(0, Math.min(Math.max(0, pageWidth - textWidth), posX));
-      const clampedPosY = Math.max(0, Math.min(Math.max(0, pageHeight - textHeight), posY));
-      expect(clampedPosX).toBe(612 - 100);
-      expect(clampedPosY).toBe(792 - 40);
+      // Negative coordinates (placed or dragged outside page left/top)
+      const negX = -150;
+      const negY = -80;
+      const clampedNegX = Math.max(minX, Math.min(maxX, negX));
+      const clampedNegY = Math.max(minY, Math.min(maxY, negY));
+      expect(clampedNegX).toBe(-150);
+      expect(clampedNegY).toBe(-80);
+
+      // Beyond page boundary (placed or dragged outside page right/bottom)
+      const posX = 750;
+      const posY = 950;
+      const clampedPosX = Math.max(minX, Math.min(maxX, posX));
+      const clampedPosY = Math.max(minY, Math.min(maxY, posY));
+      expect(clampedPosX).toBe(750);
+      expect(clampedPosY).toBe(950);
+
+      // Far beyond outer boundary clamped to avoid dragging to infinity
+      const farNegX = -1200;
+      const farPosX = 3000;
+      expect(Math.max(minX, Math.min(maxX, farNegX))).toBe(-600);
+      expect(Math.max(minX, Math.min(maxX, farPosX))).toBe(1200);
+    });
+
+    it("maps 300% overflow SVG coordinates correctly via toPagePoint math", () => {
+      // SVG rect is 3x the page width and 3x the page height
+      const rectLeft = 100;
+      const rectTop = 50;
+      const rectWidth = 1800; // 3 * 600
+      const rectHeight = 2400; // 3 * 800
+
+      const toPagePoint = (clientX: number, clientY: number) => ({
+        x: -pageWidth + (clientX - rectLeft) * ((3 * pageWidth) / rectWidth),
+        y: -pageHeight + (clientY - rectTop) * ((3 * pageHeight) / rectHeight),
+      });
+
+      // Left edge of SVG canvas (-pageWidth)
+      expect(toPagePoint(rectLeft, rectTop)).toEqual({ x: -600, y: -800 });
+
+      // Left edge of the PDF page (x = 0, y = 0)
+      const pageLeftClientX = rectLeft + rectWidth / 3;
+      const pageTopClientY = rectTop + rectHeight / 3;
+      expect(toPagePoint(pageLeftClientX, pageTopClientY)).toEqual({ x: 0, y: 0 });
+
+      // Right edge of the PDF page (x = pageWidth, y = pageHeight)
+      const pageRightClientX = rectLeft + (2 * rectWidth) / 3;
+      const pageBottomClientY = rectTop + (2 * rectHeight) / 3;
+      expect(toPagePoint(pageRightClientX, pageBottomClientY)).toEqual({ x: 600, y: 800 });
+
+      // Right edge of SVG canvas (2 * pageWidth)
+      expect(toPagePoint(rectLeft + rectWidth, rectTop + rectHeight)).toEqual({ x: 1200, y: 1600 });
     });
   });
 

@@ -375,6 +375,7 @@ export interface PdfCustomInkLayerProps {
     coords: { x: number; y: number; width?: number; height?: number; text?: string; color?: string }
   ) => void;
   onUpdateStickyText?: (pageIndex: number, id: string, text: string) => void;
+  onDeleteSticky?: (pageIndex: number, id: string) => void;
   strokes: CustomInkStroke[];
   selectedStrokeIds?: string[];
   onSelectStrokes?: (strokeIds: string[]) => void;
@@ -439,6 +440,7 @@ export function PdfCustomInkLayer({
   isStickyMode = false,
   onAddSticky,
   onUpdateStickyText,
+  onDeleteSticky,
   strokes,
   selectedStrokeIds = [],
   onSelectStrokes,
@@ -461,6 +463,24 @@ export function PdfCustomInkLayer({
   >({});
   const [liveScaledStrokes, setLiveScaledStrokes] = useState<Record<string, CustomInkPoint[]>>({});
   const [editingStickyId, setEditingStickyId] = useState<string | null>(null);
+  const editingStickyIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    editingStickyIdRef.current = editingStickyId;
+  }, [editingStickyId]);
+  const editingTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    if (editingStickyId) {
+      const focusEl = () => {
+        if (editingTextareaRef.current) {
+          editingTextareaRef.current.focus();
+          const len = editingTextareaRef.current.value.length;
+          editingTextareaRef.current.setSelectionRange(len, len);
+        }
+      };
+      focusEl();
+      requestAnimationFrame(focusEl);
+    }
+  }, [editingStickyId]);
   const [marquee, setMarquee] = useState<MarqueeRect | null>(null);
   const interactionRef = useRef<Interaction | null>(null);
 
@@ -508,6 +528,7 @@ export function PdfCustomInkLayer({
     isStickyMode,
     onAddSticky,
     onUpdateStickyText,
+    onDeleteSticky,
     strokes,
     selectedStrokeIds,
     onSelectStrokes,
@@ -535,6 +556,7 @@ export function PdfCustomInkLayer({
       isStickyMode,
       onAddSticky,
       onUpdateStickyText,
+      onDeleteSticky,
       strokes,
       selectedStrokeIds,
       onSelectStrokes,
@@ -561,8 +583,8 @@ export function PdfCustomInkLayer({
       if (rect.width <= 0 || rect.height <= 0) return null;
       const p = propsRef.current;
       return {
-        x: (clientX - rect.left) * (p.pageWidth / rect.width),
-        y: (clientY - rect.top) * (p.pageHeight / rect.height),
+        x: -p.pageWidth + (clientX - rect.left) * ((3 * p.pageWidth) / rect.width),
+        y: -p.pageHeight + (clientY - rect.top) * ((3 * p.pageHeight) / rect.height),
       };
     };
 
@@ -640,6 +662,40 @@ export function PdfCustomInkLayer({
         if (!pt) return;
 
         const target = e.target as Element | null;
+
+        // If clicking on sticky delete button, do not capture or start drag
+        if (target?.closest?.("[data-testid='pdf-sticky-delete-btn']")) {
+          return;
+        }
+
+        // If clicking inside a sticky note textarea while editing, allow native text editing
+        if (target?.closest?.("textarea") && editingStickyIdRef.current) {
+          return;
+        }
+
+        // If double clicking anywhere on a sticky note card, switch to edit mode immediately
+        const stickyCardEl = target?.closest?.('[data-testid^="pdf-sticky-card-"]');
+        if (stickyCardEl) {
+          const sid = stickyCardEl.getAttribute("data-testid")?.replace("pdf-sticky-card-", "");
+          if (sid && e.detail >= 2) {
+            e.stopPropagation();
+            setEditingStickyId(sid);
+            interactionRef.current = null;
+            const ta = stickyCardEl.querySelector("textarea");
+            if (ta) {
+              ta.focus();
+            }
+            return;
+          }
+        }
+
+        // If another sticky is being edited, clicking outside exits edit mode
+        if (editingStickyIdRef.current) {
+          const activeCard = target?.closest?.(`[data-testid="pdf-sticky-card-${editingStickyIdRef.current}"]`);
+          if (!activeCard) {
+            setEditingStickyId(null);
+          }
+        }
         const handleEl = target?.closest?.("[data-resize-handle]");
         const handlePos = handleEl?.getAttribute("data-resize-handle") as ResizeHandlePosition | null;
         const handleObjId = handleEl?.getAttribute("data-object-id");
@@ -724,9 +780,11 @@ export function PdfCustomInkLayer({
 
         if (targetId) {
           // User clicked on a custom ink stroke or a stamp/text/highlight object
-          e.preventDefault();
+          if (objType !== "sticky") {
+            e.preventDefault();
+            window.getSelection()?.removeAllRanges();
+          }
           e.stopPropagation();
-          window.getSelection()?.removeAllRanges();
           const currentSelected = new Set(p.selectedStrokeIds || []);
           let activeSelected = Array.from(currentSelected);
 
@@ -743,6 +801,18 @@ export function PdfCustomInkLayer({
           if (objType === "highlight") {
             // Highlights are strictly locked to text: selected for deletion, but dragging is disabled
             interactionRef.current = null;
+            return;
+          }
+
+          // If double-clicking on a sticky note card, switch to edit mode immediately
+          if (objType === "sticky" && e.detail >= 2) {
+            setEditingStickyId(targetId);
+            interactionRef.current = null;
+            const cardEl = target?.closest?.(`[data-testid="pdf-sticky-card-${targetId}"]`);
+            const ta = cardEl?.querySelector("textarea");
+            if (ta) {
+              ta.focus();
+            }
             return;
           }
 
@@ -900,7 +970,7 @@ export function PdfCustomInkLayer({
         setDragOffsets(nextOffsets);
 
         // Real-time visual transform on underlying AnnotationLayer DOM elements
-        const docScale = svg.getBoundingClientRect().width / p.pageWidth;
+        const docScale = svg.getBoundingClientRect().width / (3 * p.pageWidth);
         for (const [id, offset] of Object.entries(nextOffsets)) {
           const annoEl = document.querySelector(`[data-annotation-id="${id}"]`) as HTMLElement | null;
           if (annoEl) {
@@ -937,7 +1007,7 @@ export function PdfCustomInkLayer({
           }
         } else {
           // Real-time visual transform on underlying AnnotationLayer DOM elements
-          const docScale = svg.getBoundingClientRect().width / p.pageWidth;
+          const docScale = svg.getBoundingClientRect().width / (3 * p.pageWidth);
           const annoEl = document.querySelector(`[data-annotation-id="${it.objectId}"]`) as HTMLElement | null;
           if (annoEl) {
             const containerEl =
@@ -1062,10 +1132,12 @@ export function PdfCustomInkLayer({
                   const dy = cur.y - base.y;
                   const newX = Math.round((obj.x + dx) * 100) / 100;
                   const newY = Math.round((obj.y + dy) * 100) / 100;
-                  const maxX = Math.max(0, p.pageWidth - obj.width);
-                  const maxY = Math.max(0, p.pageHeight - obj.height);
-                  const clampedX = Math.max(0, Math.min(maxX, newX));
-                  const clampedY = Math.max(0, Math.min(maxY, newY));
+                  const minX = -p.pageWidth;
+                  const maxX = 2 * p.pageWidth;
+                  const minY = -p.pageHeight;
+                  const maxY = 2 * p.pageHeight;
+                  const clampedX = Math.max(minX, Math.min(maxX, newX));
+                  const clampedY = Math.max(minY, Math.min(maxY, newY));
                   p.onMoveObject(p.pageIndex, id, { x: clampedX, y: clampedY }, obj.type);
                 }
               }
@@ -1347,53 +1419,123 @@ export function PdfCustomInkLayer({
                   style={{
                     width: "100%",
                     height: "100%",
-                    backgroundColor: obj.color || "#FEF3C7",
-                    border: "1px solid #FCD34D",
+                    backgroundColor: obj.color || "#FEF08A",
+                    border: "1px solid rgba(0, 0, 0, 0.08)",
                     borderRadius: "var(--radius-sm, 4px)",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.12)",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
                     boxSizing: "border-box",
+                    cursor: isSelectMode && editingStickyId !== obj.id ? "move" : "default",
                   }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     setEditingStickyId(obj.id);
+                    const ta = e.currentTarget.querySelector("textarea");
+                    if (ta) {
+                      ta.focus();
+                    }
                   }}
                 >
                   <div
                     style={{
-                      height: "22px",
-                      backgroundColor: "#FDE68A",
+                      height: "26px",
+                      backgroundColor: "#FDE047",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "0 8px",
                       cursor: isSelectMode ? "move" : "default",
                       userSelect: "none",
-                      borderBottom: "1px solid #FCD34D",
+                      borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+                      flexShrink: 0,
                     }}
                   >
                     <span
                       style={{
-                        fontSize: "11px",
+                        fontSize: "12px",
                         fontWeight: 600,
-                        color: "#92400E",
-                        fontFamily: "system-ui, sans-serif",
+                        color: "#78350F",
+                        fontFamily: "system-ui, -apple-system, sans-serif",
+                        pointerEvents: "none",
                       }}
                     >
                       Note
                     </span>
+                    <button
+                      type="button"
+                      data-testid="pdf-sticky-delete-btn"
+                      aria-label="Delete note"
+                      title="Delete note"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (editingStickyId === obj.id) {
+                          setEditingStickyId(null);
+                        }
+                        onDeleteSticky?.(pageIndex, obj.id);
+                      }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "18px",
+                        height: "18px",
+                        padding: 0,
+                        border: "none",
+                        background: "transparent",
+                        cursor: "pointer",
+                        color: "#78350F",
+                        borderRadius: "2px",
+                        lineHeight: 1,
+                      }}
+                    >
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 10 10"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ pointerEvents: "none" }}
+                        aria-hidden="true"
+                      >
+                        <line x1="1" y1="1" x2="9" y2="9" />
+                        <line x1="9" y1="1" x2="1" y2="9" />
+                      </svg>
+                    </button>
                   </div>
                   <textarea
+                    ref={(el) => {
+                      if (editingStickyId === obj.id) {
+                        editingTextareaRef.current = el;
+                        if (el && document.activeElement !== el) {
+                          requestAnimationFrame(() => el.focus());
+                        }
+                      }
+                    }}
                     data-testid={`pdf-sticky-textarea-${obj.id}`}
                     value={obj.text ?? ""}
                     placeholder="Type a note..."
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setEditingStickyId(obj.id);
+                    }}
                     onChange={(e) => {
                       onUpdateStickyText?.(pageIndex, obj.id, e.target.value);
                     }}
                     onBlur={() => {
                       setEditingStickyId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setEditingStickyId(null);
+                      }
                     }}
                     autoFocus={editingStickyId === obj.id}
                     style={{
@@ -1404,7 +1546,7 @@ export function PdfCustomInkLayer({
                       outline: "none",
                       backgroundColor: "transparent",
                       padding: "8px",
-                      fontFamily: "system-ui, sans-serif",
+                      fontFamily: "system-ui, -apple-system, sans-serif",
                       fontSize: "13px",
                       lineHeight: "1.4",
                       color: "#78350F",
@@ -1415,27 +1557,20 @@ export function PdfCustomInkLayer({
                 </div>
               </foreignObject>
             )}
-            <rect
-              x={curX}
-              y={curY}
-              width={curW}
-              height={curH}
-              fill="transparent"
-              style={{
-                pointerEvents:
-                  isSelectMode && (!editingStickyId || editingStickyId !== obj.id) ? "all" : "none",
-                cursor: isSelectMode ? (obj.type === "highlight" ? "pointer" : "move") : "default",
-                touchAction: "none",
-              }}
-              onDoubleClick={
-                obj.type === "sticky"
-                  ? (e) => {
-                      e.stopPropagation();
-                      setEditingStickyId(obj.id);
-                    }
-                  : undefined
-              }
-            />
+            {obj.type !== "sticky" && (
+              <rect
+                x={curX}
+                y={curY}
+                width={curW}
+                height={curH}
+                fill="transparent"
+                style={{
+                  pointerEvents: isSelectMode ? "all" : "none",
+                  cursor: isSelectMode ? (obj.type === "highlight" ? "pointer" : "move") : "default",
+                  touchAction: "none",
+                }}
+              />
+            )}
             {isSelected && obj.type !== "highlight" && (
               <g data-testid={`pdf-${obj.type}-bbox`}>
                 <rect
@@ -1488,6 +1623,7 @@ export function PdfCustomInkLayer({
       selectedSet,
       editingStickyId,
       onUpdateStickyText,
+      onDeleteSticky,
       pageIndex,
     ]
   );
@@ -1496,12 +1632,13 @@ export function PdfCustomInkLayer({
     <svg
       ref={svgRef}
       data-testid={`pdf-custom-ink-layer-${pageIndex + 1}`}
-      viewBox={`0 0 ${pageWidth} ${pageHeight}`}
+      viewBox={`-${pageWidth} -${pageHeight} ${pageWidth * 3} ${pageHeight * 3}`}
       style={{
         position: "absolute",
-        inset: 0,
-        width: "100%",
-        height: "100%",
+        left: "-100%",
+        top: "-100%",
+        width: "300%",
+        height: "300%",
         pointerEvents: isActive || isSelectMode || isStampMode || isStickyMode ? "auto" : "none",
         cursor: isActive || isStampMode || isStickyMode ? "crosshair" : "default",
         zIndex: 15,
