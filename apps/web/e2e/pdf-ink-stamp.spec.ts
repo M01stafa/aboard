@@ -1724,4 +1724,269 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     await page.keyboard.type("Regressions fixed successfully!");
     await expect(textarea).toHaveValue("Regressions fixed successfully!");
   });
+
+  test("restores text tool with drag and resize, verifies sticky note auto-direction and polish, and marquee selection regression", async ({ page }) => {
+    const pid = "test-pdf-text-sticky-marquee-suite";
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Comprehensive Verification of Text Tool, Sticky Notes, and Marquee Selection", {
+      x: 50,
+      y: 750,
+      size: 16,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+
+    await fileInput.setInputFiles({
+      name: "test-text-sticky-marquee.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // =========================================================================
+    // PART A: Text Tool Restoration (click toolbar, create, type, select, move, resize)
+    // =========================================================================
+    // 1. Click the Text tool button in the floating toolbar
+    const textToolBtn = primaryPane.locator('[data-testid="pdf-tool-text"]');
+    await textToolBtn.click();
+    await page.waitForTimeout(200);
+    await expect(textToolBtn).toHaveAttribute("aria-pressed", "true");
+
+    // 2. Click on the canvas creates a text box at clicked position
+    const textClickX = page1Box.x + 140;
+    const textClickY = page1Box.y + 180;
+    await page.mouse.click(textClickX, textClickY);
+    await page.waitForTimeout(400);
+
+    const textBox = primaryPane.locator('[data-testid^="pdf-text-box-"]').first();
+    await expect(textBox).toBeVisible({ timeout: 5000 });
+
+    // 3. Type text into the text box
+    const textInput = primaryPane.locator('[data-testid^="pdf-text-input-"]').first();
+    await expect(textInput).toBeVisible();
+    await textInput.fill("Circuit Analysis Notes");
+    await expect(textInput).toHaveValue("Circuit Analysis Notes");
+
+    // Blur text box to exit edit mode and show rendered display
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(200);
+    const textDisplay = primaryPane.locator('[data-testid^="pdf-text-display-"]').first();
+    await expect(textDisplay).toHaveText("Circuit Analysis Notes");
+
+    // 4. Select the text box with the Select tool
+    const selectBtn = primaryPane.locator('[data-testid="pdf-tool-select"]');
+    await selectBtn.click();
+    await page.waitForTimeout(200);
+    await expect(selectBtn).toHaveAttribute("aria-pressed", "true");
+
+    const textObject = primaryPane.locator('[data-testid="pdf-text-object"]').first();
+    const tbBox = await textObject.boundingBox();
+    expect(tbBox).not.toBeNull();
+    if (!tbBox) return;
+
+    await page.mouse.click(tbBox.x + tbBox.width / 2, tbBox.y + tbBox.height / 2);
+    await page.waitForTimeout(200);
+
+    // Verify text selection bounding box is displayed
+    const textBbox = primaryPane.locator('[data-testid="pdf-text-bbox"]');
+    await expect(textBbox).toBeVisible({ timeout: 5000 });
+
+    // 5. Move (drag) the text box
+    const initialTextOrigin = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const textAnno = list.find((a: any) => a?.object?.type === 3);
+      return textAnno ? { ...textAnno.object.rect.origin } : null;
+    });
+    expect(initialTextOrigin).not.toBeNull();
+
+    const dragDeltaX = 70;
+    const dragDeltaY = 50;
+    await page.mouse.move(tbBox.x + tbBox.width / 2, tbBox.y + tbBox.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 10; i++) {
+      await page.mouse.move(
+        tbBox.x + tbBox.width / 2 + (dragDeltaX * i) / 10,
+        tbBox.y + tbBox.height / 2 + (dragDeltaY * i) / 10
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    const movedTextOrigin = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const textAnno = list.find((a: any) => a?.object?.type === 3);
+      return textAnno ? { ...textAnno.object.rect.origin } : null;
+    });
+    expect(movedTextOrigin).not.toBeNull();
+    expect(movedTextOrigin!.x).toBeGreaterThan(initialTextOrigin!.x + 20);
+    expect(movedTextOrigin!.y).toBeGreaterThan(initialTextOrigin!.y + 15);
+
+    // 6. Resize the text box via corner resize handle (SE)
+    const initialTextSize = await page.evaluate(() => {
+      const scope = (window as unknown as {
+        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+      }).__aboard_pdfAnnotations?.scope;
+      const res = scope?.getAnnotations();
+      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+      const textAnno = list.find((a: any) => a?.object?.type === 3);
+      return textAnno ? { ...textAnno.object.rect.size } : null;
+    });
+    expect(initialTextSize).not.toBeNull();
+
+    const textResizeHandleSE = primaryPane.locator('[data-testid="pdf-text-resize-handle-se"]');
+    await expect(textResizeHandleSE).toBeVisible({ timeout: 5000 });
+    const seBox = await textResizeHandleSE.boundingBox();
+    expect(seBox).not.toBeNull();
+    if (seBox) {
+      await page.mouse.move(seBox.x + seBox.width / 2, seBox.y + seBox.height / 2);
+      await page.mouse.down();
+      for (let i = 1; i <= 10; i++) {
+        await page.mouse.move(
+          seBox.x + seBox.width / 2 + (60 * i) / 10,
+          seBox.y + seBox.height / 2 + (40 * i) / 10
+        );
+      }
+      await page.mouse.up();
+      await page.waitForTimeout(400);
+
+      const resizedTextSize = await page.evaluate(() => {
+        const scope = (window as unknown as {
+          __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
+        }).__aboard_pdfAnnotations?.scope;
+        const res = scope?.getAnnotations();
+        const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
+        const textAnno = list.find((a: any) => a?.object?.type === 3);
+        return textAnno ? { ...textAnno.object.rect.size } : null;
+      });
+      expect(resizedTextSize).not.toBeNull();
+      expect(resizedTextSize!.width).toBeGreaterThan(initialTextSize!.width + 10);
+    }
+
+    // =========================================================================
+    // PART B: Sticky Note Auto-Direction & Polish
+    // =========================================================================
+    // 1. Create a sticky note via the toolbar button
+    const stickyToolBtn = primaryPane.locator('[data-testid="pdf-tool-sticky"]');
+    await stickyToolBtn.click();
+    await page.waitForTimeout(200);
+    await expect(stickyToolBtn).toHaveAttribute("aria-pressed", "true");
+
+    // Click canvas to place sticky note
+    const stickyPlaceX = page1Box.x + 360;
+    const stickyPlaceY = page1Box.y + 240;
+    await page.mouse.click(stickyPlaceX, stickyPlaceY);
+    await page.waitForTimeout(400);
+
+    const stickyCard = primaryPane.locator('[data-testid^="pdf-sticky-card-"]').first();
+    await expect(stickyCard).toBeVisible({ timeout: 5000 });
+
+    // 2. Verify dir="auto" attribute on textarea
+    const stickyTextarea = primaryPane.locator('[data-testid^="pdf-sticky-textarea-"]').first();
+    await expect(stickyTextarea).toHaveAttribute("dir", "auto");
+
+    // 3. Type Arabic text and English text, confirming text is set properly
+    await stickyCard.dblclick();
+    await page.waitForTimeout(200);
+    await expect(stickyTextarea).toBeFocused();
+
+    const arabicEnglishText = "ملاحظة هندسية تجريبية - Circuit Resistance R1 = 50 Ohm";
+    await stickyTextarea.fill(arabicEnglishText);
+    await expect(stickyTextarea).toHaveValue(arabicEnglishText);
+
+    // 4. Verify sticky note styles (border-radius, box-shadow)
+    const stickyStyles = await stickyCard.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      return {
+        borderRadius: style.borderRadius,
+        boxShadow: style.boxShadow,
+      };
+    });
+    // Border-radius must be at least 4px (uses var(--radius-md, 8px))
+    expect(parseFloat(stickyStyles.borderRadius)).toBeGreaterThanOrEqual(4);
+    // Box-shadow must be active and not none
+    expect(stickyStyles.boxShadow).not.toBe("none");
+    expect(stickyStyles.boxShadow.length).toBeGreaterThan(0);
+
+    // Exit sticky editing
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(200);
+
+    // =========================================================================
+    // PART C: Marquee Selection Regression Check
+    // =========================================================================
+    // 1. Draw an ink stroke
+    const inkToolBtn = primaryPane.locator('[data-testid="pdf-tool-ink"]');
+    await inkToolBtn.click();
+    await page.waitForTimeout(200);
+
+    const strokeStartX = page1Box.x + 80;
+    const strokeStartY = page1Box.y + 420;
+    const strokeEndX = page1Box.x + 160;
+    const strokeEndY = page1Box.y + 480;
+
+    await page.mouse.move(strokeStartX, strokeStartY);
+    await page.mouse.down();
+    for (let i = 1; i <= 5; i++) {
+      await page.mouse.move(
+        strokeStartX + ((strokeEndX - strokeStartX) * i) / 5,
+        strokeStartY + ((strokeEndY - strokeStartY) * i) / 5
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+
+    // 2. Switch to Select tool
+    await selectBtn.click();
+    await page.waitForTimeout(200);
+
+    // 3. Marquee drag over the ink stroke
+    const marqueeStartX = strokeStartX - 25;
+    const marqueeStartY = strokeStartY - 25;
+    const marqueeEndX = strokeEndX + 35;
+    const marqueeEndY = strokeEndY + 35;
+
+    await page.mouse.move(marqueeStartX, marqueeStartY);
+    await page.mouse.down();
+    for (let i = 1; i <= 5; i++) {
+      await page.mouse.move(
+        marqueeStartX + ((marqueeEndX - marqueeStartX) * i) / 5,
+        marqueeStartY + ((marqueeEndY - marqueeStartY) * i) / 5
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+
+    // 4. Verify selection bounding box appears over the ink stroke
+    const strokeBbox = primaryPane.locator('[data-testid="pdf-custom-ink-bbox"]');
+    await expect(strokeBbox).toBeVisible({ timeout: 5000 });
+
+    // Verify corner resize handles appear on the stroke bounding box
+    const nwHandle = primaryPane.locator('[data-testid="pdf-ink-resize-handle-nw"]');
+    await expect(nwHandle).toBeVisible();
+  });
 });

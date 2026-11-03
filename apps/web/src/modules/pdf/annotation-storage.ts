@@ -26,6 +26,7 @@ export interface CustomStickyNote {
   text: string;
   color?: string;
   transform?: { x: number; y: number };
+  rotation?: number;
 }
 
 export interface SerializedAnnotationsPayload {

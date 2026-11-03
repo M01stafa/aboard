@@ -9,6 +9,10 @@ import { useHistoryCapability } from "@embedpdf/plugin-history/react";
 import {
   PdfAnnotationSubtype,
   type PdfStampAnnoObject,
+  type PdfFreeTextAnnoObject,
+  PdfStandardFont,
+  PdfTextAlignment,
+  PdfVerticalAlignment,
 } from "@embedpdf/models";
 import {
   serializeAnnotations,
@@ -56,6 +60,11 @@ export interface UsePdfAnnotationsResult {
   ) => void;
   handleUpdateStickyText: (pageIndex: number, id: string, text: string) => void;
   handleDeleteSticky: (pageIndex: number, id: string) => void;
+  handleAddText: (
+    pageIndex: number,
+    coords: { x: number; y: number; width?: number; height?: number; text?: string; fontSize?: number; color?: string; id?: string }
+  ) => string;
+  handleUpdateText: (pageIndex: number, id: string, newText: string) => void;
   customStrokes: Record<number, CustomInkStroke[]>;
   selectedStrokeIds: string[];
   setSelectedStrokeIds: (ids: string[]) => void;
@@ -272,8 +281,8 @@ export function usePdfAnnotations({
 
     const unsub = annotationScope.onActiveToolChange((tool) => {
       if (!tool) {
-        // If we are currently in custom ink draw mode, stamp mode, or sticky mode, do NOT let EmbedPDF reset us to select
-        setActiveToolState((prev) => (prev === "ink" || prev === "stamp" || prev === "sticky" ? prev : "select"));
+        // If we are currently in custom ink draw mode, stamp mode, sticky mode, or text mode, do NOT let EmbedPDF reset us to select
+        setActiveToolState((prev) => (prev === "ink" || prev === "stamp" || prev === "sticky" || prev === "text" || prev === "freeText" ? prev : "select"));
       } else if (
         tool.id === "highlight" ||
         tool.id === "freeText" ||
@@ -351,13 +360,11 @@ export function usePdfAnnotations({
         annotationScope.deselectAnnotation();
       }
 
-      if (tool === "select" || tool === "ink" || tool === "stamp" || tool === "sticky") {
-        // Native EmbedPDF ink, stamp, and sticky note are handled via custom layers; keep native tool inactive
+      if (tool === "select" || tool === "ink" || tool === "stamp" || tool === "sticky" || tool === "text" || tool === "freeText") {
+        // Native EmbedPDF ink, stamp, sticky note, and text are handled via custom layers; keep native tool inactive
         annotationScope.setActiveTool(null);
       } else if (tool === "highlight") {
         annotationScope.setActiveTool("highlight");
-      } else if (tool === "freeText") {
-        annotationScope.setActiveTool("freeText");
       }
     },
     [annotationScope]
@@ -508,6 +515,13 @@ export function usePdfAnnotations({
             ? "highlight"
             : null;
         if (type) {
+          const anyObj = o as {
+            contents?: string;
+            text?: string;
+            fontSize?: number;
+            fontColor?: string;
+            color?: string;
+          };
           res.push({
             id: o.id,
             type,
@@ -517,6 +531,10 @@ export function usePdfAnnotations({
             width: o.rect.size.width,
             height: o.rect.size.height,
             transform: { x: 0, y: 0 },
+            text: anyObj.contents ?? anyObj.text,
+            contents: anyObj.contents ?? anyObj.text,
+            fontSize: anyObj.fontSize,
+            color: anyObj.fontColor ?? anyObj.color,
           });
         }
       }
@@ -533,7 +551,9 @@ export function usePdfAnnotations({
           height: st.height,
           transform: st.transform ?? { x: 0, y: 0 },
           text: st.text,
+          contents: st.text,
           color: st.color,
+          rotation: st.rotation,
         });
       }
 
@@ -772,12 +792,20 @@ export function usePdfAnnotations({
   const handleAddSticky = useCallback(
     (
       pageIndex: number,
-      coords: { x: number; y: number; width?: number; height?: number; text?: string; color?: string }
+      coords: { x: number; y: number; width?: number; height?: number; text?: string; color?: string; rotation?: number }
     ) => {
       const stickyId =
         typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
           ? crypto.randomUUID()
           : `sticky-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+      let hash = 0;
+      for (let i = 0; i < stickyId.length; i++) {
+        hash = (hash << 5) - hash + stickyId.charCodeAt(i);
+        hash |= 0;
+      }
+      const rotation =
+        coords.rotation ?? Math.round((((Math.abs(hash) % 17) - 8) / 10) * 10) / 10;
 
       const newSticky: CustomStickyNote = {
         id: stickyId,
@@ -787,7 +815,8 @@ export function usePdfAnnotations({
         width: coords.width ?? 200,
         height: coords.height ?? 200,
         text: coords.text ?? "",
-        color: coords.color ?? "#FEF3C7",
+        color: coords.color ?? "#FEF08A",
+        rotation,
         transform: { x: 0, y: 0 },
       };
 
@@ -841,6 +870,87 @@ export function usePdfAnnotations({
     [triggerDebouncedSave]
   );
 
+  const handleAddText = useCallback(
+    (
+      pageIndex: number,
+      coords: {
+        x: number;
+        y: number;
+        width?: number;
+        height?: number;
+        text?: string;
+        fontSize?: number;
+        color?: string;
+        id?: string;
+      }
+    ): string => {
+      const textId =
+        coords.id ||
+        (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
+
+      const originX = Math.round(coords.x * 100) / 100;
+      const originY = Math.round(coords.y * 100) / 100;
+      const width = coords.width ?? 140;
+      const height = coords.height ?? 36;
+      const text = coords.text ?? "Text";
+      const fontSize = coords.fontSize ?? 16;
+      const fontColor = coords.color ?? "#E44234";
+
+      const textAnno: PdfFreeTextAnnoObject = {
+        id: textId,
+        type: PdfAnnotationSubtype.FREETEXT,
+        pageIndex,
+        rect: {
+          origin: { x: originX, y: originY },
+          size: { width, height },
+        },
+        contents: text,
+        fontFamily: PdfStandardFont.Helvetica,
+        fontSize,
+        fontColor,
+        textAlign: PdfTextAlignment.Left,
+        verticalAlign: PdfVerticalAlignment.Top,
+        opacity: 1,
+      };
+
+      if (annotationScope) {
+        try {
+          annotationScope.createAnnotation(pageIndex, textAnno);
+          if (typeof annotationScope.selectAnnotation === "function") {
+            annotationScope.selectAnnotation(pageIndex, textId);
+          }
+        } catch (err) {
+          console.error("[usePdfAnnotations] Failed to create FreeText annotation:", err);
+        }
+      }
+
+      setActiveToolState("select");
+      setSelectedStrokeIds([textId]);
+      selectedStrokeIdsRef.current = [textId];
+      setAnnotationsVersion((v) => v + 1);
+      triggerDebouncedSave();
+
+      return textId;
+    },
+    [annotationScope, triggerDebouncedSave]
+  );
+
+  const handleUpdateText = useCallback(
+    (pageIndex: number, id: string, newText: string) => {
+      if (!annotationScope) return;
+      try {
+        annotationScope.updateAnnotation(pageIndex, id, { contents: newText });
+        setAnnotationsVersion((v) => v + 1);
+        triggerDebouncedSave();
+      } catch (err) {
+        console.error("[usePdfAnnotations] Failed to update text annotation:", err);
+      }
+    },
+    [annotationScope, triggerDebouncedSave]
+  );
+
   // Expose on window for E2E testing in browser environments
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -852,6 +962,8 @@ export function usePdfAnnotations({
         addSticky: handleAddSticky,
         handleDeleteSticky,
         deleteSticky: handleDeleteSticky,
+        addText: handleAddText,
+        updateText: handleUpdateText,
         selectedStrokeIds: selectedStrokeIdsRef.current,
         deleteSelected: handleDeleteSelected,
         flushAnnotations,
@@ -864,6 +976,8 @@ export function usePdfAnnotations({
     customStickyNotes,
     handleAddSticky,
     handleDeleteSticky,
+    handleAddText,
+    handleUpdateText,
     selectedStrokeIds,
     handleDeleteSelected,
     flushAnnotations,
@@ -881,6 +995,8 @@ export function usePdfAnnotations({
     handleAddSticky,
     handleUpdateStickyText,
     handleDeleteSticky,
+    handleAddText,
+    handleUpdateText,
     customStrokes,
     selectedStrokeIds,
     setSelectedStrokeIds,

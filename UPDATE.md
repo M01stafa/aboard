@@ -2387,3 +2387,27 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
 **Related:** PDF-1, PDF-4
 **Open:** none.
+
+
+## 2026-11-03 — Restore Text Tool, Add RTL/LTR Auto-Direction to Sticky Notes, and Polish Sticky Note UI (Multi-Agent)
+**Request:** Restore the Text tool, add RTL/LTR auto-direction to sticky notes, and polish sticky note UI via 3 sub-agents:
+1. Sub-Agent 1 (Restore Text Tool): Investigate why Text tool broke; support `'text'` and `'freeText'` aliases; rebuild text box creation on canvas click; render interactive `<foreignObject>` with inline auto-focusing `<textarea>` (`dir="auto"`); support moving and proportional font resizing with the Select tool; prevent EmbedPDF static duplicate overlay by suppressing `FreeText` in `renderCustomAnnotation`.
+2. Sub-Agent 2 (Sticky Notes Auto-Direction & UI Polish): Add `dir="auto"` and `unicodeBidi: "plaintext"` to sticky note `<textarea>`; polish UI with warmer yellow `#FEF08A`, rounder corners `var(--radius-md, 8px)`, drop shadow `var(--shadow-2)`, darker header bar `#FDE047`, and organic subtle tilt (`-0.8deg` to `0.8deg`).
+3. Sub-Agent 3 (Code Review & E2E Testing): Review integration in `pdf-custom-ink-layer.tsx`; fix double-click vs drag timing; write comprehensive Playwright test verifying text box creation, moving, resizing, sticky note bilingual auto-direction (Arabic RTL & English LTR), UI styling, and marquee selection regression.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx`: expanded `AnnotationToolType` to support both `"text"` and `"freeText"`.
+- `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx`: unified active state detection with `isTextTool` helper for dual tool keys.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx`: updated `PdfTextLayer` `isAnnotating` to include text tools; hid EmbedPDF static `FreeText` overlay in `renderCustomAnnotation`; wired `isTextMode`, `onAddText`, and `onUpdateText` to `<PdfCustomInkLayer>`.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: added `handleAddText` and `handleUpdateText`; enhanced `getObjectsForPage` to return text contents, font size, and color; added `rotation` property to `handleAddSticky`.
+- `apps/web/src/modules/pdf/annotation-storage.ts`: added `rotation?: number` to `CustomStickyNote`.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: added interactive `<foreignObject>` text box rendering with `dir="auto"` editable textarea on click/double-click, drag moving, and proportional font scaling with 8 handles; polished sticky note card with warm yellow, rounded corners, subtle drop shadow, and organic tilt; added `dir="auto"` with `unicodeBidi: "plaintext"` for auto RTL/LTR detection.
+- `apps/web/src/modules/pdf/pdf-sticky-notes.test.tsx` & `apps/web/src/modules/pdf/pdf-text-tool.test.tsx`: updated/added unit tests for sticky note UI tokens and text tool creation/lifecycle (80/80 tests passing).
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added Playwright E2E test verifying text tool creation, drag, resize, sticky note auto-direction with Arabic and English, polished styling, and marquee selection (10/10 tests passing).
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (80/80 unit tests across 10 test files).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (10/10 tests passed in 1.2m).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings, spacing 8-point compliant).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-3, PDF-4
+**Open:** none.

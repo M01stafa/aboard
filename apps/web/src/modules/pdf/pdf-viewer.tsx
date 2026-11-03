@@ -38,7 +38,7 @@ import { customStampRenderer } from "./custom-stamp-renderer";
 import { PdfTextLayer } from "./pdf-text-layer";
 import { HistoryPluginPackage } from "@embedpdf/plugin-history";
 import { ExportPluginPackage, useExport } from "@embedpdf/plugin-export/react";
-import type { PdfDocumentObject } from "@embedpdf/models";
+import { PdfAnnotationSubtype, type PdfDocumentObject } from "@embedpdf/models";
 import { projectService as defaultProjectService, type ProjectService } from "@/core/storage";
 import { computeBlobSha256 } from "@/core/storage/sha256";
 import { useI18n } from "@/i18n/provider";
@@ -247,6 +247,8 @@ function ViewerInner({
     handleAddSticky,
     handleUpdateStickyText,
     handleDeleteSticky,
+    handleAddText,
+    handleUpdateText,
     customStickyNotes,
     customStrokes,
     handleAddCustomStroke,
@@ -297,15 +299,31 @@ function ViewerInner({
   );
 
   const renderCustomAnnotation = useCallback(
-    ({ annotation, children }: { annotation: { id: string; type?: number }; children: React.ReactNode }) => (
-      <div
-        data-annotation-id={annotation.id}
-        data-annotation-type={annotation.type}
-        style={{ width: "100%", height: "100%", overflow: "visible" }}
-      >
-        {children}
-      </div>
-    ),
+    ({
+      annotation,
+      children,
+    }: {
+      annotation: { id: string; type?: number; subtype?: string };
+      children: React.ReactNode;
+    }) => {
+      if (
+        annotation.type === PdfAnnotationSubtype.FREETEXT ||
+        annotation.type === 3 ||
+        annotation.subtype === "FreeText" ||
+        (annotation as unknown as { subtype?: unknown }).subtype === PdfAnnotationSubtype.FREETEXT
+      ) {
+        return null;
+      }
+      return (
+        <div
+          data-annotation-id={annotation.id}
+          data-annotation-type={annotation.type}
+          style={{ width: "100%", height: "100%", overflow: "visible" }}
+        >
+          {children}
+        </div>
+      );
+    },
     []
   );
 
@@ -937,7 +955,14 @@ function ViewerInner({
                     <PdfTextLayer
                       documentId={documentId}
                       pageIndex={page.pageIndex}
-                      isAnnotating={activeTool === "select" || activeTool === "ink" || activeTool === "stamp" || activeTool === "sticky"}
+                      isAnnotating={
+                        activeTool === "select" ||
+                        activeTool === "ink" ||
+                        activeTool === "stamp" ||
+                        activeTool === "sticky" ||
+                        activeTool === "text" ||
+                        activeTool === "freeText"
+                      }
                     />
                     {activeTool !== "select" && (
                       <SelectionLayer
@@ -969,6 +994,9 @@ function ViewerInner({
                       onAddSticky={handleAddSticky}
                       onUpdateStickyText={handleUpdateStickyText}
                       onDeleteSticky={handleDeleteSticky}
+                      isTextMode={activeTool === "text" || activeTool === "freeText"}
+                      onAddText={handleAddText}
+                      onUpdateText={handleUpdateText}
                       strokes={customStrokes[page.pageIndex] || []}
                       selectedStrokeIds={selectedStrokeIds}
                       onSelectStrokes={setSelectedStrokeIds}

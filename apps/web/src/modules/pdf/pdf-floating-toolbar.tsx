@@ -92,8 +92,10 @@ export function PdfFloatingToolbar({
     };
   }, [showPageMenu]);
 
+  const isTextTool = (tool?: AnnotationToolType) => tool === "freeText" || tool === "text";
+
   const getToolButtonStyle = (tool: AnnotationToolType): React.CSSProperties => {
-    const isActive = activeTool === tool;
+    const isActive = activeTool === tool || (isTextTool(tool) && isTextTool(activeTool));
     return {
       display: "inline-flex",
       alignItems: "center",
@@ -266,14 +268,14 @@ export function PdfFloatingToolbar({
           style={getToolButtonStyle("freeText")}
           title={t("pdf.toolText")}
           aria-label={t("pdf.toolText")}
-          aria-pressed={activeTool === "freeText"}
+          aria-pressed={isTextTool(activeTool)}
           onMouseEnter={(e) => {
-            if (activeTool !== "freeText") {
+            if (!isTextTool(activeTool)) {
               e.currentTarget.style.backgroundColor = "var(--btn-outline-hover-bg)";
             }
           }}
           onMouseLeave={(e) => {
-            if (activeTool !== "freeText") {
+            if (!isTextTool(activeTool)) {
               e.currentTarget.style.backgroundColor = "transparent";
             }
           }}

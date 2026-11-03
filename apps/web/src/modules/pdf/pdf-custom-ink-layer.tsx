@@ -405,7 +405,26 @@ export interface CustomAnnotationObject {
   height: number;
   transform?: CustomInkTransform;
   text?: string;
+  contents?: string;
+  fontSize?: number;
   color?: string;
+  rotation?: number;
+}
+
+/**
+ * Computes a subtle deterministic rotation (-0.8deg to +0.8deg) for a sticky note
+ * based on its ID (or returns the note's explicit rotation if set).
+ */
+export function getStickyRotation(id: string, explicitRotation?: number): number {
+  if (typeof explicitRotation === "number" && !Number.isNaN(explicitRotation)) {
+    return explicitRotation;
+  }
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash |= 0;
+  }
+  return ((Math.abs(hash) % 17) - 8) / 10;
 }
 
 export interface PdfCustomInkLayerProps {
@@ -423,10 +442,17 @@ export interface PdfCustomInkLayerProps {
   isStickyMode?: boolean;
   onAddSticky?: (
     pageIndex: number,
-    coords: { x: number; y: number; width?: number; height?: number; text?: string; color?: string }
+    coords: { x: number; y: number; width?: number; height?: number; text?: string; color?: string; rotation?: number }
   ) => void;
   onUpdateStickyText?: (pageIndex: number, id: string, text: string) => void;
   onDeleteSticky?: (pageIndex: number, id: string) => void;
+  /** Text mode active: clicking canvas creates a text box */
+  isTextMode?: boolean;
+  onAddText?: (
+    pageIndex: number,
+    coords: { x: number; y: number; width?: number; height?: number; text?: string; fontSize?: number; color?: string; id?: string }
+  ) => string | void;
+  onUpdateText?: (pageIndex: number, id: string, text: string) => void;
   strokes: CustomInkStroke[];
   selectedStrokeIds?: string[];
   onSelectStrokes?: (strokeIds: string[]) => void;
@@ -492,6 +518,9 @@ export function PdfCustomInkLayer({
   onAddSticky,
   onUpdateStickyText,
   onDeleteSticky,
+  isTextMode = false,
+  onAddText,
+  onUpdateText,
   strokes,
   selectedStrokeIds = [],
   onSelectStrokes,
@@ -515,7 +544,6 @@ export function PdfCustomInkLayer({
   const [liveScaledStrokes, setLiveScaledStrokes] = useState<Record<string, CustomInkPoint[]>>({});
   const [editingStickyId, setEditingStickyId] = useState<string | null>(null);
   const editingStickyIdRef = useRef<string | null>(null);
-  const lastStickyClickRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
   useEffect(() => {
     editingStickyIdRef.current = editingStickyId;
   }, [editingStickyId]);
@@ -524,15 +552,55 @@ export function PdfCustomInkLayer({
     if (editingStickyId) {
       const focusEl = () => {
         if (editingTextareaRef.current) {
+          editingTextareaRef.current.style.pointerEvents = "auto";
           editingTextareaRef.current.focus();
           const len = editingTextareaRef.current.value.length;
-          editingTextareaRef.current.setSelectionRange(len, len);
+          if (typeof editingTextareaRef.current.setSelectionRange === "function") {
+            editingTextareaRef.current.setSelectionRange(len, len);
+          }
         }
       };
       focusEl();
       requestAnimationFrame(focusEl);
+      const t1 = setTimeout(focusEl, 30);
+      const t2 = setTimeout(focusEl, 100);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
     }
   }, [editingStickyId]);
+
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const editingTextIdRef = useRef<string | null>(null);
+  const lastClickRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
+  useEffect(() => {
+    editingTextIdRef.current = editingTextId;
+  }, [editingTextId]);
+  const editingTextInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (editingTextId) {
+      const focusEl = () => {
+        if (editingTextInputRef.current) {
+          editingTextInputRef.current.style.pointerEvents = "auto";
+          editingTextInputRef.current.focus();
+          const len = (editingTextInputRef.current as HTMLInputElement).value?.length ?? 0;
+          if (typeof (editingTextInputRef.current as HTMLInputElement).setSelectionRange === "function") {
+            (editingTextInputRef.current as HTMLInputElement).setSelectionRange(len, len);
+          }
+        }
+      };
+      focusEl();
+      requestAnimationFrame(focusEl);
+      const t1 = setTimeout(focusEl, 30);
+      const t2 = setTimeout(focusEl, 100);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    }
+  }, [editingTextId]);
+
   const [marquee, setMarquee] = useState<MarqueeRect | null>(null);
   const interactionRef = useRef<Interaction | null>(null);
 
@@ -553,6 +621,13 @@ export function PdfCustomInkLayer({
           ? "highlight"
           : null;
       if (type) {
+        const anyObj = o as {
+          contents?: string;
+          text?: string;
+          fontSize?: number;
+          fontColor?: string;
+          color?: string;
+        };
         res.push({
           id: o.id,
           type,
@@ -562,6 +637,10 @@ export function PdfCustomInkLayer({
           width: o.rect.size.width,
           height: o.rect.size.height,
           transform: { x: 0, y: 0 },
+          text: anyObj.contents ?? anyObj.text,
+          contents: anyObj.contents ?? anyObj.text,
+          fontSize: anyObj.fontSize,
+          color: anyObj.fontColor ?? anyObj.color,
         });
       }
     }
@@ -581,6 +660,9 @@ export function PdfCustomInkLayer({
     onAddSticky,
     onUpdateStickyText,
     onDeleteSticky,
+    isTextMode,
+    onAddText,
+    onUpdateText,
     strokes,
     selectedStrokeIds,
     onSelectStrokes,
@@ -609,6 +691,9 @@ export function PdfCustomInkLayer({
       onAddSticky,
       onUpdateStickyText,
       onDeleteSticky,
+      isTextMode,
+      onAddText,
+      onUpdateText,
       strokes,
       selectedStrokeIds,
       onSelectStrokes,
@@ -684,6 +769,43 @@ export function PdfCustomInkLayer({
         return;
       }
 
+      // 1c. Text mode: click on page to place a text box at (x, y)
+      if (p.isTextMode) {
+        const pt = toPagePoint(e.clientX, e.clientY);
+        if (!pt) return;
+
+        // If clicked on an existing text box, enter edit mode for that text box
+        const target = e.target as Element | null;
+        const existingTextBox = target?.closest?.('[data-testid^="pdf-text-box-"]');
+        if (existingTextBox) {
+          const tid = existingTextBox.getAttribute("data-testid")?.replace("pdf-text-box-", "");
+          if (tid) {
+            e.preventDefault();
+            e.stopPropagation();
+            setEditingTextId(tid);
+            p.onSelectStrokes?.([tid]);
+            p.annotationScope?.selectAnnotation?.(p.pageIndex, tid);
+            return;
+          }
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+        const newId = p.onAddText?.(p.pageIndex, {
+          x: pt.x,
+          y: pt.y,
+          width: 140,
+          height: 36,
+          text: "Text",
+          fontSize: 16,
+          color: p.strokeColor || "#E44234",
+        });
+        if (newId) {
+          setEditingTextId(newId);
+        }
+        return;
+      }
+
       // 2. Draw mode
       if (p.isActive) {
         e.preventDefault();
@@ -720,20 +842,42 @@ export function PdfCustomInkLayer({
           return;
         }
 
-        // If clicking inside a sticky note textarea while editing, allow native text editing
-        if (target?.closest?.("textarea") && editingStickyIdRef.current) {
+        // If clicking inside a sticky note or text box textarea/input while editing, allow native text editing
+        if (target?.closest?.("textarea, input") && (editingStickyIdRef.current || editingTextIdRef.current)) {
           return;
+        }
+
+        // If double clicking anywhere on a text box, switch to edit mode immediately
+        const textBoxEl = target?.closest?.('[data-testid^="pdf-text-box-"]');
+        if (textBoxEl) {
+          const tid = textBoxEl.getAttribute("data-testid")?.replace("pdf-text-box-", "");
+          const isDbl = Boolean(tid && e.detail >= 2);
+          if (isDbl && tid) {
+            e.preventDefault();
+            e.stopPropagation();
+            setEditingTextId(tid);
+            interactionRef.current = null;
+            const input = textBoxEl.querySelector("textarea, input") as HTMLElement | null;
+            if (input) {
+              input.focus();
+            }
+            return;
+          }
+        }
+
+        // If another text box is being edited, clicking outside exits edit mode
+        if (editingTextIdRef.current) {
+          const activeBox = target?.closest?.(`[data-testid="pdf-text-box-${editingTextIdRef.current}"]`);
+          if (!activeBox) {
+            setEditingTextId(null);
+          }
         }
 
         // If double clicking anywhere on a sticky note card, switch to edit mode immediately
         const stickyCardEl = target?.closest?.('[data-testid^="pdf-sticky-card-"]');
         if (stickyCardEl) {
           const sid = stickyCardEl.getAttribute("data-testid")?.replace("pdf-sticky-card-", "");
-          const now = Date.now();
-          const isDbl =
-            (sid && e.detail >= 2) ||
-            (sid && sid === lastStickyClickRef.current.id && now - lastStickyClickRef.current.time < 500);
-          lastStickyClickRef.current = { id: sid || "", time: now };
+          const isDbl = Boolean(sid && e.detail >= 2);
           if (isDbl && sid) {
             e.preventDefault();
             e.stopPropagation();
@@ -870,6 +1014,18 @@ export function PdfCustomInkLayer({
             const ta = cardEl?.querySelector("textarea");
             if (ta) {
               ta.focus();
+            }
+            return;
+          }
+
+          // If double-clicking on a text box, switch to edit mode immediately
+          if (objType === "text" && e.detail >= 2) {
+            setEditingTextId(targetId);
+            interactionRef.current = null;
+            const textBoxEl = target?.closest?.(`[data-testid="pdf-text-box-${targetId}"]`);
+            const input = textBoxEl?.querySelector("textarea, input") as HTMLElement | null;
+            if (input) {
+              input.focus();
             }
             return;
           }
@@ -1113,9 +1269,11 @@ export function PdfCustomInkLayer({
 
         if (commit) {
           const strokeMoves: Array<{ strokeId: string; transform: CustomInkTransform }> = [];
+          let hasMoved = false;
           for (const [id, cur] of Object.entries(it.currentOffsets)) {
             const base = it.bases[id] || { x: 0, y: 0 };
             if (Math.abs(cur.x - base.x) > 0.5 || Math.abs(cur.y - base.y) > 0.5) {
+              hasMoved = true;
               const isStroke = p.strokes.some((s) => s.id === id);
               if (isStroke) {
                 strokeMoves.push({ strokeId: id, transform: cur });
@@ -1159,6 +1317,37 @@ export function PdfCustomInkLayer({
               p.onMoveStrokes(p.pageIndex, strokeMoves);
             } else if (p.onMoveStroke && strokeMoves[0]) {
               p.onMoveStroke(p.pageIndex, strokeMoves[0].strokeId, strokeMoves[0].transform);
+            }
+          }
+
+          if (!hasMoved && it.anchorId) {
+            const now = Date.now();
+            const lastClick = lastClickRef.current;
+            if (lastClick.id === it.anchorId && now - lastClick.time < 500) {
+              lastClickRef.current = { id: "", time: 0 };
+              const isSticky = (p.objects || []).some((o) => o.id === it.anchorId && o.type === "sticky");
+              const isText = (p.objects || []).some((o) => o.id === it.anchorId && o.type === "text");
+              if (isSticky) {
+                setEditingStickyId(it.anchorId);
+                const card = document.querySelector(`[data-testid="pdf-sticky-card-${it.anchorId}"]`);
+                const ta = card?.querySelector("textarea");
+                if (ta) {
+                  ta.style.pointerEvents = "auto";
+                  ta.focus();
+                  setTimeout(() => ta.focus(), 50);
+                }
+              } else if (isText) {
+                setEditingTextId(it.anchorId);
+                const box = document.querySelector(`[data-testid="pdf-text-box-${it.anchorId}"]`);
+                const input = box?.querySelector("textarea, input") as HTMLElement | null;
+                if (input) {
+                  input.style.pointerEvents = "auto";
+                  input.focus();
+                  setTimeout(() => input.focus(), 50);
+                }
+              }
+            } else {
+              lastClickRef.current = { id: it.anchorId, time: now };
             }
           }
         }
@@ -1260,6 +1449,21 @@ export function PdfCustomInkLayer({
 
     const handleDblClick = (e: MouseEvent) => {
       const target = e.target as Element | null;
+      const textBoxEl = target?.closest?.('[data-testid^="pdf-text-box-"]');
+      if (textBoxEl) {
+        const tid = textBoxEl.getAttribute("data-testid")?.replace("pdf-text-box-", "");
+        if (tid) {
+          e.stopPropagation();
+          setEditingTextId(tid);
+          const input = textBoxEl.querySelector("textarea, input") as HTMLElement | null;
+          if (input) {
+            input.style.pointerEvents = "auto";
+            input.focus();
+            setTimeout(() => input.focus(), 50);
+          }
+          return;
+        }
+      }
       const card = target?.closest?.('[data-testid^="pdf-sticky-card-"]');
       if (card) {
         const sid = card.getAttribute("data-testid")?.replace("pdf-sticky-card-", "");
@@ -1268,7 +1472,9 @@ export function PdfCustomInkLayer({
           setEditingStickyId(sid);
           const ta = card.querySelector("textarea");
           if (ta) {
+            ta.style.pointerEvents = "auto";
             ta.focus();
+            setTimeout(() => ta.focus(), 50);
           }
         }
       }
@@ -1427,6 +1633,8 @@ export function PdfCustomInkLayer({
         const curW = resizeRect ? resizeRect.width : obj.width;
         const curH = resizeRect ? resizeRect.height : obj.height;
         const handleSize = 8;
+        const scaleRatio = resizeRect && obj.height > 0 ? resizeRect.height / obj.height : 1;
+        const curFontSize = Math.max(8, Math.min(120, Math.round((obj.fontSize || 16) * scaleRatio * 10) / 10));
 
         const handles: Array<{ pos: ResizeHandlePosition; hx: number; hy: number }> = [
           { pos: "nw", hx: curX, hy: curY },
@@ -1444,6 +1652,7 @@ export function PdfCustomInkLayer({
             key={obj.id}
             data-object-id={obj.id}
             data-object-type={obj.type}
+            data-annotation-type={obj.type === "text" ? "3" : obj.type === "stamp" ? "13" : undefined}
             data-testid={`pdf-${obj.type}-object`}
             transform={offset.x !== 0 || offset.y !== 0 ? `translate(${offset.x}, ${offset.y})` : undefined}
           >
@@ -1465,8 +1674,10 @@ export function PdfCustomInkLayer({
                     height: "100%",
                     backgroundColor: obj.color || "#FEF08A",
                     border: "1px solid rgba(0, 0, 0, 0.08)",
-                    borderRadius: "var(--radius-sm, 4px)",
-                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                    borderRadius: "var(--radius-md, 8px)",
+                    boxShadow: "var(--shadow-2, 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08))",
+                    transform: `rotate(${getStickyRotation(obj.id, obj.rotation)}deg)`,
+                    transformOrigin: "center center",
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
@@ -1478,7 +1689,9 @@ export function PdfCustomInkLayer({
                     setEditingStickyId(obj.id);
                     const ta = e.currentTarget.querySelector("textarea");
                     if (ta) {
+                      ta.style.pointerEvents = "auto";
                       ta.focus();
+                      setTimeout(() => ta?.focus(), 50);
                     }
                   }}
                 >
@@ -1486,6 +1699,8 @@ export function PdfCustomInkLayer({
                     style={{
                       height: "26px",
                       backgroundColor: "#FDE047",
+                      borderTopLeftRadius: "var(--radius-md, 8px)",
+                      borderTopRightRadius: "var(--radius-md, 8px)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
@@ -1500,6 +1715,7 @@ export function PdfCustomInkLayer({
                       style={{
                         fontSize: "12px",
                         fontWeight: 600,
+                        letterSpacing: "0.02em",
                         color: "#78350F",
                         fontFamily: "system-ui, -apple-system, sans-serif",
                         pointerEvents: "none",
@@ -1533,7 +1749,7 @@ export function PdfCustomInkLayer({
                         background: "transparent",
                         cursor: "pointer",
                         color: "#78350F",
-                        borderRadius: "2px",
+                        borderRadius: "var(--radius-sm, 4px)",
                         lineHeight: 1,
                       }}
                     >
@@ -1564,6 +1780,7 @@ export function PdfCustomInkLayer({
                       }
                     }}
                     data-testid={`pdf-sticky-textarea-${obj.id}`}
+                    dir="auto"
                     value={obj.text ?? ""}
                     placeholder="Type a note..."
                     onDoubleClick={(e) => {
@@ -1589,11 +1806,15 @@ export function PdfCustomInkLayer({
                       border: "none",
                       outline: "none",
                       backgroundColor: "transparent",
+                      borderBottomLeftRadius: "var(--radius-md, 8px)",
+                      borderBottomRightRadius: "var(--radius-md, 8px)",
                       padding: "8px",
                       fontFamily: "system-ui, -apple-system, sans-serif",
                       fontSize: "13px",
                       lineHeight: "1.4",
                       color: "#78350F",
+                      unicodeBidi: "plaintext",
+                      textAlign: "start",
                       pointerEvents: editingStickyId === obj.id ? "auto" : "none",
                       boxSizing: "border-box",
                     }}
@@ -1601,7 +1822,110 @@ export function PdfCustomInkLayer({
                 </div>
               </foreignObject>
             )}
-            {obj.type !== "sticky" && (
+            {obj.type === "text" && (
+              <foreignObject
+                x={curX}
+                y={curY}
+                width={curW}
+                height={curH}
+                data-object-id={obj.id}
+                data-object-type="text"
+                data-annotation-type="3"
+                style={{
+                  overflow: "visible",
+                  pointerEvents: isSelectMode || isTextMode ? "auto" : "none",
+                }}
+              >
+                <div
+                  data-testid={`pdf-text-box-${obj.id}`}
+                  data-object-id={obj.id}
+                  data-object-type="text"
+                  data-annotation-type="3"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    position: "relative",
+                    boxSizing: "border-box",
+                    cursor: isSelectMode && editingTextId !== obj.id ? "move" : "default",
+                  }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setEditingTextId(obj.id);
+                  }}
+                >
+                  {editingTextId === obj.id ? (
+                    <textarea
+                      ref={(el) => {
+                        if (editingTextId === obj.id) {
+                          editingTextInputRef.current = el;
+                          if (el && document.activeElement !== el) {
+                            requestAnimationFrame(() => el.focus());
+                          }
+                        }
+                      }}
+                      data-testid={`pdf-text-input-${obj.id}`}
+                      dir="auto"
+                      value={obj.contents ?? obj.text ?? ""}
+                      onChange={(e) => {
+                        onUpdateText?.(pageIndex, obj.id, e.target.value);
+                      }}
+                      onBlur={() => {
+                        setEditingTextId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          setEditingTextId(null);
+                        }
+                      }}
+                      autoFocus
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        background: "transparent",
+                        border: "1px dashed var(--accent-text, #1A63A0)",
+                        outline: "none",
+                        color: obj.color || "#E44234",
+                        fontSize: `${curFontSize}px`,
+                        fontFamily: "system-ui, -apple-system, sans-serif",
+                        lineHeight: "1.2",
+                        resize: "none",
+                        padding: 0,
+                        margin: 0,
+                        boxSizing: "border-box",
+                        overflow: "hidden",
+                        pointerEvents: "auto",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      data-testid={`pdf-text-display-${obj.id}`}
+                      data-object-id={obj.id}
+                      data-object-type="text"
+                      dir="auto"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        background: "transparent",
+                        color: obj.color || "#E44234",
+                        fontSize: `${curFontSize}px`,
+                        fontFamily: "system-ui, -apple-system, sans-serif",
+                        lineHeight: "1.2",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        overflow: "hidden",
+                        userSelect: "none",
+                        boxSizing: "border-box",
+                        cursor: isSelectMode ? "move" : "default",
+                        pointerEvents: "auto",
+                      }}
+                    >
+                      {obj.contents ?? obj.text ?? ""}
+                    </div>
+                  )}
+                </div>
+              </foreignObject>
+            )}
+            {obj.type !== "sticky" && obj.type !== "text" && (
               <rect
                 x={curX}
                 y={curY}
@@ -1615,7 +1939,7 @@ export function PdfCustomInkLayer({
                 }}
               />
             )}
-            {isSelected && obj.type !== "highlight" && (
+            {isSelected && obj.type !== "highlight" && editingTextId !== obj.id && (
               <g data-testid={`pdf-${obj.type}-bbox`}>
                 <rect
                   x={curX}
@@ -1664,9 +1988,12 @@ export function PdfCustomInkLayer({
       dragOffsets,
       resizeRects,
       isSelectMode,
+      isTextMode,
       selectedSet,
       editingStickyId,
+      editingTextId,
       onUpdateStickyText,
+      onUpdateText,
       onDeleteSticky,
       pageIndex,
     ]
@@ -1683,11 +2010,11 @@ export function PdfCustomInkLayer({
         top: "-100%",
         width: "300%",
         height: "300%",
-        pointerEvents: isActive || isSelectMode || isStampMode || isStickyMode ? "auto" : "none",
-        cursor: isActive || isStampMode || isStickyMode ? "crosshair" : "default",
+        pointerEvents: isActive || isSelectMode || isStampMode || isStickyMode || isTextMode ? "auto" : "none",
+        cursor: isActive || isStampMode || isStickyMode || isTextMode ? "crosshair" : "default",
         zIndex: 15,
         overflow: "visible",
-        touchAction: isActive || isSelectMode || isStampMode || isStickyMode ? "none" : "auto",
+        touchAction: isActive || isSelectMode || isStampMode || isStickyMode || isTextMode ? "none" : "auto",
         userSelect: "none",
         WebkitUserSelect: "none",
         direction: "ltr",

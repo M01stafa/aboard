@@ -94,12 +94,26 @@ describe("Sticky Note UI & Editing (Sub-Agent 1)", () => {
     const card = container.querySelector('[data-testid="pdf-sticky-card-sticky-1"]') as HTMLElement;
     expect(card).toBeTruthy();
     expect(card.style.backgroundColor.toLowerCase()).toMatch(/#fef08a|rgb\(254,\s*240,\s*138\)/);
-    expect(card.style.borderRadius).toContain("var(--radius-sm, 4px)");
+    expect(card.style.borderRadius).toContain("var(--radius-md, 8px)");
+    expect(card.style.boxShadow).toContain("var(--shadow-2");
+    expect(card.style.transform).toMatch(/rotate\(-?\d+(\.\d+)?deg\)/);
 
     // Header bar checks
+    const header = card.children[0] as HTMLElement;
+    expect(header).toBeTruthy();
+    expect(header.style.borderTopLeftRadius).toContain("var(--radius-md, 8px)");
+    expect(header.style.borderTopRightRadius).toContain("var(--radius-md, 8px)");
     const noteTitle = card.querySelector("span");
     expect(noteTitle).toBeTruthy();
     expect(noteTitle?.textContent).toBe("Note");
+
+    // Textarea checks (auto-direction and bottom rounded corners)
+    const textarea = container.querySelector('[data-testid="pdf-sticky-textarea-sticky-1"]') as HTMLTextAreaElement;
+    expect(textarea).toBeTruthy();
+    expect(textarea.getAttribute("dir")).toBe("auto");
+    expect(textarea.style.unicodeBidi).toBe("plaintext");
+    expect(textarea.style.borderBottomLeftRadius).toContain("var(--radius-md, 8px)");
+    expect(textarea.style.borderBottomRightRadius).toContain("var(--radius-md, 8px)");
 
     // Close button
     const deleteBtn = container.querySelector('[data-testid="pdf-sticky-delete-btn"]') as HTMLButtonElement;

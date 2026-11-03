@@ -3,7 +3,7 @@
 import React from "react";
 import { useI18n } from "@/i18n/provider";
 
-export type AnnotationToolType = "select" | "highlight" | "ink" | "freeText" | "stamp" | "sticky";
+export type AnnotationToolType = "select" | "highlight" | "ink" | "freeText" | "text" | "stamp" | "sticky";
 
 export interface PdfToolbarProps {
   documentTitle?: string;
