@@ -4,7 +4,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { PdfCustomInkLayer } from "./pdf-custom-ink-layer";
 import { usePdfAnnotations, type UsePdfAnnotationsResult } from "./use-pdf-annotations";
-import { PdfAnnotationSubtype } from "@embedpdf/models";
 import { PdfFloatingToolbar } from "./pdf-floating-toolbar";
 
 // @ts-expect-error React testing flag
@@ -57,7 +56,35 @@ vi.mock("@embedpdf/plugin-history/react", () => ({
   }),
 }));
 
-describe("PDF Text Tool (Sub-Agent 1)", () => {
+function Harness() {
+  const h = usePdfAnnotations({ documentId: "doc-1", projectId: "proj-1", currentPage: 1 });
+  useEffect(() => {
+    hookRef = h;
+  });
+  return (
+    <PdfCustomInkLayer
+      pageIndex={0}
+      pageWidth={612}
+      pageHeight={792}
+      isActive={false}
+      isSelectMode={h.activeTool === "select"}
+      isTextMode={h.activeTool === "text" || h.activeTool === "freeText"}
+      strokes={[]}
+      onAddStroke={vi.fn()}
+      selectedStrokeIds={h.selectedStrokeIds}
+      onSelectStrokes={h.setSelectedStrokeIds}
+      onAddText={h.handleAddText}
+      onUpdateText={h.handleUpdateText}
+      onDeleteText={h.handleDeleteText}
+      onMoveObject={h.handleMoveObject}
+      objects={h.getObjectsForPage(0)}
+    />
+  );
+}
+
+let hookRef!: UsePdfAnnotationsResult;
+
+describe("PDF Text Tool (custom text boxes)", () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -89,7 +116,32 @@ describe("PDF Text Tool (Sub-Agent 1)", () => {
     color: "#E44234",
   };
 
-  it("renders text display in non-editing mode within foreignObject", () => {
+  function mockSvgRect(svg: Element) {
+    vi.spyOn(svg, "getBoundingClientRect").mockReturnValue({
+      left: 0,
+      top: 0,
+      width: 612 * 3,
+      height: 792 * 3,
+      right: 612 * 3,
+      bottom: 792 * 3,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+  }
+
+  function typeInto(textarea: HTMLTextAreaElement, value: string) {
+    act(() => {
+      const nativeSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        "value"
+      )?.set;
+      nativeSetter?.call(textarea, value);
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }
+
+  it("renders a non-editing text box as a single div with the text and no textarea", () => {
     act(() => {
       root.render(
         <PdfCustomInkLayer
@@ -105,19 +157,131 @@ describe("PDF Text Tool (Sub-Agent 1)", () => {
       );
     });
 
-    const displayEl = container.querySelector('[data-testid="pdf-text-display-text-1"]');
-    expect(displayEl).not.toBeNull();
-    expect(displayEl?.textContent).toBe("Hello World");
-    expect(displayEl?.getAttribute("dir")).toBe("auto");
-
-    // In non-editing mode, no textarea or input should be present
-    const inputEl = container.querySelector('[data-testid="pdf-text-input-text-1"]');
-    expect(inputEl).toBeNull();
+    const box = container.querySelector('[data-testid="pdf-text-box-text-1"]');
+    expect(box).not.toBeNull();
+    expect(box?.tagName).toBe("DIV");
+    expect(box?.textContent).toBe("Hello World");
+    expect(box?.getAttribute("dir")).toBe("auto");
+    expect(container.querySelector("textarea")).toBeNull();
+    const withText = Array.from(container.querySelectorAll("*")).filter(
+      (el) => el.children.length === 0 && el.textContent === "Hello World"
+    );
+    expect(withText.length).toBe(1);
   });
 
-  it("switches to edit mode on double-click and triggers onUpdateText on change", () => {
-    const handleUpdateText = vi.fn();
+  it("clicking the canvas in text mode creates exactly one empty box, enters edit mode and focuses it", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
 
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 612, clientY: 792, button: 0, bubbles: true })
+      );
+    });
+
+    const boxes = hookRef.customTextBoxes[0];
+    expect(boxes.length).toBe(1);
+    expect(boxes[0].text).toBe("");
+    expect(boxes[0].fontSize).toBe(16);
+    expect(boxes[0].x).toBeCloseTo(0, 0);
+    expect(hookRef.activeTool).toBe("select");
+    expect(mockCreateAnnotation).not.toHaveBeenCalled();
+    expect(mockSetActiveTool).toHaveBeenLastCalledWith(null);
+
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+    expect(textarea).not.toBeNull();
+    expect(document.activeElement).toBe(textarea);
+    // Selection bbox exists but is hidden while editing
+    expect(container.querySelectorAll("textarea").length).toBe(1);
+  });
+
+  it("typing 5 characters in a row keeps the same textarea and yields the exact string", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+      );
+    });
+
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+    let typed = "";
+    for (const ch of "Hello") {
+      typed += ch;
+      typeInto(textarea, typed);
+      const current = container.querySelector("textarea");
+      expect(current).toBe(textarea);
+      expect(current?.value).toBe(typed);
+    }
+    expect(hookRef.customTextBoxes[0][0].text).toBe("Hello");
+    expect(document.activeElement).toBe(textarea);
+  });
+
+  it("renders the text exactly once after leaving edit mode with Escape", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+      );
+    });
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+    typeInto(textarea, "Hello");
+
+    act(() => {
+      textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    });
+
+    expect(container.querySelector("textarea")).toBeNull();
+    const matches = Array.from(container.querySelectorAll("*")).filter(
+      (el) => el.children.length === 0 && el.textContent === "Hello"
+    );
+    expect(matches.length).toBe(1);
+    expect(hookRef.customTextBoxes[0].length).toBe(1);
+  });
+
+  it("removes the text box when edit mode ends with empty text", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+      );
+    });
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+    act(() => {
+      textarea.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    expect(container.querySelector("textarea")).toBeNull();
+    expect(hookRef.customTextBoxes[0].length).toBe(0);
+  });
+
+  it("enters edit mode only through the native dblclick event", () => {
+    const handleUpdateText = vi.fn();
     act(() => {
       root.render(
         <PdfCustomInkLayer
@@ -134,128 +298,20 @@ describe("PDF Text Tool (Sub-Agent 1)", () => {
       );
     });
 
-    const textBox = container.querySelector('[data-testid="pdf-text-box-text-1"]');
-    expect(textBox).not.toBeNull();
-
-    // Double click to enter edit mode
+    const box = container.querySelector('[data-testid="pdf-text-box-text-1"]')!;
+    expect(container.querySelector("textarea")).toBeNull();
     act(() => {
-      textBox?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+      box.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
     });
-
     const textarea = container.querySelector('[data-testid="pdf-text-input-text-1"]') as HTMLTextAreaElement;
     expect(textarea).not.toBeNull();
     expect(textarea.value).toBe("Hello World");
-    expect(textarea.style.border).toContain("dashed");
     expect(textarea.getAttribute("dir")).toBe("auto");
-
-    // Typing in textarea calls onUpdateText via React native setter
-    act(() => {
-      const nativeSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLTextAreaElement.prototype,
-        "value"
-      )?.set;
-      nativeSetter?.call(textarea, "Updated Text");
-      textarea.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-
+    typeInto(textarea, "Updated Text");
     expect(handleUpdateText).toHaveBeenCalledWith(0, "text-1", "Updated Text");
-
-    // Pressing Escape exits edit mode
-    act(() => {
-      textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    });
-
-    const displayAfterEscape = container.querySelector('[data-testid="pdf-text-display-text-1"]');
-    expect(displayAfterEscape).not.toBeNull();
   });
 
-  it("exits edit mode when textarea loses focus (focusout / blur)", () => {
-    act(() => {
-      root.render(
-        <PdfCustomInkLayer
-          pageIndex={0}
-          pageWidth={612}
-          pageHeight={792}
-          isActive={false}
-          isSelectMode={true}
-          strokes={[]}
-          onAddStroke={vi.fn()}
-          objects={[sampleTextObject]}
-        />
-      );
-    });
-
-    const textBox = container.querySelector('[data-testid="pdf-text-box-text-1"]');
-    act(() => {
-      textBox?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
-    });
-
-    const textarea = container.querySelector('[data-testid="pdf-text-input-text-1"]') as HTMLTextAreaElement;
-    expect(textarea).not.toBeNull();
-
-    act(() => {
-      textarea.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
-    });
-
-    const displayAfterBlur = container.querySelector('[data-testid="pdf-text-display-text-1"]');
-    expect(displayAfterBlur).not.toBeNull();
-  });
-
-  it("clicking canvas in isTextMode calls onAddText and enters edit mode", () => {
-    const handleAddText = vi.fn().mockReturnValue("new-text-id");
-
-    act(() => {
-      root.render(
-        <PdfCustomInkLayer
-          pageIndex={0}
-          pageWidth={612}
-          pageHeight={792}
-          isActive={false}
-          isTextMode={true}
-          onAddText={handleAddText}
-          strokes={[]}
-          onAddStroke={vi.fn()}
-          objects={[]}
-        />
-      );
-    });
-
-    const svg = container.querySelector("svg");
-    expect(svg).not.toBeNull();
-
-    // Mock getBoundingClientRect on SVG for coordinate mapping
-    vi.spyOn(svg!, "getBoundingClientRect").mockReturnValue({
-      left: 0,
-      top: 0,
-      width: 612 * 3,
-      height: 792 * 3,
-      right: 612 * 3,
-      bottom: 792 * 3,
-      x: 0,
-      y: 0,
-      toJSON: () => {},
-    });
-
-    act(() => {
-      svg?.dispatchEvent(
-        new PointerEvent("pointerdown", {
-          clientX: 612,
-          clientY: 792,
-          button: 0,
-          bubbles: true,
-        })
-      );
-    });
-
-    expect(handleAddText).toHaveBeenCalledWith(0, expect.objectContaining({
-      width: 140,
-      height: 36,
-      text: "Text",
-      fontSize: 16,
-    }));
-  });
-
-  it("renders selection bounding box and 8 handles when selected", () => {
+  it("selected text shows only the dashed bbox: no resize handles and no rotate icon", () => {
     act(() => {
       root.render(
         <PdfCustomInkLayer
@@ -272,11 +328,45 @@ describe("PDF Text Tool (Sub-Agent 1)", () => {
       );
     });
 
-    const bbox = container.querySelector('[data-testid="pdf-text-bbox"]');
-    expect(bbox).not.toBeNull();
+    expect(container.querySelector('[data-testid="pdf-text-bbox"]')).not.toBeNull();
+    expect(container.querySelectorAll("[data-resize-handle]").length).toBe(0);
+    expect(container.querySelectorAll('[data-testid^="pdf-text-resize-handle-"]').length).toBe(0);
+  });
 
-    const handles = container.querySelectorAll('[data-testid^="pdf-text-resize-handle-"]');
-    expect(handles.length).toBe(8);
+  it("a single pointerdown on a text box starts a drag and commits onMoveObject on pointerup", () => {
+    const onMoveObject = vi.fn();
+    const onSelectStrokes = vi.fn();
+    act(() => {
+      root.render(
+        <PdfCustomInkLayer
+          pageIndex={0}
+          pageWidth={612}
+          pageHeight={792}
+          isActive={false}
+          isSelectMode={true}
+          strokes={[]}
+          onAddStroke={vi.fn()}
+          onSelectStrokes={onSelectStrokes}
+          onMoveObject={onMoveObject}
+          objects={[sampleTextObject]}
+        />
+      );
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    const box = container.querySelector('[data-testid="pdf-text-box-text-1"]')!;
+
+    act(() => {
+      box.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+      );
+    });
+    expect(onSelectStrokes).toHaveBeenCalledWith(["text-1"]);
+    act(() => {
+      svg.dispatchEvent(new PointerEvent("pointermove", { clientX: 760, clientY: 960, bubbles: true }));
+      svg.dispatchEvent(new PointerEvent("pointerup", { clientX: 760, clientY: 960, bubbles: true }));
+    });
+    expect(onMoveObject).toHaveBeenCalledWith(0, "text-1", { x: 120, y: 150 }, "text");
   });
 
   it("Floating toolbar highlights text button for both 'text' and 'freeText'", () => {
@@ -291,9 +381,7 @@ describe("PDF Text Tool (Sub-Agent 1)", () => {
         />
       );
     });
-
-    const textBtn = container.querySelector('[data-testid="pdf-tool-text"]');
-    expect(textBtn?.getAttribute("aria-pressed")).toBe("true");
+    expect(container.querySelector('[data-testid="pdf-tool-text"]')?.getAttribute("aria-pressed")).toBe("true");
 
     act(() => {
       root.render(
@@ -306,127 +394,77 @@ describe("PDF Text Tool (Sub-Agent 1)", () => {
         />
       );
     });
-
-    const textBtn2 = container.querySelector('[data-testid="pdf-tool-text"]');
-    expect(textBtn2?.getAttribute("aria-pressed")).toBe("true");
+    expect(container.querySelector('[data-testid="pdf-tool-text"]')?.getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("usePdfAnnotations handleAddText creates FreeText annotation and selects it", () => {
-    let hookResult!: UsePdfAnnotationsResult;
-
-    function TestComponent() {
-      hookResult = usePdfAnnotations({
-        documentId: "doc-1",
-        projectId: "proj-1",
-        currentPage: 1,
-      });
-      return null;
-    }
-
+  it("usePdfAnnotations never activates the native FreeText tool for text tools", () => {
     act(() => {
-      root.render(<TestComponent />);
+      root.render(<Harness />);
     });
-
-    expect(hookResult).toBeDefined();
-
     act(() => {
-      const id = hookResult.handleAddText(0, {
-        x: 100,
-        y: 150,
-        text: "Custom Text",
-        fontSize: 18,
-        color: "#1A63A0",
-      });
-      expect(id).toBeTruthy();
+      hookRef.handleSelectTool("freeText");
     });
-
-    expect(mockCreateAnnotation).toHaveBeenCalledWith(
-      0,
-      expect.objectContaining({
-        type: PdfAnnotationSubtype.FREETEXT,
-        pageIndex: 0,
-        contents: "Custom Text",
-        fontSize: 18,
-        fontColor: "#1A63A0",
-        rect: {
-          origin: { x: 100, y: 150 },
-          size: { width: 140, height: 36 },
-        },
-      })
-    );
-
-    expect(mockSelectAnnotation).toHaveBeenCalledWith(0, expect.any(String));
-    expect(hookResult.activeTool).toBe("select");
+    expect(mockSetActiveTool).toHaveBeenLastCalledWith(null);
+    expect(mockSetActiveTool).not.toHaveBeenCalledWith("freeText");
   });
 
-  it("usePdfAnnotations handleUpdateText calls annotationScope.updateAnnotation", () => {
-    let hookResult!: UsePdfAnnotationsResult;
-
-    function TestComponent() {
-      hookResult = usePdfAnnotations({
-        documentId: "doc-1",
-        projectId: "proj-1",
-        currentPage: 1,
-      });
-      return null;
-    }
+  it("handleUpdateText / handleMoveObject / handleResizeObject only touch custom state", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    let id = "";
+    act(() => {
+      id = hookRef.handleAddText(0, { x: 10, y: 20, text: "abc" });
+    });
+    act(() => {
+      hookRef.handleUpdateText(0, id, "abcdef");
+    });
+    expect(hookRef.customTextBoxes[0][0].text).toBe("abcdef");
 
     act(() => {
-      root.render(<TestComponent />);
+      hookRef.handleMoveObject(0, id, { x: 55.555, y: 66 }, "text");
     });
+    expect(hookRef.customTextBoxes[0][0].x).toBeCloseTo(55.56, 2);
+    expect(hookRef.customTextBoxes[0][0].y).toBe(66);
 
     act(() => {
-      hookResult.handleUpdateText(0, "text-1", "New Contents");
+      hookRef.handleResizeObject(0, id, { origin: { x: 0, y: 0 }, size: { width: 500, height: 500 } }, "text");
     });
+    expect(hookRef.customTextBoxes[0][0].x).toBeCloseTo(55.56, 2);
+    expect(hookRef.customTextBoxes[0][0].fontSize).toBe(16);
 
-    expect(mockUpdateAnnotation).toHaveBeenCalledWith(0, "text-1", {
-      contents: "New Contents",
-    });
+    expect(mockCreateAnnotation).not.toHaveBeenCalled();
+    expect(mockUpdateAnnotation).not.toHaveBeenCalled();
   });
 
-  it("usePdfAnnotations getObjectsForPage returns text objects with contents, coordinates, and fontSize", () => {
+  it("getObjectsForPage returns custom text boxes as text objects and ignores native FreeText", () => {
     mockGetAnnotations.mockReturnValue([
       {
         object: {
-          id: "freetext-anno-1",
+          id: "legacy-freetext",
           pageIndex: 0,
-          type: PdfAnnotationSubtype.FREETEXT,
-          contents: "Exam Questions",
-          fontSize: 20,
-          fontColor: "#E44234",
-          rect: {
-            origin: { x: 72, y: 144 },
-            size: { width: 200, height: 50 },
-          },
+          type: 3,
+          contents: "Legacy",
+          rect: { origin: { x: 1, y: 1 }, size: { width: 10, height: 10 } },
         },
       },
     ]);
-
-    let hookResult!: UsePdfAnnotationsResult;
-
-    function TestComponent() {
-      hookResult = usePdfAnnotations({
-        documentId: "doc-1",
-        projectId: "proj-1",
-        currentPage: 1,
-      });
-      return null;
-    }
-
     act(() => {
-      root.render(<TestComponent />);
+      root.render(<Harness />);
     });
-
-    const objects = hookResult.getObjectsForPage(0);
+    act(() => {
+      hookRef.handleAddText(0, { x: 72, y: 144, text: "Exam", fontSize: 20, color: "#1A63A0" });
+    });
+    const objects = hookRef.getObjectsForPage(0);
     expect(objects.length).toBe(1);
-    expect(objects[0].id).toBe("freetext-anno-1");
     expect(objects[0].type).toBe("text");
-    expect(objects[0].contents).toBe("Exam Questions");
-    expect(objects[0].text).toBe("Exam Questions");
+    expect(objects[0].text).toBe("Exam");
     expect(objects[0].fontSize).toBe(20);
+    expect(objects[0].color).toBe("#1A63A0");
     expect(objects[0].x).toBe(72);
     expect(objects[0].y).toBe(144);
-    expect(objects[0].width).toBe(200);
-    expect(objects[0].height).toBe(50);
+    expect(objects[0].width).toBeGreaterThanOrEqual(24);
+    expect(objects[0].height).toBeCloseTo(28, 5);
+    mockGetAnnotations.mockReturnValue([]);
   });
 });

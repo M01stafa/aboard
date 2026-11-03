@@ -9,17 +9,15 @@ import { useHistoryCapability } from "@embedpdf/plugin-history/react";
 import {
   PdfAnnotationSubtype,
   type PdfStampAnnoObject,
-  type PdfFreeTextAnnoObject,
-  PdfStandardFont,
-  PdfTextAlignment,
-  PdfVerticalAlignment,
 } from "@embedpdf/models";
 import {
   serializeAnnotations,
   deserializeAnnotations,
   extractCustomInkStrokes,
   extractCustomStickyNotes,
+  extractCustomTextBoxes,
   type CustomStickyNote,
+  type CustomTextBox,
 } from "./annotation-storage";
 import { processStampImage } from "./image-stamp-utils";
 import { stampBlobUrlCache } from "./custom-stamp-renderer";
@@ -32,6 +30,10 @@ import {
   getAbsoluteStrokeBounds,
   scaleStrokePoints,
 } from "./pdf-custom-ink-layer";
+
+/** Default text box styling (matches the design-system danger accent used for annotations). */
+export const DEFAULT_TEXT_COLOR = "#E44234";
+export const DEFAULT_TEXT_FONT_SIZE = 16;
 
 export interface UsePdfAnnotationsOptions {
   documentId: string;
@@ -60,11 +62,13 @@ export interface UsePdfAnnotationsResult {
   ) => void;
   handleUpdateStickyText: (pageIndex: number, id: string, text: string) => void;
   handleDeleteSticky: (pageIndex: number, id: string) => void;
+  customTextBoxes: Record<number, CustomTextBox[]>;
   handleAddText: (
     pageIndex: number,
-    coords: { x: number; y: number; width?: number; height?: number; text?: string; fontSize?: number; color?: string; id?: string }
+    coords: { x: number; y: number; text?: string; fontSize?: number; color?: string; id?: string }
   ) => string;
   handleUpdateText: (pageIndex: number, id: string, newText: string) => void;
+  handleDeleteText: (pageIndex: number, id: string) => void;
   customStrokes: Record<number, CustomInkStroke[]>;
   selectedStrokeIds: string[];
   setSelectedStrokeIds: (ids: string[]) => void;
@@ -131,6 +135,12 @@ export function usePdfAnnotations({
   useEffect(() => {
     customStickyNotesRef.current = customStickyNotes;
   }, [customStickyNotes]);
+  // Custom text boxes (purely custom object type; native FreeText is never used for new text)
+  const [customTextBoxes, setCustomTextBoxes] = useState<Record<number, CustomTextBox[]>>({});
+  const customTextBoxesRef = useRef<Record<number, CustomTextBox[]>>({});
+  useEffect(() => {
+    customTextBoxesRef.current = customTextBoxes;
+  }, [customTextBoxes]);
   const [selectedStrokeIds, setSelectedStrokeIds] = useState<string[]>([]);
   const selectedStrokeIdsRef = useRef<string[]>([]);
   useEffect(() => {
@@ -176,7 +186,8 @@ export function usePdfAnnotations({
         items,
         ps,
         customStrokesRef.current,
-        customStickyNotesRef.current
+        customStickyNotesRef.current,
+        customTextBoxesRef.current
       );
       await ps.saveAnnotations(projectId, hashKey, serialized);
       if (itemId) {
@@ -237,6 +248,10 @@ export function usePdfAnnotations({
         const restoredStickies = extractCustomStickyNotes(savedJson);
         setCustomStickyNotes(restoredStickies);
         customStickyNotesRef.current = restoredStickies;
+
+        const restoredTexts = extractCustomTextBoxes(savedJson);
+        setCustomTextBoxes(restoredTexts);
+        customTextBoxesRef.current = restoredTexts;
 
         isRestoringRef.current = true;
         const transferItems = await deserializeAnnotations(projectId, savedJson, ps);
@@ -476,6 +491,29 @@ export function usePdfAnnotations({
       }
     }
 
+    // 2b. Delete selected custom text boxes
+    const prevTexts = customTextBoxesRef.current;
+    if (selStrokes.size > 0) {
+      const nextTexts: Record<number, CustomTextBox[]> = {};
+      let textsRemoved = false;
+      for (const [pStr, list] of Object.entries(prevTexts)) {
+        const pIdx = parseInt(pStr, 10);
+        const filtered = list.filter((b) => !selStrokes.has(b.id));
+        if (filtered.length !== list.length) {
+          textsRemoved = true;
+          changed = true;
+        }
+        nextTexts[pIdx] = filtered;
+      }
+      if (textsRemoved) {
+        customTextBoxesRef.current = nextTexts;
+        setCustomTextBoxes(nextTexts);
+        selectedStrokeIdsRef.current = [];
+        setSelectedStrokeIds([]);
+        triggerDebouncedSave();
+      }
+    }
+
     // 3. Delete selected EmbedPDF annotations (stamps, freeText, highlights)
     if (annotationScope) {
       const selectedScopeIds = annotationScope.getSelectedAnnotationIds() || [];
@@ -509,8 +547,6 @@ export function usePdfAnnotations({
         const type: CustomObjectType | null =
           o.type === PdfAnnotationSubtype.STAMP
             ? "stamp"
-            : o.type === PdfAnnotationSubtype.FREETEXT || o.type === PdfAnnotationSubtype.TEXT
-            ? "text"
             : o.type === PdfAnnotationSubtype.HIGHLIGHT
             ? "highlight"
             : null;
@@ -557,10 +593,30 @@ export function usePdfAnnotations({
         });
       }
 
+      const texts = customTextBoxes[pageIndex] || [];
+      for (const tb of texts) {
+        const lines = tb.text.split("\n");
+        const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
+        res.push({
+          id: tb.id,
+          type: "text",
+          pageIndex,
+          x: tb.x,
+          y: tb.y,
+          width: Math.max(24, longest * tb.fontSize * 0.6),
+          height: tb.fontSize * 1.4 * lines.length,
+          transform: { x: 0, y: 0 },
+          text: tb.text,
+          contents: tb.text,
+          fontSize: tb.fontSize,
+          color: tb.color,
+        });
+      }
+
       return res;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [annotationScope, annotationsVersion, customStickyNotes]
+    [annotationScope, annotationsVersion, customStickyNotes, customTextBoxes]
   );
 
   const handleMoveObject = useCallback(
@@ -571,6 +627,27 @@ export function usePdfAnnotations({
       type: CustomObjectType
     ) => {
       if (type === "highlight") return;
+      if (type === "text") {
+        setCustomTextBoxes((prev) => {
+          const list = prev[pageIndex] || [];
+          const next = {
+            ...prev,
+            [pageIndex]: list.map((b) =>
+              b.id === id
+                ? {
+                    ...b,
+                    x: Math.round(newOrigin.x * 100) / 100,
+                    y: Math.round(newOrigin.y * 100) / 100,
+                  }
+                : b
+            ),
+          };
+          customTextBoxesRef.current = next;
+          return next;
+        });
+        triggerDebouncedSave();
+        return;
+      }
       if (type === "sticky") {
         setCustomStickyNotes((prev) => {
           const list = prev[pageIndex] || [];
@@ -623,7 +700,7 @@ export function usePdfAnnotations({
       newRect: { origin: { x: number; y: number }; size: { width: number; height: number } },
       type: CustomObjectType
     ) => {
-      if (type === "highlight") return;
+      if (type === "highlight" || type === "text") return;
       if (type === "stroke") {
         setCustomStrokes((prev) => {
           const pageStrokes = prev[pageIndex];
@@ -694,11 +771,6 @@ export function usePdfAnnotations({
               },
             },
           };
-          const textObj = target.object as { fontSize?: number };
-          if (type === "text" && textObj.fontSize && target.object.rect.size.height > 0) {
-            const scaleRatio = newRect.size.height / target.object.rect.size.height;
-            patch.fontSize = Math.max(8, Math.min(120, Math.round(textObj.fontSize * scaleRatio * 10) / 10));
-          }
           annotationScope.updateAnnotation(pageIndex, id, patch);
           setAnnotationsVersion((v) => v + 1);
           triggerDebouncedSave();
@@ -873,16 +945,7 @@ export function usePdfAnnotations({
   const handleAddText = useCallback(
     (
       pageIndex: number,
-      coords: {
-        x: number;
-        y: number;
-        width?: number;
-        height?: number;
-        text?: string;
-        fontSize?: number;
-        color?: string;
-        id?: string;
-      }
+      coords: { x: number; y: number; text?: string; fontSize?: number; color?: string; id?: string }
     ): string => {
       const textId =
         coords.id ||
@@ -890,46 +953,32 @@ export function usePdfAnnotations({
           ? crypto.randomUUID()
           : `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
 
-      const originX = Math.round(coords.x * 100) / 100;
-      const originY = Math.round(coords.y * 100) / 100;
-      const width = coords.width ?? 140;
-      const height = coords.height ?? 36;
-      const text = coords.text ?? "Text";
-      const fontSize = coords.fontSize ?? 16;
-      const fontColor = coords.color ?? "#E44234";
-
-      const textAnno: PdfFreeTextAnnoObject = {
+      const box: CustomTextBox = {
         id: textId,
-        type: PdfAnnotationSubtype.FREETEXT,
         pageIndex,
-        rect: {
-          origin: { x: originX, y: originY },
-          size: { width, height },
-        },
-        contents: text,
-        fontFamily: PdfStandardFont.Helvetica,
-        fontSize,
-        fontColor,
-        textAlign: PdfTextAlignment.Left,
-        verticalAlign: PdfVerticalAlignment.Top,
-        opacity: 1,
+        x: Math.round(coords.x * 100) / 100,
+        y: Math.round(coords.y * 100) / 100,
+        text: coords.text ?? "",
+        fontSize: coords.fontSize ?? DEFAULT_TEXT_FONT_SIZE,
+        color: coords.color ?? DEFAULT_TEXT_COLOR,
       };
 
-      if (annotationScope) {
-        try {
-          annotationScope.createAnnotation(pageIndex, textAnno);
-          if (typeof annotationScope.selectAnnotation === "function") {
-            annotationScope.selectAnnotation(pageIndex, textId);
-          }
-        } catch (err) {
-          console.error("[usePdfAnnotations] Failed to create FreeText annotation:", err);
-        }
+      setCustomTextBoxes((prev) => {
+        const list = prev[pageIndex] || [];
+        const next = { ...prev, [pageIndex]: [...list, box] };
+        customTextBoxesRef.current = next;
+        return next;
+      });
+      // Keep ref current synchronously for immediate reads
+      const cur = customTextBoxesRef.current;
+      if (!(cur[pageIndex] || []).some((b) => b.id === textId)) {
+        customTextBoxesRef.current = { ...cur, [pageIndex]: [...(cur[pageIndex] || []), box] };
       }
 
       setActiveToolState("select");
+      annotationScope?.setActiveTool(null);
       setSelectedStrokeIds([textId]);
       selectedStrokeIdsRef.current = [textId];
-      setAnnotationsVersion((v) => v + 1);
       triggerDebouncedSave();
 
       return textId;
@@ -939,18 +988,37 @@ export function usePdfAnnotations({
 
   const handleUpdateText = useCallback(
     (pageIndex: number, id: string, newText: string) => {
-      if (!annotationScope) return;
-      try {
-        annotationScope.updateAnnotation(pageIndex, id, { contents: newText });
-        setAnnotationsVersion((v) => v + 1);
-        triggerDebouncedSave();
-      } catch (err) {
-        console.error("[usePdfAnnotations] Failed to update text annotation:", err);
-      }
+      setCustomTextBoxes((prev) => {
+        const list = prev[pageIndex] || [];
+        const next = {
+          ...prev,
+          [pageIndex]: list.map((b) => (b.id === id ? { ...b, text: newText } : b)),
+        };
+        customTextBoxesRef.current = next;
+        return next;
+      });
+      triggerDebouncedSave();
     },
-    [annotationScope, triggerDebouncedSave]
+    [triggerDebouncedSave]
   );
 
+  const handleDeleteText = useCallback(
+    (pageIndex: number, id: string) => {
+      setCustomTextBoxes((prev) => {
+        const list = prev[pageIndex] || [];
+        const next = { ...prev, [pageIndex]: list.filter((b) => b.id !== id) };
+        customTextBoxesRef.current = next;
+        return next;
+      });
+      setSelectedStrokeIds((prev) => {
+        const next = prev.filter((item) => item !== id);
+        selectedStrokeIdsRef.current = next;
+        return next;
+      });
+      triggerDebouncedSave();
+    },
+    [triggerDebouncedSave]
+  );
   // Expose on window for E2E testing in browser environments
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -964,6 +1032,8 @@ export function usePdfAnnotations({
         deleteSticky: handleDeleteSticky,
         addText: handleAddText,
         updateText: handleUpdateText,
+        deleteText: handleDeleteText,
+        customTextBoxes: customTextBoxesRef.current,
         selectedStrokeIds: selectedStrokeIdsRef.current,
         deleteSelected: handleDeleteSelected,
         flushAnnotations,
@@ -974,10 +1044,12 @@ export function usePdfAnnotations({
     historyScope,
     customStrokes,
     customStickyNotes,
+    customTextBoxes,
     handleAddSticky,
     handleDeleteSticky,
     handleAddText,
     handleUpdateText,
+    handleDeleteText,
     selectedStrokeIds,
     handleDeleteSelected,
     flushAnnotations,
@@ -997,6 +1069,8 @@ export function usePdfAnnotations({
     handleDeleteSticky,
     handleAddText,
     handleUpdateText,
+    handleDeleteText,
+    customTextBoxes,
     customStrokes,
     selectedStrokeIds,
     setSelectedStrokeIds,

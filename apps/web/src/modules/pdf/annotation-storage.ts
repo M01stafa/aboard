@@ -29,11 +29,22 @@ export interface CustomStickyNote {
   rotation?: number;
 }
 
+export interface CustomTextBox {
+  id: string;
+  pageIndex: number;
+  x: number;
+  y: number;
+  text: string;
+  fontSize: number;
+  color: string;
+}
+
 export interface SerializedAnnotationsPayload {
   version?: number;
   items: SerializedAnnotationItem[];
   customInkStrokes?: Record<number, CustomInkStroke[]>;
   customStickyNotes?: Record<number, CustomStickyNote[]>;
+  customTextBoxes?: Record<number, CustomTextBox[]>;
 }
 
 /**
@@ -53,7 +64,8 @@ export async function serializeAnnotations(
   items: AnnotationTransferItem[],
   projectService: ProjectService,
   customInkStrokes?: Record<number, CustomInkStroke[]>,
-  customStickyNotes?: Record<number, CustomStickyNote[]>
+  customStickyNotes?: Record<number, CustomStickyNote[]>,
+  customTextBoxes?: Record<number, CustomTextBox[]>
 ): Promise<string> {
   const serializedItems: SerializedAnnotationItem[] = [];
 
@@ -117,12 +129,15 @@ export async function serializeAnnotations(
   const hasInk = customInkStrokes && Object.values(customInkStrokes).some((arr) => arr.length > 0);
   const hasSticky = customStickyNotes && Object.values(customStickyNotes).some((arr) => arr.length > 0);
 
-  if (hasInk || hasSticky) {
+  const hasText = customTextBoxes && Object.values(customTextBoxes).some((arr) => arr.length > 0);
+
+  if (hasInk || hasSticky || hasText) {
     const payload: SerializedAnnotationsPayload = {
       version: 2,
       items: serializedItems,
       customInkStrokes: customInkStrokes || {},
       customStickyNotes: customStickyNotes || {},
+      customTextBoxes: customTextBoxes || {},
     };
     return JSON.stringify(payload);
   }
@@ -234,6 +249,21 @@ export function extractCustomStickyNotes(json: string): Record<number, CustomSti
     const parsed = JSON.parse(json);
     if (parsed && typeof parsed === "object" && "customStickyNotes" in parsed) {
       return (parsed as SerializedAnnotationsPayload).customStickyNotes || {};
+    }
+  } catch {}
+  return {};
+}
+
+
+/**
+ * Extracts custom text boxes from serialized JSON, returning an empty map if none found.
+ */
+export function extractCustomTextBoxes(json: string): Record<number, CustomTextBox[]> {
+  if (!json || json.trim() === "") return {};
+  try {
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed === "object" && "customTextBoxes" in parsed) {
+      return (parsed as SerializedAnnotationsPayload).customTextBoxes || {};
     }
   } catch {}
   return {};

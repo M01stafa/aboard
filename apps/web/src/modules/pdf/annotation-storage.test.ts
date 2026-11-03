@@ -4,7 +4,9 @@ import {
   deserializeAnnotations,
   extractCustomStickyNotes,
   extractCustomInkStrokes,
+  extractCustomTextBoxes,
   type CustomStickyNote,
+  type CustomTextBox,
 } from "./annotation-storage";
 import type { CustomInkStroke } from "./pdf-custom-ink-layer";
 import type { ProjectService } from "@/core/storage/project-service";
@@ -239,4 +241,35 @@ describe("annotation-storage (PDF-4)", () => {
     expect(extractedStickies[0][0].y).toBe(-190.25);
     expect(extractedStickies[0][0].transform).toEqual({ x: -20, y: 1500 });
   });
-});
+
+  it("round-trips custom text boxes (text, x, y, fontSize, color) in a version 2 payload and stays backward compatible", async () => {
+    const mockProjectService = {
+      putFile: vi.fn(),
+      getFile: vi.fn(),
+    } as unknown as ProjectService;
+
+    const boxes: Record<number, CustomTextBox[]> = {
+      1: [
+        {
+          id: "text-1",
+          pageIndex: 1,
+          x: 72.5,
+          y: -10.25,
+          text: "Line one\n????? Line two",
+          fontSize: 18,
+          color: "#E44234",
+        },
+      ],
+    };
+
+    const json = await serializeAnnotations(projectId, pdfHash, [], mockProjectService, {}, {}, boxes);
+    expect(JSON.parse(json).version).toBe(2);
+    expect(extractCustomTextBoxes(json)).toEqual(boxes);
+
+    // Legacy array payloads and payloads without text boxes yield no text boxes
+    expect(extractCustomTextBoxes("[]")).toEqual({});
+    expect(extractCustomTextBoxes("")).toEqual({});
+    const legacy = await serializeAnnotations(projectId, pdfHash, [], mockProjectService);
+    expect(extractCustomTextBoxes(legacy)).toEqual({});
+    expect(await deserializeAnnotations(projectId, json, mockProjectService)).toEqual([]);
+  });});

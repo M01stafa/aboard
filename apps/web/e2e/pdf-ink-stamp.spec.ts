@@ -2,6 +2,20 @@ import { test, expect } from "@playwright/test";
 import { PDFDocument, StandardFonts, rgb } from "@cantoo/pdf-lib";
 import { mockSignIn } from "./helpers/auth";
 
+
+/** Reads the custom text boxes exposed by usePdfAnnotations for E2E. */
+async function readCustomTextBoxes(
+  page: import("@playwright/test").Page
+): Promise<Array<{ id: string; x: number; y: number; text: string; fontSize: number }>> {
+  return page.evaluate(() => {
+    const api = (window as unknown as {
+      __aboard_pdfAnnotations?: {
+        customTextBoxes?: Record<number, Array<{ id: string; x: number; y: number; text: string; fontSize: number }>>;
+      };
+    }).__aboard_pdfAnnotations;
+    return Object.values(api?.customTextBoxes ?? {}).flat();
+  });
+}
 test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
   const testUserId = "test-pdf-ink-stamp-user";
   const projectId = "pdf-ink-stamp-project";
@@ -433,58 +447,26 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(movedStampOrigin!.x).toBeGreaterThan(initialStampOrigin!.x + 40);
     expect(movedStampOrigin!.y).toBeGreaterThan(initialStampOrigin!.y + 30);
 
-    // 4. Add Text annotation
+    // 4. Add a custom text box (click, type, Escape)
     await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
     await page.waitForTimeout(200);
-
-    const textClickX = initialBox.x + 100;
-    const textClickY = initialBox.y + 300;
-    await page.mouse.click(textClickX, textClickY);
-    await page.waitForTimeout(500);
-
-    // Wait for FreeText annotation to be created
-    await expect.poll(async () => {
-      return await page.evaluate(() => {
-        const scope = (window as unknown as {
-          __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
-        }).__aboard_pdfAnnotations?.scope;
-        const res = scope?.getAnnotations();
-        const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
-        return list.some((a: any) => a?.object?.type === 3);
-      });
-    }, { timeout: 10000 }).toBe(true);
+    await page.mouse.click(initialBox.x + 100, initialBox.y + 300);
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toBeFocused({ timeout: 5000 });
+    await page.keyboard.type("Alpha", { delay: 10 });
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-box-"]').first()).toHaveText("Alpha");
 
     // Switch to Select tool
     await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
     await page.waitForTimeout(300);
 
-    // Get text object and position
-    await expect(primaryPane.locator('[data-testid="pdf-text-object"]').first()).toBeAttached({ timeout: 10000 });
-    const textObject = primaryPane.locator('[data-testid="pdf-text-object"]').first();
-    const textBox = await textObject.boundingBox();
+    const textBox = await primaryPane.locator('[data-testid^="pdf-text-box-"]').first().boundingBox();
     expect(textBox).not.toBeNull();
     if (!textBox) return;
+    const initialTextOrigin = (await readCustomTextBoxes(page))[0];
+    expect(initialTextOrigin).toBeDefined();
 
-    const initialTextOrigin = await page.evaluate(() => {
-      const scope = (window as unknown as {
-        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
-      }).__aboard_pdfAnnotations?.scope;
-      const res = scope?.getAnnotations();
-      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
-      const textAnno = list.find((a: any) => a?.object?.type === 3);
-      return textAnno ? { ...textAnno.object.rect.origin } : null;
-    });
-    expect(initialTextOrigin).not.toBeNull();
-
-    // Click text to select
-    await page.mouse.click(textBox.x + textBox.width / 2, textBox.y + textBox.height / 2);
-    await page.waitForTimeout(200);
-
-    // Verify text selection bounding box is displayed
-    const textBbox = primaryPane.locator('[data-testid="pdf-text-bbox"]');
-    await expect(textBbox).toBeVisible({ timeout: 5000 });
-
-    // Drag text by (+70px, +50px)
+    // Drag text by (+70px, +50px) in one gesture (the first press selects and starts the drag)
     const textDeltaX = 70;
     const textDeltaY = 50;
     await page.mouse.move(textBox.x + textBox.width / 2, textBox.y + textBox.height / 2);
@@ -496,21 +478,12 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
       );
     }
     await page.mouse.up();
-    await page.waitForTimeout(400);
-
-    // Verify text origin updated in store
-    const movedTextOrigin = await page.evaluate(() => {
-      const scope = (window as unknown as {
-        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
-      }).__aboard_pdfAnnotations?.scope;
-      const res = scope?.getAnnotations();
-      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
-      const textAnno = list.find((a: any) => a?.object?.type === 3);
-      return textAnno ? { ...textAnno.object.rect.origin } : null;
-    });
-    expect(movedTextOrigin).not.toBeNull();
-    expect(movedTextOrigin!.x).toBeGreaterThan(initialTextOrigin!.x + 30);
-    expect(movedTextOrigin!.y).toBeGreaterThan(initialTextOrigin!.y + 20);
+    await expect(primaryPane.locator('[data-testid="pdf-text-bbox"]')).toBeVisible({ timeout: 5000 });
+    await expect
+      .poll(async () => ((await readCustomTextBoxes(page))[0]?.x ?? 0) - initialTextOrigin.x, { timeout: 5000 })
+      .toBeGreaterThan(30);
+    const movedTextOrigin = (await readCustomTextBoxes(page))[0];
+    expect(movedTextOrigin.y).toBeGreaterThan(initialTextOrigin.y + 20);
 
     // Wait for debounced flush to Dexie
     await page.waitForTimeout(1000);
@@ -523,26 +496,24 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     await page.waitForTimeout(1000);
 
     // Verify restored annotations match moved positions
-    const restoredPositions = await page.evaluate(() => {
+    const restoredStamp = await page.evaluate(() => {
       const scope = (window as unknown as {
         __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
       }).__aboard_pdfAnnotations?.scope;
       const res = scope?.getAnnotations();
       const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
       const stamp = list.find((a: any) => a?.object?.type === 13);
-      const textAnno = list.find((a: any) => a?.object?.type === 3);
-      return {
-        stampOrigin: stamp ? stamp.object.rect.origin : null,
-        textOrigin: textAnno ? textAnno.object.rect.origin : null,
-      };
+      return stamp ? stamp.object.rect.origin : null;
     });
+    const restoredText = (await readCustomTextBoxes(page))[0];
+    const restoredPositions = { stampOrigin: restoredStamp, textOrigin: restoredText ?? null };
 
     expect(restoredPositions.stampOrigin).not.toBeNull();
     expect(restoredPositions.textOrigin).not.toBeNull();
     expect(Math.abs(restoredPositions.stampOrigin.x - movedStampOrigin!.x)).toBeLessThanOrEqual(2);
     expect(Math.abs(restoredPositions.stampOrigin.y - movedStampOrigin!.y)).toBeLessThanOrEqual(2);
-    expect(Math.abs(restoredPositions.textOrigin.x - movedTextOrigin!.x)).toBeLessThanOrEqual(2);
-    expect(Math.abs(restoredPositions.textOrigin.y - movedTextOrigin!.y)).toBeLessThanOrEqual(2);
+    expect(Math.abs(restoredPositions.textOrigin!.x - movedTextOrigin!.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs(restoredPositions.textOrigin!.y - movedTextOrigin!.y)).toBeLessThanOrEqual(2);
 
     // 6. Test Resizing Stamp and Text using the Select Tool
     // Select the stamp
@@ -622,59 +593,18 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(Math.abs(currentStampBbox!.x - stampImgBox!.x)).toBeLessThanOrEqual(6);
     expect(Math.abs(currentStampBbox!.y - stampImgBox!.y)).toBeLessThanOrEqual(6);
 
-    // Now select the text
-    const reloadedText = primaryPane.locator('[data-testid="pdf-text-object"]').first();
+    // Text boxes are movable only: selecting one shows the dashed bbox but no resize handles
+    const reloadedText = primaryPane.locator('[data-testid^="pdf-text-box-"]').first();
     const reloadedTextBox = await reloadedText.boundingBox();
     expect(reloadedTextBox).not.toBeNull();
     if (!reloadedTextBox) return;
 
     await page.mouse.click(reloadedTextBox.x + reloadedTextBox.width / 2, reloadedTextBox.y + reloadedTextBox.height / 2);
-    await page.waitForTimeout(200);
+    await expect(primaryPane.locator('[data-testid="pdf-text-bbox"]')).toBeVisible({ timeout: 5000 });
+    await expect(primaryPane.locator('[data-resize-handle][data-object-type="text"]')).toHaveCount(0);
 
-    // Verify resize handles appear on the text bounding box
-    const textResizeHandleSE = primaryPane.locator('[data-testid="pdf-text-resize-handle-se"]');
-    await expect(textResizeHandleSE).toBeVisible({ timeout: 5000 });
-
-    const initialTextSize = await page.evaluate(() => {
-      const scope = (window as unknown as {
-        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
-      }).__aboard_pdfAnnotations?.scope;
-      const res = scope?.getAnnotations();
-      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
-      const textAnno = list.find((a: any) => a?.object?.type === 3);
-      return textAnno ? { ...textAnno.object.rect.size } : null;
-    });
-    expect(initialTextSize).not.toBeNull();
-
-    // Drag the southeast resize handle of the text (+80px, +40px)
-    const textSeBox = await textResizeHandleSE.boundingBox();
-    expect(textSeBox).not.toBeNull();
-    if (!textSeBox) return;
-
-    await page.mouse.move(textSeBox.x + textSeBox.width / 2, textSeBox.y + textSeBox.height / 2);
-    await page.mouse.down();
-    for (let i = 1; i <= 10; i++) {
-      await page.mouse.move(
-        textSeBox.x + textSeBox.width / 2 + (80 * i) / 10,
-        textSeBox.y + textSeBox.height / 2 + (40 * i) / 10
-      );
-    }
-    await page.mouse.up();
-    await page.waitForTimeout(400);
-
-    // Verify text size increased
-    const resizedTextSize = await page.evaluate(() => {
-      const scope = (window as unknown as {
-        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
-      }).__aboard_pdfAnnotations?.scope;
-      const res = scope?.getAnnotations();
-      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
-      const textAnno = list.find((a: any) => a?.object?.type === 3);
-      return textAnno ? { ...textAnno.object.rect.size } : null;
-    });
-    expect(resizedTextSize).not.toBeNull();
-    expect(resizedTextSize!.width).toBeGreaterThan(initialTextSize!.width + 20);
-
+    // Wait for debounced flush to Dexie
+    await page.waitForTimeout(1000);
     // Wait for debounced flush to Dexie
     await page.waitForTimeout(1000);
 
@@ -692,19 +622,14 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
       const res = scope?.getAnnotations();
       const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
       const stamp = list.find((a: any) => a?.object?.type === 13);
-      const textAnno = list.find((a: any) => a?.object?.type === 3);
-      return {
-        stampSize: stamp ? stamp.object.rect.size : null,
-        textSize: textAnno ? textAnno.object.rect.size : null,
-      };
+      return { stampSize: stamp ? stamp.object.rect.size : null };
     });
 
     expect(persistedSizes.stampSize).not.toBeNull();
-    expect(persistedSizes.textSize).not.toBeNull();
+
     expect(Math.abs(persistedSizes.stampSize.width - resizedStampSize!.width)).toBeLessThanOrEqual(2);
     expect(Math.abs(persistedSizes.stampSize.height - resizedStampSize!.height)).toBeLessThanOrEqual(2);
-    expect(Math.abs(persistedSizes.textSize.width - resizedTextSize!.width)).toBeLessThanOrEqual(2);
-    expect(Math.abs(persistedSizes.textSize.height - resizedTextSize!.height)).toBeLessThanOrEqual(2);
+
   });
 
   test("drag ink stroke updates and persists across reload, stamp 'se' resize anchors origin and keeps content aligned, and text near edges remains visible", async ({ page }) => {
@@ -910,23 +835,16 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     await page.mouse.click(textClickX, textClickY);
     await page.waitForTimeout(500);
 
-    // Wait for FreeText annotation
-    await expect.poll(async () => {
-      return await page.evaluate(() => {
-        const scope = (window as unknown as {
-          __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
-        }).__aboard_pdfAnnotations?.scope;
-        const res = scope?.getAnnotations();
-        const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
-        return list.some((a: any) => a?.object?.type === 3);
-      });
-    }, { timeout: 10000 }).toBe(true);
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toBeFocused({ timeout: 5000 });
+    await page.keyboard.type("Edge", { delay: 10 });
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-box-"]').first()).toHaveText("Edge");
 
     // Switch to Select tool
     await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
     await page.waitForTimeout(200);
 
-    const textObject = primaryPane.locator('[data-testid="pdf-text-object"]').first();
+    const textObject = primaryPane.locator('[data-testid^="pdf-text-box-"]').first();
     await expect(textObject).toBeVisible({ timeout: 5000 });
     const textBox = await textObject.boundingBox();
     expect(textBox).not.toBeNull();
@@ -951,9 +869,9 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     await page.waitForTimeout(400);
 
     // Verify text remains visible and not clipped
-    const textAfterDrag = primaryPane.locator('[data-testid="pdf-text-object"]').first();
+    const textAfterDrag = primaryPane.locator('[data-testid^="pdf-text-box-"]').first();
     await expect(textAfterDrag).toBeVisible();
-    const textContainer = primaryPane.locator('[data-annotation-type="3"]').first();
+    const textContainer = primaryPane.locator('[data-testid^="pdf-text-box-"]').first();
     await expect(textContainer).toBeVisible();
 
     const isTextVisible = await textContainer.evaluate((el) => {
@@ -970,15 +888,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(isTextVisible).toBe(true);
 
     // Verify text origin coordinates in store are clamped safely within page bounds (>= 0)
-    const textOriginData = await page.evaluate(() => {
-      const scope = (window as unknown as {
-        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
-      }).__aboard_pdfAnnotations?.scope;
-      const res = scope?.getAnnotations();
-      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
-      const textAnno = list.find((a: any) => a?.object?.type === 3);
-      return textAnno ? textAnno.object.rect.origin : null;
-    });
+    const textOriginData = (await readCustomTextBoxes(page))[0] ?? null;
     expect(textOriginData).not.toBeNull();
     expect(textOriginData!.x).toBeGreaterThanOrEqual(0);
     expect(textOriginData!.y).toBeGreaterThanOrEqual(0);
@@ -1002,7 +912,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(Math.abs(reloadedStrokeBox!.y - strokeBoxAfterDrag!.y)).toBeLessThanOrEqual(3);
 
     // Verify text annotation is still visible near the edge after reload
-    const reloadedText = primaryPane.locator('[data-testid="pdf-text-object"]').first();
+    const reloadedText = primaryPane.locator('[data-testid^="pdf-text-box-"]').first();
     await expect(reloadedText).toBeVisible({ timeout: 5000 });
   });
 
@@ -1134,7 +1044,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(reloadedBox!.height).toBeGreaterThan(strokeBoxBefore.height + 20);
   });
 
-  test("locks highlights to text (no drag/resize, selectable for deletion) and scales text proportionally with polished handles", async ({ page }) => {
+  test("locks highlights to text (no drag/resize, selectable for deletion) and text boxes are movable only (no resize handles)", async ({ page }) => {
     // 1. Generate test PDF
     const pdfDoc = await PDFDocument.create();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -1183,21 +1093,12 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
       }
     });
 
-    // Also add a FreeText annotation (type: 3)
+    // Also add a custom text box
     await page.evaluate(() => {
-      const scope = (window as unknown as {
-        __aboard_pdfAnnotations?: { scope?: any };
-      }).__aboard_pdfAnnotations?.scope;
-      if (scope) {
-        scope.createAnnotation(0, {
-          id: "test-text-prop",
-          type: 3,
-          pageIndex: 0,
-          contents: "Proportional Text Scaling",
-          fontSize: 16,
-          rect: { origin: { x: 60, y: 220 }, size: { width: 160, height: 40 } },
-        });
-      }
+      const api = (window as unknown as {
+        __aboard_pdfAnnotations?: { addText?: (p: number, c: { x: number; y: number; text: string }) => string };
+      }).__aboard_pdfAnnotations;
+      api?.addText?.(0, { x: 60, y: 220, text: "Static Text" });
     });
     await page.waitForTimeout(300);
 
@@ -1240,8 +1141,8 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
       expect(hlOriginAfterDrag).toEqual({ x: 60, y: 120 });
     }
 
-    // 4. Text Proportional Scaling Verification
-    const textObject = primaryPane.locator('[data-testid="pdf-text-object"]').first();
+    // 4. Text boxes are movable only: dashed bbox, no resize handles
+    const textObject = primaryPane.locator('[data-testid^="pdf-text-box-"]').first();
     await expect(textObject).toBeVisible({ timeout: 5000 });
     const textBox = await textObject.boundingBox();
     expect(textBox).not.toBeNull();
@@ -1249,52 +1150,11 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
       await page.mouse.click(textBox.x + textBox.width / 2, textBox.y + textBox.height / 2);
       await page.waitForTimeout(200);
 
-      // Verify bounding box and resize handles exist with polished styling
       const textBbox = primaryPane.locator('[data-testid="pdf-text-bbox"] rect').first();
       await expect(textBbox).toBeVisible({ timeout: 5000 });
       await expect(textBbox).toHaveAttribute("stroke-dasharray", "4 3");
-
-      const handleSE = primaryPane.locator('[data-testid="pdf-text-resize-handle-se"]');
-      await expect(handleSE).toBeVisible({ timeout: 5000 });
-      await expect(handleSE).toHaveAttribute("width", "8");
-      await expect(handleSE).toHaveAttribute("rx", "1.5");
-
-      // Initial aspect ratio: 160 / 40 = 4.0
-      const initialTextRect = await page.evaluate(() => {
-        const scope = (window as unknown as {
-          __aboard_pdfAnnotations?: { scope?: any };
-        }).__aboard_pdfAnnotations?.scope;
-        const list = scope?.getAnnotations() || [];
-        const t = list.find((a: any) => a?.object?.id === "test-text-prop");
-        return t ? { ...t.object.rect.size } : null;
-      });
-      expect(initialTextRect).not.toBeNull();
-      const initialAspect = initialTextRect!.width / initialTextRect!.height;
-
-      // Drag SE handle (+80px, +20px)
-      const handleBox = await handleSE.boundingBox();
-      expect(handleBox).not.toBeNull();
-      if (handleBox) {
-        await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
-        await page.mouse.down();
-        await page.mouse.move(handleBox.x + handleBox.width / 2 + 80, handleBox.y + handleBox.height / 2 + 20);
-        await page.mouse.up();
-        await page.waitForTimeout(400);
-
-        // Verify new dimensions maintain exact aspect ratio (proportional scaling)
-        const newTextRect = await page.evaluate(() => {
-          const scope = (window as unknown as {
-            __aboard_pdfAnnotations?: { scope?: any };
-          }).__aboard_pdfAnnotations?.scope;
-          const list = scope?.getAnnotations() || [];
-          const t = list.find((a: any) => a?.object?.id === "test-text-prop");
-          return t ? { ...t.object.rect.size } : null;
-        });
-        expect(newTextRect).not.toBeNull();
-        expect(newTextRect!.width).toBeGreaterThan(initialTextRect!.width + 20);
-        const newAspect = newTextRect!.width / newTextRect!.height;
-        expect(Math.abs(newAspect - initialAspect)).toBeLessThan(0.05);
-      }
+      await expect(primaryPane.locator('[data-resize-handle][data-object-type="text"]')).toHaveCount(0);
+      await expect(primaryPane.locator('[data-testid^="pdf-text-resize-handle-"]')).toHaveCount(0);
     }
   });
 
@@ -1725,7 +1585,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     await expect(textarea).toHaveValue("Regressions fixed successfully!");
   });
 
-  test("restores text tool with drag and resize, verifies sticky note auto-direction and polish, and marquee selection regression", async ({ page }) => {
+  test("restores text tool with create and drag (no resize), verifies sticky note auto-direction and polish, and marquee selection regression", async ({ page }) => {
     const pid = "test-pdf-text-sticky-marquee-suite";
     const pdfDoc = await PDFDocument.create();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -1761,131 +1621,55 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     if (!page1Box) return;
 
     // =========================================================================
-    // PART A: Text Tool Restoration (click toolbar, create, type, select, move, resize)
+    // PART A: Text Tool (custom text box: click, type, select, move; no resize handles)
     // =========================================================================
-    // 1. Click the Text tool button in the floating toolbar
     const textToolBtn = primaryPane.locator('[data-testid="pdf-tool-text"]');
     await textToolBtn.click();
     await page.waitForTimeout(200);
     await expect(textToolBtn).toHaveAttribute("aria-pressed", "true");
 
-    // 2. Click on the canvas creates a text box at clicked position
-    const textClickX = page1Box.x + 140;
-    const textClickY = page1Box.y + 180;
-    await page.mouse.click(textClickX, textClickY);
-    await page.waitForTimeout(400);
-
-    const textBox = primaryPane.locator('[data-testid^="pdf-text-box-"]').first();
-    await expect(textBox).toBeVisible({ timeout: 5000 });
-
-    // 3. Type text into the text box
+    await page.mouse.click(page1Box.x + 140, page1Box.y + 180);
     const textInput = primaryPane.locator('[data-testid^="pdf-text-input-"]').first();
-    await expect(textInput).toBeVisible();
-    await textInput.fill("Circuit Analysis Notes");
+    await expect(textInput).toBeFocused({ timeout: 5000 });
+    await page.keyboard.type("Circuit Analysis Notes", { delay: 10 });
     await expect(textInput).toHaveValue("Circuit Analysis Notes");
 
-    // Blur text box to exit edit mode and show rendered display
     await page.keyboard.press("Escape");
-    await page.waitForTimeout(200);
-    const textDisplay = primaryPane.locator('[data-testid^="pdf-text-display-"]').first();
-    await expect(textDisplay).toHaveText("Circuit Analysis Notes");
+    const textBox = primaryPane.locator('[data-testid^="pdf-text-box-"]').first();
+    await expect(textBox).toHaveText("Circuit Analysis Notes");
 
-    // 4. Select the text box with the Select tool
     const selectBtn = primaryPane.locator('[data-testid="pdf-tool-select"]');
     await selectBtn.click();
-    await page.waitForTimeout(200);
     await expect(selectBtn).toHaveAttribute("aria-pressed", "true");
 
-    const textObject = primaryPane.locator('[data-testid="pdf-text-object"]').first();
-    const tbBox = await textObject.boundingBox();
+    const readTextBoxes = () =>
+      page.evaluate(() => {
+        const api = (window as unknown as {
+          __aboard_pdfAnnotations?: { customTextBoxes?: Record<number, Array<{ x: number; y: number }>> };
+        }).__aboard_pdfAnnotations;
+        return Object.values(api?.customTextBoxes ?? {}).flat();
+      });
+    const before = (await readTextBoxes())[0];
+    expect(before).toBeDefined();
+
+    const tbBox = await textBox.boundingBox();
     expect(tbBox).not.toBeNull();
     if (!tbBox) return;
-
-    await page.mouse.click(tbBox.x + tbBox.width / 2, tbBox.y + tbBox.height / 2);
-    await page.waitForTimeout(200);
-
-    // Verify text selection bounding box is displayed
-    const textBbox = primaryPane.locator('[data-testid="pdf-text-bbox"]');
-    await expect(textBbox).toBeVisible({ timeout: 5000 });
-
-    // 5. Move (drag) the text box
-    const initialTextOrigin = await page.evaluate(() => {
-      const scope = (window as unknown as {
-        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
-      }).__aboard_pdfAnnotations?.scope;
-      const res = scope?.getAnnotations();
-      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
-      const textAnno = list.find((a: any) => a?.object?.type === 3);
-      return textAnno ? { ...textAnno.object.rect.origin } : null;
-    });
-    expect(initialTextOrigin).not.toBeNull();
-
-    const dragDeltaX = 70;
-    const dragDeltaY = 50;
-    await page.mouse.move(tbBox.x + tbBox.width / 2, tbBox.y + tbBox.height / 2);
+    const cx = tbBox.x + tbBox.width / 2;
+    const cy = tbBox.y + tbBox.height / 2;
+    await page.mouse.move(cx, cy);
     await page.mouse.down();
     for (let i = 1; i <= 10; i++) {
-      await page.mouse.move(
-        tbBox.x + tbBox.width / 2 + (dragDeltaX * i) / 10,
-        tbBox.y + tbBox.height / 2 + (dragDeltaY * i) / 10
-      );
+      await page.mouse.move(cx + (70 * i) / 10, cy + (50 * i) / 10);
     }
     await page.mouse.up();
-    await page.waitForTimeout(400);
+    await expect(primaryPane.locator('[data-testid="pdf-text-bbox"]')).toBeVisible({ timeout: 5000 });
+    await expect
+      .poll(async () => ((await readTextBoxes())[0]?.x ?? 0) - before.x, { timeout: 5000 })
+      .toBeGreaterThan(20);
+    // Text boxes are movable only: no resize handles
+    await expect(primaryPane.locator('[data-resize-handle][data-object-type="text"]')).toHaveCount(0);
 
-    const movedTextOrigin = await page.evaluate(() => {
-      const scope = (window as unknown as {
-        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
-      }).__aboard_pdfAnnotations?.scope;
-      const res = scope?.getAnnotations();
-      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
-      const textAnno = list.find((a: any) => a?.object?.type === 3);
-      return textAnno ? { ...textAnno.object.rect.origin } : null;
-    });
-    expect(movedTextOrigin).not.toBeNull();
-    expect(movedTextOrigin!.x).toBeGreaterThan(initialTextOrigin!.x + 20);
-    expect(movedTextOrigin!.y).toBeGreaterThan(initialTextOrigin!.y + 15);
-
-    // 6. Resize the text box via corner resize handle (SE)
-    const initialTextSize = await page.evaluate(() => {
-      const scope = (window as unknown as {
-        __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
-      }).__aboard_pdfAnnotations?.scope;
-      const res = scope?.getAnnotations();
-      const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
-      const textAnno = list.find((a: any) => a?.object?.type === 3);
-      return textAnno ? { ...textAnno.object.rect.size } : null;
-    });
-    expect(initialTextSize).not.toBeNull();
-
-    const textResizeHandleSE = primaryPane.locator('[data-testid="pdf-text-resize-handle-se"]');
-    await expect(textResizeHandleSE).toBeVisible({ timeout: 5000 });
-    const seBox = await textResizeHandleSE.boundingBox();
-    expect(seBox).not.toBeNull();
-    if (seBox) {
-      await page.mouse.move(seBox.x + seBox.width / 2, seBox.y + seBox.height / 2);
-      await page.mouse.down();
-      for (let i = 1; i <= 10; i++) {
-        await page.mouse.move(
-          seBox.x + seBox.width / 2 + (60 * i) / 10,
-          seBox.y + seBox.height / 2 + (40 * i) / 10
-        );
-      }
-      await page.mouse.up();
-      await page.waitForTimeout(400);
-
-      const resizedTextSize = await page.evaluate(() => {
-        const scope = (window as unknown as {
-          __aboard_pdfAnnotations?: { scope?: { getAnnotations: () => unknown } };
-        }).__aboard_pdfAnnotations?.scope;
-        const res = scope?.getAnnotations();
-        const list = Array.isArray(res) ? res : Object.values((res as Record<string, any[]>) || {}).flat();
-        const textAnno = list.find((a: any) => a?.object?.type === 3);
-        return textAnno ? { ...textAnno.object.rect.size } : null;
-      });
-      expect(resizedTextSize).not.toBeNull();
-      expect(resizedTextSize!.width).toBeGreaterThan(initialTextSize!.width + 10);
-    }
 
     // =========================================================================
     // PART B: Sticky Note Auto-Direction & Polish
@@ -1988,5 +1772,103 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     // Verify corner resize handles appear on the stroke bounding box
     const nwHandle = primaryPane.locator('[data-testid="pdf-ink-resize-handle-nw"]');
     await expect(nwHandle).toBeVisible();
+  });
+
+  test("text tool: creates one text box, types exact text, renders once, drags in a single gesture, has no resize handles and persists across reload", async ({ page }) => {
+    const pid = "test-pdf-text-tool-rebuild";
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Text tool rebuild verification", { x: 50, y: 750, size: 16, font, color: rgb(0, 0, 0) });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles({
+      name: "text-tool-rebuild.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    const readTextBoxes = () =>
+      page.evaluate(() => {
+        const api = (window as unknown as {
+          __aboard_pdfAnnotations?: {
+            customTextBoxes?: Record<number, Array<{ x: number; y: number; text: string }>>;
+          };
+        }).__aboard_pdfAnnotations;
+        return Object.values(api?.customTextBoxes ?? {}).flat();
+      });
+
+    // Create + type
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    await page.mouse.click(page1Box.x + 160, page1Box.y + 200);
+    const textarea = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(textarea).toHaveCount(1);
+    await expect(textarea).toBeFocused();
+    await page.keyboard.type("Hello", { delay: 30 });
+    await expect(textarea).toHaveValue("Hello");
+
+    // Escape exits edit mode; text renders exactly once
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
+    await expect(page1.getByText("Hello", { exact: true })).toHaveCount(1);
+    await expect(primaryPane.locator('[data-testid^="pdf-text-box-"]')).toHaveText("Hello");
+
+    // Select tool + single drag gesture
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    const before = (await readTextBoxes())[0];
+    expect(before.text).toBe("Hello");
+    const box = await primaryPane.locator('[data-testid^="pdf-text-box-"]').boundingBox();
+    expect(box).not.toBeNull();
+    if (!box) return;
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    for (let i = 1; i <= 8; i++) {
+      await page.mouse.move(cx + (80 * i) / 8, cy + (50 * i) / 8, { steps: 2 });
+    }
+    await page.mouse.up();
+    await expect
+      .poll(async () => {
+        const now = (await readTextBoxes())[0];
+        return Math.round(now.x - before.x);
+      })
+      .toBeGreaterThan(40);
+    const after = (await readTextBoxes())[0];
+    const scale = page1Box.width / 595.28;
+    expect(Math.abs(after.x - before.x - 80 / scale)).toBeLessThan(6);
+    expect(Math.abs(after.y - before.y - 50 / scale)).toBeLessThan(6);
+
+    // No resize handles, no EmbedPDF selection UI
+    await expect(primaryPane.locator('[data-testid="pdf-text-bbox"]')).toBeVisible();
+    await expect(primaryPane.locator('[data-resize-handle][data-object-type="text"]')).toHaveCount(0);
+    await expect(primaryPane.locator('[data-testid^="pdf-text-resize-handle-"]')).toHaveCount(0);
+    await expect(primaryPane.locator('[data-annotation-id][data-annotation-type="3"]')).toHaveCount(0);
+
+    // Persist across reload
+    await page.waitForTimeout(800);
+    await page.evaluate(async () => {
+      const api = (window as unknown as { __aboard_pdfAnnotations?: { flushAnnotations?: () => Promise<void> } })
+        .__aboard_pdfAnnotations;
+      await api?.flushAnnotations?.();
+    });
+    await page.reload();
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await expect(primaryPane.locator('[data-testid^="pdf-text-box-"]')).toHaveText("Hello", { timeout: 10000 });
+    await expect(page1.getByText("Hello", { exact: true })).toHaveCount(1);
+    const reloaded = (await readTextBoxes())[0];
+    expect(Math.abs(reloaded.x - after.x)).toBeLessThan(0.5);
+    expect(Math.abs(reloaded.y - after.y)).toBeLessThan(0.5);
   });
 });

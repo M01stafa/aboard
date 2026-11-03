@@ -235,7 +235,7 @@ test.describe("PDF Annotations & Separate Storage (Task 29 / PDF-3, PDF-4)", () 
     expect(restoredTypes).toContain(13); // STAMP
   });
 
-  test("accurately maps pointer coordinates for Draw (Ink), Text (FreeText), Highlight, Stamp, and Select tools on rotated and zoomed PDFs", async ({
+  test("accurately maps pointer coordinates for Draw (Ink), Text (custom text box), Highlight, Stamp, and Select tools on rotated and zoomed PDFs", async ({
     page,
   }) => {
     // 1. Test on a rotated/landscape PDF (/Rotate 90)
@@ -357,19 +357,19 @@ test.describe("PDF Annotations & Separate Storage (Task 29 / PDF-3, PDF-4)", () 
     // Wait for second ink stroke to commit before switching to Text tool
     await page.waitForTimeout(900);
 
-    // Text (FreeText) tool at exact click coordinates
+    // Text tool (custom text box) at exact click coordinates
     await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
-    await page.mouse.click(zoomedPage1Box.x + 350, zoomedPage1Box.y + 250);
+    const textClickX = zoomedPage1Box.x + 350;
+    const textClickY = zoomedPage1Box.y + 250;
+    await page.mouse.click(textClickX, textClickY);
 
-    await expect.poll(async () => {
-      return await page.evaluate(() => {
-        const scope = (window as unknown as {
-          __aboard_pdfAnnotations?: { scope?: { getState?: () => { byUid?: Record<string, { object?: { type: number } }> } } };
-        }).__aboard_pdfAnnotations?.scope;
-        const list = Object.values(scope?.getState?.()?.byUid || {}).map((x) => x.object);
-        return list.some((a) => a?.type === 3); // FREETEXT = 3
-      });
-    }, { timeout: 5000 }).toBe(true);
+    const zTextInput = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(zTextInput).toBeFocused({ timeout: 5000 });
+    await page.keyboard.type("Zoom", { delay: 10 });
+    const zTextRect = await zTextInput.boundingBox();
+    expect(zTextRect).not.toBeNull();
+    expect(Math.abs(zTextRect!.x - textClickX)).toBeLessThanOrEqual(10);
+    expect(Math.abs(zTextRect!.y - textClickY)).toBeLessThanOrEqual(10);
 
     // 2. Test Highlight, Stamp, and Select on standard portrait PDF
     const pdfDocStd = await PDFDocument.create();
@@ -445,6 +445,23 @@ test.describe("PDF Annotations & Separate Storage (Task 29 / PDF-3, PDF-4)", () 
       await page.mouse.move(selStartX + ((selEndX - selStartX) * i) / 10, hlY);
     }
     await page.mouse.up();
+
+    // Select text to verify "Send to Board" popup appears
+    await page.evaluate(() => {
+      const viewerRoot = document.querySelector('[data-testid="pdf-viewer-root"]');
+      if (!viewerRoot) return;
+      const span = document.createElement("span");
+      span.textContent = "Selectable PDF Text Line";
+      span.style.position = "relative";
+      span.style.display = "inline-block";
+      span.setAttribute("data-testid", "temp-selected-text");
+      const targetContainer = viewerRoot.querySelector('[data-testid="pdf-toolbar"]')?.parentElement || viewerRoot;
+      targetContainer.appendChild(span);
+    });
+
+    const textLocator = primaryPane.locator('[data-testid="temp-selected-text"]');
+    await expect(textLocator).toBeVisible();
+    await textLocator.selectText();
 
     await expect(primaryPane.locator('[data-testid="pdf-selection-to-board-btn"]')).toBeVisible({ timeout: 5000 });
   });

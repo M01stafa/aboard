@@ -5,7 +5,9 @@ import {
   deserializeAnnotations,
   extractCustomInkStrokes,
   extractCustomStickyNotes,
+  extractCustomTextBoxes,
   type CustomStickyNote,
+  type CustomTextBox,
 } from "./annotation-storage";
 import type { CustomInkStroke } from "./pdf-custom-ink-layer";
 
@@ -183,6 +185,68 @@ export function drawCustomStickyNotesOnDoc(
       } catch (err) {
         console.warn("[page-operations] Error drawing sticky note:", err);
       }
+    }
+  }
+}
+
+export function drawCustomTextBoxesOnDoc(
+  pdfDoc: PDFDocument,
+  customTextBoxes: Record<number, CustomTextBox[]>,
+  font: PDFFont
+): void {
+  const pages = pdfDoc.getPages();
+  for (const [pageIdxStr, boxes] of Object.entries(customTextBoxes)) {
+    const pageIdx = parseInt(pageIdxStr, 10);
+    if (pageIdx < 0 || pageIdx >= pages.length) continue;
+    const page = pages[pageIdx];
+    const pageWidth = page.getWidth();
+    const pageHeight = page.getHeight();
+
+    for (const box of boxes) {
+      if (!box || !box.text || !box.text.trim()) continue;
+      const fontSize = box.fontSize > 0 ? box.fontSize : 16;
+      const lineHeight = fontSize * 1.4;
+      const lines = box.text.split("\n");
+      const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
+      if (
+        isRectCompletelyOutOfBounds(
+          box.x,
+          box.y,
+          Math.max(24, longest * fontSize * 0.6),
+          lineHeight * lines.length,
+          pageWidth,
+          pageHeight
+        )
+      ) {
+        continue;
+      }
+      const c = parseStrokeColor(box.color);
+      lines.forEach((line, i) => {
+        if (!line) return;
+        // Helvetica (WinAnsi) cannot encode every character; drop unencodable ones instead of failing.
+        const safe = Array.from(line)
+          .filter((ch) => {
+            try {
+              font.encodeText(ch);
+              return true;
+            } catch {
+              return false;
+            }
+          })
+          .join("");
+        if (!safe) return;
+        try {
+          page.drawText(safe, {
+            x: box.x,
+            y: pageHeight - box.y - fontSize * 1.05 - i * lineHeight,
+            size: fontSize,
+            font,
+            color: rgb(c.r, c.g, c.b),
+          });
+        } catch (err) {
+          console.warn("[page-operations] Error drawing text box:", err);
+        }
+      });
     }
   }
 }
@@ -577,6 +641,13 @@ export async function burnAnnotationsWithPdfLib(
     console.error("[page-operations] Failed to draw sticky notes:", err);
   }
 
+  // 4b. TEXT BOXES: Burn custom text boxes
+  try {
+    drawCustomTextBoxesOnDoc(pdfDoc, extractCustomTextBoxes(annotationsJson), font);
+  } catch (err) {
+    console.error("[page-operations] Failed to draw text boxes:", err);
+  }
+
   // 5. CUSTOM INK: Burn custom ink strokes into page content streams
   try {
     const customInkStrokes = extractCustomInkStrokes(annotationsJson);
@@ -595,13 +666,17 @@ export async function burnAnnotationsWithPdfLib(
 export async function burnCustomInkOnPdfBytes(
   pdfBytes: Uint8Array,
   customInkStrokes: Record<number, CustomInkStroke[]>,
-  customStickyNotes?: Record<number, CustomStickyNote[]>
+  customStickyNotes?: Record<number, CustomStickyNote[]>,
+  customTextBoxes?: Record<number, CustomTextBox[]>
 ): Promise<Uint8Array> {
   const hasStrokes = Object.values(customInkStrokes || {}).some((arr) => arr && arr.length > 0);
   const hasStickies =
     customStickyNotes &&
     Object.values(customStickyNotes || {}).some((arr) => arr && arr.length > 0);
-  if (!hasStrokes && !hasStickies) return pdfBytes;
+  const hasTexts =
+    customTextBoxes &&
+    Object.values(customTextBoxes || {}).some((arr) => arr && arr.length > 0);
+  if (!hasStrokes && !hasStickies && !hasTexts) return pdfBytes;
 
   try {
     const pdfDoc = await PDFDocument.load(pdfBytes);
@@ -611,6 +686,10 @@ export async function burnCustomInkOnPdfBytes(
     if (hasStickies && customStickyNotes) {
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       drawCustomStickyNotesOnDoc(pdfDoc, customStickyNotes, font);
+    }
+    if (hasTexts && customTextBoxes) {
+      const textFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      drawCustomTextBoxesOnDoc(pdfDoc, customTextBoxes, textFont);
     }
     return await pdfDoc.save();
   } catch (err) {

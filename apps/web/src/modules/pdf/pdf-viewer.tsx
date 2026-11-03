@@ -38,7 +38,7 @@ import { customStampRenderer } from "./custom-stamp-renderer";
 import { PdfTextLayer } from "./pdf-text-layer";
 import { HistoryPluginPackage } from "@embedpdf/plugin-history";
 import { ExportPluginPackage, useExport } from "@embedpdf/plugin-export/react";
-import { PdfAnnotationSubtype, type PdfDocumentObject } from "@embedpdf/models";
+import type { PdfDocumentObject } from "@embedpdf/models";
 import { projectService as defaultProjectService, type ProjectService } from "@/core/storage";
 import { computeBlobSha256 } from "@/core/storage/sha256";
 import { useI18n } from "@/i18n/provider";
@@ -249,7 +249,9 @@ function ViewerInner({
     handleDeleteSticky,
     handleAddText,
     handleUpdateText,
+    handleDeleteText,
     customStickyNotes,
+    customTextBoxes,
     customStrokes,
     handleAddCustomStroke,
     handleMoveCustomStroke,
@@ -306,14 +308,6 @@ function ViewerInner({
       annotation: { id: string; type?: number; subtype?: string };
       children: React.ReactNode;
     }) => {
-      if (
-        annotation.type === PdfAnnotationSubtype.FREETEXT ||
-        annotation.type === 3 ||
-        annotation.subtype === "FreeText" ||
-        (annotation as unknown as { subtype?: unknown }).subtype === PdfAnnotationSubtype.FREETEXT
-      ) {
-        return null;
-      }
       return (
         <div
           data-annotation-id={annotation.id}
@@ -637,7 +631,7 @@ function ViewerInner({
         const arrayBuffer = await task.toPromise();
         pdfBytes = new Uint8Array(arrayBuffer);
         // Burn custom ink strokes and custom sticky notes onto the exported PDF
-        pdfBytes = await burnCustomInkOnPdfBytes(pdfBytes, customStrokes, customStickyNotes);
+        pdfBytes = await burnCustomInkOnPdfBytes(pdfBytes, customStrokes, customStickyNotes, customTextBoxes);
       } else {
         // 2. Standalone burning fallback using @cantoo/pdf-lib
         const curBuffer = await blob.arrayBuffer();
@@ -997,6 +991,7 @@ function ViewerInner({
                       isTextMode={activeTool === "text" || activeTool === "freeText"}
                       onAddText={handleAddText}
                       onUpdateText={handleUpdateText}
+                      onDeleteText={handleDeleteText}
                       strokes={customStrokes[page.pageIndex] || []}
                       selectedStrokeIds={selectedStrokeIds}
                       onSelectStrokes={setSelectedStrokeIds}

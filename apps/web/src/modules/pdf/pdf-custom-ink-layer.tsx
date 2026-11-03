@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PdfAnnotationSubtype } from "@embedpdf/models";
 
 export interface CustomInkPoint {
@@ -453,6 +453,7 @@ export interface PdfCustomInkLayerProps {
     coords: { x: number; y: number; width?: number; height?: number; text?: string; fontSize?: number; color?: string; id?: string }
   ) => string | void;
   onUpdateText?: (pageIndex: number, id: string, text: string) => void;
+  onDeleteText?: (pageIndex: number, id: string) => void;
   strokes: CustomInkStroke[];
   selectedStrokeIds?: string[];
   onSelectStrokes?: (strokeIds: string[]) => void;
@@ -521,6 +522,7 @@ export function PdfCustomInkLayer({
   isTextMode = false,
   onAddText,
   onUpdateText,
+  onDeleteText,
   strokes,
   selectedStrokeIds = [],
   onSelectStrokes,
@@ -571,36 +573,61 @@ export function PdfCustomInkLayer({
     }
   }, [editingStickyId]);
 
+  // Text boxes: edit mode is entered right after creation or via the native dblclick event only.
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const editingTextIdRef = useRef<string | null>(null);
+  const [textSizes, setTextSizes] = useState<Record<string, { width: number; height: number }>>({});
+  // Measure rendered text so the selection box hugs the text (no resize handles for text)
+  // Guarded by an equality check, so it settles after one extra pass.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const next: Record<string, { width: number; height: number }> = {};
+    svg.querySelectorAll<HTMLElement>("[data-text-measure]").forEach((el) => {
+      const id = el.getAttribute("data-text-measure");
+      if (!id) return;
+      if (el instanceof HTMLTextAreaElement) {
+        el.style.width = "0px";
+        el.style.height = "0px";
+        const w = Math.max(8, el.scrollWidth + 2);
+        const h = Math.max(el.scrollHeight, 1);
+        el.style.width = `${w}px`;
+        el.style.height = `${h}px`;
+        next[id] = { width: w, height: h };
+      } else {
+        next[id] = { width: el.offsetWidth, height: el.offsetHeight };
+      }
+    });
+    setTextSizes((prev) => {
+      const keys = Object.keys(next);
+      const same =
+        keys.length === Object.keys(prev).length &&
+        keys.every((k) => prev[k] && Math.abs(prev[k].width - next[k].width) < 0.5 && Math.abs(prev[k].height - next[k].height) < 0.5);
+      return same ? prev : next;
+    });
+  });
   const lastClickRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
   useEffect(() => {
     editingTextIdRef.current = editingTextId;
+    if (!editingTextId) return;
+    // Focus once on entering edit mode; never re-focus (and never touch the caret) while the user is typing.
+    const focusOnce = () => {
+      const ta = svgRef.current?.querySelector<HTMLTextAreaElement>(`[data-testid="pdf-text-input-${editingTextId}"]`);
+      if (ta && document.activeElement !== ta) {
+        ta.focus();
+        const len = ta.value.length;
+        ta.setSelectionRange(len, len);
+      }
+    };
+    focusOnce();
+    const raf = requestAnimationFrame(focusOnce);
+    const t1 = setTimeout(focusOnce, 40);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+    };
   }, [editingTextId]);
-  const editingTextInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
-  useEffect(() => {
-    if (editingTextId) {
-      const focusEl = () => {
-        if (editingTextInputRef.current) {
-          editingTextInputRef.current.style.pointerEvents = "auto";
-          editingTextInputRef.current.focus();
-          const len = (editingTextInputRef.current as HTMLInputElement).value?.length ?? 0;
-          if (typeof (editingTextInputRef.current as HTMLInputElement).setSelectionRange === "function") {
-            (editingTextInputRef.current as HTMLInputElement).setSelectionRange(len, len);
-          }
-        }
-      };
-      focusEl();
-      requestAnimationFrame(focusEl);
-      const t1 = setTimeout(focusEl, 30);
-      const t2 = setTimeout(focusEl, 100);
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-      };
-    }
-  }, [editingTextId]);
-
   const [marquee, setMarquee] = useState<MarqueeRect | null>(null);
   const interactionRef = useRef<Interaction | null>(null);
 
@@ -615,8 +642,6 @@ export function PdfCustomInkLayer({
       const type: CustomObjectType | null =
         o.type === PdfAnnotationSubtype.STAMP
           ? "stamp"
-          : o.type === PdfAnnotationSubtype.FREETEXT || o.type === PdfAnnotationSubtype.TEXT
-          ? "text"
           : o.type === PdfAnnotationSubtype.HIGHLIGHT
           ? "highlight"
           : null;
@@ -663,6 +688,7 @@ export function PdfCustomInkLayer({
     isTextMode,
     onAddText,
     onUpdateText,
+    onDeleteText,
     strokes,
     selectedStrokeIds,
     onSelectStrokes,
@@ -694,6 +720,7 @@ export function PdfCustomInkLayer({
       isTextMode,
       onAddText,
       onUpdateText,
+      onDeleteText,
       strokes,
       selectedStrokeIds,
       onSelectStrokes,
@@ -769,43 +796,25 @@ export function PdfCustomInkLayer({
         return;
       }
 
-      // 1c. Text mode: click on page to place a text box at (x, y)
+      // 1c. Text mode: click on page creates one text box and enters edit mode
       if (p.isTextMode) {
-        const pt = toPagePoint(e.clientX, e.clientY);
-        if (!pt) return;
-
-        // If clicked on an existing text box, enter edit mode for that text box
-        const target = e.target as Element | null;
-        const existingTextBox = target?.closest?.('[data-testid^="pdf-text-box-"]');
-        if (existingTextBox) {
-          const tid = existingTextBox.getAttribute("data-testid")?.replace("pdf-text-box-", "");
-          if (tid) {
-            e.preventDefault();
-            e.stopPropagation();
-            setEditingTextId(tid);
-            p.onSelectStrokes?.([tid]);
-            p.annotationScope?.selectAnnotation?.(p.pageIndex, tid);
-            return;
-          }
-        }
-
         e.preventDefault();
         e.stopPropagation();
+        const pt = toPagePoint(e.clientX, e.clientY);
+        if (!pt) return;
         const newId = p.onAddText?.(p.pageIndex, {
           x: pt.x,
           y: pt.y,
-          width: 140,
-          height: 36,
-          text: "Text",
+          text: "",
           fontSize: 16,
           color: p.strokeColor || "#E44234",
         });
         if (newId) {
+          editingTextIdRef.current = newId;
           setEditingTextId(newId);
         }
         return;
       }
-
       // 2. Draw mode
       if (p.isActive) {
         e.preventDefault();
@@ -842,37 +851,17 @@ export function PdfCustomInkLayer({
           return;
         }
 
-        // If clicking inside a sticky note or text box textarea/input while editing, allow native text editing
+        // While editing, pointerdown inside the textarea must reach the browser so caret/selection work
         if (target?.closest?.("textarea, input") && (editingStickyIdRef.current || editingTextIdRef.current)) {
           return;
         }
 
-        // If double clicking anywhere on a text box, switch to edit mode immediately
-        const textBoxEl = target?.closest?.('[data-testid^="pdf-text-box-"]');
-        if (textBoxEl) {
-          const tid = textBoxEl.getAttribute("data-testid")?.replace("pdf-text-box-", "");
-          const isDbl = Boolean(tid && e.detail >= 2);
-          if (isDbl && tid) {
-            e.preventDefault();
-            e.stopPropagation();
-            setEditingTextId(tid);
-            interactionRef.current = null;
-            const input = textBoxEl.querySelector("textarea, input") as HTMLElement | null;
-            if (input) {
-              input.focus();
-            }
-            return;
-          }
-        }
-
-        // If another text box is being edited, clicking outside exits edit mode
+        // Clicking anywhere else exits text edit mode (blur commits / removes empty boxes)
         if (editingTextIdRef.current) {
-          const activeBox = target?.closest?.(`[data-testid="pdf-text-box-${editingTextIdRef.current}"]`);
-          if (!activeBox) {
-            setEditingTextId(null);
-          }
+          const activeEl = document.activeElement as HTMLElement | null;
+          if (activeEl && typeof activeEl.blur === "function") activeEl.blur();
+          setEditingTextId(null);
         }
-
         // If double clicking anywhere on a sticky note card, switch to edit mode immediately
         const stickyCardEl = target?.closest?.('[data-testid^="pdf-sticky-card-"]');
         if (stickyCardEl) {
@@ -936,8 +925,6 @@ export function PdfCustomInkLayer({
                 const inferredType: CustomObjectType | null =
                   ta.object.type === PdfAnnotationSubtype.STAMP
                     ? "stamp"
-                    : ta.object.type === PdfAnnotationSubtype.FREETEXT || ta.object.type === PdfAnnotationSubtype.TEXT
-                    ? "text"
                     : null;
                 if (!inferredType) return null;
                 return {
@@ -1014,18 +1001,6 @@ export function PdfCustomInkLayer({
             const ta = cardEl?.querySelector("textarea");
             if (ta) {
               ta.focus();
-            }
-            return;
-          }
-
-          // If double-clicking on a text box, switch to edit mode immediately
-          if (objType === "text" && e.detail >= 2) {
-            setEditingTextId(targetId);
-            interactionRef.current = null;
-            const textBoxEl = target?.closest?.(`[data-testid="pdf-text-box-${targetId}"]`);
-            const input = textBoxEl?.querySelector("textarea, input") as HTMLElement | null;
-            if (input) {
-              input.focus();
             }
             return;
           }
@@ -1326,7 +1301,6 @@ export function PdfCustomInkLayer({
             if (lastClick.id === it.anchorId && now - lastClick.time < 500) {
               lastClickRef.current = { id: "", time: 0 };
               const isSticky = (p.objects || []).some((o) => o.id === it.anchorId && o.type === "sticky");
-              const isText = (p.objects || []).some((o) => o.id === it.anchorId && o.type === "text");
               if (isSticky) {
                 setEditingStickyId(it.anchorId);
                 const card = document.querySelector(`[data-testid="pdf-sticky-card-${it.anchorId}"]`);
@@ -1335,15 +1309,6 @@ export function PdfCustomInkLayer({
                   ta.style.pointerEvents = "auto";
                   ta.focus();
                   setTimeout(() => ta.focus(), 50);
-                }
-              } else if (isText) {
-                setEditingTextId(it.anchorId);
-                const box = document.querySelector(`[data-testid="pdf-text-box-${it.anchorId}"]`);
-                const input = box?.querySelector("textarea, input") as HTMLElement | null;
-                if (input) {
-                  input.style.pointerEvents = "auto";
-                  input.focus();
-                  setTimeout(() => input.focus(), 50);
                 }
               }
             } else {
@@ -1449,21 +1414,26 @@ export function PdfCustomInkLayer({
 
     const handleDblClick = (e: MouseEvent) => {
       const target = e.target as Element | null;
-      const textBoxEl = target?.closest?.('[data-testid^="pdf-text-box-"]');
-      if (textBoxEl) {
+      // Pointer capture can retarget dblclick to the svg, so resolve the text box by coordinates.
+      const hitEls =
+        typeof document.elementsFromPoint === "function"
+          ? document.elementsFromPoint(e.clientX, e.clientY)
+          : [];
+      const textBoxEl =
+        target?.closest?.('[data-testid^="pdf-text-box-"]') ||
+        hitEls.find((el) => el.getAttribute?.("data-testid")?.startsWith("pdf-text-box-")) ||
+        null;
+      if (textBoxEl && svg.contains(textBoxEl)) {
         const tid = textBoxEl.getAttribute("data-testid")?.replace("pdf-text-box-", "");
         if (tid) {
           e.stopPropagation();
+          e.preventDefault();
+          editingTextIdRef.current = tid;
           setEditingTextId(tid);
-          const input = textBoxEl.querySelector("textarea, input") as HTMLElement | null;
-          if (input) {
-            input.style.pointerEvents = "auto";
-            input.focus();
-            setTimeout(() => input.focus(), 50);
-          }
           return;
         }
       }
+
       const card = target?.closest?.('[data-testid^="pdf-sticky-card-"]');
       if (card) {
         const sid = card.getAttribute("data-testid")?.replace("pdf-sticky-card-", "");
@@ -1630,11 +1600,10 @@ export function PdfCustomInkLayer({
         const isSelected = isSelectMode && selectedSet.has(obj.id);
         const curX = resizeRect ? resizeRect.x : obj.x;
         const curY = resizeRect ? resizeRect.y : obj.y;
-        const curW = resizeRect ? resizeRect.width : obj.width;
-        const curH = resizeRect ? resizeRect.height : obj.height;
+        const measured = obj.type === "text" ? textSizes[obj.id] : undefined;
+        const curW = resizeRect ? resizeRect.width : (measured?.width ?? obj.width);
+        const curH = resizeRect ? resizeRect.height : (measured?.height ?? obj.height);
         const handleSize = 8;
-        const scaleRatio = resizeRect && obj.height > 0 ? resizeRect.height / obj.height : 1;
-        const curFontSize = Math.max(8, Math.min(120, Math.round((obj.fontSize || 16) * scaleRatio * 10) / 10));
 
         const handles: Array<{ pos: ResizeHandlePosition; hx: number; hy: number }> = [
           { pos: "nw", hx: curX, hy: curY },
@@ -1826,103 +1795,88 @@ export function PdfCustomInkLayer({
               <foreignObject
                 x={curX}
                 y={curY}
-                width={curW}
-                height={curH}
-                data-object-id={obj.id}
-                data-object-type="text"
-                data-annotation-type="3"
+                width={curW + 8}
+                height={curH + 8}
                 style={{
                   overflow: "visible",
-                  pointerEvents: isSelectMode || isTextMode ? "auto" : "none",
+                  pointerEvents: isSelectMode ? "auto" : "none",
                 }}
               >
-                <div
-                  data-testid={`pdf-text-box-${obj.id}`}
-                  data-object-id={obj.id}
-                  data-object-type="text"
-                  data-annotation-type="3"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    position: "relative",
-                    boxSizing: "border-box",
-                    cursor: isSelectMode && editingTextId !== obj.id ? "move" : "default",
-                  }}
-                  onDoubleClick={(e) => {
-                    e.stopPropagation();
-                    setEditingTextId(obj.id);
-                  }}
-                >
-                  {editingTextId === obj.id ? (
-                    <textarea
-                      ref={(el) => {
-                        if (editingTextId === obj.id) {
-                          editingTextInputRef.current = el;
-                          if (el && document.activeElement !== el) {
-                            requestAnimationFrame(() => el.focus());
-                          }
-                        }
-                      }}
-                      data-testid={`pdf-text-input-${obj.id}`}
-                      dir="auto"
-                      value={obj.contents ?? obj.text ?? ""}
-                      onChange={(e) => {
-                        onUpdateText?.(pageIndex, obj.id, e.target.value);
-                      }}
-                      onBlur={() => {
-                        setEditingTextId(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") {
-                          setEditingTextId(null);
-                        }
-                      }}
-                      autoFocus
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        background: "transparent",
-                        border: "1px dashed var(--accent-text, #1A63A0)",
-                        outline: "none",
-                        color: obj.color || "#E44234",
-                        fontSize: `${curFontSize}px`,
-                        fontFamily: "system-ui, -apple-system, sans-serif",
-                        lineHeight: "1.2",
-                        resize: "none",
-                        padding: 0,
-                        margin: 0,
-                        boxSizing: "border-box",
-                        overflow: "hidden",
-                        pointerEvents: "auto",
-                      }}
-                    />
-                  ) : (
-                    <div
-                      data-testid={`pdf-text-display-${obj.id}`}
-                      data-object-id={obj.id}
-                      data-object-type="text"
-                      dir="auto"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        background: "transparent",
-                        color: obj.color || "#E44234",
-                        fontSize: `${curFontSize}px`,
-                        fontFamily: "system-ui, -apple-system, sans-serif",
-                        lineHeight: "1.2",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                        overflow: "hidden",
-                        userSelect: "none",
-                        boxSizing: "border-box",
-                        cursor: isSelectMode ? "move" : "default",
-                        pointerEvents: "auto",
-                      }}
-                    >
-                      {obj.contents ?? obj.text ?? ""}
-                    </div>
-                  )}
-                </div>
+                {editingTextId === obj.id ? (
+                  <textarea
+                    key={`text-input-${obj.id}`}
+                    data-testid={`pdf-text-input-${obj.id}`}
+                    data-text-measure={obj.id}
+                    dir="auto"
+                    wrap="off"
+                    rows={1}
+                    spellCheck={false}
+                    value={obj.text ?? ""}
+                    onChange={(e) => {
+                      onUpdateText?.(pageIndex, obj.id, e.target.value);
+                    }}
+                    onBlur={(e) => {
+                      const value = e.currentTarget.value;
+                      setEditingTextId((cur) => (cur === obj.id ? null : cur));
+                      if (value.trim() === "") {
+                        onDeleteText?.(pageIndex, obj.id);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === "Escape" || (e.key === "Enter" && (e.shiftKey || e.ctrlKey || e.metaKey))) {
+                        e.preventDefault();
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    style={{
+                      display: "block",
+                      background: "transparent",
+                      border: "none",
+                      outline: "none",
+                      color: obj.color || "#E44234",
+                      fontSize: `${obj.fontSize || 16}px`,
+                      fontFamily: "var(--font-sans, system-ui, -apple-system, sans-serif)",
+                      lineHeight: "1.4",
+                      resize: "none",
+                      padding: 0,
+                      margin: 0,
+                      boxSizing: "content-box",
+                      overflow: "hidden",
+                      whiteSpace: "pre",
+                      userSelect: "text",
+                      WebkitUserSelect: "text",
+                      cursor: "text",
+                      pointerEvents: "auto",
+                    }}
+                  />
+                ) : (
+                  <div
+                    key={`text-display-${obj.id}`}
+                    data-testid={`pdf-text-box-${obj.id}`}
+                    data-text-measure={obj.id}
+                    data-object-id={obj.id}
+                    data-object-type="text"
+                    dir="auto"
+                    style={{
+                      display: "block",
+                      width: "max-content",
+                      minWidth: "8px",
+                      color: obj.color || "#E44234",
+                      fontSize: `${obj.fontSize || 16}px`,
+                      fontFamily: "var(--font-sans, system-ui, -apple-system, sans-serif)",
+                      lineHeight: "1.4",
+                      whiteSpace: "pre-wrap",
+                      userSelect: "none",
+                      WebkitUserSelect: "none",
+                      boxSizing: "content-box",
+                      cursor: isSelectMode ? "move" : "default",
+                      pointerEvents: "auto",
+                    }}
+                  >
+                    {obj.text ?? ""}
+                  </div>
+                )}
               </foreignObject>
             )}
             {obj.type !== "sticky" && obj.type !== "text" && (
@@ -1954,7 +1908,7 @@ export function PdfCustomInkLayer({
                   vectorEffect="non-scaling-stroke"
                   style={{ pointerEvents: "none" }}
                 />
-                {handles.map(({ pos, hx, hy }) => (
+                {obj.type !== "text" && handles.map(({ pos, hx, hy }) => (
                   <rect
                     key={pos}
                     data-resize-handle={pos}
@@ -1988,12 +1942,13 @@ export function PdfCustomInkLayer({
       dragOffsets,
       resizeRects,
       isSelectMode,
-      isTextMode,
       selectedSet,
       editingStickyId,
       editingTextId,
+      textSizes,
       onUpdateStickyText,
       onUpdateText,
+      onDeleteText,
       onDeleteSticky,
       pageIndex,
     ]

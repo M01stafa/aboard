@@ -2411,3 +2411,25 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
 **Related:** PDF-1, PDF-3, PDF-4
 **Open:** none.
+
+
+## 2026-11-03 — Rebuild PDF Text Tool from Scratch (Fix Duplication, Overwriting, and Drag)
+**Request:** Rebuild the PDF text tool cleanly from scratch to eliminate text duplication, lost focus / character overwriting, and broken drag interactions. Strictly remove resizing handles for text boxes (text must only be movable and auto-size to fit content). Do not touch sticky notes.
+**Changes:**
+- `apps/web/src/modules/pdf/annotation-storage.ts`: added `CustomTextBox` type and integrated custom text boxes into `SerializedAnnotationsPayload`, `serializeAnnotations`, and `extractCustomTextBoxes`.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: decoupled text entirely from EmbedPDF FreeText annotations; added custom text box state management (`handleAddText`, `handleUpdateText`, `handleDeleteText`, `handleDeleteSelected`); mapped custom text boxes in `getObjectsForPage`; updated `handleMoveObject` for text position translation; disabled resizing in `handleResizeObject` for text objects.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: streamlined text box creation and interaction; eliminated dual element rendering by rendering only a single `<textarea>` when editing and a single `<div>` when not; eliminated double-click timing delays so clicking selects and drag moves smoothly on the first gesture; strictly hid resize handles for `type === "text"`; added auto-resizing to text dimensions; auto-deleted empty text boxes on blur/Escape.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx`: wired custom text boxes into `burnCustomInkOnPdfBytes` for PDF export flattening.
+- `apps/web/src/modules/pdf/page-operations.ts`: added `drawCustomTextBoxesOnDoc` to burn custom text boxes with multiline wrap, out-of-bounds clipping, and hex color parsing into exported PDFs.
+- `apps/web/src/modules/pdf/pdf-text-tool.test.tsx`: updated unit tests covering text box creation, typing, moving, delete shortcut, and absence of resize handles.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added comprehensive E2E test verifying single text rendering, exact text typing without overwrite, single-gesture drag, absence of resize handles, and persistence across reload (11/11 tests passing).
+- `apps/web/e2e/pdf-annotations.spec.ts`: updated cross-tool note link E2E test to use text container selection.
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (84/84 unit tests across 10 test files).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (11/11 tests passing).
+- `playwright test e2e/pdf-annotations.spec.ts`: PASS (2/2 tests passing).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-4
+**Open:** none.
