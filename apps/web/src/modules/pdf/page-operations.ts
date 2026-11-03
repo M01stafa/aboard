@@ -9,7 +9,7 @@ import {
   type CustomStickyNote,
   type CustomTextBox,
 } from "./annotation-storage";
-import type { CustomInkStroke } from "./pdf-custom-ink-layer";
+import { getMaxTextWidth, type CustomInkStroke } from "./pdf-custom-ink-layer";
 
 function parseStrokeColor(hex?: string): { r: number; g: number; b: number } {
   if (hex && hex.startsWith("#")) {
@@ -189,6 +189,83 @@ export function drawCustomStickyNotesOnDoc(
   }
 }
 
+/**
+ * Wraps a line of text so that each wrapped line fits within maxTextWidth.
+ * Breaks on word boundaries (spaces) if possible, or forces a break within
+ * long words/strings (word-break / break-word behavior).
+ */
+export function wrapLineForPdf(
+  line: string,
+  font: PDFFont,
+  fontSize: number,
+  maxTextWidth: number
+): string[] {
+  if (!line) return [""];
+
+  const measure = (text: string): number => {
+    try {
+      if (typeof font.widthOfTextAtSize === "function") {
+        return font.widthOfTextAtSize(text, fontSize);
+      }
+    } catch {
+      // fallback if font measurement fails
+    }
+    return text.length * fontSize * 0.6;
+  };
+
+  if (measure(line) <= maxTextWidth) {
+    return [line];
+  }
+
+  const words = line.split(" ");
+  const resultLines: string[] = [];
+  let currentLine = "";
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+
+    // If the word itself is wider than maxTextWidth, break the word into chunks
+    if (measure(word) > maxTextWidth) {
+      if (currentLine) {
+        resultLines.push(currentLine);
+        currentLine = "";
+      }
+      let currentWordChunk = "";
+      for (const char of word) {
+        const candidateChunk = currentWordChunk + char;
+        if (measure(candidateChunk) <= maxTextWidth) {
+          currentWordChunk = candidateChunk;
+        } else {
+          if (currentWordChunk) {
+            resultLines.push(currentWordChunk);
+          }
+          currentWordChunk = char;
+        }
+      }
+      if (currentWordChunk) {
+        currentLine = currentWordChunk;
+      }
+      continue;
+    }
+
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (measure(testLine) <= maxTextWidth) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) {
+        resultLines.push(currentLine);
+      }
+      currentLine = word;
+    }
+  }
+
+  if (currentLine) {
+    resultLines.push(currentLine);
+  }
+
+  return resultLines.length > 0 ? resultLines : [line];
+}
+
 export function drawCustomTextBoxesOnDoc(
   pdfDoc: PDFDocument,
   customTextBoxes: Record<number, CustomTextBox[]>,
@@ -206,25 +283,13 @@ export function drawCustomTextBoxesOnDoc(
       if (!box || !box.text || !box.text.trim()) continue;
       const fontSize = box.fontSize > 0 ? box.fontSize : 16;
       const lineHeight = fontSize * 1.4;
-      const lines = box.text.split("\n");
-      const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
-      if (
-        isRectCompletelyOutOfBounds(
-          box.x,
-          box.y,
-          Math.max(24, longest * fontSize * 0.6),
-          lineHeight * lines.length,
-          pageWidth,
-          pageHeight
-        )
-      ) {
-        continue;
-      }
-      const c = parseStrokeColor(box.color);
-      lines.forEach((line, i) => {
-        if (!line) return;
+      const maxTextWidth = getMaxTextWidth(pageWidth, box.x);
+      const rawLines = box.text.split("\n");
+      const wrappedLines: string[] = [];
+
+      for (const rawLine of rawLines) {
         // Helvetica (WinAnsi) cannot encode every character; drop unencodable ones instead of failing.
-        const safe = Array.from(line)
+        const safe = Array.from(rawLine)
           .filter((ch) => {
             try {
               font.encodeText(ch);
@@ -234,9 +299,31 @@ export function drawCustomTextBoxesOnDoc(
             }
           })
           .join("");
-        if (!safe) return;
+        if (!safe) {
+          wrappedLines.push("");
+          continue;
+        }
+        const subLines = wrapLineForPdf(safe, font, fontSize, maxTextWidth);
+        wrappedLines.push(...subLines);
+      }
+
+      if (
+        isRectCompletelyOutOfBounds(
+          box.x,
+          box.y,
+          maxTextWidth,
+          lineHeight * wrappedLines.length,
+          pageWidth,
+          pageHeight
+        )
+      ) {
+        continue;
+      }
+      const c = parseStrokeColor(box.color);
+      wrappedLines.forEach((line, i) => {
+        if (!line) return;
         try {
-          page.drawText(safe, {
+          page.drawText(line, {
             x: box.x,
             y: pageHeight - box.y - fontSize * 1.05 - i * lineHeight,
             size: fontSize,

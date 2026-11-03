@@ -161,6 +161,12 @@ export function scaleStrokePoints(
   });
 }
 
+export function getMaxTextWidth(pageWidth: number, x: number): number {
+  const pWidth = pageWidth > 0 ? pageWidth : 612;
+  const available = pWidth - x - 24;
+  return Math.min(500, Math.max(200, available));
+}
+
 export function rectsIntersect(
   r1: { x: number; y: number; width: number; height: number },
   r2: { x: number; y: number; width: number; height: number }
@@ -213,10 +219,11 @@ export function findIntersectingItemIds(
     .filter((o) => {
       // Account for var(--space-1, 8px) padding for text boxes
       const pad = o.type === "text" ? 8 : 0;
+      const rawW = o.type === "text" ? Math.min(500, o.width) : o.width;
       const oBox = {
         x: o.x + (o.transform?.x ?? 0),
         y: o.y + (o.transform?.y ?? 0),
-        width: Math.max(o.type === "text" ? 64 : 1, o.width + pad * 2),
+        width: Math.max(o.type === "text" ? 64 : 1, rawW + pad * 2),
         height: o.height + pad * 2,
       };
       return rectsIntersect(box, oBox);
@@ -639,7 +646,11 @@ export function PdfCustomInkLayer({
     svg.querySelectorAll<HTMLElement>("[data-text-measure]").forEach((el) => {
       const id = el.getAttribute("data-text-measure");
       if (!id) return;
+      const targetObj = pageObjects.find((o) => o.id === id);
+      const curObjX = targetObj?.x ?? 0;
+      const maxW = getMaxTextWidth(pageWidth, curObjX);
       if (el instanceof HTMLTextAreaElement) {
+        el.style.height = "auto";
         const lines = (el.value || "").split("\n");
         const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
         const fontSize = parseFloat(el.style.fontSize) || 16;
@@ -647,11 +658,12 @@ export function PdfCustomInkLayer({
         const padBorder = 18; // var(--space-1, 8px) * 2 + 2px border
         const h = Math.max(lineH + padBorder, el.scrollHeight + 2, lines.length * lineH + padBorder);
         el.style.height = `${h}px`;
-        const w = Math.max(64, el.offsetWidth || el.scrollWidth + 2, longest * fontSize * 0.7 + padBorder);
+        const rawW = Math.max(64, el.offsetWidth || el.scrollWidth + 2, longest * fontSize * 0.7 + padBorder);
+        const w = Math.min(maxW, rawW);
         next[id] = { width: Math.round(w), height: Math.round(h) };
       } else {
         if (el.offsetWidth > 0 && el.offsetHeight > 0) {
-          const w = Math.max(64, el.offsetWidth);
+          const w = Math.min(maxW, Math.max(64, el.offsetWidth));
           const h = Math.max(16, el.offsetHeight);
           next[id] = { width: Math.round(w), height: Math.round(h) };
         }
@@ -671,7 +683,7 @@ export function PdfCustomInkLayer({
       });
       return hasMeaningfulChange ? next : prev;
     });
-  }, [textContentKey]);
+  }, [textContentKey, pageWidth, pageObjects]);
 
   const lastClickRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
   useEffect(() => {
@@ -686,7 +698,15 @@ export function PdfCustomInkLayer({
         const lineH = fontSize * 1.4;
         const lines = (ta.value || "").split("\n");
         const padBorder = 18;
-        ta.style.height = `${Math.max(lineH + padBorder, ta.scrollHeight + 2, lines.length * lineH + padBorder)}px`;
+        const curObj = pageObjects.find((o) => o.id === editingTextId);
+        const curX = curObj?.x ?? 0;
+        const maxTextW = getMaxTextWidth(pageWidth, curX);
+        const approxCharsPerLine = Math.max(10, Math.floor(maxTextW / (fontSize * 0.6)));
+        const totalEstLines = lines.reduce(
+          (sum, line) => sum + Math.max(1, Math.ceil(line.length / approxCharsPerLine)),
+          0
+        );
+        ta.style.height = `${Math.max(lineH + padBorder, ta.scrollHeight + 2, totalEstLines * lineH + padBorder)}px`;
         if (document.activeElement !== ta) {
           ta.focus();
           const len = ta.value.length;
@@ -701,6 +721,7 @@ export function PdfCustomInkLayer({
       cancelAnimationFrame(raf);
       clearTimeout(t1);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingTextId]);
   const [marquee, setMarquee] = useState<MarqueeRect | null>(null);
   const interactionRef = useRef<Interaction | null>(null);
@@ -1640,14 +1661,27 @@ export function PdfCustomInkLayer({
         const measured = obj.type === "text" ? textSizes[obj.id] : undefined;
         const textFontSize = obj.fontSize || 16;
         const textLineHeight = textFontSize * 1.4;
+        const maxTextWidth = getMaxTextWidth(pageWidth, curX);
         const textLines = (obj.text || "").split("\n");
         const longestLineChars = textLines.reduce((m, l) => Math.max(m, l.length), 0);
-        const dynamicContentW = Math.max(64, longestLineChars * textFontSize * 0.7, measured?.width ?? obj.width);
-        const dynamicContentH = Math.max(textLineHeight, textLines.length * textLineHeight, measured?.height ?? obj.height);
+        const approxCharsPerLine = Math.max(10, Math.floor(maxTextWidth / (textFontSize * 0.6)));
+        const totalEstimatedLines = textLines.reduce(
+          (sum, line) => sum + Math.max(1, Math.ceil(line.length / approxCharsPerLine)),
+          0
+        );
+        const dynamicContentW = Math.min(
+          maxTextWidth,
+          Math.max(64, longestLineChars * textFontSize * 0.7)
+        );
+        const dynamicContentH = Math.max(
+          textLineHeight,
+          totalEstimatedLines * textLineHeight,
+          measured?.height ?? obj.height
+        );
         const curW = resizeRect
           ? resizeRect.width
           : obj.type === "text"
-          ? (measured?.width ?? dynamicContentW)
+          ? Math.min(maxTextWidth, measured?.width ?? dynamicContentW)
           : (measured?.width ?? obj.width);
         const curH = resizeRect
           ? resizeRect.height
@@ -1870,7 +1904,7 @@ export function PdfCustomInkLayer({
                       ref={(el) => {
                         if (el) {
                           el.style.height = "auto";
-                          const targetH = Math.max(textLineHeight + 18, el.scrollHeight + 2, textLines.length * textLineHeight + 18);
+                          const targetH = Math.max(textLineHeight + 18, el.scrollHeight + 2, totalEstimatedLines * textLineHeight + 18);
                           el.style.height = `${targetH}px`;
                         }
                       }}
@@ -1881,17 +1915,68 @@ export function PdfCustomInkLayer({
                       spellCheck={false}
                       dir={textDirection}
                       value={obj.text ?? ""}
+                      onPaste={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const rawText = e.clipboardData?.getData("text/plain") ?? "";
+                        if (!rawText) return;
+                        const normalized = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+                        const target = e.currentTarget;
+                        const start = target.selectionStart ?? target.value.length;
+                        const end = target.selectionEnd ?? target.value.length;
+                        const curVal = target.value ?? "";
+                        const nextValue = curVal.slice(0, start) + normalized + curVal.slice(end);
+                        const newCursorPos = start + normalized.length;
+
+                        target.value = nextValue;
+                        if (typeof target.setSelectionRange === "function") {
+                          target.setSelectionRange(newCursorPos, newCursorPos);
+                        }
+
+                        target.style.height = "auto";
+                        const lines = nextValue.split("\n");
+                        const estLines = lines.reduce(
+                          (sum, line) => sum + Math.max(1, Math.ceil(line.length / approxCharsPerLine)),
+                          0
+                        );
+                        const targetH = Math.max(
+                          textLineHeight + 18,
+                          target.scrollHeight + 2,
+                          estLines * textLineHeight + 18
+                        );
+                        target.style.height = `${targetH}px`;
+
+                        onUpdateText?.(pageIndex, obj.id, nextValue);
+
+                        if (typeof requestAnimationFrame === "function") {
+                          requestAnimationFrame(() => {
+                            if (document.activeElement === target && typeof target.setSelectionRange === "function") {
+                              target.setSelectionRange(newCursorPos, newCursorPos);
+                            }
+                          });
+                        }
+                      }}
                       onChange={(e) => {
                         const target = e.currentTarget;
                         target.style.height = "auto";
-                        const targetH = Math.max(textLineHeight + 18, target.scrollHeight + 2, textLines.length * textLineHeight + 18);
+                        const lines = target.value.split("\n");
+                        const estLines = lines.reduce(
+                          (sum, line) => sum + Math.max(1, Math.ceil(line.length / approxCharsPerLine)),
+                          0
+                        );
+                        const targetH = Math.max(textLineHeight + 18, target.scrollHeight + 2, estLines * textLineHeight + 18);
                         target.style.height = `${targetH}px`;
                         onUpdateText?.(pageIndex, obj.id, e.target.value);
                       }}
                       onInput={(e) => {
                         const target = e.currentTarget;
                         target.style.height = "auto";
-                        const targetH = Math.max(textLineHeight + 18, target.scrollHeight + 2, textLines.length * textLineHeight + 18);
+                        const lines = target.value.split("\n");
+                        const estLines = lines.reduce(
+                          (sum, line) => sum + Math.max(1, Math.ceil(line.length / approxCharsPerLine)),
+                          0
+                        );
+                        const targetH = Math.max(textLineHeight + 18, target.scrollHeight + 2, estLines * textLineHeight + 18);
                         target.style.height = `${targetH}px`;
                         onUpdateText?.(pageIndex, obj.id, target.value);
                       }}
@@ -1913,6 +1998,7 @@ export function PdfCustomInkLayer({
                         display: "block",
                         width: `${Math.max(64, curW)}px`,
                         minWidth: "64px",
+                        maxWidth: `${maxTextWidth}px`,
                         height: `${Math.max(textLineHeight + 18, curH)}px`,
                         minHeight: `${textLineHeight + 18}px`,
                         background: "transparent",
@@ -1930,6 +2016,7 @@ export function PdfCustomInkLayer({
                         overflow: "hidden",
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
+                        overflowWrap: "break-word",
                         direction: textDirection,
                         textAlign: textAlign,
                         userSelect: "text",
@@ -1946,6 +2033,9 @@ export function PdfCustomInkLayer({
                         visibility: "hidden",
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
+                        overflowWrap: "break-word",
+                        maxWidth: `${maxTextWidth}px`,
+                        width: `${Math.max(64, curW)}px`,
                         fontSize: `${textFontSize}px`,
                         fontFamily: "var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
                         lineHeight: "1.4",
@@ -1975,12 +2065,14 @@ export function PdfCustomInkLayer({
                       display: "block",
                       width: "max-content",
                       minWidth: "64px",
+                      maxWidth: `${maxTextWidth}px`,
                       color: obj.color || "#E44234",
                       fontSize: `${textFontSize}px`,
                       fontFamily: "var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
                       lineHeight: "1.4",
                       whiteSpace: "pre-wrap",
                       wordBreak: "break-word",
+                      overflowWrap: "break-word",
                       direction: textDirection,
                       textAlign: textAlign,
                       userSelect: "none",
@@ -2070,6 +2162,7 @@ export function PdfCustomInkLayer({
       onDeleteText,
       onDeleteSticky,
       pageIndex,
+      pageWidth,
     ]
   );
 

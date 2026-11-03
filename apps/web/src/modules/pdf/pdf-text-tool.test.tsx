@@ -2,9 +2,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React, { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { PdfCustomInkLayer } from "./pdf-custom-ink-layer";
+import { PdfCustomInkLayer, getMaxTextWidth } from "./pdf-custom-ink-layer";
 import { usePdfAnnotations, type UsePdfAnnotationsResult } from "./use-pdf-annotations";
 import { PdfFloatingToolbar } from "./pdf-floating-toolbar";
+import { wrapLineForPdf } from "./page-operations";
 
 // @ts-expect-error React testing flag
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -139,6 +140,28 @@ describe("PDF Text Tool (custom text boxes)", () => {
       nativeSetter?.call(textarea, value);
       textarea.dispatchEvent(new Event("input", { bubbles: true }));
     });
+  }
+
+  function dispatchPaste(
+    textarea: HTMLTextAreaElement,
+    plainText: string,
+    htmlText?: string
+  ): Event {
+    let pasteEv: Event;
+    act(() => {
+      pasteEv = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(pasteEv, "clipboardData", {
+        value: {
+          getData: (type: string) => {
+            if (type === "text/plain") return plainText;
+            if (type === "text/html") return htmlText ?? "";
+            return "";
+          },
+        },
+      });
+      textarea.dispatchEvent(pasteEv);
+    });
+    return pasteEv!;
   }
 
   it("renders a non-editing text box as a single div with the text and no textarea", () => {
@@ -781,5 +804,230 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(div.style.direction).toBe("rtl");
     expect(div.style.textAlign).toBe("right");
     expect(div.getAttribute("dir")).toBe("rtl");
+  });
+
+  it("pasting plain text with CRLF (\\r\\n) normalizes to \\n and preserves all newlines", () => {
+    const handleUpdateText = vi.fn();
+    act(() => {
+      root.render(
+        <PdfCustomInkLayer
+          pageIndex={0}
+          pageWidth={612}
+          pageHeight={792}
+          isActive={false}
+          isSelectMode={true}
+          strokes={[]}
+          onAddStroke={vi.fn()}
+          onUpdateText={handleUpdateText}
+          objects={[sampleTextObject]}
+        />
+      );
+    });
+
+    const box = container.querySelector('[data-testid="pdf-text-box-text-1"]')!;
+    act(() => {
+      box.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+    });
+    const textarea = container.querySelector('[data-testid="pdf-text-input-text-1"]') as HTMLTextAreaElement;
+    expect(textarea).not.toBeNull();
+
+    // Select all existing text to replace with paste
+    textarea.selectionStart = 0;
+    textarea.selectionEnd = textarea.value.length;
+
+    const crlfText = "First line\r\nSecond line\r\nThird line";
+    const pasteEv = dispatchPaste(textarea, crlfText);
+
+    expect(pasteEv.defaultPrevented).toBe(true);
+    expect(handleUpdateText).toHaveBeenCalledWith(0, "text-1", "First line\nSecond line\nThird line");
+    expect(textarea.value).toBe("First line\nSecond line\nThird line");
+    expect(textarea.selectionStart).toBe("First line\nSecond line\nThird line".length);
+    expect(textarea.selectionEnd).toBe("First line\nSecond line\nThird line".length);
+    const expectedMinHeight = 16 * 1.4 * 3 + 18;
+    expect(parseFloat(textarea.style.height)).toBeGreaterThanOrEqual(expectedMinHeight);
+  });
+
+  it("pasting plain text with \\n splices at cursor position and calls onUpdateText with newlines intact", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+      );
+    });
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+    typeInto(textarea, "Prefix: ");
+
+    // Position cursor at end of "Prefix: " (length 8)
+    textarea.selectionStart = 8;
+    textarea.selectionEnd = 8;
+
+    const multilineText = "Item 1\nItem 2\nItem 3";
+    const pasteEv = dispatchPaste(textarea, multilineText, "<b>Item 1</b><br>Item 2<br>Item 3");
+
+    expect(pasteEv.defaultPrevented).toBe(true);
+    const expectedResult = "Prefix: Item 1\nItem 2\nItem 3";
+    expect(hookRef.customTextBoxes[0][0].text).toBe(expectedResult);
+    expect(textarea.value).toBe(expectedResult);
+    expect(textarea.selectionStart).toBe(8 + multilineText.length);
+    expect(textarea.selectionEnd).toBe(8 + multilineText.length);
+    const expectedMinHeight = 16 * 1.4 * 3 + 18;
+    expect(parseFloat(textarea.style.height)).toBeGreaterThanOrEqual(expectedMinHeight);
+  });
+
+  describe("Auto-wrapping & max-width constraints", () => {
+    it("getMaxTextWidth computes sensible constraints based on page width and X offset", () => {
+      // Available width is 612 - 60 - 24 = 528 -> clamped to 500 max
+      expect(getMaxTextWidth(612, 60)).toBe(500);
+      // Available width is 612 - 350 - 24 = 238 -> between 200 and 500
+      expect(getMaxTextWidth(612, 350)).toBe(238);
+      // Available width is 612 - 550 - 24 = 38 -> clamped to 200 min
+      expect(getMaxTextWidth(612, 550)).toBe(200);
+      // On wide page, still capped at 500
+      expect(getMaxTextWidth(1200, 100)).toBe(500);
+    });
+
+    it("clamps textarea to maxTextWidth with word-break and auto-expands vertically when long unbroken text is typed", () => {
+      act(() => {
+        root.render(<Harness />);
+      });
+      act(() => {
+        hookRef.handleSelectTool("text");
+      });
+      const svg = container.querySelector("svg")!;
+      mockSvgRect(svg);
+      act(() => {
+        svg.dispatchEvent(
+          new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+        );
+      });
+      const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+      expect(textarea).not.toBeNull();
+      const fo = textarea.closest("foreignObject");
+      expect(fo).not.toBeNull();
+      const initialOriginX = parseFloat(fo?.getAttribute("x") || "0");
+      const initialOriginY = parseFloat(fo?.getAttribute("y") || "0");
+
+      // 300 character string without newlines
+      const longText = "A".repeat(300);
+      typeInto(textarea, longText);
+
+      // Verify styling properties for wrapping and bounding
+      expect(textarea.style.maxWidth).toBe("500px");
+      expect(textarea.style.whiteSpace).toBe("pre-wrap");
+      expect(textarea.style.wordBreak).toBe("break-word");
+      expect(textarea.style.overflowWrap).toBe("break-word");
+
+      // Verify width does not stretch infinitely (e.g. 3000px)
+      const widthVal = parseFloat(textarea.style.width);
+      expect(widthVal).toBeLessThanOrEqual(500);
+
+      // Verify vertical expansion for wrapped lines (approx 6-7 lines * ~22px > 100px)
+      const heightVal = parseFloat(textarea.style.height);
+      expect(heightVal).toBeGreaterThanOrEqual(100);
+
+      // Verify the foreignObject origin remains strictly fixed in place
+      const finalOriginX = parseFloat(fo?.getAttribute("x") || "0");
+      const finalOriginY = parseFloat(fo?.getAttribute("y") || "0");
+      expect(finalOriginX).toBe(initialOriginX);
+      expect(finalOriginY).toBe(initialOriginY);
+    });
+
+    it("display div applies maxWidth, word-break, pre-wrap and selection bbox hugs wrapped text", () => {
+      const longText = "B".repeat(300);
+      const longTextObject = {
+        id: "text-long-1",
+        type: "text" as const,
+        pageIndex: 0,
+        x: 72,
+        y: 120,
+        width: 3000, // Legacy or unconstrained value
+        height: 24,
+        contents: longText,
+        text: longText,
+        fontSize: 16,
+        color: "#E44234",
+      };
+
+      act(() => {
+        root.render(
+          <PdfCustomInkLayer
+            pageIndex={0}
+            pageWidth={612}
+            pageHeight={792}
+            isActive={false}
+            isSelectMode={true}
+            selectedStrokeIds={["text-long-1"]}
+            strokes={[]}
+            onAddStroke={vi.fn()}
+            objects={[longTextObject]}
+          />
+        );
+      });
+
+      const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-long-1"]') as HTMLElement | null;
+      expect(displayDiv).not.toBeNull();
+      expect(displayDiv?.style.maxWidth).toBe("500px");
+      expect(displayDiv?.style.whiteSpace).toBe("pre-wrap");
+      expect(displayDiv?.style.wordBreak).toBe("break-word");
+      expect(displayDiv?.style.overflowWrap).toBe("break-word");
+
+      // Check selection bbox
+      const bboxGroup = container.querySelector('[data-testid="pdf-text-bbox"]');
+      expect(bboxGroup).not.toBeNull();
+      const bboxRect = bboxGroup?.querySelector("rect");
+      expect(bboxRect).not.toBeNull();
+
+      // Bounding box width must be clamped to maxTextWidth (500), never stretching to 3000px
+      const bboxWidth = parseFloat(bboxRect?.getAttribute("width") || "0");
+      expect(bboxWidth).toBeLessThanOrEqual(500);
+
+      // Bounding box height must auto-expand vertically for wrapped lines
+      const bboxHeight = parseFloat(bboxRect?.getAttribute("height") || "0");
+      expect(bboxHeight).toBeGreaterThanOrEqual(100);
+
+      // Bounding box origin (x, y) must strictly match the object's origin
+      const bboxX = parseFloat(bboxRect?.getAttribute("x") || "0");
+      const bboxY = parseFloat(bboxRect?.getAttribute("y") || "0");
+      expect(bboxX).toBe(72);
+      expect(bboxY).toBe(120);
+    });
+
+    it("wrapLineForPdf wraps long unbroken strings into chunks fitting maxTextWidth", () => {
+      const mockFont = {
+        widthOfTextAtSize: (text: string, size: number) => text.length * size * 0.6,
+      } as any;
+
+      const longUnbroken = "C".repeat(300);
+      const wrapped = wrapLineForPdf(longUnbroken, mockFont, 16, 500);
+
+      // 500 / (16 * 0.6) = 52 characters per line, so 300 chars should wrap into ~6 lines
+      expect(wrapped.length).toBeGreaterThan(1);
+      for (const line of wrapped) {
+        expect(mockFont.widthOfTextAtSize(line, 16)).toBeLessThanOrEqual(500);
+      }
+      expect(wrapped.join("")).toBe(longUnbroken);
+    });
+
+    it("wrapLineForPdf wraps multiline sentences at word boundaries when possible", () => {
+      const mockFont = {
+        widthOfTextAtSize: (text: string, size: number) => text.length * size * 0.6,
+      } as any;
+
+      const sentence = "The quick brown fox jumps over the lazy dog and runs across the entire field without stopping";
+      const wrapped = wrapLineForPdf(sentence, mockFont, 16, 250);
+
+      expect(wrapped.length).toBeGreaterThan(1);
+      for (const line of wrapped) {
+        expect(mockFont.widthOfTextAtSize(line, 16)).toBeLessThanOrEqual(250);
+      }
+      expect(wrapped.join(" ")).toBe(sentence);
+    });
   });
 });

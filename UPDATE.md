@@ -2478,3 +2478,24 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
 **Related:** PDF-1, PDF-4
 **Open:** none.
+
+
+## 2026-11-03 — Fix Text Pasting (Preserve Newlines) and Auto-Wrap Long Text (Multi-Agent)
+**Request:** Fix multiline text pasting to strictly preserve `\n` line breaks, and implement max-width auto-wrapping so long text paragraphs never extend infinitely across the PDF page:
+1. Sub-Agent 1 (Fix Paste Event & Newlines): Added explicit `onPaste` handler on the text input `<textarea>` to intercept clipboard events, extract clean `text/plain` only (stripping rich HTML), normalize CRLF / CR line breaks to `\n`, splice into cursor position, update cursor position, auto-grow height, and call `onUpdateText`.
+2. Sub-Agent 2 (Fix Auto-Wrapping & Max-Width): Implemented `getMaxTextWidth` clamping text box width to `Math.min(500, Math.max(200, pageWidth - curX - 24))`; applied `maxWidth`, `whiteSpace: "pre-wrap"`, `wordBreak: "break-word"`, and `overflowWrap: "break-word"` on both `<textarea>` and display `<div>`; ensured selection bounding box hugs wrapped dimensions without stretching; implemented `wrapLineForPdf` in `page-operations.ts` so exported flattened PDFs match wrapped layout.
+3. Sub-Agent 3 (Review & E2E Testing): Added targeted Playwright E2E tests verifying pasting multiline text preserves newlines and expands height across blur, and pasting long 280+ character paragraphs auto-wraps within 500px without extending infinitely across the page or drifting from origin (16/16 E2E tests passing).
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: added `onPaste` handler with `text/plain` extraction, CRLF normalization, cursor splicing, and dynamic auto-expansion; added `getMaxTextWidth` helper; clamped text width and selection box to max-width; applied `maxWidth`, `whiteSpace: "pre-wrap"`, `wordBreak: "break-word"`, and `overflowWrap: "break-word"` on textarea and display div; clamped marquee selection search box.
+- `apps/web/src/modules/pdf/page-operations.ts`: added `wrapLineForPdf` helper with word boundary breaking; updated `drawCustomTextBoxesOnDoc` to wrap long lines against maxTextWidth for clean PDF export flattening.
+- `apps/web/src/modules/pdf/pdf-text-tool.test.tsx`: added unit tests for clipboard paste with CRLF/LF preservation, HTML stripping, cursor retention, `getMaxTextWidth`, and `wrapLineForPdf`.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added Playwright E2E tests for multiline paste with preserved newlines and long paragraph auto-wrapping within 500px max-width (16/16 tests passing).
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (101/101 tests across 11 test files).
+- `pnpm test`: PASS (402/402 tests across 48 test files).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (16/16 tests passing in 1.5m).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-4
+**Open:** none.

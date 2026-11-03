@@ -2176,4 +2176,258 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(Math.abs(displayBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(displayBox!.y - initialOriginY)).toBeLessThanOrEqual(2);
   });
+
+  test("text tool: pasting multiline text preserves newlines, auto-expands height, and persists across blur", async ({ page }) => {
+    const pid = "test-pdf-text-paste-multiline";
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Pasting Multiline Text Verification", { x: 50, y: 750, size: 16, font, color: rgb(0, 0, 0) });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles({
+      name: "paste-multiline.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // 1. Activate Text tool and create a text box
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    const clickX = page1Box.x + 180;
+    const clickY = page1Box.y + 220;
+    await page.mouse.click(clickX, clickY);
+
+    const textarea = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(textarea).toHaveCount(1, { timeout: 5000 });
+    await expect(textarea).toBeFocused();
+
+    const initialBox = await textarea.boundingBox();
+    expect(initialBox).not.toBeNull();
+    const initialHeight = initialBox!.height;
+    const initialOriginX = initialBox!.x;
+    const initialOriginY = initialBox!.y;
+
+    // 2. Simulate pasting a 3-line Telegram message containing \r\n line breaks
+    const multilineTelegramMessage =
+      "Telegram line 1: Urgent project update\r\nTelegram line 2: Meeting scheduled at 14:00 GMT\r\nTelegram line 3: Review the attached documents";
+    const expectedNormalizedText =
+      "Telegram line 1: Urgent project update\nTelegram line 2: Meeting scheduled at 14:00 GMT\nTelegram line 3: Review the attached documents";
+
+    await textarea.evaluate((el: HTMLTextAreaElement, pasteText: string) => {
+      const dt = new DataTransfer();
+      dt.setData("text/plain", pasteText);
+      const pasteEvent = new ClipboardEvent("paste", {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true,
+      });
+      el.dispatchEvent(pasteEvent);
+    }, multilineTelegramMessage);
+
+    // 3. Verify textarea preserves all newlines and value matches normalized text
+    await expect(textarea).toHaveValue(expectedNormalizedText);
+
+    // Verify textarea auto-expands height for multiline text (3 lines >= initialHeight + 30)
+    const textareaAfterPaste = await textarea.boundingBox();
+    expect(textareaAfterPaste).not.toBeNull();
+    expect(textareaAfterPaste!.height).toBeGreaterThanOrEqual(initialHeight + 30);
+
+    // Verify origin remains anchored during paste
+    expect(Math.abs(textareaAfterPaste!.x - initialOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(textareaAfterPaste!.y - initialOriginY)).toBeLessThanOrEqual(2);
+
+    // Verify in-memory state before blur
+    const storedBeforeBlur = await readCustomTextBoxes(page);
+    expect(storedBeforeBlur.length).toBe(1);
+    expect(storedBeforeBlur[0].text).toBe(expectedNormalizedText);
+
+    // 4. Blur / exit edit mode via Escape and verify multiline renders across multiple lines
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
+
+    const textBox = primaryPane.locator('[data-testid^="pdf-text-box-"]');
+    await expect(textBox).toHaveCount(1);
+    await expect(textBox).toBeVisible();
+    await expect(textBox).toHaveText(expectedNormalizedText);
+
+    // Verify display styles: pre-wrap must be enabled to preserve newlines visually
+    const styles = await textBox.evaluate((el) => {
+      const s = window.getComputedStyle(el);
+      return {
+        whiteSpace: s.whiteSpace,
+        wordBreak: s.wordBreak,
+        overflowWrap: s.overflowWrap,
+      };
+    });
+    expect(styles.whiteSpace).toBe("pre-wrap");
+    expect(styles.wordBreak).toBe("break-word");
+    expect(styles.overflowWrap).toBe("break-word");
+
+    // Verify display box height accommodates all 3 lines
+    const displayBox = await textBox.boundingBox();
+    expect(displayBox).not.toBeNull();
+    expect(displayBox!.height).toBeGreaterThanOrEqual(initialHeight + 30);
+
+    // Verify origin stays anchored without crawl across blur
+    expect(Math.abs(displayBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(displayBox!.y - initialOriginY)).toBeLessThanOrEqual(2);
+
+    // 5. Verify persistence in annotation storage across blur
+    const storedAfterBlur = await readCustomTextBoxes(page);
+    expect(storedAfterBlur.length).toBe(1);
+    expect(storedAfterBlur[0].text).toBe(expectedNormalizedText);
+  });
+
+  test("text tool: pasting long paragraph (280+ characters) auto-wraps within 500px width limit, expands vertically, and anchors strictly at origin", async ({ page }) => {
+    const pid = "test-pdf-text-autowrap-long-string";
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Long String Auto-Wrapping Verification", { x: 50, y: 750, size: 16, font, color: rgb(0, 0, 0) });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles({
+      name: "autowrap-long-text.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // 1. Activate Text tool and create text box at origin
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    const clickX = page1Box.x + 50;
+    const clickY = page1Box.y + 180;
+    await page.mouse.click(clickX, clickY);
+
+    const textarea = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(textarea).toHaveCount(1, { timeout: 5000 });
+    await expect(textarea).toBeFocused();
+
+    const initialBox = await textarea.boundingBox();
+    expect(initialBox).not.toBeNull();
+    const initialOriginX = initialBox!.x;
+    const initialOriginY = initialBox!.y;
+
+    // 2. Prepare the 280+ character paragraph from the user's prompt
+    const longParagraph =
+      "Nusuq is a premium men's brand specializing in luxury formal neckties, bespoke silk bowties, handcrafted cufflinks, and woven pocket squares tailored for discerning modern gentlemen seeking timeless elegance, refined taste, and uncompromising sartorial craftsmanship in every single stitch.";
+    expect(longParagraph.length).toBeGreaterThanOrEqual(280);
+    expect(longParagraph.startsWith("Nusuq is a premium men's brand specializing in luxury formal neckties")).toBe(true);
+
+    // 3. Paste the 280+ character paragraph into the textarea
+    await textarea.evaluate((el: HTMLTextAreaElement, pasteText: string) => {
+      const dt = new DataTransfer();
+      dt.setData("text/plain", pasteText);
+      const pasteEvent = new ClipboardEvent("paste", {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true,
+      });
+      el.dispatchEvent(pasteEvent);
+    }, longParagraph);
+
+    await expect(textarea).toHaveValue(longParagraph);
+
+    // 4. Verify textarea bounds during editing:
+    // - Bounding box width must NOT extend infinitely across the page (must be <= 500px)
+    // - Box auto-expands vertically to accommodate the wrapped lines (approx 6-7 lines * ~22px >= 100px)
+    // - The anchor point (x, y) remains strictly fixed in place (< 2px drift)
+    const textareaBox = await textarea.boundingBox();
+    expect(textareaBox).not.toBeNull();
+    expect(textareaBox!.width).toBeLessThanOrEqual(500);
+    expect(textareaBox!.height).toBeGreaterThanOrEqual(100);
+    expect(Math.abs(textareaBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(textareaBox!.y - initialOriginY)).toBeLessThanOrEqual(2);
+
+    // Verify textarea CSS wrapping properties
+    const textareaStyles = await textarea.evaluate((el) => {
+      const s = window.getComputedStyle(el);
+      return {
+        maxWidth: s.maxWidth,
+        whiteSpace: s.whiteSpace,
+        wordBreak: s.wordBreak,
+        overflowWrap: s.overflowWrap,
+      };
+    });
+    expect(textareaStyles.maxWidth).toBe("500px");
+    expect(textareaStyles.whiteSpace).toBe("pre-wrap");
+    expect(textareaStyles.wordBreak).toBe("break-word");
+    expect(textareaStyles.overflowWrap).toBe("break-word");
+
+    // 5. Exit editing mode via Escape and verify display mode
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
+
+    const textBox = primaryPane.locator('[data-testid^="pdf-text-box-"]');
+    await expect(textBox).toHaveCount(1);
+    await expect(textBox).toBeVisible();
+    await expect(textBox).toHaveText(longParagraph);
+
+    // 6. Verify display mode bounds:
+    // - Auto-wraps within bounding box (width <= 500px)
+    // - Does NOT extend infinitely across page (<= 500px)
+    // - Auto-expands vertically (height >= 100px)
+    // - Origin remains strictly fixed in place
+    const displayBox = await textBox.boundingBox();
+    expect(displayBox).not.toBeNull();
+    expect(displayBox!.width).toBeLessThanOrEqual(500);
+    expect(displayBox!.height).toBeGreaterThanOrEqual(100);
+    expect(Math.abs(displayBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(displayBox!.y - initialOriginY)).toBeLessThanOrEqual(2);
+
+    const displayStyles = await textBox.evaluate((el) => {
+      const s = window.getComputedStyle(el);
+      return {
+        maxWidth: s.maxWidth,
+        whiteSpace: s.whiteSpace,
+        wordBreak: s.wordBreak,
+        overflowWrap: s.overflowWrap,
+      };
+    });
+    expect(displayStyles.maxWidth).toBe("500px");
+    expect(displayStyles.whiteSpace).toBe("pre-wrap");
+    expect(displayStyles.wordBreak).toBe("break-word");
+    expect(displayStyles.overflowWrap).toBe("break-word");
+
+    // 7. Switch to Select tool, click the text box, and verify selection bounding box
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await textBox.click();
+
+    const bbox = primaryPane.locator('[data-testid="pdf-text-bbox"] rect');
+    await expect(bbox).toBeVisible({ timeout: 5000 });
+
+    const bboxRect = await bbox.boundingBox();
+    expect(bboxRect).not.toBeNull();
+    // SVG rect attribute width is strictly clamped to maxTextWidth (<= 500px)
+    const bboxSvgWidth = parseFloat((await bbox.getAttribute("width")) || "0");
+    expect(bboxSvgWidth).toBeLessThanOrEqual(500);
+    // Bounding box rendered width must be <= 502px including 1.5px stroke (never stretching to 2000px+)
+    expect(bboxRect!.width).toBeLessThanOrEqual(502);
+    // Bounding box height must auto-expand to hug wrapped lines
+    expect(bboxRect!.height).toBeGreaterThanOrEqual(100);
+    // Bounding box origin must match anchor point
+    expect(Math.abs(bboxRect!.x - initialOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(bboxRect!.y - initialOriginY)).toBeLessThanOrEqual(2);
+  });
 });
