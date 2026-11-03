@@ -1871,4 +1871,157 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(Math.abs(reloaded.x - after.x)).toBeLessThan(0.5);
     expect(Math.abs(reloaded.y - after.y)).toBeLessThan(0.5);
   });
+
+  test("text tool: typing English text appears immediately without clicking away, and pressing Enter creates multiline text that persists across blur", async ({ page }) => {
+    const pid = "test-pdf-text-english-multiline";
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Text Tool English & Multiline Verification", { x: 50, y: 750, size: 16, font, color: rgb(0, 0, 0) });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles({
+      name: "text-multiline.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // 1. Activate Text tool and click page to create a text box
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    await page.mouse.click(page1Box.x + 180, page1Box.y + 220);
+
+    const textarea = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(textarea).toHaveCount(1, { timeout: 5000 });
+    await expect(textarea).toBeFocused();
+
+    // 2. Typing English text: verify it appears immediately without clicking away
+    await page.keyboard.type("First line English text", { delay: 25 });
+    await expect(textarea).toHaveValue("First line English text");
+
+    const boxesTyping = await readCustomTextBoxes(page);
+    expect(boxesTyping.length).toBe(1);
+    expect(boxesTyping[0].text).toBe("First line English text");
+
+    // 3. Press Enter in text box: verify multiline works without losing edit mode or focus
+    await page.keyboard.press("Enter");
+    await expect(textarea).toBeVisible();
+    await expect(textarea).toBeFocused();
+
+    // Type second line
+    await page.keyboard.type("Second line of notes", { delay: 25 });
+    await expect(textarea).toHaveValue("First line English text\nSecond line of notes");
+
+    const boxesMultilineTyping = await readCustomTextBoxes(page);
+    expect(boxesMultilineTyping[0].text).toBe("First line English text\nSecond line of notes");
+
+    // 4. Blur / exit edit mode (via Escape) and verify multiline persists and renders
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
+
+    const textBox = primaryPane.locator('[data-testid^="pdf-text-box-"]');
+    await expect(textBox).toHaveCount(1);
+    await expect(textBox).toBeVisible();
+    await expect(textBox).toHaveText("First line English text\nSecond line of notes");
+
+    // Verify CSS pre-wrap is applied
+    const whiteSpace = await textBox.evaluate((el) => window.getComputedStyle(el).whiteSpace);
+    expect(whiteSpace).toBe("pre-wrap");
+
+    // Verify box height expands for multiline content (> 30px for 2 lines)
+    const boxMetrics = await textBox.boundingBox();
+    expect(boxMetrics).not.toBeNull();
+    expect(boxMetrics!.height).toBeGreaterThanOrEqual(30);
+
+    // Verify state across blur retains exact multiline text
+    const boxesAfterBlur = await readCustomTextBoxes(page);
+    expect(boxesAfterBlur[0].text).toBe("First line English text\nSecond line of notes");
+  });
+
+  test("stamp tool: inserting stamp from file picker displays bounding box and 8 resize handles immediately without switching tools or clicking away", async ({ page }) => {
+    const pid = "test-pdf-stamp-immediate-resize-handles";
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Stamp Immediate Resize Handles Verification", { x: 50, y: 750, size: 16, font, color: rgb(0, 0, 0) });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles({
+      name: "stamp-immediate.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+
+    // 1. Insert stamp from file picker
+    const squarePngBase64 =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    const stampInput = primaryPane.locator('input[data-testid="pdf-stamp-input"]');
+    await stampInput.setInputFiles({
+      name: "stamp-immediate.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(squarePngBase64, "base64"),
+    });
+
+    // 2. Verify stamp object attached
+    const stampObject = primaryPane.locator('[data-testid="pdf-stamp-object"]').first();
+    await expect(stampObject).toBeAttached({ timeout: 10000 });
+
+    // 3. Verify tool automatically switches to select
+    const selectBtn = primaryPane.locator('[data-testid="pdf-tool-select"]');
+    await expect(selectBtn).toHaveAttribute("aria-pressed", "true");
+
+    // 4. Verify bounding box appears immediately without switching tools or clicking away and back
+    const stampBbox = primaryPane.locator('[data-testid="pdf-stamp-bbox"]');
+    await expect(stampBbox).toBeVisible({ timeout: 5000 });
+
+    // 5. Verify all 8 resize handles appear immediately
+    const handlePositions = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+    for (const pos of handlePositions) {
+      const handle = primaryPane.locator(`[data-testid="pdf-stamp-resize-handle-${pos}"]`);
+      await expect(handle).toBeVisible();
+    }
+    const allHandles = primaryPane.locator('[data-testid^="pdf-stamp-resize-handle-"]');
+    await expect(allHandles).toHaveCount(8);
+
+    // 6. Verify stamp can immediately be resized using the 'se' handle without clicking anywhere else
+    const stampBboxBefore = await stampBbox.boundingBox();
+    expect(stampBboxBefore).not.toBeNull();
+    const seHandle = primaryPane.locator('[data-testid="pdf-stamp-resize-handle-se"]');
+    const seBox = await seHandle.boundingBox();
+    expect(seBox).not.toBeNull();
+    if (stampBboxBefore && seBox) {
+      await page.mouse.move(seBox.x + seBox.width / 2, seBox.y + seBox.height / 2);
+      await page.mouse.down();
+      for (let i = 1; i <= 6; i++) {
+        await page.mouse.move(
+          seBox.x + seBox.width / 2 + (40 * i) / 6,
+          seBox.y + seBox.height / 2 + (40 * i) / 6
+        );
+      }
+      await page.mouse.up();
+      await page.waitForTimeout(300);
+
+      const stampBboxAfter = await stampBbox.boundingBox();
+      expect(stampBboxAfter).not.toBeNull();
+      expect(stampBboxAfter!.width).toBeGreaterThan(stampBboxBefore.width + 10);
+    }
+  });
 });

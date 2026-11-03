@@ -2433,3 +2433,27 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
 **Related:** PDF-1, PDF-4
 **Open:** none.
+
+
+## 2026-11-03 — Fix Text Tool Multiline/English Instant Render, and Fix Stamp Immediate Resizing (Multi-Agent)
+**Request:** Fix Text tool multiline entry, instantaneous English keystroke rendering, and stamp immediate resize handles via 3 sub-agents:
+1. Sub-Agent 1 (Fix Text Tool Multiline & English Typing): Enable multiline in textarea via Enter key, wrap="soft", and white-space: pre-wrap; remove dir="auto" to eliminate Blink SVG foreignObject repainting delays on LTR keystrokes; add unicode-bidi: plaintext and GPU layer acceleration so English text updates immediately without requiring blur.
+2. Sub-Agent 2 (Fix Stamp Immediate Resize): Select newly placed stamps immediately in selectedStrokeIds and annotationScope upon insertion, switching activeTool to select and rendering the bounding box with 8 resize handles right away without tool switching.
+3. Sub-Agent 3 (Code Review & E2E Testing): Verify zero regressions in Ink and Sticky Notes; run unit tests and add 2 Playwright E2E tests verifying instant English typing, Enter key multiline with persistence across blur, and immediate stamp 8-handle drag resize.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: replaced destructive textarea resizing with offscreen span measurement; removed `dir="auto"` and applied `unicode-bidi: plaintext; text-align: start; white-space: pre-wrap; word-break: break-word`; allowed Enter key to insert newlines while keeping edit mode; added GPU layer promotion on foreignObject; added `onInput` listener; rendered stamp bounding box and 8 resize handles immediately when selected.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: updated `getObjectsForPage` multiline text height calculation; updated `handleAddStamp` to select newly inserted stamp in `selectedStrokeIds` and annotationScope immediately, switching activeTool to "select" and bumping `annotationsVersion`.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx`: eliminated redundant `handleSelectTool("select")` call on successful stamp insertion that previously cleared stamp selection.
+- `apps/web/src/core/drive/drive-provider.ts`: updated `navigator.onLine` check to `navigator.onLine === false` for Node 22 test environment compatibility.
+- `apps/web/src/modules/pdf/pdf-text-tool.test.tsx`: added unit tests for instant English keystroke state updates, multiline text entry, dynamic box expansion, and `white-space: pre-wrap`.
+- `apps/web/src/modules/pdf/pdf-stamp-resize.test.tsx`: added unit tests verifying immediate stamp selection and 8-handle rendering.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added Playwright E2E tests for English text instant rendering, multiline text with blur persistence, and immediate stamp selection with 8-handle resize (13/13 tests passing).
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (90/90 tests across 11 test files).
+- `pnpm test`: PASS (391/391 tests across 48 test files).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (13/13 tests passing in 1.4m).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-3, PDF-4
+**Open:** none.

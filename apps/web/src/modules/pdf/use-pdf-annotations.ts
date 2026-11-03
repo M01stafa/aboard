@@ -595,7 +595,7 @@ export function usePdfAnnotations({
 
       const texts = customTextBoxes[pageIndex] || [];
       for (const tb of texts) {
-        const lines = tb.text.split("\n");
+        const lines = (tb.text ?? "").split("\n");
         const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
         res.push({
           id: tb.id,
@@ -604,7 +604,7 @@ export function usePdfAnnotations({
           x: tb.x,
           y: tb.y,
           width: Math.max(24, longest * tb.fontSize * 0.6),
-          height: tb.fontSize * 1.4 * lines.length,
+          height: tb.fontSize * 1.4 * Math.max(1, lines.length),
           transform: { x: 0, y: 0 },
           text: tb.text,
           contents: tb.text,
@@ -849,9 +849,15 @@ export function usePdfAnnotations({
 
         annotationScope.setActiveTool(null);
         setActiveToolState("select");
+        selectedStrokeIdsRef.current = [stampId];
+        setSelectedStrokeIds([stampId]);
         if (typeof annotationScope.selectAnnotation === "function") {
           annotationScope.selectAnnotation(pageIdx, stampId);
         }
+        if (typeof (annotationScope as unknown as { setSelection?: (ids: string[]) => void }).setSelection === "function") {
+          (annotationScope as unknown as { setSelection?: (ids: string[]) => void }).setSelection?.([stampId]);
+        }
+        setAnnotationsVersion((v) => v + 1);
 
         triggerDebouncedSave();
       } catch (err) {

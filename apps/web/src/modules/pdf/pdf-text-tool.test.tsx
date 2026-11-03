@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import React, { act } from "react";
+import React, { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { PdfCustomInkLayer } from "./pdf-custom-ink-layer";
 import { usePdfAnnotations, type UsePdfAnnotationsResult } from "./use-pdf-annotations";
@@ -157,11 +157,13 @@ describe("PDF Text Tool (custom text boxes)", () => {
       );
     });
 
-    const box = container.querySelector('[data-testid="pdf-text-box-text-1"]');
+    const box = container.querySelector('[data-testid="pdf-text-box-text-1"]') as HTMLElement | null;
     expect(box).not.toBeNull();
     expect(box?.tagName).toBe("DIV");
     expect(box?.textContent).toBe("Hello World");
-    expect(box?.getAttribute("dir")).toBe("auto");
+    // Ensure dir="auto" is avoided to prevent Chromium foreignObject rendering blocks
+    expect(box?.getAttribute("dir")).not.toBe("auto");
+    expect(box?.style.whiteSpace).toBe("pre-wrap");
     expect(container.querySelector("textarea")).toBeNull();
     const withText = Array.from(container.querySelectorAll("*")).filter(
       (el) => el.children.length === 0 && el.textContent === "Hello World"
@@ -280,6 +282,137 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(hookRef.customTextBoxes[0].length).toBe(0);
   });
 
+  it("accepts newlines on Enter without modifiers and stays in edit mode", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+      );
+    });
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+    typeInto(textarea, "Line 1");
+
+    // Enter alone without modifiers should NOT blur or exit edit mode
+    let defaultPrevented = false;
+    act(() => {
+      const enterEv = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      textarea.dispatchEvent(enterEv);
+      defaultPrevented = enterEv.defaultPrevented;
+    });
+
+    expect(defaultPrevented).toBe(false);
+    expect(container.querySelector("textarea")).not.toBeNull();
+    expect(document.activeElement).toBe(textarea);
+
+    // Typing newline continues multiline input
+    typeInto(textarea, "Line 1\nLine 2");
+    expect(hookRef.customTextBoxes[0][0].text).toBe("Line 1\nLine 2");
+    expect(textarea.value).toBe("Line 1\nLine 2");
+  });
+
+  it("exits edit mode on Enter with modifiers (Shift+Enter, Ctrl+Enter, Meta+Enter)", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+      );
+    });
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+    typeInto(textarea, "Line 1\nLine 2");
+
+    // Shift+Enter should blur and commit
+    act(() => {
+      textarea.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true })
+      );
+    });
+
+    expect(container.querySelector("textarea")).toBeNull();
+    const box = container.querySelector('[data-testid^="pdf-text-box-"]') as HTMLElement | null;
+    expect(box).not.toBeNull();
+    expect(box?.textContent).toBe("Line 1\nLine 2");
+    expect(box?.style.whiteSpace).toBe("pre-wrap");
+  });
+
+  it("adjusts container height and width dynamically based on multiline content", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+      );
+    });
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+
+    // Multiline English text
+    typeInto(textarea, "First line\nSecond longer line\nThird");
+    expect(hookRef.customTextBoxes[0][0].text).toBe("First line\nSecond longer line\nThird");
+
+    // Exit edit mode with Escape
+    act(() => {
+      textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    });
+
+    // Check rendered objects from hook
+    const objects = hookRef.getObjectsForPage(0);
+    expect(objects.length).toBe(1);
+    // 3 lines height: 16 * 1.4 * 3 = 67.2
+    expect(objects[0].height).toBeCloseTo(67.2, 1);
+    // Longest line is "Second longer line" (18 chars)
+    expect(objects[0].width).toBeGreaterThanOrEqual(18 * 16 * 0.6);
+
+    // Verify rendered div has pre-wrap and displays all lines properly
+    const div = container.querySelector('[data-testid^="pdf-text-box-"]') as HTMLElement | null;
+    expect(div).not.toBeNull();
+    expect(div?.style.whiteSpace).toBe("pre-wrap");
+    expect(div?.textContent).toBe("First line\nSecond longer line\nThird");
+  });
+
+  it("updates state on every keystroke for English text without delay", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+      );
+    });
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+
+    // English keystrokes: each letter updates state immediately
+    const words = ["A", "Al", "Alpha", "Alpha Board"];
+    for (const w of words) {
+      typeInto(textarea, w);
+      expect(hookRef.customTextBoxes[0][0].text).toBe(w);
+      expect(textarea.value).toBe(w);
+    }
+  });
+
   it("enters edit mode only through the native dblclick event", () => {
     const handleUpdateText = vi.fn();
     act(() => {
@@ -306,7 +439,8 @@ describe("PDF Text Tool (custom text boxes)", () => {
     const textarea = container.querySelector('[data-testid="pdf-text-input-text-1"]') as HTMLTextAreaElement;
     expect(textarea).not.toBeNull();
     expect(textarea.value).toBe("Hello World");
-    expect(textarea.getAttribute("dir")).toBe("auto");
+    expect(textarea.getAttribute("dir")).not.toBe("auto");
+    expect(textarea.style.whiteSpace).toBe("pre-wrap");
     typeInto(textarea, "Updated Text");
     expect(handleUpdateText).toHaveBeenCalledWith(0, "text-1", "Updated Text");
   });

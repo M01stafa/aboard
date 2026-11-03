@@ -298,7 +298,7 @@ export class DriveProvider implements StorageProvider {
     if (store.quotaExceeded || store.reconnectRequired) {
       return;
     }
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
       return;
     }
 
@@ -306,7 +306,7 @@ export class DriveProvider implements StorageProvider {
     try {
       await this.uploadItemToDrive(projectId, item, payload);
     } catch (err: unknown) {
-      if (typeof navigator !== "undefined" && !navigator.onLine) {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
         return;
       }
       const isQuota =
@@ -751,7 +751,7 @@ export class DriveProvider implements StorageProvider {
     if (store.quotaExceeded || store.reconnectRequired) {
       return;
     }
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
       return;
     }
 
@@ -759,7 +759,7 @@ export class DriveProvider implements StorageProvider {
     const outboxEntries = await db.outbox.toArray();
 
     for (const entry of outboxEntries) {
-      if (typeof navigator !== "undefined" && !navigator.onLine) {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
         break;
       }
       const item = await db.items.get(entry.itemId);
@@ -777,7 +777,7 @@ export class DriveProvider implements StorageProvider {
       try {
         await this.uploadItemToDrive(entry.projectId, storageItem, item.payload);
       } catch (err: unknown) {
-        if (typeof navigator !== "undefined" && !navigator.onLine) {
+        if (typeof navigator !== "undefined" && navigator.onLine === false) {
           break; // Stop further attempts while offline; items remain safe in outbox
         }
         const isQuota =

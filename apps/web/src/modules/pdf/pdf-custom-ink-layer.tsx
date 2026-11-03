@@ -588,15 +588,16 @@ export function PdfCustomInkLayer({
       const id = el.getAttribute("data-text-measure");
       if (!id) return;
       if (el instanceof HTMLTextAreaElement) {
-        el.style.width = "0px";
-        el.style.height = "0px";
-        const w = Math.max(8, el.scrollWidth + 2);
-        const h = Math.max(el.scrollHeight, 1);
-        el.style.width = `${w}px`;
-        el.style.height = `${h}px`;
+        const lines = (el.value || "").split("\n");
+        const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
+        const fontSize = parseFloat(el.style.fontSize) || 16;
+        const w = Math.max(8, el.scrollWidth || longest * fontSize * 0.7);
+        const h = Math.max(fontSize * 1.4, el.scrollHeight || lines.length * fontSize * 1.4);
         next[id] = { width: w, height: h };
       } else {
-        next[id] = { width: el.offsetWidth, height: el.offsetHeight };
+        const w = Math.max(8, el.offsetWidth);
+        const h = Math.max(16, el.offsetHeight);
+        next[id] = { width: w, height: h };
       }
     });
     setTextSizes((prev) => {
@@ -1598,11 +1599,18 @@ export function PdfCustomInkLayer({
         const resizeRect = resizeRects[obj.id];
         const offset = resizeRect ? { x: 0, y: 0 } : (dragOffsets[obj.id] ?? obj.transform ?? { x: 0, y: 0 });
         const isSelected = isSelectMode && selectedSet.has(obj.id);
+        const isEditingThis = obj.type === "text" && editingTextId === obj.id;
         const curX = resizeRect ? resizeRect.x : obj.x;
         const curY = resizeRect ? resizeRect.y : obj.y;
         const measured = obj.type === "text" ? textSizes[obj.id] : undefined;
-        const curW = resizeRect ? resizeRect.width : (measured?.width ?? obj.width);
-        const curH = resizeRect ? resizeRect.height : (measured?.height ?? obj.height);
+        const textFontSize = obj.fontSize || 16;
+        const textLineHeight = textFontSize * 1.4;
+        const textLines = (obj.text || "").split("\n");
+        const longestLineChars = textLines.reduce((m, l) => Math.max(m, l.length), 0);
+        const dynamicContentW = Math.max(24, longestLineChars * textFontSize * 0.7, measured?.width ?? obj.width);
+        const dynamicContentH = Math.max(textLineHeight, textLines.length * textLineHeight, measured?.height ?? obj.height);
+        const curW = resizeRect ? resizeRect.width : (obj.type === "text" ? dynamicContentW : (measured?.width ?? obj.width));
+        const curH = resizeRect ? resizeRect.height : (obj.type === "text" ? dynamicContentH : (measured?.height ?? obj.height));
         const handleSize = 8;
 
         const handles: Array<{ pos: ResizeHandlePosition; hx: number; hy: number }> = [
@@ -1795,61 +1803,93 @@ export function PdfCustomInkLayer({
               <foreignObject
                 x={curX}
                 y={curY}
-                width={curW + 8}
-                height={curH + 8}
+                width={isEditingThis ? Math.max(curW + 64, 160) : curW + 8}
+                height={isEditingThis ? Math.max(curH + 48, 64) : curH + 8}
                 style={{
                   overflow: "visible",
                   pointerEvents: isSelectMode ? "auto" : "none",
+                  transform: "translateZ(0)",
+                  willChange: isEditingThis ? "contents, transform" : undefined,
                 }}
               >
-                {editingTextId === obj.id ? (
-                  <textarea
-                    key={`text-input-${obj.id}`}
-                    data-testid={`pdf-text-input-${obj.id}`}
-                    data-text-measure={obj.id}
-                    dir="auto"
-                    wrap="off"
-                    rows={1}
-                    spellCheck={false}
-                    value={obj.text ?? ""}
-                    onChange={(e) => {
-                      onUpdateText?.(pageIndex, obj.id, e.target.value);
-                    }}
-                    onBlur={(e) => {
-                      const value = e.currentTarget.value;
-                      setEditingTextId((cur) => (cur === obj.id ? null : cur));
-                      if (value.trim() === "") {
-                        onDeleteText?.(pageIndex, obj.id);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      e.stopPropagation();
-                      if (e.key === "Escape" || (e.key === "Enter" && (e.shiftKey || e.ctrlKey || e.metaKey))) {
-                        e.preventDefault();
-                        e.currentTarget.blur();
-                      }
-                    }}
-                    style={{
-                      display: "block",
-                      background: "transparent",
-                      border: "none",
-                      outline: "none",
-                      color: obj.color || "#E44234",
-                      fontSize: `${obj.fontSize || 16}px`,
-                      fontFamily: "var(--font-sans, system-ui, -apple-system, sans-serif)",
-                      lineHeight: "1.4",
-                      resize: "none",
-                      padding: 0,
-                      margin: 0,
-                      boxSizing: "content-box",
-                      overflow: "hidden",
-                      whiteSpace: "pre",
-                      userSelect: "text",
-                      WebkitUserSelect: "text",
-                      cursor: "text",
-                      pointerEvents: "auto",
-                    }}
-                  />
+                {isEditingThis ? (
+                  <>
+                    <textarea
+                      key={`text-input-${obj.id}`}
+                      data-testid={`pdf-text-input-${obj.id}`}
+                      wrap="soft"
+                      rows={Math.max(1, textLines.length)}
+                      spellCheck={false}
+                      value={obj.text ?? ""}
+                      onChange={(e) => {
+                        onUpdateText?.(pageIndex, obj.id, e.target.value);
+                      }}
+                      onInput={(e) => {
+                        onUpdateText?.(pageIndex, obj.id, (e.target as HTMLTextAreaElement).value);
+                      }}
+                      onBlur={(e) => {
+                        const value = e.currentTarget.value;
+                        setEditingTextId((cur) => (cur === obj.id ? null : cur));
+                        if (value.trim() === "") {
+                          onDeleteText?.(pageIndex, obj.id);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === "Escape" || (e.key === "Enter" && (e.shiftKey || e.ctrlKey || e.metaKey))) {
+                          e.preventDefault();
+                          e.currentTarget.blur();
+                        }
+                      }}
+                      style={{
+                        display: "block",
+                        width: `${Math.max(40, curW + 16)}px`,
+                        minWidth: "40px",
+                        height: `${Math.max(textLineHeight, curH + 4)}px`,
+                        minHeight: `${textLineHeight}px`,
+                        background: "transparent",
+                        border: "none",
+                        outline: "none",
+                        color: obj.color || "#E44234",
+                        fontSize: `${textFontSize}px`,
+                        fontFamily: "var(--font-sans, system-ui, -apple-system, sans-serif)",
+                        lineHeight: "1.4",
+                        resize: "none",
+                        padding: 0,
+                        margin: 0,
+                        boxSizing: "border-box",
+                        overflow: "visible",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        unicodeBidi: "plaintext",
+                        textAlign: "start",
+                        userSelect: "text",
+                        WebkitUserSelect: "text",
+                        cursor: "text",
+                        pointerEvents: "auto",
+                      }}
+                    />
+                    <span
+                      data-text-measure={obj.id}
+                      aria-hidden="true"
+                      style={{
+                        position: "absolute",
+                        visibility: "hidden",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        fontSize: `${textFontSize}px`,
+                        fontFamily: "var(--font-sans, system-ui, -apple-system, sans-serif)",
+                        lineHeight: "1.4",
+                        padding: 0,
+                        margin: 0,
+                        pointerEvents: "none",
+                        top: 0,
+                        left: 0,
+                      }}
+                    >
+                      {(obj.text ?? "") + (obj.text?.endsWith("\n") ? "\u200B" : "")}
+                    </span>
+                  </>
                 ) : (
                   <div
                     key={`text-display-${obj.id}`}
@@ -1857,16 +1897,18 @@ export function PdfCustomInkLayer({
                     data-text-measure={obj.id}
                     data-object-id={obj.id}
                     data-object-type="text"
-                    dir="auto"
                     style={{
                       display: "block",
                       width: "max-content",
                       minWidth: "8px",
                       color: obj.color || "#E44234",
-                      fontSize: `${obj.fontSize || 16}px`,
+                      fontSize: `${textFontSize}px`,
                       fontFamily: "var(--font-sans, system-ui, -apple-system, sans-serif)",
                       lineHeight: "1.4",
                       whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                      unicodeBidi: "plaintext",
+                      textAlign: "start",
                       userSelect: "none",
                       WebkitUserSelect: "none",
                       boxSizing: "content-box",

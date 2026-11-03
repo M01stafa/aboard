@@ -290,12 +290,13 @@ function ViewerInner({
       const pending = pendingStampRef.current;
       if (file) {
         await handleAddStamp(file, pending ?? undefined);
+      } else {
+        handleSelectTool("select");
       }
       if (stampFileInputRef.current) {
         stampFileInputRef.current.value = "";
       }
       pendingStampRef.current = null;
-      handleSelectTool("select");
     },
     [handleAddStamp, handleSelectTool]
   );
