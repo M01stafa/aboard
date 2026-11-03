@@ -937,12 +937,14 @@ function ViewerInner({
                     <PdfTextLayer
                       documentId={documentId}
                       pageIndex={page.pageIndex}
-                      isAnnotating={activeTool !== "select"}
+                      isAnnotating={activeTool === "select" || activeTool === "ink" || activeTool === "stamp" || activeTool === "sticky"}
                     />
-                    <SelectionLayer
-                      documentId={documentId}
-                      pageIndex={page.pageIndex}
-                    />
+                    {activeTool !== "select" && (
+                      <SelectionLayer
+                        documentId={documentId}
+                        pageIndex={page.pageIndex}
+                      />
+                    )}
                     <AnnotationLayer
                       documentId={documentId}
                       pageIndex={page.pageIndex}

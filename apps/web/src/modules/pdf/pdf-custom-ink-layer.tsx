@@ -173,6 +173,57 @@ export function rectsIntersect(
   );
 }
 
+/**
+ * Calculates bounding boxes and checks intersection for custom ink strokes,
+ * stamps, texts, and sticky notes against a marquee selection rectangle.
+ */
+export function findIntersectingItemIds(
+  box: MarqueeRect,
+  strokes: CustomInkStroke[] = [],
+  objects: CustomAnnotationObject[] = []
+): string[] {
+  const strokeIds: string[] = [];
+  for (const stroke of strokes) {
+    if (!stroke.points || stroke.points.length === 0) continue;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const pt of stroke.points) {
+      if (pt.x < minX) minX = pt.x;
+      if (pt.y < minY) minY = pt.y;
+      if (pt.x > maxX) maxX = pt.x;
+      if (pt.y > maxY) maxY = pt.y;
+    }
+    const ox = stroke.transform?.x ?? 0;
+    const oy = stroke.transform?.y ?? 0;
+    const pad = Math.max(2, (stroke.width || 2) / 2);
+    const strokeBox = {
+      x: minX + ox - pad,
+      y: minY + oy - pad,
+      width: Math.max(1, maxX - minX + pad * 2),
+      height: Math.max(1, maxY - minY + pad * 2),
+    };
+    if (rectsIntersect(box, strokeBox)) {
+      strokeIds.push(stroke.id);
+    }
+  }
+
+  const objectIds = (objects || [])
+    .filter((o) => {
+      const oBox = {
+        x: o.x + (o.transform?.x ?? 0),
+        y: o.y + (o.transform?.y ?? 0),
+        width: o.width,
+        height: o.height,
+      };
+      return rectsIntersect(box, oBox);
+    })
+    .map((o) => o.id);
+
+  return Array.from(new Set([...strokeIds, ...objectIds]));
+}
+
 export interface MarqueeRect {
   x: number;
   y: number;
@@ -198,7 +249,7 @@ export interface AnnotationScopeLike {
   getSelectedAnnotationIds?: () => string[];
 }
 
-export type CustomObjectType = "stroke" | "stamp" | "text" | "highlight" | "sticky";
+export type CustomObjectType = "stroke" | "ink" | "stamp" | "text" | "highlight" | "sticky";
 
 export type ResizeHandlePosition = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 
@@ -464,6 +515,7 @@ export function PdfCustomInkLayer({
   const [liveScaledStrokes, setLiveScaledStrokes] = useState<Record<string, CustomInkPoint[]>>({});
   const [editingStickyId, setEditingStickyId] = useState<string | null>(null);
   const editingStickyIdRef = useRef<string | null>(null);
+  const lastStickyClickRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
   useEffect(() => {
     editingStickyIdRef.current = editingStickyId;
   }, [editingStickyId]);
@@ -677,7 +729,13 @@ export function PdfCustomInkLayer({
         const stickyCardEl = target?.closest?.('[data-testid^="pdf-sticky-card-"]');
         if (stickyCardEl) {
           const sid = stickyCardEl.getAttribute("data-testid")?.replace("pdf-sticky-card-", "");
-          if (sid && e.detail >= 2) {
+          const now = Date.now();
+          const isDbl =
+            (sid && e.detail >= 2) ||
+            (sid && sid === lastStickyClickRef.current.id && now - lastStickyClickRef.current.time < 500);
+          lastStickyClickRef.current = { id: sid || "", time: now };
+          if (isDbl && sid) {
+            e.preventDefault();
             e.stopPropagation();
             setEditingStickyId(sid);
             interactionRef.current = null;
@@ -894,40 +952,8 @@ export function PdfCustomInkLayer({
           return;
         }
 
-        // Check if pointer is directly over a text element (span in text layer)
-        const isOverText = (() => {
-          if (typeof document === "undefined") return false;
-          if (document.elementsFromPoint) {
-            const els = document.elementsFromPoint(e.clientX, e.clientY);
-            for (const el of els) {
-              if (el.tagName === "SPAN" && el.closest('[data-text-layer="true"]')) return true;
-              if (el.hasAttribute("data-char-index") || el.closest("[data-char-index]")) return true;
-              if (el.closest('.embed-pdf-text-layer, [data-testid="pdf-text-layer"]')) return true;
-            }
-          }
-          const spans = svg.parentElement?.querySelectorAll<HTMLElement>('[data-text-layer="true"] span');
-          if (spans && spans.length > 0) {
-            for (let i = 0; i < spans.length; i++) {
-              const rect = spans[i].getBoundingClientRect();
-              if (
-                e.clientX >= rect.left &&
-                e.clientX <= rect.right &&
-                e.clientY >= rect.top &&
-                e.clientY <= rect.bottom
-              ) {
-                return true;
-              }
-            }
-          }
-          return false;
-        })();
-
-        if (isOverText) {
-          // Allow text selection to propagate to PagePointerProvider / text layer
-          return;
-        }
-
-        // Pointer is on empty space: start Marquee Selection!
+        // Pointer is on canvas / text (select mode): start Marquee Selection!
+        // Prevent native text selection so marquee selection takes priority across the whole document
         e.preventDefault();
         e.stopPropagation();
         window.getSelection()?.removeAllRanges();
@@ -1034,24 +1060,8 @@ export function PdfCustomInkLayer({
         setMarquee(box);
 
         if (mw > 2 || mh > 2) {
-          // Find intersecting custom strokes
-          const intersectingStrokeIds = p.strokes
-            .filter((s) => rectsIntersect(box, getAbsoluteStrokeBounds(s)))
-            .map((s) => s.id);
-
-          // Find intersecting objects (stamps, text)
-          const intersectingObjectIds = (p.objects || [])
-            .filter((o) =>
-              rectsIntersect(box, {
-                x: o.x,
-                y: o.y,
-                width: o.width,
-                height: o.height,
-              })
-            )
-            .map((o) => o.id);
-
-          p.onSelectStrokes?.([...intersectingStrokeIds, ...intersectingObjectIds]);
+          const allSelectedIds = findIntersectingItemIds(box, p.strokes, p.objects);
+          p.onSelectStrokes?.(allSelectedIds);
 
           // Find intersecting EmbedPDF annotations (stamps, text, etc.)
           const pageAnnos = p.annotationScope?.getAnnotations?.({ pageIndex: p.pageIndex }) || [];
@@ -1067,7 +1077,8 @@ export function PdfCustomInkLayer({
               });
             })
             .map((ta) => ta.object.id);
-          p.annotationScope?.setSelection?.(Array.from(new Set([...intersectingObjectIds, ...intersectingAnnoIds])));
+          const embedPdfSelected = allSelectedIds.filter((id) => pageAnnos.some((ta) => ta.object.id === id));
+          p.annotationScope?.setSelection?.(Array.from(new Set([...embedPdfSelected, ...intersectingAnnoIds])));
         }
       }
     };
@@ -1209,6 +1220,21 @@ export function PdfCustomInkLayer({
           // Just a single click on empty space: deselect everything
           p.onSelectStrokes?.([]);
           p.annotationScope?.deselectAnnotation?.();
+        } else {
+          const box: MarqueeRect = { x: mx, y: my, width: mw, height: mh };
+          const finalSelectedIds = findIntersectingItemIds(box, p.strokes, p.objects);
+          p.onSelectStrokes?.(finalSelectedIds);
+          const pageAnnos = p.annotationScope?.getAnnotations?.({ pageIndex: p.pageIndex }) || [];
+          const intersectingAnnoIds = pageAnnos
+            .filter((ta) => ta?.object?.rect && rectsIntersect(box, {
+              x: ta.object.rect.origin.x,
+              y: ta.object.rect.origin.y,
+              width: ta.object.rect.size.width,
+              height: ta.object.rect.size.height,
+            }))
+            .map((ta) => ta.object.id);
+          const embedPdfSelected = finalSelectedIds.filter((id) => pageAnnos.some((ta) => ta.object.id === id));
+          p.annotationScope?.setSelection?.(Array.from(new Set([...embedPdfSelected, ...intersectingAnnoIds])));
         }
         setMarquee(null);
       }
@@ -1232,11 +1258,28 @@ export function PdfCustomInkLayer({
       }
     };
 
+    const handleDblClick = (e: MouseEvent) => {
+      const target = e.target as Element | null;
+      const card = target?.closest?.('[data-testid^="pdf-sticky-card-"]');
+      if (card) {
+        const sid = card.getAttribute("data-testid")?.replace("pdf-sticky-card-", "");
+        if (sid) {
+          e.stopPropagation();
+          setEditingStickyId(sid);
+          const ta = card.querySelector("textarea");
+          if (ta) {
+            ta.focus();
+          }
+        }
+      }
+    };
+
     svg.addEventListener("pointerdown", handleDown);
     svg.addEventListener("pointermove", handleMove);
     svg.addEventListener("pointerup", handleUp);
     svg.addEventListener("pointercancel", handleCancel);
     svg.addEventListener("mousedown", handleMouseDown);
+    svg.addEventListener("dblclick", handleDblClick);
     svg.addEventListener("selectstart", blockWhenBusy);
     svg.addEventListener("dragstart", blockWhenBusy);
     return () => {
@@ -1245,6 +1288,7 @@ export function PdfCustomInkLayer({
       svg.removeEventListener("pointerup", handleUp);
       svg.removeEventListener("pointercancel", handleCancel);
       svg.removeEventListener("mousedown", handleMouseDown);
+      svg.removeEventListener("dblclick", handleDblClick);
       svg.removeEventListener("selectstart", blockWhenBusy);
       svg.removeEventListener("dragstart", blockWhenBusy);
     };

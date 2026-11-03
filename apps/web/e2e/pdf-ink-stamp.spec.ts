@@ -1596,4 +1596,132 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
       expect(exportedPdfDoc.getPageCount()).toBe(1);
     }
   });
+
+  test("Select tool disables native text selection, marquee selects ink strokes, and sticky note tool activates via toolbar", async ({ page }) => {
+    const pid = "test-pdf-select-marquee-sticky";
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Raspberry Pi 5 Camera Module autonomous navigation text line.", {
+      x: 50,
+      y: 750,
+      size: 16,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+
+    await fileInput.setInputFiles({
+      name: "test-marquee-sticky.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // 1. Draw an ink stroke on page 1
+    await primaryPane.locator('[data-testid="pdf-tool-ink"]').click();
+    await page.waitForTimeout(200);
+
+    const strokeStartX = page1Box.x + 120;
+    const strokeStartY = page1Box.y + 160;
+    const strokeEndX = page1Box.x + 220;
+    const strokeEndY = page1Box.y + 240;
+
+    await page.mouse.move(strokeStartX, strokeStartY);
+    await page.mouse.down();
+    for (let i = 1; i <= 5; i++) {
+      await page.mouse.move(
+        strokeStartX + ((strokeEndX - strokeStartX) * i) / 5,
+        strokeStartY + ((strokeEndY - strokeStartY) * i) / 5
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+
+    const customInkPath = primaryPane.locator('[data-testid="pdf-custom-ink-layer-1"] path');
+    await expect(customInkPath).toHaveCount(1, { timeout: 5000 });
+
+    // 2. Switch to Select tool
+    const selectBtn = primaryPane.locator('[data-testid="pdf-tool-select"]');
+    await selectBtn.click();
+    await page.waitForTimeout(200);
+    await expect(selectBtn).toHaveAttribute("aria-pressed", "true");
+
+    // 3. Verify drag across text does NOT trigger native browser text selection
+    const textStartX = page1Box.x + 50;
+    const textStartY = page1Box.y + 90;
+    await page.mouse.move(textStartX, textStartY);
+    await page.mouse.down();
+    await page.mouse.move(textStartX + 200, textStartY + 20);
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+
+    const selectedText = await page.evaluate(() => window.getSelection()?.toString() || "");
+    expect(selectedText).toBe("");
+
+    // 4. Verify Marquee selection over the ink stroke selects it
+    // Start marquee drag around the stroke
+    const marqueeStartX = strokeStartX - 30;
+    const marqueeStartY = strokeStartY - 30;
+    const marqueeEndX = strokeEndX + 40;
+    const marqueeEndY = strokeEndY + 40;
+
+    await page.mouse.move(marqueeStartX, marqueeStartY);
+    await page.mouse.down();
+    for (let i = 1; i <= 5; i++) {
+      await page.mouse.move(
+        marqueeStartX + ((marqueeEndX - marqueeStartX) * i) / 5,
+        marqueeStartY + ((marqueeEndY - marqueeStartY) * i) / 5
+      );
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+
+    // Ink stroke bounding box must be visible
+    const strokeBbox = primaryPane.locator('[data-testid="pdf-custom-ink-bbox"]');
+    await expect(strokeBbox).toBeVisible({ timeout: 5000 });
+
+    // Handles must be present
+    const nwHandle = primaryPane.locator('[data-testid="pdf-ink-resize-handle-nw"]');
+    await expect(nwHandle).toBeVisible();
+
+    // 5. Test Sticky Note Tool activation via toolbar button
+    const stickyBtn = primaryPane.locator('[data-testid="pdf-tool-sticky"]');
+    await stickyBtn.click();
+    await page.waitForTimeout(200);
+    await expect(stickyBtn).toHaveAttribute("aria-pressed", "true");
+
+    // Click on page to place a sticky note
+    const stickyPlaceX = page1Box.x + 300;
+    const stickyPlaceY = page1Box.y + 300;
+    await page.mouse.click(stickyPlaceX, stickyPlaceY);
+    await page.waitForTimeout(400);
+
+    // Verify sticky note card is rendered
+    const stickyCard = primaryPane.locator('[data-testid^="pdf-sticky-card-"]');
+    await expect(stickyCard).toBeVisible({ timeout: 5000 });
+
+    // Double-click to focus textarea
+    await stickyCard.dblclick();
+    await page.waitForTimeout(200);
+
+    const textarea = primaryPane.locator('[data-testid^="pdf-sticky-textarea-"]');
+    await expect(textarea).toBeFocused();
+    await page.keyboard.type("Regressions fixed successfully!");
+    await expect(textarea).toHaveValue("Regressions fixed successfully!");
+  });
 });

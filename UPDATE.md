@@ -2367,3 +2367,23 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Checks:**
 - HTTP GET http://localhost:3000 returned 200 OK.
 **Open:** none.
+
+
+## 2026-11-03 — Fix Select Tool Over-selection, Sticky Note Activation, and Marquee Ink Selection
+**Request:** Fix three critical regressions and missing behaviors in the PDF editor:
+1. Fix over-selection (native text highlight): Disable EmbedPDF's native text selection and SelectionLayer when Select tool is active; ensure clicking and dragging creates a marquee selection box instead of selecting PDF text.
+2. Fix Sticky Note tool activation: Ensure clicking the Sticky Note icon in `pdf-floating-toolbar.tsx` sets `activeTool = 'sticky'`, `use-pdf-annotations.ts` does not let EmbedPDF revert tool to 'select', and clicking on the canvas creates a note.
+3. Marquee Selection over Ink: Calculate bounding box (`minX, minY, maxX, maxY`) for ink strokes and select them in marquee drag (`findIntersectingItemIds`), showing bounding box and handles.
+**Changes:**
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: updated `onActiveToolChange` and `handleSelectTool` to include `"sticky"` so EmbedPDF does not reset activeTool; added `window.getSelection()?.removeAllRanges()` on tool switch.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx`: set `PdfTextLayer` `isAnnotating` prop to true when `activeTool === "select" || activeTool === "ink" || activeTool === "stamp" || activeTool === "sticky"` to disable native text selection during select mode; conditioned `SelectionLayer` on `activeTool !== "select"`.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: added `"ink"` to `CustomObjectType`; added `findIntersectingItemIds` calculating stroke bounds and transforms against marquee rectangles; removed `isOverText` early return in `handleDown` so marquee always starts cleanly without text selection; updated `handleMove` and `finish` to select intersecting ink strokes and objects; enhanced double-click detection for sticky notes via `lastStickyClickRef` timestamp and native `dblclick` event listener.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added comprehensive E2E test verifying that dragging across text with Select tool produces no native text highlights, marquee drag selects ink strokes and displays bounding box with resize handles, and Sticky Note toolbar button activates tool and places note on click with double-click text editing (9/9 tests passing).
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (71/71 tests passed across 9 test files).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (9/9 tests passed in 1.1m).
+- `pnpm typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings, spacing 8-point compliant).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-4
+**Open:** none.

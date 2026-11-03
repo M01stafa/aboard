@@ -272,8 +272,8 @@ export function usePdfAnnotations({
 
     const unsub = annotationScope.onActiveToolChange((tool) => {
       if (!tool) {
-        // If we are currently in custom ink draw mode or stamp mode, do NOT let EmbedPDF reset us to select
-        setActiveToolState((prev) => (prev === "ink" || prev === "stamp" ? prev : "select"));
+        // If we are currently in custom ink draw mode, stamp mode, or sticky mode, do NOT let EmbedPDF reset us to select
+        setActiveToolState((prev) => (prev === "ink" || prev === "stamp" || prev === "sticky" ? prev : "select"));
       } else if (
         tool.id === "highlight" ||
         tool.id === "freeText" ||
@@ -342,14 +342,17 @@ export function usePdfAnnotations({
   const handleSelectTool = useCallback(
     (tool: AnnotationToolType) => {
       setActiveToolState(tool);
+      if (typeof window !== "undefined") {
+        window.getSelection()?.removeAllRanges();
+      }
       if (!annotationScope) return;
 
       if (typeof annotationScope.deselectAnnotation === "function") {
         annotationScope.deselectAnnotation();
       }
 
-      if (tool === "select" || tool === "ink" || tool === "stamp") {
-        // Native EmbedPDF ink and stamp are handled via custom layers; keep native tool inactive
+      if (tool === "select" || tool === "ink" || tool === "stamp" || tool === "sticky") {
+        // Native EmbedPDF ink, stamp, and sticky note are handled via custom layers; keep native tool inactive
         annotationScope.setActiveTool(null);
       } else if (tool === "highlight") {
         annotationScope.setActiveTool("highlight");
