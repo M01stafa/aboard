@@ -597,18 +597,19 @@ export function usePdfAnnotations({
       for (const tb of texts) {
         const lines = (tb.text ?? "").split("\n");
         const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
+        const fontSize = tb.fontSize || 16;
         res.push({
           id: tb.id,
           type: "text",
           pageIndex,
           x: tb.x,
           y: tb.y,
-          width: Math.max(24, longest * tb.fontSize * 0.6),
-          height: tb.fontSize * 1.4 * Math.max(1, lines.length),
+          width: Math.max(24, longest * fontSize * 0.6),
+          height: fontSize * 1.4 * Math.max(1, lines.length),
           transform: { x: 0, y: 0 },
           text: tb.text,
           contents: tb.text,
-          fontSize: tb.fontSize,
+          fontSize,
           color: tb.color,
         });
       }

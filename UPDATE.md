@@ -2457,3 +2457,24 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
 **Related:** PDF-1, PDF-3, PDF-4
 **Open:** none.
+
+
+## 2026-11-03 — Fix Text Tool Crawling, Multiline Support, and Polish UI (Multi-Agent)
+**Request:** Fix text crawling/shifting during typing, multiline support (Enter and Shift+Enter inserting newlines with auto-grow), and apply modern editor UI/UX polish per DESIGN.md:
+1. Sub-Agent 1 (Fix Crawling / Shifting): Fixed anchor point crawling by explicitly declaring text direction and text alignment (`ltr` / `left` for English, `rtl` / `right` for Arabic), anchoring character 0 strictly at canvas origin `(curX, curY)` and preventing text from tracking a shifting right edge inside RTL-inherited foreignObjects.
+2. Sub-Agent 2 (Fix Multiline & Enter Key): Allowed `Enter` and `Shift+Enter` to insert newlines without exiting edit mode; reserved blur/commit strictly for `Escape`, `Ctrl+Enter`, or `Meta+Enter`; enabled dynamic vertical auto-grow via `scrollHeight` and line count.
+3. Sub-Agent 3 (UI/UX Polish & E2E Testing): Styled active text box with `1px dashed var(--accent-text)`, `var(--radius-sm)` border radius, `var(--space-1)` 8px padding, native font stack, and minimum width `64px`; aligned display mode to identical 9px padding and border box to guarantee zero layout jump; added Playwright E2E test verifying origin anchoring, multiline growth, and active styling.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: added explicit script direction detection (`isArabicText`); set top-left anchoring with `direction: "ltr"; textAlign: "left"` for English and `direction: "rtl"; textAlign: "right"` for Arabic; enabled `Enter` and `Shift+Enter` for multiline text insertion without triggering blur; added dynamic height auto-grow via `scrollHeight`; applied DESIGN.md active styling (`1px dashed var(--accent-text)`, `var(--space-1)` 8px padding, `var(--radius-sm)`, min-width 64px, native font stack); aligned display `<div>` with identical padding and bounds to eliminate transition flicker; updated marquee intersection to account for 8px padding.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: verified multiline height calculation in `getObjectsForPage`.
+- `apps/web/src/modules/pdf/pdf-text-tool.test.tsx`: added unit tests for origin anchoring, Arabic vs LTR direction, Enter/Shift+Enter multiline insertion, Ctrl+Enter/Meta+Enter commit, and multiline bounding box height.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added comprehensive Playwright E2E test asserting origin anchoring without crawl during typing, multiline auto-grow, active dashed border and 8px padding, and seamless zero-jump transition to display mode (all 4 text tool tests passing).
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (92/92 tests across 11 test files).
+- `pnpm test`: PASS (395/395 tests across 48 test files).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (14/14 tests passing).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-4
+**Open:** none.

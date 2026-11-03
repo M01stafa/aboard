@@ -317,7 +317,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(textarea.value).toBe("Line 1\nLine 2");
   });
 
-  it("exits edit mode on Enter with modifiers (Shift+Enter, Ctrl+Enter, Meta+Enter)", () => {
+  it("allows Enter and Shift+Enter to insert new lines without exiting edit mode, and exits edit mode on Ctrl+Enter / Meta+Enter", () => {
     act(() => {
       root.render(<Harness />);
     });
@@ -332,20 +332,67 @@ describe("PDF Text Tool (custom text boxes)", () => {
       );
     });
     const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
-    typeInto(textarea, "Line 1\nLine 2");
+    typeInto(textarea, "Line 1");
 
-    // Shift+Enter should blur and commit
+    // Shift+Enter should NOT blur and should NOT preventDefault
+    let shiftEnterPrevented = false;
+    act(() => {
+      const shiftEnterEv = new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true });
+      textarea.dispatchEvent(shiftEnterEv);
+      shiftEnterPrevented = shiftEnterEv.defaultPrevented;
+    });
+
+    expect(shiftEnterPrevented).toBe(false);
+    expect(container.querySelector("textarea")).not.toBeNull();
+    expect(document.activeElement).toBe(textarea);
+
+    // Typing multiline content
+    typeInto(textarea, "Line 1\nLine 2\nLine 3");
+    expect(Number(textarea.rows)).toBe(3);
+    expect(textarea.style.whiteSpace).toBe("pre-wrap");
+
+    // Ctrl+Enter should blur and commit
     act(() => {
       textarea.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true })
+        new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true, cancelable: true })
       );
     });
 
     expect(container.querySelector("textarea")).toBeNull();
     const box = container.querySelector('[data-testid^="pdf-text-box-"]') as HTMLElement | null;
     expect(box).not.toBeNull();
-    expect(box?.textContent).toBe("Line 1\nLine 2");
+    expect(box?.textContent).toBe("Line 1\nLine 2\nLine 3");
     expect(box?.style.whiteSpace).toBe("pre-wrap");
+  });
+
+  it("exits edit mode on Meta+Enter", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+      );
+    });
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+    typeInto(textarea, "Cmd+Enter commit");
+
+    // Meta+Enter should blur and commit
+    act(() => {
+      textarea.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", metaKey: true, bubbles: true, cancelable: true })
+      );
+    });
+
+    expect(container.querySelector("textarea")).toBeNull();
+    const box = container.querySelector('[data-testid^="pdf-text-box-"]') as HTMLElement | null;
+    expect(box).not.toBeNull();
+    expect(box?.textContent).toBe("Cmd+Enter commit");
   });
 
   it("adjusts container height and width dynamically based on multiline content", () => {
@@ -465,6 +512,46 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(container.querySelector('[data-testid="pdf-text-bbox"]')).not.toBeNull();
     expect(container.querySelectorAll("[data-resize-handle]").length).toBe(0);
     expect(container.querySelectorAll('[data-testid^="pdf-text-resize-handle-"]').length).toBe(0);
+  });
+
+  it("selection bounding box hugs all lines of multiline text", () => {
+    const multilineObject = {
+      id: "text-multi",
+      type: "text" as const,
+      pageIndex: 0,
+      x: 50,
+      y: 50,
+      width: 100,
+      height: 16 * 1.4 * 3, // 3 lines
+      contents: "Line 1\nLine 2\nLine 3",
+      text: "Line 1\nLine 2\nLine 3",
+      fontSize: 16,
+      color: "#E44234",
+    };
+
+    act(() => {
+      root.render(
+        <PdfCustomInkLayer
+          pageIndex={0}
+          pageWidth={612}
+          pageHeight={792}
+          isActive={false}
+          isSelectMode={true}
+          selectedStrokeIds={["text-multi"]}
+          strokes={[]}
+          onAddStroke={vi.fn()}
+          objects={[multilineObject]}
+        />
+      );
+    });
+
+    const bboxGroup = container.querySelector('[data-testid="pdf-text-bbox"]');
+    expect(bboxGroup).not.toBeNull();
+    const bboxRect = bboxGroup?.querySelector("rect");
+    expect(bboxRect).not.toBeNull();
+    const heightAttr = parseFloat(bboxRect?.getAttribute("height") || "0");
+    // Should hug 3 lines: 16 * 1.4 * 3 = 67.2
+    expect(heightAttr).toBeCloseTo(67.2, 1);
   });
 
   it("a single pointerdown on a text box starts a drag and commits onMoveObject on pointerup", () => {
@@ -600,5 +687,99 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(objects[0].width).toBeGreaterThanOrEqual(24);
     expect(objects[0].height).toBeCloseTo(28, 5);
     mockGetAnnotations.mockReturnValue([]);
+  });
+
+  it("anchors English text to top-left (curX, curY) with direction ltr and text-align left, preventing crawling across keystrokes", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 712, clientY: 942, button: 0, bubbles: true })
+      );
+    });
+
+    const initialX = hookRef.customTextBoxes[0][0].x;
+    const initialY = hookRef.customTextBoxes[0][0].y;
+    expect(initialX).toBeCloseTo(100, 0);
+    expect(initialY).toBeCloseTo(150, 0);
+
+    const fo = container.querySelector("foreignObject") as SVGForeignObjectElement;
+    expect(fo).not.toBeNull();
+    expect(parseFloat(fo.getAttribute("x") || "0")).toBeCloseTo(initialX, 0);
+    expect(parseFloat(fo.getAttribute("y") || "0")).toBeCloseTo(initialY, 0);
+    expect(fo.style.direction).toBe("ltr");
+    expect(fo.style.textAlign).toBe("left");
+
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+    expect(textarea).not.toBeNull();
+    expect(textarea.style.direction).toBe("ltr");
+    expect(textarea.style.textAlign).toBe("left");
+
+    // Type 20 characters in succession ("TTTTTTTTTTTTTTTTTTTT")
+    let typed = "";
+    for (let i = 0; i < 20; i++) {
+      typed += "T";
+      typeInto(textarea, typed);
+
+      const currentFo = container.querySelector("foreignObject") as SVGForeignObjectElement;
+      const currentTa = container.querySelector("textarea") as HTMLTextAreaElement;
+      const currentGroup = container.querySelector('[data-testid="pdf-text-object"]') as SVGGElement;
+
+      // Crucially: foreignObject x and y must NOT change dynamically based on text width
+      expect(parseFloat(currentFo.getAttribute("x") || "0")).toBeCloseTo(initialX, 0);
+      expect(parseFloat(currentFo.getAttribute("y") || "0")).toBeCloseTo(initialY, 0);
+      // Group transform must not contain dynamic text-width offsets
+      expect(currentGroup.getAttribute("transform")).toBeNull();
+      // Direction and text-align remain strictly LTR left
+      expect(currentTa.style.direction).toBe("ltr");
+      expect(currentTa.style.textAlign).toBe("left");
+    }
+
+    expect(hookRef.customTextBoxes[0][0].x).toBeCloseTo(initialX, 0);
+    expect(hookRef.customTextBoxes[0][0].y).toBeCloseTo(initialY, 0);
+    expect(hookRef.customTextBoxes[0][0].text).toBe("TTTTTTTTTTTTTTTTTTTT");
+  });
+
+  it("detects Arabic text and applies direction rtl and text-align right", () => {
+    act(() => {
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 712, clientY: 942, button: 0, bubbles: true })
+      );
+    });
+
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+    // Type Arabic text
+    typeInto(textarea, "مرحبا بالعالم");
+
+    const fo = container.querySelector("foreignObject") as SVGForeignObjectElement;
+    expect(fo.style.direction).toBe("rtl");
+    expect(fo.style.textAlign).toBe("right");
+    expect(textarea.style.direction).toBe("rtl");
+    expect(textarea.style.textAlign).toBe("right");
+
+    // Exit edit mode to test display div
+    act(() => {
+      textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    });
+
+    const div = container.querySelector('[data-testid^="pdf-text-box-"]') as HTMLDivElement;
+    expect(div).not.toBeNull();
+    expect(div.style.direction).toBe("rtl");
+    expect(div.style.textAlign).toBe("right");
+    expect(div.getAttribute("dir")).toBe("rtl");
   });
 });

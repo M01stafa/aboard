@@ -2024,4 +2024,156 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
       expect(stampBboxAfter!.width).toBeGreaterThan(stampBboxBefore.width + 10);
     }
   });
+
+  test("text tool: UI polish styling, origin anchoring without crawl during typing, multiline auto-grow, and smooth transition to display mode", async ({ page }) => {
+    const pid = "test-pdf-text-ui-polish-anchoring";
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Text Tool UI Polish & Anchoring Verification", { x: 50, y: 750, size: 16, font, color: rgb(0, 0, 0) });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles({
+      name: "text-polish.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // 1. Activate Text tool and click page to create a text box
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    const clickX = page1Box.x + 200;
+    const clickY = page1Box.y + 240;
+    await page.mouse.click(clickX, clickY);
+
+    const textarea = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(textarea).toHaveCount(1, { timeout: 5000 });
+    await expect(textarea).toBeFocused();
+
+    // c. Verify text box looks styled with active border and padding when editing
+    const textareaStyles = await textarea.evaluate((el) => {
+      const s = window.getComputedStyle(el);
+      return {
+        borderStyle: s.borderStyle,
+        borderWidth: s.borderWidth,
+        borderColor: s.borderColor,
+        borderRadius: s.borderRadius,
+        paddingTop: s.paddingTop,
+        paddingBottom: s.paddingBottom,
+        paddingLeft: s.paddingLeft,
+        paddingRight: s.paddingRight,
+        minWidth: s.minWidth,
+        cursor: s.cursor,
+        fontFamily: s.fontFamily,
+      };
+    });
+
+    expect(textareaStyles.borderStyle).toBe("dashed");
+    expect(textareaStyles.borderWidth).toBe("1px");
+    // rgb(26, 99, 160) corresponds to #1A63A0
+    expect(textareaStyles.borderColor).toBe("rgb(26, 99, 160)");
+    expect(parseFloat(textareaStyles.paddingTop)).toBeCloseTo(8, 0);
+    expect(parseFloat(textareaStyles.paddingBottom)).toBeCloseTo(8, 0);
+    expect(parseFloat(textareaStyles.paddingLeft)).toBeCloseTo(8, 0);
+    expect(parseFloat(textareaStyles.paddingRight)).toBeCloseTo(8, 0);
+    expect(parseFloat(textareaStyles.minWidth)).toBeGreaterThanOrEqual(64);
+    expect(textareaStyles.cursor).toBe("text");
+    expect(textareaStyles.fontFamily.toLowerCase()).toContain("sans-serif");
+
+    // a. Verify typing does not move / crawl the box (anchored strictly at origin)
+    const initialBox = await textarea.boundingBox();
+    expect(initialBox).not.toBeNull();
+    const initialOriginX = initialBox!.x;
+    const initialOriginY = initialBox!.y;
+
+    const initialBoxes = await readCustomTextBoxes(page);
+    expect(initialBoxes.length).toBe(1);
+    const initialStoredX = initialBoxes[0].x;
+    const initialStoredY = initialBoxes[0].y;
+
+    // Type first phrase: verify origin remains pinned at start
+    await page.keyboard.type("First line of notes", { delay: 20 });
+    await expect(textarea).toHaveValue("First line of notes");
+
+    const boxAfterTyping1 = await textarea.boundingBox();
+    expect(boxAfterTyping1).not.toBeNull();
+    expect(Math.abs(boxAfterTyping1!.x - initialOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(boxAfterTyping1!.y - initialOriginY)).toBeLessThanOrEqual(2);
+
+    const storedAfter1 = await readCustomTextBoxes(page);
+    expect(Math.abs(storedAfter1[0].x - initialStoredX)).toBeLessThan(0.1);
+    expect(Math.abs(storedAfter1[0].y - initialStoredY)).toBeLessThan(0.1);
+
+    // b. Verify pressing Enter creates a new line, and text box auto-grows in height
+    const heightBeforeEnter = boxAfterTyping1!.height;
+
+    await page.keyboard.press("Enter");
+    await expect(textarea).toBeFocused();
+    await page.keyboard.type("Second line with additional details", { delay: 20 });
+    await expect(textarea).toHaveValue("First line of notes\nSecond line with additional details");
+
+    const boxAfterEnter = await textarea.boundingBox();
+    expect(boxAfterEnter).not.toBeNull();
+    // Height must expand for the second line by at least 16px (approx 22px for 16px font at 1.4 line-height)
+    expect(boxAfterEnter!.height).toBeGreaterThanOrEqual(heightBeforeEnter + 16);
+    // Origin must STILL remain pinned strictly at origin without vertical or horizontal crawling
+    expect(Math.abs(boxAfterEnter!.x - initialOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(boxAfterEnter!.y - initialOriginY)).toBeLessThanOrEqual(2);
+
+    // Add a third line via Enter
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("Third line", { delay: 20 });
+    await expect(textarea).toHaveValue("First line of notes\nSecond line with additional details\nThird line");
+
+    const boxAfterLine3 = await textarea.boundingBox();
+    expect(boxAfterLine3).not.toBeNull();
+    expect(boxAfterLine3!.height).toBeGreaterThanOrEqual(boxAfterEnter!.height + 16);
+    expect(Math.abs(boxAfterLine3!.x - initialOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(boxAfterLine3!.y - initialOriginY)).toBeLessThanOrEqual(2);
+
+    // Transition between edit and display mode: verify display <div> has clean layout and does not jump
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
+
+    const textBox = primaryPane.locator('[data-testid^="pdf-text-box-"]');
+    await expect(textBox).toHaveCount(1);
+    await expect(textBox).toBeVisible();
+
+    const displayStyles = await textBox.evaluate((el) => {
+      const s = window.getComputedStyle(el);
+      return {
+        paddingTop: s.paddingTop,
+        paddingBottom: s.paddingBottom,
+        paddingLeft: s.paddingLeft,
+        paddingRight: s.paddingRight,
+        minWidth: s.minWidth,
+        fontFamily: s.fontFamily,
+        boxSizing: s.boxSizing,
+      };
+    });
+
+    expect(parseFloat(displayStyles.paddingTop)).toBeCloseTo(8, 0);
+    expect(parseFloat(displayStyles.paddingBottom)).toBeCloseTo(8, 0);
+    expect(parseFloat(displayStyles.paddingLeft)).toBeCloseTo(8, 0);
+    expect(parseFloat(displayStyles.paddingRight)).toBeCloseTo(8, 0);
+    expect(parseFloat(displayStyles.minWidth)).toBeGreaterThanOrEqual(64);
+    expect(displayStyles.boxSizing).toBe("border-box");
+    expect(displayStyles.fontFamily.toLowerCase()).toContain("sans-serif");
+
+    const displayBox = await textBox.boundingBox();
+    expect(displayBox).not.toBeNull();
+    // Display box top-left must match the textarea top-left within 2px (zero jump!)
+    expect(Math.abs(displayBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(displayBox!.y - initialOriginY)).toBeLessThanOrEqual(2);
+  });
 });
