@@ -2355,3 +2355,15 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
 **Related:** PDF-1, PDF-4
 **Open:** none.
+
+
+## 2026-11-03 — Restart Dev Server
+**Request:** Stop any running dev server, delete `apps/web/.next`, run `pnpm dev` in the background, and wait for HTTP 200 on http://localhost:3000.
+**Changes:**
+- Stopped previous dev server processes.
+- Cleared Next.js build cache directory `apps/web/.next`.
+- Started development server in background via `pnpm dev`.
+- Verified server responded with HTTP 200 on http://localhost:3000.
+**Checks:**
+- HTTP GET http://localhost:3000 returned 200 OK.
+**Open:** none.
