@@ -2749,3 +2749,27 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 
 
 
+
+## 2026-11-05 — Rebuild PDF Text Tool with True RTL/LTR and Arabic Shaping
+**Request:** Rebuild the PDF Text tool with true RTL/LTR text direction persistence and Arabic shaping based on `pdf-text-tool-rtl-guide.md`.
+**Changes:**
+- `apps/web/package.json` & `pnpm-lock.yaml` (changed): added `pdf-lib`, `@pdf-lib/fontkit`, `arabic-reshaper`, `bidi-js`.
+- `apps/web/public/fonts/NotoNaskhArabic-Regular.ttf` & `Roboto-Regular.ttf` (created): self-hosted fonts for PDF embedding and UI rendering.
+- `apps/web/src/modules/pdf/lib/direction.ts` (created): First Strong direction detection algorithm (`detectDirection`).
+- `apps/web/src/modules/pdf/lib/bidiText.ts` (created): visual shaping and Bidi reordering (`toVisual`) using `bidi-js` and `arabic-reshaper`.
+- `apps/web/src/modules/pdf/lib/loadFont.ts` (created): font loader with browser fetch and Node `fs` fallbacks, registering fontkit and embedding fonts.
+- `apps/web/src/modules/pdf/lib/drawText.ts` (created): PDF coordinate space text drawer (`addTextToPdf`).
+- `apps/web/src/modules/pdf/lib/bidiText.test.ts` (created): unit tests for First Strong rule, Arabic shaping, Latin preservation, mirroring, and font embedding.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx` (changed): implemented fixed-width auto-growing textarea during edit (`dir="auto"`, `unicodeBidi: "plaintext"`), and strict `dir={annotation.direction}`, `direction: annotation.direction`, `textAlign` alignment on blur.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts` (changed): records text direction dynamically via `detectDirection`.
+- `apps/web/src/modules/pdf/page-operations.ts` & `page-operations.test.ts` (changed): burns custom ink text boxes into PDF bytes using font embedding and visual line reordering.
+- `apps/web/e2e/pdf-text-tool-rtl.spec.ts` (created): Playwright E2E verification test for Arabic, English, and mixed text boxes in an RTL environment.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (60/60 unit tests passed across `bidiText.test.ts`, `page-operations.test.ts`, and `pdf-text-tool.test.tsx`).
+- `pnpm exec playwright test e2e/pdf-text-tool-rtl.spec.ts`: PASS (verified LTR English, RTL Arabic, and mixed text).
+- Dev server: running and healthy at `http://localhost:3000` (HTTP 200).
+**Related:** PDF-1, PDF-4
+**Open:** none.

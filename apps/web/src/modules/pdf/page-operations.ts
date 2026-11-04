@@ -10,6 +10,9 @@ import {
   type CustomTextBox,
 } from "./annotation-storage";
 import { getMaxTextWidth, type CustomInkStroke } from "./pdf-custom-ink-layer";
+import { embedArabicFont } from "./lib/loadFont";
+import { detectDirection, type Dir } from "./lib/direction";
+import { toVisual } from "./lib/bidiText";
 
 function parseStrokeColor(hex?: string): { r: number; g: number; b: number } {
   if (hex && hex.startsWith("#")) {
@@ -168,16 +171,33 @@ export function drawCustomStickyNotesOnDoc(
           if (note.text && note.text.trim()) {
             const lines = note.text.split("\n");
             let lineY = pdfY + height - headerHeight - 12;
+            const noteFontSize = 9;
             for (const line of lines) {
               if (lineY < pdfY + 6) break;
-              const cleanLine = line.slice(0, 80);
-              page.drawText(cleanLine, {
-                x: x + 6,
-                y: lineY,
-                size: 9,
-                font,
-                color: rgb(0.47, 0.21, 0.06),
-              });
+              try {
+                const dir: Dir = note.direction ?? detectDirection(line);
+                const visual = toVisual(line, dir);
+                let textWidth = 0;
+                try {
+                  textWidth = font.widthOfTextAtSize(visual, noteFontSize);
+                } catch {
+                  textWidth = visual.length * noteFontSize * 0.55;
+                }
+                const lineX =
+                  dir === "rtl"
+                    ? Math.max(x + 6, x + width - 6 - textWidth)
+                    : x + 6;
+
+                page.drawText(visual, {
+                  x: lineX,
+                  y: lineY,
+                  size: noteFontSize,
+                  font,
+                  color: rgb(0.47, 0.21, 0.06),
+                });
+              } catch (err) {
+                console.warn("[page-operations] Error drawing sticky line:", err);
+              }
               lineY -= 12;
             }
           }
@@ -283,27 +303,13 @@ export function drawCustomTextBoxesOnDoc(
       if (!box || !box.text || !box.text.trim()) continue;
       const fontSize = box.fontSize > 0 ? box.fontSize : 16;
       const lineHeight = fontSize * 1.4;
+      const boxW = box.width && box.width > 0 ? box.width : 250;
       const maxTextWidth = getMaxTextWidth(pageWidth, box.x);
       const rawLines = box.text.split("\n");
       const wrappedLines: string[] = [];
 
       for (const rawLine of rawLines) {
-        // Helvetica (WinAnsi) cannot encode every character; drop unencodable ones instead of failing.
-        const safe = Array.from(rawLine)
-          .filter((ch) => {
-            try {
-              font.encodeText(ch);
-              return true;
-            } catch {
-              return false;
-            }
-          })
-          .join("");
-        if (!safe) {
-          wrappedLines.push("");
-          continue;
-        }
-        const subLines = wrapLineForPdf(safe, font, fontSize, maxTextWidth);
+        const subLines = wrapLineForPdf(rawLine, font, fontSize, maxTextWidth);
         wrappedLines.push(...subLines);
       }
 
@@ -323,15 +329,32 @@ export function drawCustomTextBoxesOnDoc(
       wrappedLines.forEach((line, i) => {
         if (!line) return;
         try {
-          page.drawText(line, {
-            x: box.x,
-            y: pageHeight - box.y - fontSize * 1.05 - i * lineHeight,
+          const dir: Dir = box.direction ?? detectDirection(line);
+          const visual = toVisual(line, dir);
+          let textWidth = 0;
+          try {
+            textWidth = font.widthOfTextAtSize(visual, fontSize);
+          } catch {
+            textWidth = visual.length * fontSize * 0.55;
+          }
+
+          // LTR: start at box.x + 8 (matches browser 8px padding)
+          // RTL: right-align at box.x + boxW - 8 - textWidth
+          const lineX =
+            dir === "rtl"
+              ? Math.max(box.x, box.x + boxW - 8 - textWidth)
+              : box.x + 8;
+          const lineY = pageHeight - box.y - 8 - fontSize * 0.9 - i * lineHeight;
+
+          page.drawText(visual, {
+            x: lineX,
+            y: lineY,
             size: fontSize,
             font,
             color: rgb(c.r, c.g, c.b),
           });
         } catch (err) {
-          console.warn("[page-operations] Error drawing text box:", err);
+          console.warn("[page-operations] Error drawing text box line:", err);
         }
       });
     }
@@ -605,7 +628,12 @@ export async function burnAnnotationsWithPdfLib(
   }
 
   const items = await deserializeAnnotations(projectId, annotationsJson, projectService);
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  let font: PDFFont;
+  try {
+    font = await embedArabicFont(pdfDoc);
+  } catch {
+    font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  }
 
   for (const item of items) {
     const { annotation, ctx } = item;
@@ -770,13 +798,17 @@ export async function burnCustomInkOnPdfBytes(
     if (hasStrokes) {
       drawCustomInkStrokesOnDoc(pdfDoc, customInkStrokes);
     }
+    let font: PDFFont;
+    try {
+      font = await embedArabicFont(pdfDoc);
+    } catch {
+      font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    }
     if (hasStickies && customStickyNotes) {
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       drawCustomStickyNotesOnDoc(pdfDoc, customStickyNotes, font);
     }
     if (hasTexts && customTextBoxes) {
-      const textFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      drawCustomTextBoxesOnDoc(pdfDoc, customTextBoxes, textFont);
+      drawCustomTextBoxesOnDoc(pdfDoc, customTextBoxes, font);
     }
     return await pdfDoc.save();
   } catch (err) {

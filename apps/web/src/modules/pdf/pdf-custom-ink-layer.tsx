@@ -2,6 +2,7 @@
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { PdfAnnotationSubtype } from "@embedpdf/models";
+import { detectDirection, type Dir } from "./lib/direction";
 
 export interface CustomInkPoint {
   x: number;
@@ -172,11 +173,7 @@ export function getMaxTextWidth(pageWidth: number, x: number): number {
 }
 
 export function detectTextDirection(text: string): "ltr" | "rtl" {
-  if (!text) return "ltr";
-  // Search for the first strong directional character (Arabic / Hebrew vs Latin / Greek / Cyrillic)
-  const match = text.match(/[\u0600-\u06FF\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]|[A-Za-z\u00C0-\u024F]/);
-  if (!match) return "ltr";
-  return /[\u0600-\u06FF\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]/.test(match[0]) ? "rtl" : "ltr";
+  return detectDirection(text);
 }
 
 /**
@@ -545,7 +542,7 @@ export interface PdfCustomInkLayerProps {
       direction?: "ltr" | "rtl";
     }
   ) => string | void;
-  onUpdateText?: (pageIndex: number, id: string, text: string) => void;
+  onUpdateText?: (pageIndex: number, id: string, text: string, direction?: "ltr" | "rtl") => void;
   onUpdateTextBoxSize?: (
     pageIndex: number,
     id: string,
@@ -2047,8 +2044,8 @@ export function PdfCustomInkLayer({
                       lineHeight: "1.4",
                       color: "#78350F",
                       unicodeBidi: "plaintext",
-                      direction: stickyDirection,
-                      textAlign: stickyTextAlign,
+                      direction: editingStickyId === obj.id ? undefined : stickyDirection,
+                      textAlign: editingStickyId === obj.id ? undefined : stickyTextAlign,
                       pointerEvents: editingStickyId === obj.id ? "auto" : "none",
                       boxSizing: "border-box",
                     }}

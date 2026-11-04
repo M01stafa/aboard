@@ -29,9 +29,9 @@ import {
   type CustomObjectType,
   getAbsoluteStrokeBounds,
   scaleStrokePoints,
-  detectTextDirection,
   measureTextHeight,
 } from "./pdf-custom-ink-layer";
+import { detectDirection } from "./lib/direction";
 
 /** Default text box styling (matches the design-system danger accent used for annotations). */
 export const DEFAULT_TEXT_COLOR = "#E44234";
@@ -624,7 +624,7 @@ export function usePdfAnnotations({
           contents: st.text,
           color: st.color,
           rotation: st.rotation,
-          direction: st.direction ?? detectTextDirection(st.text ?? ""),
+          direction: st.direction ?? detectDirection(st.text ?? ""),
         });
       }
 
@@ -646,7 +646,7 @@ export function usePdfAnnotations({
           contents: tb.text,
           fontSize,
           color: tb.color,
-          direction: tb.direction ?? detectTextDirection(tb.text ?? ""),
+          direction: tb.direction ?? detectDirection(tb.text ?? ""),
         });
       }
 
@@ -965,7 +965,7 @@ export function usePdfAnnotations({
         coords.rotation ?? Math.round((((Math.abs(hash) % 17) - 8) / 10) * 10) / 10;
 
       const initialDir =
-        coords.direction ?? (coords.text ? detectTextDirection(coords.text) : "ltr");
+        coords.direction ?? (coords.text ? detectDirection(coords.text) : "ltr");
 
       const newSticky: CustomStickyNote = {
         id: stickyId,
@@ -999,7 +999,7 @@ export function usePdfAnnotations({
 
   const handleUpdateStickyText = useCallback(
     (pageIndex: number, id: string, text: string, direction?: "ltr" | "rtl") => {
-      const dir = direction ?? detectTextDirection(text);
+      const dir = direction ?? detectDirection(text);
       setCustomStickyNotes((prev) => {
         const list = prev[pageIndex] || [];
         const nextList = list.map((st) => (st.id === id ? { ...st, text, direction: dir } : st));
@@ -1054,7 +1054,7 @@ export function usePdfAnnotations({
           : `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
 
       const initialDir =
-        coords.direction ?? (coords.text ? detectTextDirection(coords.text) : "ltr");
+        coords.direction ?? (coords.text ? detectDirection(coords.text) : "ltr");
 
       const box: CustomTextBox = {
         id: textId,
@@ -1099,7 +1099,7 @@ export function usePdfAnnotations({
 
   const handleUpdateText = useCallback(
     (pageIndex: number, id: string, newText: string, newDirection?: "ltr" | "rtl") => {
-      const dir = newDirection ?? detectTextDirection(newText);
+      const dir = newDirection ?? detectDirection(newText);
       setCustomTextBoxes((prev) => {
         const list = prev[pageIndex] || [];
         const next = {

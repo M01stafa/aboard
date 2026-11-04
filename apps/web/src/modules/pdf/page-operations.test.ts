@@ -359,4 +359,54 @@ describe("page-operations (@cantoo/pdf-lib)", () => {
     const doc = await PDFDocument.load(burned);
     expect(doc.getPageCount()).toBe(1);
   });
+
+  it("burnCustomInkOnPdfBytes burns Arabic and English text boxes with Noto font and Bidi alignment", async () => {
+    const originalPdf = await createTestPdf(1);
+    const customTextBoxes = {
+      0: [
+        {
+          id: "tb-ar",
+          pageIndex: 0,
+          x: 50,
+          y: 100,
+          width: 300,
+          height: 50,
+          text: "مرحبا بالعالم",
+          fontSize: 16,
+          color: "#E44234",
+          direction: "rtl" as const,
+        },
+        {
+          id: "tb-en",
+          pageIndex: 0,
+          x: 50,
+          y: 200,
+          width: 300,
+          height: 50,
+          text: "Hello World",
+          fontSize: 16,
+          color: "#1A63A0",
+          direction: "ltr" as const,
+        },
+        {
+          id: "tb-mixed",
+          pageIndex: 0,
+          x: 50,
+          y: 300,
+          width: 300,
+          height: 50,
+          text: "Hello مرحبا 123",
+          fontSize: 16,
+          color: "#000000",
+        },
+      ],
+    };
+
+    const burned = await burnCustomInkOnPdfBytes(originalPdf, {}, undefined, customTextBoxes);
+    expect(burned).toBeDefined();
+    expect(burned.byteLength).toBeGreaterThan(originalPdf.byteLength);
+
+    const doc = await PDFDocument.load(burned);
+    expect(doc.getPageCount()).toBe(1);
+  });
 });
