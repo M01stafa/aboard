@@ -284,17 +284,17 @@ Implement board to PDF by exporting the board with `exportToBlob` and appending 
 
 ---
 
-## Phase 9: Online PDF Tools (Release 2) — CANCELLED (Dropped by owner)
+## Phase 9: Online PDF Tools (Release 2) — CANCELLED - Dropped by owner
 
-> **Note:** Phase 9 was dropped during the PDF phase completion cleanup to keep the PDF editor 100% client-side with zero server dependencies or Docker containers. All Stirling logic and gateway endpoints have been removed.
+> **Note:** Phase 9 (Tasks 40, 41) is CANCELLED - Dropped by owner. Server-side PDF tools (Stirling-PDF, Gateway) and all Docker infrastructure have been purged to keep the PDF editor 100% client-side with zero server dependencies or Docker containers.
 
-### Task 40: Deploy Stirling-PDF and the Gateway
+### Task 40: Deploy Stirling-PDF and the Gateway — CANCELLED - Dropped by owner
 
 Ask the owner for a VPS (two vCPUs and 4 GB of RAM to start) and a subdomain such as `api.<domain>`, then deploy the stack from the setup spec with Docker Compose. Caddy terminates TLS and forwards only `/pdf/*` to the gateway. The gateway is a small Node 22 and Hono service. Stirling-PDF runs as the full official image on an internal Docker network with no published port and a memory limit. Build the gateway in `services/gateway`: it verifies the Supabase JWT, maps a fixed allow-list of tool names to fixed Stirling endpoints, checks uploaded files by their magic bytes, enforces per-user size, rate and concurrency limits, streams bodies in both directions without buffering whole files, allows only the app's origin, and never logs file names or contents. Set Stirling's allowed CORS origins explicitly, disable the endpoints the app does not use, and after testing pin the image to a version tag instead of `latest`. Run an external port scan to prove Stirling cannot be reached from the internet.
 
 *Spec: `docs/specs/setup-and-deploy.md` §13 · `docs/specs/modules.md` §7.4 · `docs/specs/security.md` §14.8 · Requirements: PDFX-4, SEC-8 · VERIFY: V13, V16 · Done when: the gateway rejects requests without a valid JWT and the port scan shows only ports 80 and 443.*
 
-### Task 41: Build the Online PDF Tools Interface
+### Task 41: Build the Online PDF Tools Interface — CANCELLED - Dropped by owner
 
 Add OCR, Office to PDF, PDF to Office, compression, merging and splitting to the PDF module through `src/core/stirling.ts`, which sends the file to the gateway with the user's Supabase JWT, shows upload and processing progress, and allows the user to cancel. Before the first use, show the one-time notice that these tools upload the file to the app's server for processing and delete it afterwards. Save every result into the project like any other PDF, so it lands in the user's Drive or browser and never stays on the server. Show clear, translated messages when the user hits a size or rate limit.
 

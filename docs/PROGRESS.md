@@ -11,8 +11,8 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 10 — UI redesign (Completed) |
-| Current task | Task 43 — Redesign the PDF Toolbars and Unify the Interface (completed) |
-| Last updated | 2026-10-21 |
+| Current task | Docker infrastructure purge & GitHub push |
+| Last updated | 2026-11-04 |
 | Next step | Task 44 — Publish the Legal Pages and Implement Account Deletion |
 | Blockers | None (carried open items tracked below) |
 
@@ -33,7 +33,7 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | **6. `.alpha` export/import** | In progress | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
 | **7. Google Drive** | Done (2026-10-19) | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
 | **8. Integration** | Done (2026-10-19) | §8 actions | All four actions work across modes |
-| **9. Stirling** | Dropped by owner (2026-10-29) | Dropped during visual campaign cleanup | Docker Stirling-PDF & Gateway tools removed to keep PDF entirely client-side |
+| **9. Stirling** | Dropped | Permanently dropped by owner; services/ and all Docker infrastructure purged from repo | Zero server dependencies for PDF tools; 100% client-side |
 | **10. UI redesign** | Done (2026-10-21) | Circuit toolbar via `runCommand`, advanced menu toggle, PDF toolbars, unified styling | Every circuit action reachable |
 | **11. Launch prep** | Not started | **§14.12 security checklist signed off**, security headers/CSP, privacy policy, terms, third-party notices, fork source published, Google app published + brand verification, monitoring | Google verification approved; refresh tokens no longer expire after 7 days |
 
@@ -135,6 +135,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-21 | Task 41: Built Stirling-PDF client (stirling.ts), online tools dropdown in PdfToolbar (OCR, Compress, Office to PDF), one-time server notice modal (PDFX-5) with localStorage persistence, processing modal with progress & cancel, and SHA-256 putFile storage. |
 | 2026-10-21 | Task 42: Built custom CircuitToolbar adhering to DESIGN.md tokens and 8-point grid with Run/Pause toggle, Reset, Speed presets (Slow 1µs, Normal 5µs, Fast 25µs), Component Palette mega-menu (13 components/tools via runCommand with GWT class mapping), and Advanced Menu toggle cycle (export -> hide custom toolbar -> reload iframe with native menu -> import, and reverse to restore custom toolbar) with state preservation (CIRC-5). |
 | 2026-10-21 | Task 43: Redesigned PDF toolbar into 3 cohesive control groups (Navigation & View, Annotation Tools & History, Document Actions & Popovers); unified all interface chrome (app shell, PDF, circuit toolbar, dialogs, banners) into DESIGN.md tokens; verified strict 8-point grid compliance across all modules. Phase 10 completed. |
+| 2026-11-04 | Permanently dropped Phase 9 (Stirling-PDF & Gateway); purged all Docker files, Caddy, and gateway code from repository to keep the app 100% client-side. |
 
 ## Lessons and corrections
 

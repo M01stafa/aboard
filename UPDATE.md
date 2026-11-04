@@ -2671,3 +2671,20 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `playwright test e2e/pdf-ink-stamp.spec.ts -g "text direction|proportional corner scaling"`: PASS (2/2 passed).
 **Related:** PDF-1, PDF-4
 **Open:** none.
+
+
+## 2026-11-04 — Purge Docker and Stirling Infrastructure, Mark Phase 9 Dropped
+**Request:** Permanently drop server-side PDF tools (Stirling, Gateway), delete all Docker infrastructure and files, update documentation (Phase 9 Dropped in TASKS.md and PROGRESS.md), run full local CI checks, and push all local commits to GitHub.
+**Changes:**
+- Deleted `services/` directory completely (`services/gateway/`, `services/stirling/`, `services/docker-compose.yml`, `Caddyfile`, `DEPLOY.md`, etc.).
+- Removed `- "services/*"` from `pnpm-workspace.yaml` and re-synced workspace.
+- Stopped and removed project Docker containers (`services-caddy-1`, `services-gateway-1`, `services-stirling-1`) and pruned project networks/volumes.
+- In `docs/TASKS.md`: Marked Phase 9 (Tasks 40, 41) as "CANCELLED - Dropped by owner".
+- In `docs/PROGRESS.md`: Marked Phase 9 status as "Dropped" and added decision entry to Decisions log.
+**Checks:**
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm test`: PASS.
+- `pnpm ci:security`: PASS.
+**Related:** PDFX-1..5, SEC-8, PDF-1
+**Open:** none.
