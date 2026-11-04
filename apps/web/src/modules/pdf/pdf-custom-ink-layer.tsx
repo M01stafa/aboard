@@ -1821,17 +1821,34 @@ export function PdfCustomInkLayer({
           typeof document !== "undefined" && document.documentElement.getAttribute("dir") === "rtl"
             ? "rtl"
             : "ltr";
-        const effectiveDirection = obj.direction ?? detectTextDirection(obj.text || "");
-        const textAlign = effectiveDirection === "rtl" ? "right" : "left";
-        const stickyDirection = obj.direction ?? detectTextDirection(obj.text || "");
-        const stickyTextAlign = stickyDirection === "rtl" ? "right" : "left";
+        const effectiveDirection: "ltr" | "rtl" =
+          obj.direction === "rtl"
+            ? "rtl"
+            : obj.direction === "ltr"
+            ? "ltr"
+            : detectTextDirection(obj.text || "") === "rtl"
+            ? "rtl"
+            : "ltr";
+        const textAlign: "right" | "left" = effectiveDirection === "rtl" ? "right" : "left";
+
+        const stickyDirection: "ltr" | "rtl" =
+          obj.direction === "rtl"
+            ? "rtl"
+            : obj.direction === "ltr"
+            ? "ltr"
+            : detectTextDirection(obj.text || "") === "rtl"
+            ? "rtl"
+            : "ltr";
+        const stickyTextAlign: "right" | "left" = stickyDirection === "rtl" ? "right" : "left";
         const textFontSize = liveTextFontSizes[obj.id] ?? obj.fontSize ?? 16;
         const preDragSize = dragTextSizes[obj.id];
-        const curW = resizeRect
+        const maxPageW = Math.max(120, (pageWidth || 612) - curX - 16);
+        const rawW = resizeRect
           ? resizeRect.width
           : obj.type === "text"
           ? (preDragSize?.width ?? (obj.width && obj.width > 0 ? obj.width : DEFAULT_TEXT_BOX_WIDTH))
           : obj.width;
+        const curW = obj.type === "text" ? Math.min(maxPageW, rawW) : rawW;
         const autoMeasuredH = Math.max(36, measureTextHeight(obj.text || "", curW, textFontSize));
         const curH = resizeRect
           ? resizeRect.height
@@ -1869,9 +1886,12 @@ export function PdfCustomInkLayer({
                 y={curY}
                 width={curW}
                 height={curH}
+                {...({ dir: stickyDirection } as React.SVGProps<SVGForeignObjectElement> & { dir?: "ltr" | "rtl" })}
                 style={{
                   overflow: "visible",
                   pointerEvents: "auto",
+                  direction: stickyDirection,
+                  textAlign: stickyTextAlign,
                 }}
               >
                 <div
@@ -1890,6 +1910,7 @@ export function PdfCustomInkLayer({
                     overflow: "hidden",
                     boxSizing: "border-box",
                     cursor: isSelectMode && editingStickyId !== obj.id ? "move" : "default",
+                    direction: stickyDirection,
                   }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
@@ -2301,6 +2322,7 @@ export function PdfCustomInkLayer({
       onDeleteText,
       onDeleteSticky,
       pageIndex,
+      pageWidth,
       dragTextSizes,
       editingHeights,
       liveTextFontSizes,

@@ -2653,3 +2653,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `playwright test e2e/pdf-ink-stamp.spec.ts -g "text direction|proportional corner scaling"`: PASS (2 passed in 9.6s).
 **Related:** PDF-1, PDF-4
 **Open:** none.
+
+
+## 2026-11-04 — Debug and Fix Text Direction Visual Alignment and Text Box Max-Width Clamping
+**Request:** Debug and fix text direction visual alignment (LTR for English, RTL for Arabic) for Text Box and Sticky Note tools in Arabic RTL environment; ensure English text displays left-aligned and Arabic text displays right-aligned; enforce text box page width clamping so pasted text wraps within the page boundaries.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`:
+  - Enforced page width constraint on text box rendered width `curW`: clamped to `Math.min(maxPageW, rawW)` where `maxPageW = Math.max(120, (pageWidth || 612) - curX - 16)` so pasted multiline text wraps cleanly within the PDF boundaries without infinite horizontal extension.
+  - In `renderedObjects`: applied `direction: effectiveDirection`, `textAlign: textAlign`, and `unicodeBidi: "plaintext"` to both Text Box `<textarea>` in edit mode and the static display `<div>` on blur.
+  - On Sticky Note: applied `dir={stickyDirection}` on `<foreignObject>`, `direction: stickyDirection` on the card container, and `dir="auto"`, `direction: stickyDirection`, `textAlign: stickyTextAlign`, and `unicodeBidi: "plaintext"` on `<textarea>`.
+  - Preserved direct child hierarchy without extra wrapper divs, ensuring 100% DOM structure compatibility.
+  - Added `pageWidth` to `useMemo` dependencies for clean linting.
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (120/120 tests across 11 test files).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 0 warnings, 8-point spacing compliant).
+- `playwright test e2e/pdf-ink-stamp.spec.ts -g "text direction|proportional corner scaling"`: PASS (2/2 passed).
+**Related:** PDF-1, PDF-4
+**Open:** none.
