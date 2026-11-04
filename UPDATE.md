@@ -2559,3 +2559,31 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
 **Related:** PDF-1, PDF-4
 **Open:** none.
+
+
+## 2026-11-04 — Fix Text Direction, Auto-Grow Height, and Width Resizing (Single Agent)
+**Request:** Fix text direction persistence on blur (English LTR, Arabic RTL without flipping under RTL parent), auto-grow height to fit text without clipping (removing fixed 100px and overflow: hidden), enable width resizing with responsive text reflow and fixed edge anchors, and maintain strictly fixed (x, y) coordinates to prevent text crawling, executed cohesion-first as a single agent.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`:
+  - Implemented `measureTextHeight` utilizing DOM offscreen measurement and robust line font-metric fallback.
+  - Implemented `editingHeights` dynamic height tracking on `<textarea>` input/paste/change via scrollHeight and line math, ensuring 4, 10, 20+ lines are always completely visible.
+  - Enabled horizontal and corner resize handles (`nw`, `n`, `ne`, `e`, `se`, `s`, `sw`, `w`) on the text bounding box.
+  - Implemented width resizing with dynamic height recalculation in `onPointerMove`/`onPointerUp` (`kind === "resize"`) with fixed edge anchors (left handle drag anchors right edge; right handle drag anchors left edge).
+  - Explicitly bound `dir={effectiveDirection}`, `direction: effectiveDirection`, and `textAlign: effectiveDirection === "rtl" ? "right" : "left"` to `<foreignObject>`, `<textarea>`, and display `<div>` so English text strictly persists as LTR on blur even under an Arabic (`dir="rtl"`) workspace.
+  - Fixed static display `<div>` styling with `height: "100%"`, `whiteSpace: "pre-wrap"`, `wordBreak: "break-word"`, `overflowWrap: "break-word"`, and `<foreignObject>` with `overflow: "visible"`.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`:
+  - Updated `handleResizeObject` to support `type === "text"`, updating `x`, `y`, `width`, and `height` without touching native annotations.
+  - Updated `handleUpdateText` to dynamically compute text height and update `customTextBoxes` with `height: Math.max(b.height || 36, h)`.
+  - Updated `getObjectsForPage` to return auto-measured height when not explicitly set.
+- `apps/web/src/modules/pdf/pdf-text-tool.test.tsx`:
+  - Updated unit test assertions for auto-growing height, resize handles on bounding box, and zero crawling (37/37 tests passed).
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`:
+  - Added comprehensive E2E Playwright test verifying LTR direction persistence on blur, 20-line auto-growing height without clipping, and width resizing with reflow (passed in 2.5s).
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (113/113 tests across 11 test files).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `playwright test e2e/pdf-ink-stamp.spec.ts -g "text tool: verifies"`: PASS (2/2 tests passed in 8.2s).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-4
+**Open:** none.

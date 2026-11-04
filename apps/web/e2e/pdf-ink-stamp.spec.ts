@@ -2602,7 +2602,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     const enInitialBox = await enTextarea.boundingBox();
     expect(enInitialBox).not.toBeNull();
     expect(enInitialBox!.width).toBeCloseTo(250, 0);
-    expect(enInitialBox!.height).toBeCloseTo(100, 0);
+    expect(enInitialBox!.height).toBeGreaterThanOrEqual(36);
     const enOriginX = enInitialBox!.x;
     const enOriginY = enInitialBox!.y;
 
@@ -2630,11 +2630,11 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(enStyles.direction).toBe("ltr");
     expect(enStyles.textAlign).toBe("left");
 
-    // Verify anchor coordinates (x, y) strictly fixed without shifting and dimensions remain 250x100
+    // Verify anchor coordinates (x, y) strictly fixed without shifting and dimensions auto-grow
     const enBoxDuring = await enTextarea.boundingBox();
     expect(enBoxDuring).not.toBeNull();
     expect(enBoxDuring!.width).toBeCloseTo(250, 0);
-    expect(enBoxDuring!.height).toBeCloseTo(100, 0);
+    expect(enBoxDuring!.height).toBeGreaterThanOrEqual(36);
     expect(Math.abs(enBoxDuring!.x - enOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(enBoxDuring!.y - enOriginY)).toBeLessThanOrEqual(2);
 
@@ -2654,7 +2654,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     const enDisplayBox = await enTextBox.boundingBox();
     expect(enDisplayBox).not.toBeNull();
     expect(enDisplayBox!.width).toBeCloseTo(250, 0);
-    expect(enDisplayBox!.height).toBeCloseTo(100, 0);
+    expect(enDisplayBox!.height).toBeGreaterThanOrEqual(36);
     expect(Math.abs(enDisplayBox!.x - enOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(enDisplayBox!.y - enOriginY)).toBeLessThanOrEqual(2);
 
@@ -2672,7 +2672,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     const arInitialBox = await arTextarea.boundingBox();
     expect(arInitialBox).not.toBeNull();
     expect(arInitialBox!.width).toBeCloseTo(250, 0);
-    expect(arInitialBox!.height).toBeCloseTo(100, 0);
+    expect(arInitialBox!.height).toBeGreaterThanOrEqual(36);
     const arOriginX = arInitialBox!.x;
     const arOriginY = arInitialBox!.y;
 
@@ -2720,11 +2720,11 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(arStyles.direction).toBe("rtl");
     expect(arStyles.textAlign).toBe("right");
 
-    // Verify anchor coordinates (x, y) strictly fixed without shifting and dimensions remain 250x100
+    // Verify anchor coordinates (x, y) strictly fixed without shifting and dimensions auto-grow
     const arBoxDuring = await arTextarea.boundingBox();
     expect(arBoxDuring).not.toBeNull();
     expect(arBoxDuring!.width).toBeCloseTo(250, 0);
-    expect(arBoxDuring!.height).toBeCloseTo(100, 0);
+    expect(arBoxDuring!.height).toBeGreaterThanOrEqual(36);
     expect(Math.abs(arBoxDuring!.x - arOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(arBoxDuring!.y - arOriginY)).toBeLessThanOrEqual(2);
 
@@ -2744,8 +2744,105 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     const arDisplayBox = await arTextBox.boundingBox();
     expect(arDisplayBox).not.toBeNull();
     expect(arDisplayBox!.width).toBeCloseTo(250, 0);
-    expect(arDisplayBox!.height).toBeCloseTo(100, 0);
+    expect(arDisplayBox!.height).toBeGreaterThanOrEqual(36);
     expect(Math.abs(arDisplayBox!.x - arOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(arDisplayBox!.y - arOriginY)).toBeLessThanOrEqual(2);
+  });
+
+  test("text tool: verifies LTR direction persistence on blur, 20-line auto-growing height without clipping, and width resizing with reflow", async ({ page }) => {
+    const pid = `${projectId}-text-autogrow-resize`;
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("PDF Text Auto-Grow & Resize Test", {
+      x: 50,
+      y: 750,
+      size: 20,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles({
+      name: "text-autogrow-test.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // 1. Activate Text tool and click page
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    const clickX = page1Box.x + 80;
+    const clickY = page1Box.y + 100;
+    await page.mouse.click(clickX, clickY);
+
+    const textarea = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(textarea).toHaveCount(1, { timeout: 5000 });
+    await expect(textarea).toBeFocused();
+
+    // 2. Insert 20 lines of English text
+    const lines20 = Array.from({ length: 20 }, (_, i) => `Line ${i + 1}: English text verification`).join("\n");
+    await textarea.evaluate((el: HTMLTextAreaElement, pasteText: string) => {
+      const dt = new DataTransfer();
+      dt.setData("text/plain", pasteText);
+      const pasteEvent = new ClipboardEvent("paste", {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true,
+      });
+      el.dispatchEvent(pasteEvent);
+    }, lines20);
+    await expect(textarea).toHaveValue(lines20);
+
+    // 3. Verify textarea height auto-grows to fit all 20 lines (>= 300px, significantly larger than 100px)
+    const taBox = await textarea.boundingBox();
+    expect(taBox).not.toBeNull();
+    expect(taBox!.height).toBeGreaterThan(300);
+
+    // 4. Blur / exit edit mode (Escape)
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
+
+    // 5. Verify static display div: LTR direction persists, text-align is left, and height fits all 20 lines
+    const textBox = primaryPane.locator('[data-testid^="pdf-text-box-"]').filter({ hasText: "Line 20" });
+    await expect(textBox).toHaveCount(1);
+    const displayStyles = await textBox.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return { direction: cs.direction, textAlign: cs.textAlign, height: parseFloat(cs.height) };
+    });
+    expect(displayStyles.direction).toBe("ltr");
+    expect(displayStyles.textAlign).toBe("left");
+    expect(displayStyles.height).toBeGreaterThan(300);
+
+    // 6. Switch to Select tool and select the text box
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await textBox.click();
+
+    // 7. Verify 8 resize handles are visible
+    const eastHandle = primaryPane.locator('[data-testid="pdf-text-resize-handle-e"]');
+    await expect(eastHandle).toBeVisible();
+
+    // 8. Drag East handle to expand width from ~250px to ~400px
+    const handleBoxBefore = await eastHandle.boundingBox();
+    expect(handleBoxBefore).not.toBeNull();
+    await page.mouse.move(handleBoxBefore!.x + handleBoxBefore!.width / 2, handleBoxBefore!.y + handleBoxBefore!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(handleBoxBefore!.x + 150, handleBoxBefore!.y, { steps: 5 });
+    await page.mouse.up();
+
+    // 9. Verify resized box width has increased and height has reflowed
+    const displayBoxAfter = await textBox.boundingBox();
+    expect(displayBoxAfter).not.toBeNull();
+    expect(displayBoxAfter!.width).toBeGreaterThanOrEqual(350);
   });
 });

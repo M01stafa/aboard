@@ -30,6 +30,7 @@ import {
   getAbsoluteStrokeBounds,
   scaleStrokePoints,
   detectTextDirection,
+  measureTextHeight,
 } from "./pdf-custom-ink-layer";
 
 /** Default text box styling (matches the design-system danger accent used for annotations). */
@@ -614,14 +615,16 @@ export function usePdfAnnotations({
       const texts = customTextBoxes[pageIndex] || [];
       for (const tb of texts) {
         const fontSize = tb.fontSize || 16;
+        const w = tb.width && tb.width > 0 ? tb.width : DEFAULT_TEXT_BOX_WIDTH;
+        const autoH = Math.max(36, measureTextHeight(tb.text ?? "", w, fontSize));
         res.push({
           id: tb.id,
           type: "text",
           pageIndex,
           x: tb.x,
           y: tb.y,
-          width: tb.width && tb.width > 0 ? tb.width : DEFAULT_TEXT_BOX_WIDTH,
-          height: tb.height && tb.height > 0 ? tb.height : DEFAULT_TEXT_BOX_HEIGHT,
+          width: w,
+          height: tb.height && tb.height > 0 ? tb.height : autoH,
           transform: { x: 0, y: 0 },
           text: tb.text,
           contents: tb.text,
@@ -718,7 +721,34 @@ export function usePdfAnnotations({
       newRect: { origin: { x: number; y: number }; size: { width: number; height: number } },
       type: CustomObjectType
     ) => {
-      if (type === "highlight" || type === "text") return;
+      if (type === "highlight") return;
+      if (type === "text") {
+        const safeX = Math.round(newRect.origin.x * 100) / 100;
+        const safeY = Math.round(newRect.origin.y * 100) / 100;
+        const safeW = Math.round(newRect.size.width * 100) / 100;
+        const safeH = Math.round(newRect.size.height * 100) / 100;
+        setCustomTextBoxes((prev) => {
+          const list = prev[pageIndex] || [];
+          const next = {
+            ...prev,
+            [pageIndex]: list.map((b) =>
+              b.id === id
+                ? {
+                    ...b,
+                    x: safeX,
+                    y: safeY,
+                    width: safeW,
+                    height: safeH,
+                  }
+                : b
+            ),
+          };
+          customTextBoxesRef.current = next;
+          return next;
+        });
+        triggerDebouncedSave();
+        return;
+      }
       if (type === "stroke") {
         setCustomStrokes((prev) => {
           const pageStrokes = prev[pageIndex];
@@ -996,7 +1026,12 @@ export function usePdfAnnotations({
         x: Math.round(coords.x * 100) / 100,
         y: Math.round(coords.y * 100) / 100,
         width: coords.width && coords.width > 0 ? coords.width : DEFAULT_TEXT_BOX_WIDTH,
-        height: coords.height && coords.height > 0 ? coords.height : DEFAULT_TEXT_BOX_HEIGHT,
+        height:
+          coords.height && coords.height > 0
+            ? coords.height
+            : coords.text
+            ? Math.max(36, measureTextHeight(coords.text, coords.width || DEFAULT_TEXT_BOX_WIDTH, coords.fontSize || DEFAULT_TEXT_FONT_SIZE))
+            : 36,
         text: coords.text ?? "",
         fontSize: coords.fontSize ?? DEFAULT_TEXT_FONT_SIZE,
         color: coords.color ?? DEFAULT_TEXT_COLOR,
@@ -1027,13 +1062,23 @@ export function usePdfAnnotations({
   );
 
   const handleUpdateText = useCallback(
-    (pageIndex: number, id: string, newText: string) => {
-      const dir = detectTextDirection(newText);
+    (pageIndex: number, id: string, newText: string, newDirection?: "ltr" | "rtl") => {
+      const dir = newDirection ?? detectTextDirection(newText);
       setCustomTextBoxes((prev) => {
         const list = prev[pageIndex] || [];
         const next = {
           ...prev,
-          [pageIndex]: list.map((b) => (b.id === id ? { ...b, text: newText, direction: dir } : b)),
+          [pageIndex]: list.map((b) => {
+            if (b.id !== id) return b;
+            const w = b.width && b.width > 0 ? b.width : DEFAULT_TEXT_BOX_WIDTH;
+            const h = measureTextHeight(newText, w, b.fontSize || 16);
+            return {
+              ...b,
+              text: newText,
+              direction: dir,
+              height: Math.max(b.height || 36, h),
+            };
+          }),
         };
         customTextBoxesRef.current = next;
         return next;

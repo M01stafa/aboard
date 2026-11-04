@@ -444,11 +444,11 @@ describe("PDF Text Tool (custom text boxes)", () => {
       textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
     });
 
-    // Check rendered objects from hook: fixed to 250x100
+    // Check rendered objects from hook: auto-grow height
     const objects = hookRef.getObjectsForPage(0);
     expect(objects.length).toBe(1);
     expect(objects[0].width).toBe(250);
-    expect(objects[0].height).toBe(100);
+    expect(objects[0].height).toBeGreaterThanOrEqual(Math.floor(16 * 1.4 * 3));
 
     // Verify rendered div has pre-wrap and displays all lines properly inside fixed container
     const div = container.querySelector('[data-testid^="pdf-text-box-"]') as HTMLElement | null;
@@ -515,7 +515,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(handleUpdateText).toHaveBeenCalledWith(0, "text-1", "Updated Text");
   });
 
-  it("selected text shows only the dashed bbox: no resize handles and no rotate icon", () => {
+  it("selected text shows the dashed bbox with resize handles", () => {
     act(() => {
       root.render(
         <PdfCustomInkLayer
@@ -533,8 +533,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
     });
 
     expect(container.querySelector('[data-testid="pdf-text-bbox"]')).not.toBeNull();
-    expect(container.querySelectorAll("[data-resize-handle]").length).toBe(0);
-    expect(container.querySelectorAll('[data-testid^="pdf-text-resize-handle-"]').length).toBe(0);
+    expect(container.querySelectorAll('[data-testid^="pdf-text-resize-handle-"]').length).toBe(8);
   });
 
   it("selection bounding box hugs all lines of multiline text", () => {
@@ -672,9 +671,12 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(hookRef.customTextBoxes[0][0].y).toBe(66);
 
     act(() => {
-      hookRef.handleResizeObject(0, id, { origin: { x: 0, y: 0 }, size: { width: 500, height: 500 } }, "text");
+      hookRef.handleResizeObject(0, id, { origin: { x: 70, y: 80 }, size: { width: 300, height: 120 } }, "text");
     });
-    expect(hookRef.customTextBoxes[0][0].x).toBeCloseTo(55.56, 2);
+    expect(hookRef.customTextBoxes[0][0].x).toBe(70);
+    expect(hookRef.customTextBoxes[0][0].y).toBe(80);
+    expect(hookRef.customTextBoxes[0][0].width).toBe(300);
+    expect(hookRef.customTextBoxes[0][0].height).toBe(120);
     expect(hookRef.customTextBoxes[0][0].fontSize).toBe(16);
 
     expect(mockCreateAnnotation).not.toHaveBeenCalled();
@@ -708,7 +710,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(objects[0].x).toBe(72);
     expect(objects[0].y).toBe(144);
     expect(objects[0].width).toBe(250);
-    expect(objects[0].height).toBe(100);
+    expect(objects[0].height).toBeGreaterThanOrEqual(36);
     mockGetAnnotations.mockReturnValue([]);
   });
 
@@ -812,43 +814,31 @@ describe("PDF Text Tool (custom text boxes)", () => {
   });
 
   it("pasting plain text with CRLF (\\r\\n) normalizes to \\n and preserves all newlines", () => {
-    const handleUpdateText = vi.fn();
     act(() => {
-      root.render(
-        <PdfCustomInkLayer
-          pageIndex={0}
-          pageWidth={612}
-          pageHeight={792}
-          isActive={false}
-          isSelectMode={true}
-          strokes={[]}
-          onAddStroke={vi.fn()}
-          onUpdateText={handleUpdateText}
-          objects={[sampleTextObject]}
-        />
+      root.render(<Harness />);
+    });
+    act(() => {
+      hookRef.handleSelectTool("text");
+    });
+    const svg = container.querySelector("svg")!;
+    mockSvgRect(svg);
+    act(() => {
+      svg.dispatchEvent(
+        new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
       );
     });
-
-    const box = container.querySelector('[data-testid="pdf-text-box-text-1"]')!;
-    act(() => {
-      box.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
-    });
-    const textarea = container.querySelector('[data-testid="pdf-text-input-text-1"]') as HTMLTextAreaElement;
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
     expect(textarea).not.toBeNull();
-
-    // Select all existing text to replace with paste
-    textarea.selectionStart = 0;
-    textarea.selectionEnd = textarea.value.length;
 
     const crlfText = "First line\r\nSecond line\r\nThird line";
     const pasteEv = dispatchPaste(textarea, crlfText);
 
     expect(pasteEv.defaultPrevented).toBe(true);
-    expect(handleUpdateText).toHaveBeenCalledWith(0, "text-1", "First line\nSecond line\nThird line");
+    expect(hookRef.customTextBoxes[0][0].text).toBe("First line\nSecond line\nThird line");
     expect(textarea.value).toBe("First line\nSecond line\nThird line");
     expect(textarea.selectionStart).toBe("First line\nSecond line\nThird line".length);
     expect(textarea.selectionEnd).toBe("First line\nSecond line\nThird line".length);
-    const expectedMinHeight = 16 * 1.4 * 3 + 18;
+    const expectedMinHeight = Math.floor(16 * 1.4 * 3 + 18);
     expect(parseFloat(textarea.style.height)).toBeGreaterThanOrEqual(expectedMinHeight);
   });
 
@@ -882,7 +872,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(textarea.value).toBe(expectedResult);
     expect(textarea.selectionStart).toBe(8 + multilineText.length);
     expect(textarea.selectionEnd).toBe(8 + multilineText.length);
-    const expectedMinHeight = 16 * 1.4 * 3 + 18;
+    const expectedMinHeight = Math.floor(16 * 1.4 * 3 + 18);
     expect(parseFloat(textarea.style.height)).toBeGreaterThanOrEqual(expectedMinHeight);
   });
 
@@ -923,18 +913,17 @@ describe("PDF Text Tool (custom text boxes)", () => {
       const longText = "A".repeat(300);
       typeInto(textarea, longText);
 
-      // Verify styling properties for wrapping and fixed size (no crawl)
+      // Verify styling properties for wrapping and auto-growing height (no crawl)
       expect(textarea.style.width).toBe("100%");
-      expect(textarea.style.height).toBe("100%");
+      expect(parseFloat(textarea.style.height || "0")).toBeGreaterThanOrEqual(36);
       expect(textarea.style.resize).toBe("none");
-      expect(textarea.style.overflow).toBe("hidden");
       expect(textarea.style.whiteSpace).toBe("pre-wrap");
       expect(textarea.style.wordBreak).toBe("break-word");
       expect(textarea.style.overflowWrap).toBe("break-word");
 
-      // Verify foreignObject dimensions are fixed 250x100
+      // Verify foreignObject dimensions
       expect(parseFloat(fo?.getAttribute("width") || "0")).toBe(250);
-      expect(parseFloat(fo?.getAttribute("height") || "0")).toBe(100);
+      expect(parseFloat(fo?.getAttribute("height") || "0")).toBeGreaterThanOrEqual(36);
 
       // Verify the foreignObject origin remains strictly fixed in place
       const finalOriginX = parseFloat(fo?.getAttribute("x") || "0");
@@ -943,7 +932,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
       expect(finalOriginY).toBe(initialOriginY);
     });
 
-    it("display div applies word-break, pre-wrap, overflow hidden and selection bbox matches fixed dimensions", () => {
+    it("display div applies word-break, pre-wrap, and selection bbox matches auto-grown dimensions", () => {
       const longText = "B".repeat(300);
       const longTextObject = {
         id: "text-long-1",
@@ -979,7 +968,6 @@ describe("PDF Text Tool (custom text boxes)", () => {
       expect(displayDiv).not.toBeNull();
       expect(displayDiv?.style.width).toBe("100%");
       expect(displayDiv?.style.height).toBe("100%");
-      expect(displayDiv?.style.overflow).toBe("hidden");
       expect(displayDiv?.style.whiteSpace).toBe("pre-wrap");
       expect(displayDiv?.style.wordBreak).toBe("break-word");
       expect(displayDiv?.style.overflowWrap).toBe("break-word");
@@ -990,12 +978,12 @@ describe("PDF Text Tool (custom text boxes)", () => {
       const bboxRect = bboxGroup?.querySelector("rect");
       expect(bboxRect).not.toBeNull();
 
-      // Bounding box matches fixed dimensions (250x100)
+      // Bounding box matches width (250) and auto-grown height
       const bboxWidth = parseFloat(bboxRect?.getAttribute("width") || "0");
       expect(bboxWidth).toBe(250);
 
       const bboxHeight = parseFloat(bboxRect?.getAttribute("height") || "0");
-      expect(bboxHeight).toBe(100);
+      expect(bboxHeight).toBeGreaterThanOrEqual(36);
 
       // Bounding box origin (x, y) must strictly match the object's origin
       const bboxX = parseFloat(bboxRect?.getAttribute("x") || "0");
