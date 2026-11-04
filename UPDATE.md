@@ -2731,3 +2731,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** Complete browser OAuth authentication upon Antigravity restart.
 
 
+## 2026-11-05 — Verify Remote Supabase Database via Supabase CLI
+**Request:** Check Supabase CLI setup, verify remote linked project (`fmlpkcbpoziwkjuxuyaf`), compare local vs remote migrations, check `0001_init.sql` status, generate TypeScript types, and document verification.
+**Changes:**
+- Verified `supabase.cmd -v` (version 2.120.0 installed).
+- Verified `supabase/.temp/project-ref` links to `fmlpkcbpoziwkjuxuyaf`.
+- Executed `supabase migration list`: confirmed `0001_init.sql` is present and applied both locally and remotely (`{"migrations":[{"local":"0001","remote":"0001","time":"0001"}]}`).
+- Executed `supabase gen types typescript --linked`: verified all schema tables (`google_drive_links`, `oauth_states`, `profiles`, `projects`, `rate_limits`) and RPC functions (`check_rate_limit`, `get_drive_status`) are present and live on the remote database.
+- Updated `docs/PROGRESS.md`: recorded CLI migration verification in decisions log and cleared migration uncertainty.
+**Checks:**
+- `supabase.cmd migration list`: PASS (`local: 0001`, `remote: 0001` in sync).
+- `supabase.cmd gen types typescript --linked`: PASS (generated complete schema types).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+**Related:** SEC-1, SEC-3, SEC-4, Task 13
+**Open:** none.
+
+
+

@@ -11,10 +11,10 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | 10 — UI redesign (Completed) |
-| Current task | Docker infrastructure purge & GitHub push |
-| Last updated | 2026-11-04 |
+| Current task | Verify remote Supabase schema via Supabase CLI |
+| Last updated | 2026-11-05 |
 | Next step | Task 44 — Publish the Legal Pages and Implement Account Deletion |
-| Blockers | None (carried open items tracked below) |
+| Blockers | None (Remote Supabase database migration status verified in sync via Supabase CLI; 0001_init.sql confirmed applied) |
 
 ## Phases
 
@@ -136,6 +136,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-21 | Task 42: Built custom CircuitToolbar adhering to DESIGN.md tokens and 8-point grid with Run/Pause toggle, Reset, Speed presets (Slow 1µs, Normal 5µs, Fast 25µs), Component Palette mega-menu (13 components/tools via runCommand with GWT class mapping), and Advanced Menu toggle cycle (export -> hide custom toolbar -> reload iframe with native menu -> import, and reverse to restore custom toolbar) with state preservation (CIRC-5). |
 | 2026-10-21 | Task 43: Redesigned PDF toolbar into 3 cohesive control groups (Navigation & View, Annotation Tools & History, Document Actions & Popovers); unified all interface chrome (app shell, PDF, circuit toolbar, dialogs, banners) into DESIGN.md tokens; verified strict 8-point grid compliance across all modules. Phase 10 completed. |
 | 2026-11-04 | Permanently dropped Phase 9 (Stirling-PDF & Gateway); purged all Docker files, Caddy, and gateway code from repository to keep the app 100% client-side. |
+| 2026-11-05 | Verified remote Supabase database (`fmlpkcbpoziwkjuxuyaf`) schema via Supabase CLI (`supabase migration list`); confirmed `0001_init.sql` is applied remotely and in sync with local schema. |
 
 ## Lessons and corrections
 
