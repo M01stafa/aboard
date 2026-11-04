@@ -272,4 +272,34 @@ describe("annotation-storage (PDF-4)", () => {
     const legacy = await serializeAnnotations(projectId, pdfHash, [], mockProjectService);
     expect(extractCustomTextBoxes(legacy)).toEqual({});
     expect(await deserializeAnnotations(projectId, json, mockProjectService)).toEqual([]);
-  });});
+  });
+
+  it("extracts width and height on custom text boxes if present", async () => {
+    const mockProjectService = {
+      putFile: vi.fn(),
+      getFile: vi.fn(),
+    } as unknown as ProjectService;
+
+    const boxesWithSize: Record<number, CustomTextBox[]> = {
+      0: [
+        {
+          id: "text-locked-1",
+          pageIndex: 0,
+          x: 120,
+          y: 200,
+          width: 280,
+          height: 64,
+          text: "Three lines of text\nthat are locked\nto 280px width",
+          fontSize: 16,
+          color: "#E44234",
+        },
+      ],
+    };
+
+    const json = await serializeAnnotations(projectId, pdfHash, [], mockProjectService, {}, {}, boxesWithSize);
+    const extracted = extractCustomTextBoxes(json);
+    expect(extracted[0]).toHaveLength(1);
+    expect(extracted[0][0].width).toBe(280);
+    expect(extracted[0][0].height).toBe(64);
+  });
+});

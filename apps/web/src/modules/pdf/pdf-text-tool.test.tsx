@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React, { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { PdfCustomInkLayer, getMaxTextWidth } from "./pdf-custom-ink-layer";
+import { PdfCustomInkLayer, getMaxTextWidth, detectTextDirection } from "./pdf-custom-ink-layer";
 import { usePdfAnnotations, type UsePdfAnnotationsResult } from "./use-pdf-annotations";
 import { PdfFloatingToolbar } from "./pdf-floating-toolbar";
 import { wrapLineForPdf } from "./page-operations";
@@ -76,6 +76,7 @@ function Harness() {
       onSelectStrokes={h.setSelectedStrokeIds}
       onAddText={h.handleAddText}
       onUpdateText={h.handleUpdateText}
+      onUpdateTextBoxSize={h.handleUpdateTextBoxSize}
       onDeleteText={h.handleDeleteText}
       onMoveObject={h.handleMoveObject}
       objects={h.getObjectsForPage(0)}
@@ -184,8 +185,8 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(box).not.toBeNull();
     expect(box?.tagName).toBe("DIV");
     expect(box?.textContent).toBe("Hello World");
-    // Ensure dir="auto" is avoided to prevent Chromium foreignObject rendering blocks
-    expect(box?.getAttribute("dir")).not.toBe("auto");
+    expect(box?.getAttribute("dir")).toBe("auto");
+    expect(box?.style.unicodeBidi).toBe("plaintext");
     expect(box?.style.whiteSpace).toBe("pre-wrap");
     expect(container.querySelector("textarea")).toBeNull();
     const withText = Array.from(container.querySelectorAll("*")).filter(
@@ -509,7 +510,8 @@ describe("PDF Text Tool (custom text boxes)", () => {
     const textarea = container.querySelector('[data-testid="pdf-text-input-text-1"]') as HTMLTextAreaElement;
     expect(textarea).not.toBeNull();
     expect(textarea.value).toBe("Hello World");
-    expect(textarea.getAttribute("dir")).not.toBe("auto");
+    expect(textarea.getAttribute("dir")).toBe("auto");
+    expect(textarea.style.unicodeBidi).toBe("plaintext");
     expect(textarea.style.whiteSpace).toBe("pre-wrap");
     typeInto(textarea, "Updated Text");
     expect(handleUpdateText).toHaveBeenCalledWith(0, "text-1", "Updated Text");
@@ -791,8 +793,12 @@ describe("PDF Text Tool (custom text boxes)", () => {
     const fo = container.querySelector("foreignObject") as SVGForeignObjectElement;
     expect(fo.style.direction).toBe("rtl");
     expect(fo.style.textAlign).toBe("right");
+    expect(fo.getAttribute("dir")).toBe("auto");
+    expect(fo.style.unicodeBidi).toBe("plaintext");
     expect(textarea.style.direction).toBe("rtl");
     expect(textarea.style.textAlign).toBe("right");
+    expect(textarea.getAttribute("dir")).toBe("auto");
+    expect(textarea.style.unicodeBidi).toBe("plaintext");
 
     // Exit edit mode to test display div
     act(() => {
@@ -803,7 +809,8 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(div).not.toBeNull();
     expect(div.style.direction).toBe("rtl");
     expect(div.style.textAlign).toBe("right");
-    expect(div.getAttribute("dir")).toBe("rtl");
+    expect(div.getAttribute("dir")).toBe("auto");
+    expect(div.style.unicodeBidi).toBe("plaintext");
   });
 
   it("pasting plain text with CRLF (\\r\\n) normalizes to \\n and preserves all newlines", () => {
@@ -1028,6 +1035,415 @@ describe("PDF Text Tool (custom text boxes)", () => {
         expect(mockFont.widthOfTextAtSize(line, 16)).toBeLessThanOrEqual(250);
       }
       expect(wrapped.join(" ")).toBe(sentence);
+    });
+  });
+
+  describe("Text Direction - RTL/LTR & Bidi handling", () => {
+    it("detectTextDirection correctly classifies pure English, pure Arabic, and mixed text based on first strong directional character", () => {
+      // Pure English
+      expect(detectTextDirection("Hello World")).toBe("ltr");
+      expect(detectTextDirection("Nusuq platform")).toBe("ltr");
+      // Pure Arabic
+      expect(detectTextDirection("مرحبا بالعالم")).toBe("rtl");
+      expect(detectTextDirection("منصة نسق")).toBe("rtl");
+      // Mixed text starting with English
+      expect(detectTextDirection("Aboard أداة")).toBe("ltr");
+      expect(detectTextDirection("Alpha Board منصة العمل")).toBe("ltr");
+      // Mixed text starting with Arabic
+      expect(detectTextDirection("أداة Aboard")).toBe("rtl");
+      expect(detectTextDirection("منصة Alpha Board")).toBe("rtl");
+      // Leading numbers, symbols, spaces followed by directional characters
+      expect(detectTextDirection("  123. Hello")).toBe("ltr");
+      expect(detectTextDirection("  123. مرحباً")).toBe("rtl");
+      // Fallback for empty or non-directional text
+      expect(detectTextDirection("")).toBe("ltr");
+      expect(detectTextDirection("123 456 !!!")).toBe("ltr");
+    });
+
+    it("verifies pure English text resolves to direction: ltr and textAlign: left in both textarea and display div", () => {
+      const englishTextObject = {
+        id: "text-en",
+        type: "text" as const,
+        pageIndex: 0,
+        x: 50,
+        y: 80,
+        width: 120,
+        height: 30,
+        contents: "English text content",
+        text: "English text content",
+        fontSize: 16,
+        color: "#1A63A0",
+      };
+
+      act(() => {
+        root.render(
+          <PdfCustomInkLayer
+            pageIndex={0}
+            pageWidth={612}
+            pageHeight={792}
+            isActive={false}
+            isSelectMode={true}
+            strokes={[]}
+            onAddStroke={vi.fn()}
+            objects={[englishTextObject]}
+          />
+        );
+      });
+
+      const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-en"]') as HTMLDivElement;
+      expect(displayDiv).not.toBeNull();
+      expect(displayDiv.style.direction).toBe("ltr");
+      expect(displayDiv.style.textAlign).toBe("left");
+      expect(displayDiv.getAttribute("dir")).toBe("auto");
+      expect(displayDiv.style.unicodeBidi).toBe("plaintext");
+
+      const fo = displayDiv.closest("foreignObject");
+      expect(fo?.style.direction).toBe("ltr");
+      expect(fo?.style.textAlign).toBe("left");
+      expect(fo?.getAttribute("dir")).toBe("auto");
+      expect(fo?.style.unicodeBidi).toBe("plaintext");
+
+      act(() => {
+        displayDiv.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+      });
+
+      const textarea = container.querySelector('[data-testid="pdf-text-input-text-en"]') as HTMLTextAreaElement;
+      expect(textarea).not.toBeNull();
+      expect(textarea.style.direction).toBe("ltr");
+      expect(textarea.style.textAlign).toBe("left");
+      expect(textarea.getAttribute("dir")).toBe("auto");
+      expect(textarea.style.unicodeBidi).toBe("plaintext");
+    });
+
+    it("verifies pure Arabic text resolves to direction: rtl and textAlign: right in both textarea and display div", () => {
+      const arabicTextObject = {
+        id: "text-ar",
+        type: "text" as const,
+        pageIndex: 0,
+        x: 50,
+        y: 80,
+        width: 120,
+        height: 30,
+        contents: "نص عربي خالص",
+        text: "نص عربي خالص",
+        fontSize: 16,
+        color: "#E44234",
+      };
+
+      act(() => {
+        root.render(
+          <PdfCustomInkLayer
+            pageIndex={0}
+            pageWidth={612}
+            pageHeight={792}
+            isActive={false}
+            isSelectMode={true}
+            strokes={[]}
+            onAddStroke={vi.fn()}
+            objects={[arabicTextObject]}
+          />
+        );
+      });
+
+      const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-ar"]') as HTMLDivElement;
+      expect(displayDiv).not.toBeNull();
+      expect(displayDiv.style.direction).toBe("rtl");
+      expect(displayDiv.style.textAlign).toBe("right");
+      expect(displayDiv.getAttribute("dir")).toBe("auto");
+      expect(displayDiv.style.unicodeBidi).toBe("plaintext");
+
+      const fo = displayDiv.closest("foreignObject");
+      expect(fo?.style.direction).toBe("rtl");
+      expect(fo?.style.textAlign).toBe("right");
+      expect(fo?.getAttribute("dir")).toBe("auto");
+      expect(fo?.style.unicodeBidi).toBe("plaintext");
+
+      act(() => {
+        displayDiv.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+      });
+
+      const textarea = container.querySelector('[data-testid="pdf-text-input-text-ar"]') as HTMLTextAreaElement;
+      expect(textarea).not.toBeNull();
+      expect(textarea.style.direction).toBe("rtl");
+      expect(textarea.style.textAlign).toBe("right");
+      expect(textarea.getAttribute("dir")).toBe("auto");
+      expect(textarea.style.unicodeBidi).toBe("plaintext");
+    });
+
+    it("verifies mixed text starting with English (Aboard أداة) resolves to direction: ltr, textAlign: left, with dir=auto and unicodeBidi: plaintext", () => {
+      const mixedEnObject = {
+        id: "text-mixed-en",
+        type: "text" as const,
+        pageIndex: 0,
+        x: 60,
+        y: 100,
+        width: 150,
+        height: 32,
+        contents: "Aboard أداة",
+        text: "Aboard أداة",
+        fontSize: 16,
+        color: "#1A63A0",
+      };
+
+      act(() => {
+        root.render(
+          <PdfCustomInkLayer
+            pageIndex={0}
+            pageWidth={612}
+            pageHeight={792}
+            isActive={false}
+            isSelectMode={true}
+            strokes={[]}
+            onAddStroke={vi.fn()}
+            objects={[mixedEnObject]}
+          />
+        );
+      });
+
+      const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-mixed-en"]') as HTMLDivElement;
+      expect(displayDiv).not.toBeNull();
+      expect(displayDiv.style.direction).toBe("ltr");
+      expect(displayDiv.style.textAlign).toBe("left");
+      expect(displayDiv.getAttribute("dir")).toBe("auto");
+      expect(displayDiv.style.unicodeBidi).toBe("plaintext");
+
+      const fo = displayDiv.closest("foreignObject");
+      expect(fo?.style.direction).toBe("ltr");
+      expect(fo?.style.textAlign).toBe("left");
+      expect(fo?.getAttribute("dir")).toBe("auto");
+      expect(fo?.style.unicodeBidi).toBe("plaintext");
+
+      act(() => {
+        displayDiv.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+      });
+
+      const textarea = container.querySelector('[data-testid="pdf-text-input-text-mixed-en"]') as HTMLTextAreaElement;
+      expect(textarea).not.toBeNull();
+      expect(textarea.style.direction).toBe("ltr");
+      expect(textarea.style.textAlign).toBe("left");
+      expect(textarea.getAttribute("dir")).toBe("auto");
+      expect(textarea.style.unicodeBidi).toBe("plaintext");
+    });
+
+    it("verifies mixed text starting with Arabic (أداة Aboard) resolves to direction: rtl, textAlign: right, with dir=auto and unicodeBidi: plaintext", () => {
+      const mixedArObject = {
+        id: "text-mixed-ar",
+        type: "text" as const,
+        pageIndex: 0,
+        x: 60,
+        y: 100,
+        width: 150,
+        height: 32,
+        contents: "أداة Aboard",
+        text: "أداة Aboard",
+        fontSize: 16,
+        color: "#E44234",
+      };
+
+      act(() => {
+        root.render(
+          <PdfCustomInkLayer
+            pageIndex={0}
+            pageWidth={612}
+            pageHeight={792}
+            isActive={false}
+            isSelectMode={true}
+            strokes={[]}
+            onAddStroke={vi.fn()}
+            objects={[mixedArObject]}
+          />
+        );
+      });
+
+      const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-mixed-ar"]') as HTMLDivElement;
+      expect(displayDiv).not.toBeNull();
+      expect(displayDiv.style.direction).toBe("rtl");
+      expect(displayDiv.style.textAlign).toBe("right");
+      expect(displayDiv.getAttribute("dir")).toBe("auto");
+      expect(displayDiv.style.unicodeBidi).toBe("plaintext");
+
+      const fo = displayDiv.closest("foreignObject");
+      expect(fo?.style.direction).toBe("rtl");
+      expect(fo?.style.textAlign).toBe("right");
+      expect(fo?.getAttribute("dir")).toBe("auto");
+      expect(fo?.style.unicodeBidi).toBe("plaintext");
+
+      act(() => {
+        displayDiv.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+      });
+
+      const textarea = container.querySelector('[data-testid="pdf-text-input-text-mixed-ar"]') as HTMLTextAreaElement;
+      expect(textarea).not.toBeNull();
+      expect(textarea.style.direction).toBe("rtl");
+      expect(textarea.style.textAlign).toBe("right");
+      expect(textarea.getAttribute("dir")).toBe("auto");
+      expect(textarea.style.unicodeBidi).toBe("plaintext");
+    });
+  });
+
+  describe("Fix Resizing on Drag for PDF Text Box", () => {
+    it("handleUpdateTextBoxSize updates width and height on custom text box, and getObjectsForPage preserves them", () => {
+      act(() => {
+        root.render(<Harness />);
+      });
+      let textId = "";
+      act(() => {
+        textId = hookRef.handleAddText(0, { x: 50, y: 50, text: "Line 1\nLine 2\nLine 3" });
+      });
+      act(() => {
+        hookRef.handleUpdateTextBoxSize(0, textId, { width: 220, height: 68 });
+      });
+      expect(hookRef.customTextBoxes[0].find((b) => b.id === textId)?.width).toBe(220);
+      expect(hookRef.customTextBoxes[0].find((b) => b.id === textId)?.height).toBe(68);
+
+      const pageObjs = hookRef.getObjectsForPage(0);
+      const textObj = pageObjs.find((o) => o.id === textId);
+      expect(textObj?.width).toBe(220);
+      expect(textObj?.height).toBe(68);
+
+      // Moving the object strictly updates x and y and preserves locked width and height
+      act(() => {
+        hookRef.handleMoveObject(0, textId, { x: 300, y: 150 }, "text");
+      });
+      const movedBox = hookRef.customTextBoxes[0].find((b) => b.id === textId);
+      expect(movedBox?.x).toBe(300);
+      expect(movedBox?.y).toBe(150);
+      expect(movedBox?.width).toBe(220);
+      expect(movedBox?.height).toBe(68);
+
+      const movedObj = hookRef.getObjectsForPage(0).find((o) => o.id === textId);
+      expect(movedObj?.x).toBe(300);
+      expect(movedObj?.y).toBe(150);
+      expect(movedObj?.width).toBe(220);
+      expect(movedObj?.height).toBe(68);
+    });
+
+    it("text box maintains exact width and height before, during, and after drag", () => {
+      const onMoveObject = vi.fn();
+      const textObject = {
+        id: "text-drag-test",
+        type: "text" as const,
+        pageIndex: 0,
+        x: 60,
+        y: 80,
+        width: 250,
+        height: 68,
+        contents: "Line 1\nLine 2\nLine 3",
+        text: "Line 1\nLine 2\nLine 3",
+        fontSize: 16,
+        color: "#E44234",
+      };
+
+      act(() => {
+        root.render(
+          <PdfCustomInkLayer
+            pageIndex={0}
+            pageWidth={612}
+            pageHeight={792}
+            isActive={false}
+            isSelectMode={true}
+            selectedStrokeIds={["text-drag-test"]}
+            strokes={[]}
+            onAddStroke={vi.fn()}
+            onMoveObject={onMoveObject}
+            objects={[textObject]}
+          />
+        );
+      });
+
+      const svg = container.querySelector("svg")!;
+      mockSvgRect(svg);
+      const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-drag-test"]') as HTMLDivElement;
+      const bboxRect = container.querySelector('[data-testid="pdf-text-bbox"] rect') as SVGRectElement;
+
+      // 1. Before drag: display div and bbox have identical width and height
+      expect(displayDiv.style.width).toBe("250px");
+      expect(displayDiv.style.height).toBe("68px");
+      expect(parseFloat(bboxRect.getAttribute("width") || "0")).toBe(250);
+      expect(parseFloat(bboxRect.getAttribute("height") || "0")).toBe(68);
+
+      // 2. Start drag: pointerdown
+      act(() => {
+        displayDiv.dispatchEvent(
+          new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+        );
+      });
+
+      // 3. During drag: pointermove across page (e.g. moved horizontally by 200px)
+      act(() => {
+        svg.dispatchEvent(new PointerEvent("pointermove", { clientX: 900, clientY: 950, bubbles: true }));
+      });
+
+      // Bounding box and display box width & height MUST remain strictly 250 and 68
+      const displayDuring = container.querySelector('[data-testid="pdf-text-box-text-drag-test"]') as HTMLDivElement;
+      const bboxDuring = container.querySelector('[data-testid="pdf-text-bbox"] rect') as SVGRectElement;
+      expect(displayDuring.style.width).toBe("250px");
+      expect(displayDuring.style.height).toBe("68px");
+      expect(parseFloat(bboxDuring.getAttribute("width") || "0")).toBe(250);
+      expect(parseFloat(bboxDuring.getAttribute("height") || "0")).toBe(68);
+
+      // 4. End drag: pointerup commits movement
+      act(() => {
+        svg.dispatchEvent(new PointerEvent("pointerup", { clientX: 900, clientY: 950, bubbles: true }));
+      });
+      expect(onMoveObject).toHaveBeenCalledTimes(1);
+    });
+
+    it("locks computed width and height via onUpdateTextBoxSize on blur", () => {
+      const onUpdateTextBoxSize = vi.fn();
+      const textObject = {
+        id: "text-blur-test",
+        type: "text" as const,
+        pageIndex: 0,
+        x: 60,
+        y: 80,
+        width: 0,
+        height: 0,
+        contents: "Some text",
+        text: "Some text",
+        fontSize: 16,
+        color: "#E44234",
+      };
+
+      act(() => {
+        root.render(
+          <PdfCustomInkLayer
+            pageIndex={0}
+            pageWidth={612}
+            pageHeight={792}
+            isActive={false}
+            isSelectMode={true}
+            strokes={[]}
+            onAddStroke={vi.fn()}
+            onUpdateTextBoxSize={onUpdateTextBoxSize}
+            objects={[textObject]}
+          />
+        );
+      });
+
+      const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-blur-test"]')!;
+      act(() => {
+        displayDiv.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+      });
+
+      const textarea = container.querySelector('[data-testid="pdf-text-input-text-blur-test"]') as HTMLTextAreaElement;
+      expect(textarea).not.toBeNull();
+
+      act(() => {
+        textarea.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      });
+
+      expect(onUpdateTextBoxSize).toHaveBeenCalledWith(
+        0,
+        "text-blur-test",
+        expect.objectContaining({
+          width: expect.any(Number),
+          height: expect.any(Number),
+        })
+      );
+      const call = onUpdateTextBoxSize.mock.calls[0];
+      expect(call[2].width).toBeGreaterThanOrEqual(64);
+      expect(call[2].height).toBeGreaterThan(0);
     });
   });
 });

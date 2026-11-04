@@ -2274,10 +2274,10 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(styles.wordBreak).toBe("break-word");
     expect(styles.overflowWrap).toBe("break-word");
 
-    // Verify display box height accommodates all 3 lines
+    // Verify display box height accommodates all 3 lines (3 lines * 22.4px = 67.2px >= 60px)
     const displayBox = await textBox.boundingBox();
     expect(displayBox).not.toBeNull();
-    expect(displayBox!.height).toBeGreaterThanOrEqual(initialHeight + 30);
+    expect(displayBox!.height).toBeGreaterThanOrEqual(60);
 
     // Verify origin stays anchored without crawl across blur
     expect(Math.abs(displayBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
@@ -2429,5 +2429,246 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     // Bounding box origin must match anchor point
     expect(Math.abs(bboxRect!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(bboxRect!.y - initialOriginY)).toBeLessThanOrEqual(2);
+  });
+
+  test("text tool: 3-line text box maintains strictly fixed width and height during and after dragging across page without re-wrapping or resizing", async ({ page }) => {
+    const pid = `${projectId}-drag-fixed`;
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("PDF Fixed Dimensions on Drag Verification", {
+      x: 50,
+      y: 750,
+      size: 20,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles({
+      name: "fixed-drag-test.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // 1. Activate Text tool and create text box
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    const clickX = page1Box.x + 80;
+    const clickY = page1Box.y + 180;
+    await page.mouse.click(clickX, clickY);
+
+    const textarea = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(textarea).toHaveCount(1, { timeout: 5000 });
+    await expect(textarea).toBeFocused();
+
+    // 2. Paste a 3-line wrapped text
+    const threeLineText =
+      "Nusuq luxury brand specializes in formal neckties,\nhandcrafted bespoke silk bowties and cufflinks,\ntailored for modern gentlemen seeking elegance.";
+
+    await textarea.evaluate((el: HTMLTextAreaElement, pasteText: string) => {
+      const dt = new DataTransfer();
+      dt.setData("text/plain", pasteText);
+      const pasteEvent = new ClipboardEvent("paste", {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true,
+      });
+      el.dispatchEvent(pasteEvent);
+    }, threeLineText);
+
+    await expect(textarea).toHaveValue(threeLineText);
+
+    // 3. Exit edit mode via Escape to switch to display mode
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
+
+    const textBox = primaryPane.locator('[data-testid^="pdf-text-box-"]');
+    await expect(textBox).toHaveCount(1);
+    await expect(textBox).toBeVisible();
+    await expect(textBox).toHaveText(threeLineText);
+
+    // 4. Switch to Select tool and measure initial width and height
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await textBox.click();
+
+    const initialBox = await textBox.boundingBox();
+    expect(initialBox).not.toBeNull();
+    const initialWidth = initialBox!.width;
+    const initialHeight = initialBox!.height;
+    const initialOriginX = initialBox!.x;
+    const initialOriginY = initialBox!.y;
+
+    expect(initialWidth).toBeGreaterThan(64);
+    expect(initialHeight).toBeGreaterThanOrEqual(60);
+
+    // Verify selection bbox has matching dimensions
+    const bbox = primaryPane.locator('[data-testid="pdf-text-bbox"] rect');
+    await expect(bbox).toBeVisible({ timeout: 5000 });
+    const bboxInitial = await bbox.boundingBox();
+    expect(bboxInitial).not.toBeNull();
+    expect(Math.abs(bboxInitial!.width - initialWidth)).toBeLessThanOrEqual(2);
+    expect(Math.abs(bboxInitial!.height - initialHeight)).toBeLessThanOrEqual(2);
+
+    // 5. Drag across the page: move mouse in steps and verify dimensions remain strictly fixed during drag
+    const dragStartX = initialOriginX + initialWidth / 2;
+    const dragStartY = initialOriginY + initialHeight / 2;
+    const dragDeltaX = 140;
+    const dragDeltaY = 100;
+
+    await page.mouse.move(dragStartX, dragStartY);
+    await page.mouse.down();
+
+    for (let step = 1; step <= 5; step++) {
+      await page.mouse.move(
+        dragStartX + (dragDeltaX * step) / 5,
+        dragStartY + (dragDeltaY * step) / 5
+      );
+      // During drag: verify width and height remain strictly fixed (within 1px), without re-wrapping or resizing
+      const draggingBox = await textBox.boundingBox();
+      expect(draggingBox).not.toBeNull();
+      expect(Math.abs(draggingBox!.width - initialWidth)).toBeLessThanOrEqual(1);
+      expect(Math.abs(draggingBox!.height - initialHeight)).toBeLessThanOrEqual(1);
+    }
+
+    // 6. Release mouse to commit drag
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+
+    // 7. Verify after drag: dimensions remain strictly fixed (within 1px), position moved, content intact
+    const afterDragBox = await textBox.boundingBox();
+    expect(afterDragBox).not.toBeNull();
+    expect(Math.abs(afterDragBox!.width - initialWidth)).toBeLessThanOrEqual(1);
+    expect(Math.abs(afterDragBox!.height - initialHeight)).toBeLessThanOrEqual(1);
+    expect(Math.abs(afterDragBox!.x - (initialOriginX + dragDeltaX))).toBeLessThanOrEqual(5);
+    expect(Math.abs(afterDragBox!.y - (initialOriginY + dragDeltaY))).toBeLessThanOrEqual(5);
+
+    // Text content remains strictly identical without re-wrapping
+    await expect(textBox).toHaveText(threeLineText);
+  });
+
+  test("text tool: verifies computed direction (ltr/rtl) and text-align (left/right) for English and Arabic text", async ({ page }) => {
+    const pid = `${projectId}-text-direction`;
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("PDF Text Direction Verification", {
+      x: 50,
+      y: 750,
+      size: 20,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles({
+      name: "text-direction-test.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // --- Part A: English text direction ---
+    // 1. Activate Text tool and click page
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    const enClickX = page1Box.x + 80;
+    const enClickY = page1Box.y + 140;
+    await page.mouse.click(enClickX, enClickY);
+
+    const enTextarea = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(enTextarea).toHaveCount(1, { timeout: 5000 });
+    await expect(enTextarea).toBeFocused();
+
+    // 2. Type English text: "Nusuq luxury brand"
+    const enText = "Nusuq luxury brand";
+    await page.keyboard.type(enText, { delay: 20 });
+    await expect(enTextarea).toHaveValue(enText);
+
+    // 3. Verify computed direction is 'ltr' and text-align is 'left' in edit mode
+    const enEditStyles = await enTextarea.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return { direction: cs.direction, textAlign: cs.textAlign };
+    });
+    expect(enEditStyles.direction).toBe("ltr");
+    expect(enEditStyles.textAlign).toBe("left");
+
+    // 4. Exit edit mode via Escape and verify computed styles in display mode
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
+
+    const enTextBox = primaryPane.locator('[data-testid^="pdf-text-box-"]').filter({ hasText: "Nusuq luxury brand" });
+    await expect(enTextBox).toHaveCount(1);
+    const enDisplayStyles = await enTextBox.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return { direction: cs.direction, textAlign: cs.textAlign };
+    });
+    expect(enDisplayStyles.direction).toBe("ltr");
+    expect(enDisplayStyles.textAlign).toBe("left");
+
+    // --- Part B: Arabic text direction ---
+    // 5. Activate Text tool again and click page for Arabic text box
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    const arClickX = page1Box.x + 80;
+    const arClickY = page1Box.y + 260;
+    await page.mouse.click(arClickX, arClickY);
+
+    const arTextarea = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(arTextarea).toHaveCount(1, { timeout: 5000 });
+    await expect(arTextarea).toBeFocused();
+
+    // 6. Type Arabic text: "نُسُق علامة تجارية فاخرة"
+    const arText = "نُسُق علامة تجارية فاخرة";
+    await arTextarea.evaluate((el: HTMLTextAreaElement, pasteText: string) => {
+      const dt = new DataTransfer();
+      dt.setData("text/plain", pasteText);
+      const pasteEvent = new ClipboardEvent("paste", {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true,
+      });
+      el.dispatchEvent(pasteEvent);
+    }, arText);
+    await expect(arTextarea).toHaveValue(arText);
+
+    // 7. Verify computed direction is 'rtl' and text-align is 'right' in edit mode
+    const arEditStyles = await arTextarea.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return { direction: cs.direction, textAlign: cs.textAlign };
+    });
+    expect(arEditStyles.direction).toBe("rtl");
+    expect(arEditStyles.textAlign).toBe("right");
+
+    // 8. Exit edit mode via Escape and verify computed styles in display mode
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
+
+    const arTextBox = primaryPane.locator('[data-testid^="pdf-text-box-"]').filter({ hasText: "نُسُق" });
+    await expect(arTextBox).toHaveCount(1);
+    const arDisplayStyles = await arTextBox.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return { direction: cs.direction, textAlign: cs.textAlign };
+    });
+    expect(arDisplayStyles.direction).toBe("rtl");
+    expect(arDisplayStyles.textAlign).toBe("right");
   });
 });

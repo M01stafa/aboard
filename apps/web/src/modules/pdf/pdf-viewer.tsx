@@ -249,6 +249,7 @@ function ViewerInner({
     handleDeleteSticky,
     handleAddText,
     handleUpdateText,
+    handleUpdateTextBoxSize,
     handleDeleteText,
     customStickyNotes,
     customTextBoxes,
@@ -992,6 +993,7 @@ function ViewerInner({
                       isTextMode={activeTool === "text" || activeTool === "freeText"}
                       onAddText={handleAddText}
                       onUpdateText={handleUpdateText}
+                      onUpdateTextBoxSize={handleUpdateTextBoxSize}
                       onDeleteText={handleDeleteText}
                       strokes={customStrokes[page.pageIndex] || []}
                       selectedStrokeIds={selectedStrokeIds}

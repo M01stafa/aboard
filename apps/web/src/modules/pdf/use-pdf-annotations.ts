@@ -68,6 +68,11 @@ export interface UsePdfAnnotationsResult {
     coords: { x: number; y: number; text?: string; fontSize?: number; color?: string; id?: string }
   ) => string;
   handleUpdateText: (pageIndex: number, id: string, newText: string) => void;
+  handleUpdateTextBoxSize: (
+    pageIndex: number,
+    id: string,
+    size: { width: number; height: number }
+  ) => void;
   handleDeleteText: (pageIndex: number, id: string) => void;
   customStrokes: Record<number, CustomInkStroke[]>;
   selectedStrokeIds: string[];
@@ -604,8 +609,14 @@ export function usePdfAnnotations({
           pageIndex,
           x: tb.x,
           y: tb.y,
-          width: Math.max(24, longest * fontSize * 0.6),
-          height: fontSize * 1.4 * Math.max(1, lines.length),
+          width:
+            typeof tb.width === "number" && tb.width > 0
+              ? tb.width
+              : Math.max(24, longest * fontSize * 0.6),
+          height:
+            typeof tb.height === "number" && tb.height > 0
+              ? tb.height
+              : fontSize * 1.4 * Math.max(1, lines.length),
           transform: { x: 0, y: 0 },
           text: tb.text,
           contents: tb.text,
@@ -1009,6 +1020,30 @@ export function usePdfAnnotations({
     [triggerDebouncedSave]
   );
 
+  const handleUpdateTextBoxSize = useCallback(
+    (pageIndex: number, id: string, size: { width: number; height: number }) => {
+      setCustomTextBoxes((prev) => {
+        const list = prev[pageIndex] || [];
+        const next = {
+          ...prev,
+          [pageIndex]: list.map((b) =>
+            b.id === id
+              ? {
+                  ...b,
+                  width: Math.round(size.width * 100) / 100,
+                  height: Math.round(size.height * 100) / 100,
+                }
+              : b
+          ),
+        };
+        customTextBoxesRef.current = next;
+        return next;
+      });
+      triggerDebouncedSave();
+    },
+    [triggerDebouncedSave]
+  );
+
   const handleDeleteText = useCallback(
     (pageIndex: number, id: string) => {
       setCustomTextBoxes((prev) => {
@@ -1039,6 +1074,7 @@ export function usePdfAnnotations({
         deleteSticky: handleDeleteSticky,
         addText: handleAddText,
         updateText: handleUpdateText,
+        updateTextBoxSize: handleUpdateTextBoxSize,
         deleteText: handleDeleteText,
         customTextBoxes: customTextBoxesRef.current,
         selectedStrokeIds: selectedStrokeIdsRef.current,
@@ -1056,6 +1092,7 @@ export function usePdfAnnotations({
     handleDeleteSticky,
     handleAddText,
     handleUpdateText,
+    handleUpdateTextBoxSize,
     handleDeleteText,
     selectedStrokeIds,
     handleDeleteSelected,
@@ -1076,6 +1113,7 @@ export function usePdfAnnotations({
     handleDeleteSticky,
     handleAddText,
     handleUpdateText,
+    handleUpdateTextBoxSize,
     handleDeleteText,
     customTextBoxes,
     customStrokes,

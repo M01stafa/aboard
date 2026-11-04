@@ -2511,3 +2511,27 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Checks:**
 - HTTP GET http://localhost:3000 returned 200 OK.
 **Open:** none.
+
+
+## 2026-11-04 — Fix Text Box Resizing on Drag and Implement Auto Text Direction (Multi-Agent)
+**Request:** Fix text box resizing during drag and implement automatic LTR/RTL text direction handling via 3 sub-agents:
+1. Sub-Agent 1 (Fix Resizing on Drag): Decoupled text box width from dynamic canvas `curX` coordinate by standardizing `MAX_TEXT_WIDTH = 500`; added `width` and `height` to `CustomTextBox` schema and hook; locked pre-drag dimensions via `dragTextSizes` snapshot on pointerdown; locked computed dimensions upon editing blur via `onUpdateTextBoxSize` so text box behaves as a strictly fixed-size container that never resizes or re-wraps on drag.
+2. Sub-Agent 2 (Fix Text Direction - RTL/LTR): Implemented `detectTextDirection` based on Unicode Bidirectional Algorithm (UBA Rule P2) strong character detection; applied `dir="auto"`, `direction: textDirection`, `textAlign: textDirection === "rtl" ? "right" : "left"`, and `unicodeBidi: "plaintext"` to all text containers and display elements so English text aligns left (LTR) and Arabic text aligns right (RTL), even under an Arabic app locale.
+3. Sub-Agent 3 (E2E Testing & Review): Added Playwright E2E tests asserting 3-line text box maintains strictly fixed width and height during and after drag without re-wrapping, and verifying computed LTR/left alignment for English and RTL/right alignment for Arabic (18/18 E2E tests passing).
+**Changes:**
+- `apps/web/src/modules/pdf/annotation-storage.ts`: added optional `width` and `height` to `CustomTextBox`; updated `extractCustomTextBoxes` to parse dimensions.
+- `apps/web/src/modules/pdf/annotation-storage.test.ts`: added unit tests for `width` and `height` serialization and extraction.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: added `handleUpdateTextBoxSize`; updated `getObjectsForPage` to preserve locked dimensions; confirmed `handleMoveObject` preserves dimensions.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx`: wired `onUpdateTextBoxSize` to `PdfCustomInkLayer`.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: added `detectTextDirection`; applied `dir="auto"`, `unicodeBidi: "plaintext"`, and script-aware `textAlign`; snapshot pre-drag dimensions in `dragTextSizes`; committed dimensions on blur via `onUpdateTextBoxSize`.
+- `apps/web/src/modules/pdf/pdf-text-tool.test.tsx`: added unit tests for direction detection, LTR/RTL styles, drag lock, and size updates.
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added E2E tests verifying fixed dimensions during and after drag across the page and verifying computed direction/alignment for English and Arabic text.
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (110/110 tests across 11 test files).
+- `pnpm test`: PASS (411/411 tests across 48 test files).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `playwright test e2e/pdf-ink-stamp.spec.ts`: PASS (18/18 tests passing in 1.4m).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-4
+**Open:** none.

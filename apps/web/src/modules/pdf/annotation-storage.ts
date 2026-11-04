@@ -34,6 +34,8 @@ export interface CustomTextBox {
   pageIndex: number;
   x: number;
   y: number;
+  width?: number;
+  height?: number;
   text: string;
   fontSize: number;
   color: string;
@@ -263,7 +265,18 @@ export function extractCustomTextBoxes(json: string): Record<number, CustomTextB
   try {
     const parsed = JSON.parse(json);
     if (parsed && typeof parsed === "object" && "customTextBoxes" in parsed) {
-      return (parsed as SerializedAnnotationsPayload).customTextBoxes || {};
+      const raw = (parsed as SerializedAnnotationsPayload).customTextBoxes || {};
+      const result: Record<number, CustomTextBox[]> = {};
+      for (const [k, list] of Object.entries(raw)) {
+        const pageIdx = parseInt(k, 10);
+        if (Number.isNaN(pageIdx) || !Array.isArray(list)) continue;
+        result[pageIdx] = list.map((b) => ({
+          ...b,
+          width: typeof b.width === "number" && !Number.isNaN(b.width) ? b.width : undefined,
+          height: typeof b.height === "number" && !Number.isNaN(b.height) ? b.height : undefined,
+        }));
+      }
+      return result;
     }
   } catch {}
   return {};
