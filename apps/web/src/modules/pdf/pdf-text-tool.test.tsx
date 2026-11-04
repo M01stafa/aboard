@@ -1518,4 +1518,266 @@ describe("PDF Text Tool (custom text boxes)", () => {
       expect(call[2].height).toBeGreaterThan(0);
     });
   });
+
+  describe("Proportional Corner Scaling for PDF Text Tool", () => {
+    it("dragging corner handle ('se') scales width, height, and font size proportionally locking aspect ratio", () => {
+      const onResizeObject = vi.fn();
+      const onUpdateTextBoxSize = vi.fn();
+      const textObject = {
+        id: "text-scale-se",
+        type: "text" as const,
+        pageIndex: 0,
+        x: 100,
+        y: 100,
+        width: 250,
+        height: 100,
+        contents: "Scaling text",
+        text: "Scaling text",
+        fontSize: 16,
+        color: "#E44234",
+      };
+
+      act(() => {
+        root.render(
+          <PdfCustomInkLayer
+            pageIndex={0}
+            pageWidth={612}
+            pageHeight={792}
+            isActive={false}
+            isSelectMode={true}
+            selectedStrokeIds={["text-scale-se"]}
+            strokes={[]}
+            onAddStroke={vi.fn()}
+            onResizeObject={onResizeObject}
+            onUpdateTextBoxSize={onUpdateTextBoxSize}
+            objects={[textObject]}
+          />
+        );
+      });
+
+      const svg = container.querySelector("svg")!;
+      mockSvgRect(svg);
+      const seHandle = container.querySelector('[data-testid="pdf-text-resize-handle-se"]') as SVGRectElement;
+      expect(seHandle).not.toBeNull();
+
+      // Initial aspect ratio: 250 / 100 = 2.5
+      // 1. Start drag on SE handle: pointerdown
+      act(() => {
+        seHandle.dispatchEvent(
+          new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+        );
+      });
+
+      // 2. Drag inward by dx = -50 (newWidth: 200, scaleRatio: 0.8)
+      act(() => {
+        svg.dispatchEvent(new PointerEvent("pointermove", { clientX: 650, clientY: 880, bubbles: true }));
+      });
+
+      // During drag: font size scales to 16 * 0.8 = 12.8, dimensions scale to 200x80
+      const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-scale-se"]') as HTMLDivElement;
+      expect(displayDiv.style.fontSize).toBe("12.8px");
+      const fo = displayDiv.closest("foreignObject");
+      expect(parseFloat(fo?.getAttribute("width") || "0")).toBe(200);
+      expect(parseFloat(fo?.getAttribute("height") || "0")).toBe(80);
+      // Top-left anchor remains fixed at (100, 100)
+      expect(parseFloat(fo?.getAttribute("x") || "0")).toBe(100);
+      expect(parseFloat(fo?.getAttribute("y") || "0")).toBe(100);
+
+      // 3. Commit drag on pointerup
+      act(() => {
+        svg.dispatchEvent(new PointerEvent("pointerup", { clientX: 650, clientY: 880, bubbles: true }));
+      });
+
+      expect(onResizeObject).toHaveBeenCalledWith(
+        0,
+        "text-scale-se",
+        { origin: { x: 100, y: 100 }, size: { width: 200, height: 80 } },
+        "text",
+        { fontSize: 12.8 }
+      );
+      expect(onUpdateTextBoxSize).toHaveBeenCalledWith(
+        0,
+        "text-scale-se",
+        { width: 200, height: 80, fontSize: 12.8 }
+      );
+    });
+
+    it("dragging corner handle ('nw') anchors bottom-right and scales font size proportionally", () => {
+      const onResizeObject = vi.fn();
+      const onUpdateTextBoxSize = vi.fn();
+      const textObject = {
+        id: "text-scale-nw",
+        type: "text" as const,
+        pageIndex: 0,
+        x: 100,
+        y: 100,
+        width: 200,
+        height: 100,
+        contents: "NW text",
+        text: "NW text",
+        fontSize: 20,
+        color: "#E44234",
+      };
+
+      act(() => {
+        root.render(
+          <PdfCustomInkLayer
+            pageIndex={0}
+            pageWidth={612}
+            pageHeight={792}
+            isActive={false}
+            isSelectMode={true}
+            selectedStrokeIds={["text-scale-nw"]}
+            strokes={[]}
+            onAddStroke={vi.fn()}
+            onResizeObject={onResizeObject}
+            onUpdateTextBoxSize={onUpdateTextBoxSize}
+            objects={[textObject]}
+          />
+        );
+      });
+
+      const svg = container.querySelector("svg")!;
+      mockSvgRect(svg);
+      const nwHandle = container.querySelector('[data-testid="pdf-text-resize-handle-nw"]') as SVGRectElement;
+      expect(nwHandle).not.toBeNull();
+
+      // Original bottom-right: x = 100 + 200 = 300, y = 100 + 100 = 200
+      act(() => {
+        nwHandle.dispatchEvent(
+          new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+        );
+      });
+
+      // Drag inward (dx = 40): newWidth = 160, scaleRatio = 0.8
+      act(() => {
+        svg.dispatchEvent(new PointerEvent("pointermove", { clientX: 740, clientY: 920, bubbles: true }));
+      });
+
+      const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-scale-nw"]') as HTMLDivElement;
+      // font size: 20 * 0.8 = 16px
+      expect(displayDiv.style.fontSize).toBe("16px");
+      const fo = displayDiv.closest("foreignObject");
+      expect(parseFloat(fo?.getAttribute("width") || "0")).toBe(160);
+      expect(parseFloat(fo?.getAttribute("height") || "0")).toBe(80);
+      // Bottom-right anchor preserved: 140 + 160 = 300, 120 + 80 = 200
+      expect(parseFloat(fo?.getAttribute("x") || "0")).toBe(140);
+      expect(parseFloat(fo?.getAttribute("y") || "0")).toBe(120);
+
+      act(() => {
+        svg.dispatchEvent(new PointerEvent("pointerup", { clientX: 740, clientY: 920, bubbles: true }));
+      });
+
+      expect(onResizeObject).toHaveBeenCalledWith(
+        0,
+        "text-scale-nw",
+        { origin: { x: 140, y: 120 }, size: { width: 160, height: 80 } },
+        "text",
+        { fontSize: 16 }
+      );
+    });
+
+    it("dragging side handle ('e') reflows text independently without altering font size", () => {
+      const onResizeObject = vi.fn();
+      const textObject = {
+        id: "text-side-e",
+        type: "text" as const,
+        pageIndex: 0,
+        x: 50,
+        y: 50,
+        width: 250,
+        height: 60,
+        contents: "Some text that will reflow when width changes",
+        text: "Some text that will reflow when width changes",
+        fontSize: 16,
+        color: "#E44234",
+      };
+
+      act(() => {
+        root.render(
+          <PdfCustomInkLayer
+            pageIndex={0}
+            pageWidth={612}
+            pageHeight={792}
+            isActive={false}
+            isSelectMode={true}
+            selectedStrokeIds={["text-side-e"]}
+            strokes={[]}
+            onAddStroke={vi.fn()}
+            onResizeObject={onResizeObject}
+            objects={[textObject]}
+          />
+        );
+      });
+
+      const svg = container.querySelector("svg")!;
+      mockSvgRect(svg);
+      const eHandle = container.querySelector('[data-testid="pdf-text-resize-handle-e"]') as SVGRectElement;
+      expect(eHandle).not.toBeNull();
+
+      act(() => {
+        eHandle.dispatchEvent(
+          new PointerEvent("pointerdown", { clientX: 700, clientY: 900, button: 0, bubbles: true })
+        );
+      });
+
+      // Drag right by 100px (newWidth: 350)
+      act(() => {
+        svg.dispatchEvent(new PointerEvent("pointermove", { clientX: 800, clientY: 900, bubbles: true }));
+      });
+
+      const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-side-e"]') as HTMLDivElement;
+      // Font size must stay at 16px!
+      expect(displayDiv.style.fontSize).toBe("16px");
+      const fo = displayDiv.closest("foreignObject");
+      expect(parseFloat(fo?.getAttribute("width") || "0")).toBe(350);
+
+      act(() => {
+        svg.dispatchEvent(new PointerEvent("pointerup", { clientX: 800, clientY: 900, bubbles: true }));
+      });
+
+      expect(onResizeObject).toHaveBeenCalledWith(
+        0,
+        "text-side-e",
+        expect.objectContaining({
+          origin: { x: 50, y: 50 },
+          size: expect.objectContaining({ width: 350 }),
+        }),
+        "text",
+        { fontSize: 16 }
+      );
+    });
+
+    it("verifies handleResizeObject updates and persists scaled fontSize in hook and storage", () => {
+      act(() => {
+        root.render(<Harness />);
+      });
+      let textId = "";
+      act(() => {
+        textId = hookRef.handleAddText(0, { x: 50, y: 50, text: "Scaling test", fontSize: 16 });
+      });
+
+      // Resize object with proportional scaling: font size 12
+      act(() => {
+        hookRef.handleResizeObject(
+          0,
+          textId,
+          { origin: { x: 50, y: 50 }, size: { width: 180, height: 72 } },
+          "text",
+          { fontSize: 12 }
+        );
+      });
+
+      const box = hookRef.customTextBoxes[0].find((b) => b.id === textId);
+      expect(box?.fontSize).toBe(12);
+      expect(box?.width).toBe(180);
+      expect(box?.height).toBe(72);
+
+      const pageObjs = hookRef.getObjectsForPage(0);
+      const textObj = pageObjs.find((o) => o.id === textId);
+      expect(textObj?.fontSize).toBe(12);
+      expect(textObj?.width).toBe(180);
+      expect(textObj?.height).toBe(72);
+    });
+  });
 });

@@ -276,6 +276,10 @@ export function extractCustomTextBoxes(json: string): Record<number, CustomTextB
           width: typeof b.width === "number" && !Number.isNaN(b.width) ? b.width : undefined,
           height: typeof b.height === "number" && !Number.isNaN(b.height) ? b.height : undefined,
           direction: b.direction === "rtl" || b.direction === "ltr" ? b.direction : undefined,
+          fontSize:
+            typeof b.fontSize === "number" && !Number.isNaN(b.fontSize) && b.fontSize > 0
+              ? Math.round(b.fontSize * 10) / 10
+              : 16,
         }));
       }
       return result;

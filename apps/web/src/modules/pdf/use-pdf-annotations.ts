@@ -85,7 +85,7 @@ export interface UsePdfAnnotationsResult {
   handleUpdateTextBoxSize: (
     pageIndex: number,
     id: string,
-    size: { width: number; height: number }
+    size: { width: number; height: number; fontSize?: number }
   ) => void;
   handleDeleteText: (pageIndex: number, id: string) => void;
   customStrokes: Record<number, CustomInkStroke[]>;
@@ -113,7 +113,8 @@ export interface UsePdfAnnotationsResult {
     pageIndex: number,
     id: string,
     newRect: { origin: { x: number; y: number }; size: { width: number; height: number } },
-    type: CustomObjectType
+    type: CustomObjectType,
+    options?: { fontSize?: number }
   ) => void;
   annotationScope: ReturnType<typeof useAnnotation>["provides"];
 }
@@ -719,7 +720,8 @@ export function usePdfAnnotations({
       pageIndex: number,
       id: string,
       newRect: { origin: { x: number; y: number }; size: { width: number; height: number } },
-      type: CustomObjectType
+      type: CustomObjectType,
+      options?: { fontSize?: number }
     ) => {
       if (type === "highlight") return;
       if (type === "text") {
@@ -727,6 +729,10 @@ export function usePdfAnnotations({
         const safeY = Math.round(newRect.origin.y * 100) / 100;
         const safeW = Math.round(newRect.size.width * 100) / 100;
         const safeH = Math.round(newRect.size.height * 100) / 100;
+        const newFontSize =
+          typeof options?.fontSize === "number" && options.fontSize > 0
+            ? Math.round(options.fontSize * 10) / 10
+            : undefined;
         setCustomTextBoxes((prev) => {
           const list = prev[pageIndex] || [];
           const next = {
@@ -739,6 +745,7 @@ export function usePdfAnnotations({
                     y: safeY,
                     width: safeW,
                     height: safeH,
+                    ...(newFontSize !== undefined ? { fontSize: newFontSize } : {}),
                   }
                 : b
             ),
@@ -1089,7 +1096,11 @@ export function usePdfAnnotations({
   );
 
   const handleUpdateTextBoxSize = useCallback(
-    (pageIndex: number, id: string, size: { width: number; height: number }) => {
+    (
+      pageIndex: number,
+      id: string,
+      size: { width: number; height: number; fontSize?: number }
+    ) => {
       setCustomTextBoxes((prev) => {
         const list = prev[pageIndex] || [];
         const next = {
@@ -1100,6 +1111,9 @@ export function usePdfAnnotations({
                   ...b,
                   width: Math.round(size.width * 100) / 100,
                   height: Math.round(size.height * 100) / 100,
+                  ...(typeof size.fontSize === "number" && size.fontSize > 0
+                    ? { fontSize: Math.round(size.fontSize * 10) / 10 }
+                    : {}),
                 }
               : b
           ),

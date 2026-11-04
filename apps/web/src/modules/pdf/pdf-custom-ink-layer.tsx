@@ -539,7 +539,7 @@ export interface PdfCustomInkLayerProps {
   onUpdateTextBoxSize?: (
     pageIndex: number,
     id: string,
-    size: { width: number; height: number }
+    size: { width: number; height: number; fontSize?: number }
   ) => void;
   onDeleteText?: (pageIndex: number, id: string) => void;
   strokes: CustomInkStroke[];
@@ -563,7 +563,8 @@ export interface PdfCustomInkLayerProps {
     pageIndex: number,
     id: string,
     newRect: { origin: { x: number; y: number }; size: { width: number; height: number } },
-    type: CustomObjectType
+    type: CustomObjectType,
+    options?: { fontSize?: number }
   ) => void;
   annotationScope?: AnnotationScopeLike | null;
   strokeColor?: string;
@@ -588,6 +589,8 @@ type Interaction =
       startRect: { x: number; y: number; width: number; height: number };
       currentRect: { x: number; y: number; width: number; height: number };
       objectType: CustomObjectType;
+      startFontSize?: number;
+      currentFontSize?: number;
     }
   | {
       kind: "marquee";
@@ -708,6 +711,7 @@ export function PdfCustomInkLayer({
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const editingTextIdRef = useRef<string | null>(null);
   const [editingHeights, setEditingHeights] = useState<Record<string, number>>({});
+  const [liveTextFontSizes, setLiveTextFontSizes] = useState<Record<string, number>>({});
 
   const lastClickRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
   useEffect(() => {
@@ -1013,6 +1017,7 @@ export function PdfCustomInkLayer({
                 : obj.type === "text"
                 ? Math.max(36, measureTextHeight(obj.text || "", startW, obj.fontSize || 16))
                 : (obj.height || 40);
+            const initialFontSize = obj.type === "text" ? obj.fontSize || 16 : undefined;
             interactionRef.current = {
               kind: "resize",
               objectId: handleObjId,
@@ -1021,10 +1026,15 @@ export function PdfCustomInkLayer({
               startRect: { x: obj.x, y: obj.y, width: startW, height: startH },
               currentRect: { x: obj.x, y: obj.y, width: startW, height: startH },
               objectType: obj.type,
+              startFontSize: initialFontSize,
+              currentFontSize: initialFontSize,
             };
             setResizeRects({
               [handleObjId]: { x: obj.x, y: obj.y, width: startW, height: startH },
             });
+            if (initialFontSize !== undefined) {
+              setLiveTextFontSizes({ [handleObjId]: initialFontSize });
+            }
             return;
           }
         }
@@ -1239,37 +1249,49 @@ export function PdfCustomInkLayer({
         let newRect: { x: number; y: number; width: number; height: number };
 
         if (it.objectType === "text") {
-          const textObj = (p.objects || []).find((o) => o.id === it.objectId);
-          const textStr = textObj?.text || "";
-          const fontSize = textObj?.fontSize || 16;
-          let newW = it.startRect.width;
-          let newX = it.startRect.x;
-          const minW = 64;
-
-          switch (it.handle) {
-            case "w":
-            case "nw":
-            case "sw": {
+          const isCorner = ["nw", "ne", "se", "sw"].includes(it.handle);
+          if (isCorner) {
+            newRect = computeResizedRect(it.startRect, it.handle, dx, dy, true, 30, 20);
+            const scaleRatio = it.startRect.width > 0 ? newRect.width / it.startRect.width : 1;
+            const baseFontSize = it.startFontSize || 16;
+            const newFontSize = Math.max(6, Math.min(160, Math.round(baseFontSize * scaleRatio * 10) / 10));
+            it.currentFontSize = newFontSize;
+            setLiveTextFontSizes({ [it.objectId]: newFontSize });
+          } else if (it.handle === "w" || it.handle === "e") {
+            const textObj = (p.objects || []).find((o) => o.id === it.objectId);
+            const textStr = textObj?.text || "";
+            const fontSize = textObj?.fontSize || 16;
+            let newW = it.startRect.width;
+            let newX = it.startRect.x;
+            const minW = 64;
+            if (it.handle === "w") {
               newW = Math.max(minW, it.startRect.width - dx);
               newX = it.startRect.x + (it.startRect.width - newW);
-              break;
-            }
-            case "e":
-            case "ne":
-            case "se": {
+            } else {
               newW = Math.max(minW, it.startRect.width + dx);
               newX = it.startRect.x;
-              break;
             }
-            default: {
-              newW = it.startRect.width;
-              newX = it.startRect.x;
-              break;
+            const newH = Math.max(36, measureTextHeight(textStr, newW, fontSize));
+            newRect = { x: newX, y: it.startRect.y, width: newW, height: newH };
+            it.currentFontSize = it.startFontSize;
+            setLiveTextFontSizes({});
+          } else if (it.handle === "n" || it.handle === "s") {
+            let newH = it.startRect.height;
+            let newY = it.startRect.y;
+            const minH = 36;
+            if (it.handle === "n") {
+              newH = Math.max(minH, it.startRect.height - dy);
+              newY = it.startRect.y + (it.startRect.height - newH);
+            } else {
+              newH = Math.max(minH, it.startRect.height + dy);
+              newY = it.startRect.y;
             }
+            newRect = { x: it.startRect.x, y: newY, width: it.startRect.width, height: newH };
+            it.currentFontSize = it.startFontSize;
+            setLiveTextFontSizes({});
+          } else {
+            newRect = it.startRect;
           }
-
-          const newH = Math.max(36, measureTextHeight(textStr, newW, fontSize));
-          newRect = { x: newX, y: it.startRect.y, width: newW, height: newH };
         } else {
           const lockAspect =
             it.objectType === "stamp" ||
@@ -1464,32 +1486,48 @@ export function PdfCustomInkLayer({
         if (commit) {
           const pt = toPagePoint(e.clientX, e.clientY);
           let finalRect = it.currentRect;
+          let finalFontSize = it.currentFontSize;
           if (pt) {
             const dx = pt.x - it.startPoint.x;
             const dy = pt.y - it.startPoint.y;
             if (it.objectType === "text") {
-              const textObj = (p.objects || []).find((o) => o.id === it.objectId);
-              const textStr = textObj?.text || "";
-              const fontSize = textObj?.fontSize || 16;
-              let newW = it.startRect.width;
-              let newX = it.startRect.x;
-              const minW = 64;
-              switch (it.handle) {
-                case "w":
-                case "nw":
-                case "sw":
+              const isCorner = ["nw", "ne", "se", "sw"].includes(it.handle);
+              if (isCorner) {
+                finalRect = computeResizedRect(it.startRect, it.handle, dx, dy, true, 30, 20);
+                const scaleRatio = it.startRect.width > 0 ? finalRect.width / it.startRect.width : 1;
+                const baseFontSize = it.startFontSize || 16;
+                finalFontSize = Math.max(6, Math.min(160, Math.round(baseFontSize * scaleRatio * 10) / 10));
+              } else if (it.handle === "w" || it.handle === "e") {
+                const textObj = (p.objects || []).find((o) => o.id === it.objectId);
+                const textStr = textObj?.text || "";
+                const fontSize = textObj?.fontSize || 16;
+                let newW = it.startRect.width;
+                let newX = it.startRect.x;
+                const minW = 64;
+                if (it.handle === "w") {
                   newW = Math.max(minW, it.startRect.width - dx);
                   newX = it.startRect.x + (it.startRect.width - newW);
-                  break;
-                case "e":
-                case "ne":
-                case "se":
+                } else {
                   newW = Math.max(minW, it.startRect.width + dx);
                   newX = it.startRect.x;
-                  break;
+                }
+                const newH = Math.max(36, measureTextHeight(textStr, newW, fontSize));
+                finalRect = { x: newX, y: it.startRect.y, width: newW, height: newH };
+                finalFontSize = it.startFontSize;
+              } else if (it.handle === "n" || it.handle === "s") {
+                let newH = it.startRect.height;
+                let newY = it.startRect.y;
+                const minH = 36;
+                if (it.handle === "n") {
+                  newH = Math.max(minH, it.startRect.height - dy);
+                  newY = it.startRect.y + (it.startRect.height - newH);
+                } else {
+                  newH = Math.max(minH, it.startRect.height + dy);
+                  newY = it.startRect.y;
+                }
+                finalRect = { x: it.startRect.x, y: newY, width: it.startRect.width, height: newH };
+                finalFontSize = it.startFontSize;
               }
-              const newH = Math.max(36, measureTextHeight(textStr, newW, fontSize));
-              finalRect = { x: newX, y: it.startRect.y, width: newW, height: newH };
             } else {
               const lockAspect =
                 it.objectType === "stamp" ||
@@ -1517,18 +1555,21 @@ export function PdfCustomInkLayer({
                   height: Math.round(finalRect.height * 100) / 100,
                 },
               },
-              it.objectType
+              it.objectType,
+              it.objectType === "text" && finalFontSize ? { fontSize: finalFontSize } : undefined
             );
             if (it.objectType === "text") {
               p.onUpdateTextBoxSize?.(p.pageIndex, it.objectId, {
                 width: Math.round(finalRect.width * 100) / 100,
                 height: Math.round(finalRect.height * 100) / 100,
+                fontSize: finalFontSize,
               });
             }
           }
         }
         setLiveScaledStrokes({});
         setResizeRects({});
+        setLiveTextFontSizes({});
       } else if (it.kind === "marquee") {
         const mx = Math.min(it.start.x, it.current.x);
         const my = Math.min(it.start.y, it.current.y);
@@ -1768,7 +1809,7 @@ export function PdfCustomInkLayer({
         const curY = resizeRect ? resizeRect.y : obj.y;
         const effectiveDirection = obj.direction ?? detectTextDirection(obj.text || "");
         const textAlign = effectiveDirection === "rtl" ? "right" : "left";
-        const textFontSize = obj.fontSize || 16;
+        const textFontSize = liveTextFontSizes[obj.id] ?? obj.fontSize ?? 16;
         const preDragSize = dragTextSizes[obj.id];
         const curW = resizeRect
           ? resizeRect.width
@@ -2240,6 +2281,7 @@ export function PdfCustomInkLayer({
       pageIndex,
       dragTextSizes,
       editingHeights,
+      liveTextFontSizes,
     ]
   );
 

@@ -2845,4 +2845,112 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(displayBoxAfter).not.toBeNull();
     expect(displayBoxAfter!.width).toBeGreaterThanOrEqual(350);
   });
+
+  test("text tool: verifies proportional corner scaling (width, height, and font size scale locking aspect ratio) and independent side handle reflow", async ({ page }) => {
+    const pid = `${projectId}-text-corner-proportional-scale`;
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("PDF Text Proportional Scaling Test", {
+      x: 50,
+      y: 750,
+      size: 20,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles({
+      name: "text-scale-test.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // 1. Activate Text tool and create text box
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    const clickX = page1Box.x + 80;
+    const clickY = page1Box.y + 120;
+    await page.mouse.click(clickX, clickY);
+
+    const textarea = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(textarea).toHaveCount(1, { timeout: 5000 });
+    await expect(textarea).toBeFocused();
+
+    // Type sample text
+    const sampleText = "Proportional Scaling Verification";
+    await page.keyboard.type(sampleText, { delay: 10 });
+    await expect(textarea).toHaveValue(sampleText);
+
+    // 2. Exit edit mode
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
+
+    const textBox = primaryPane.locator('[data-testid^="pdf-text-box-"]').filter({ hasText: sampleText });
+    await expect(textBox).toHaveCount(1);
+
+    // 3. Switch to Select tool and select the text box
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await textBox.click();
+
+    // 4. Record initial dimensions and font size
+    const initialBox = await textBox.boundingBox();
+    expect(initialBox).not.toBeNull();
+    const initialFontSize = await textBox.evaluate((el) => parseFloat(window.getComputedStyle(el).fontSize));
+    expect(initialFontSize).toBe(16);
+
+    // 5. Locate SE (bottom-right) corner handle
+    const seHandle = primaryPane.locator('[data-testid="pdf-text-resize-handle-se"]');
+    await expect(seHandle).toBeVisible();
+    const seBoxBefore = await seHandle.boundingBox();
+    expect(seBoxBefore).not.toBeNull();
+
+    // 6. Drag SE corner handle inward by 75px
+    await page.mouse.move(seBoxBefore!.x + seBoxBefore!.width / 2, seBoxBefore!.y + seBoxBefore!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(seBoxBefore!.x - 75, seBoxBefore!.y - 30, { steps: 5 });
+    await page.mouse.up();
+
+    // 7. Verify both width, height, and font size decreased proportionally
+    const boxAfterCorner = await textBox.boundingBox();
+    expect(boxAfterCorner).not.toBeNull();
+    expect(boxAfterCorner!.width).toBeLessThan(initialBox!.width);
+    expect(boxAfterCorner!.height).toBeLessThan(initialBox!.height);
+
+    const scaledFontSize = await textBox.evaluate((el) => parseFloat(window.getComputedStyle(el).fontSize));
+    expect(scaledFontSize).toBeLessThan(initialFontSize);
+    // Aspect ratio should be preserved
+    const initialAspect = initialBox!.width / initialBox!.height;
+    const scaledAspect = boxAfterCorner!.width / boxAfterCorner!.height;
+    expect(Math.abs(scaledAspect - initialAspect)).toBeLessThan(0.4);
+
+    // 8. Test side handle (E handle): drag to expand width
+    const eHandle = primaryPane.locator('[data-testid="pdf-text-resize-handle-e"]');
+    await expect(eHandle).toBeVisible();
+    const eBoxBefore = await eHandle.boundingBox();
+    expect(eBoxBefore).not.toBeNull();
+
+    await page.mouse.move(eBoxBefore!.x + eBoxBefore!.width / 2, eBoxBefore!.y + eBoxBefore!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(eBoxBefore!.x + 120, eBoxBefore!.y, { steps: 5 });
+    await page.mouse.up();
+
+    // 9. Side handle should change width without modifying font size
+    const boxAfterSide = await textBox.boundingBox();
+    expect(boxAfterSide).not.toBeNull();
+    expect(boxAfterSide!.width).toBeGreaterThan(boxAfterCorner!.width);
+
+    const fontSizeAfterSide = await textBox.evaluate((el) => parseFloat(window.getComputedStyle(el).fontSize));
+    expect(fontSizeAfterSide).toBeCloseTo(scaledFontSize, 1);
+  });
 });

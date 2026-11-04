@@ -2599,3 +2599,26 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Checks:**
 - HTTP GET http://localhost:3000 returned 200 OK.
 **Open:** none.
+
+
+## 2026-11-04 — Implement Proportional Corner Scaling for the Text Tool (Single Agent)
+**Request:** Implement proportional scaling for the Text tool using corner handles (`nw`, `ne`, `se`, `sw`) locking the original aspect ratio and scaling the font size with the box; maintain independent side handles (`w`, `e` for width text reflow, `n`, `s` for height); persist `fontSize`, `width`, and `height` in storage; add unit tests and Playwright E2E verification.
+**Changes:**
+- `apps/web/src/modules/pdf/annotation-storage.ts`: ensured `fontSize` is strictly parsed and preserved in `extractCustomTextBoxes`.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: updated `handleResizeObject` and `handleUpdateTextBoxSize` to accept and persist `fontSize` on text boxes.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`:
+  - Updated `Interaction` type to track `startFontSize` and `currentFontSize`.
+  - Added `liveTextFontSizes` state for real-time font size feedback during drag.
+  - Implemented proportional corner scaling in `onPointerMove` and `onPointerUp` (`nw`, `ne`, `se`, `sw`) locking aspect ratio with opposite-corner anchors and scaling font size proportionally (`newFontSize = Math.max(6, Math.min(160, Math.round(baseFontSize * scaleRatio * 10) / 10))`).
+  - Preserved independent side handles: `w` and `e` drag width and reflow text, `n` and `s` drag height without altering font size.
+  - Connected `liveTextFontSizes` to `textFontSize` in `renderedObjects` and updated dependency array.
+- `apps/web/src/modules/pdf/pdf-text-tool.test.tsx`: added unit test suite `Proportional Corner Scaling for PDF Text Tool` verifying SE corner drag, NW corner drag, E side handle reflow, and storage persistence (41/41 tests passed).
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added Playwright test verifying corner drag shrinks width, height, and font size proportionally, text stays inside bounding box, and side handle reflows text without changing font size (passed in 3.7s).
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (117/117 tests across 11 test files).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `playwright test e2e/pdf-ink-stamp.spec.ts -g "text tool: verifies"`: PASS (3/3 tests passed in 12.0s).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-4
+**Open:** none.
