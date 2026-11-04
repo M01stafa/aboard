@@ -2622,3 +2622,34 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
 **Related:** PDF-1, PDF-4
 **Open:** none.
+
+
+## 2026-11-04 — Fix Text Direction (LTR/RTL) for Text Box and Sticky Note ONLY (Single Agent)
+**Request:** Fix text direction for Text Box and Sticky Note tools only: English text typed or displayed must align strictly LTR (left-aligned), Arabic text must align strictly RTL (right-aligned); during edit, `<textarea>` applies `dir="auto"` and `unicodeBidi: "plaintext"`; during blur, static render explicitly sets `dir={annotation.direction}`, `direction: annotation.direction`, and `textAlign: annotation.direction === "rtl" ? "right" : "left"`; Sticky Note "Note" header title remains aligned with UI (`uiDir`), while note content aligns with detected language; persist `direction` in memory and in `annotation-storage.ts` across page reloads; verify Text Box dragging, corner handles, and proportional scaling remain intact.
+**Changes:**
+- `apps/web/src/modules/pdf/annotation-storage.ts`:
+  - Added `direction?: "ltr" | "rtl"` to `CustomStickyNote` interface.
+  - Updated `extractCustomStickyNotes` to parse and preserve `direction: s.direction === "rtl" || s.direction === "ltr" ? s.direction : undefined`.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`:
+  - Updated `UsePdfAnnotationsResult` interface: `handleAddSticky` and `handleUpdateStickyText` accept `direction?: "ltr" | "rtl"`.
+  - In `handleAddSticky`: initialized `direction: coords.direction ?? (coords.text ? detectTextDirection(coords.text) : "ltr")`.
+  - In `handleUpdateStickyText`: updated `direction: direction ?? detectTextDirection(text)` on the target note.
+  - In `getObjectsForPage`: included `direction: st.direction ?? detectTextDirection(st.text ?? "")` for sticky notes.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`:
+  - In `detectTextDirection`: explicitly checked Arabic Unicode block `[\u0600-\u06FF]` along with presentation forms and Latin characters for first strong character classification.
+  - In `renderedObjects`: computed `uiDir` from `document.documentElement.dir === "rtl" ? "rtl" : "ltr"`.
+  - For Sticky Note header bar: applied `dir={uiDir}` and `direction: uiDir` so the header title and delete button follow the app's UI direction independently of note content.
+  - For Sticky Note `<textarea>`: applied `dir="auto"`, `style={{ unicodeBidi: "plaintext", direction: stickyDirection, textAlign: stickyTextAlign }}` where `stickyDirection` resolves to `"ltr"` (`left`) for English and `"rtl"` (`right`) for Arabic.
+  - For Text Box `<foreignObject>`, edit wrapper `<div>`, and `<textarea>`: applied `dir="auto"` and `unicodeBidi: "plaintext"`, ensuring dynamic direction and text-align resolution.
+  - For Text Box display `<div>` (blur / static render): explicitly applied `dir={effectiveDirection}`, `direction: effectiveDirection`, and `textAlign: textAlign`.
+- `apps/web/src/modules/pdf/annotation-storage.test.ts`: added unit test verifying `extractCustomStickyNotes` preserves `direction: 'ltr'` and `'rtl'` (9/9 tests passed).
+- `apps/web/src/modules/pdf/pdf-sticky-notes.test.tsx`: added unit tests verifying English sticky notes render `direction: ltr` and `textAlign: left`, Arabic sticky notes render `direction: rtl` and `textAlign: right`, and `usePdfAnnotations` initializes/updates/propagates sticky note direction (10/10 tests passed).
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: added Playwright test verifying English text in both Text Box and Sticky Note blurs to LTR left-aligned, Arabic text blurs to RTL right-aligned, and Text Box selection handles, dragging, and proportional corner scaling remain completely intact (passed in 4.5s).
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (120/120 tests across 11 test files).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `playwright test e2e/pdf-ink-stamp.spec.ts -g "text direction: verifies Text Box and Sticky Note"`: PASS (1 passed in 4.5s).
+- `playwright test e2e/pdf-ink-stamp.spec.ts -g "text direction|proportional corner scaling"`: PASS (2 passed in 9.6s).
+**Related:** PDF-1, PDF-4
+**Open:** none.

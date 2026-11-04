@@ -2953,4 +2953,137 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     const fontSizeAfterSide = await textBox.evaluate((el) => parseFloat(window.getComputedStyle(el).fontSize));
     expect(fontSizeAfterSide).toBeCloseTo(scaledFontSize, 1);
   });
+
+  test("text direction: verifies Text Box and Sticky Note English text aligns LTR / left and Arabic text aligns RTL / right, with dragging and scaling intact", async ({ page }) => {
+    const pid = `${projectId}-text-sticky-direction-test`;
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const p1 = pdfDoc.addPage([595.28, 841.89]);
+    p1.drawText("Text Box and Sticky Note Direction Test", {
+      x: 50,
+      y: 750,
+      size: 18,
+      font,
+      color: rgb(0, 0, 0),
+    });
+    const pdfBytes = await pdfDoc.save();
+
+    await page.goto(`/workspace?p=${pid}&kind=pdf`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    const primaryPane = page.locator('.pane[data-slot="primary"]');
+    const fileInput = primaryPane.locator('input[data-testid="pdf-file-input"]');
+    await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles({
+      name: "direction-test.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdfBytes),
+    });
+    const page1 = primaryPane.locator('[data-testid="pdf-page-1"]');
+    await expect(page1).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(600);
+    const page1Box = await page1.boundingBox();
+    expect(page1Box).not.toBeNull();
+    if (!page1Box) return;
+
+    // 1. Add English Text Box
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    await page.mouse.click(page1Box!.x + 60, page1Box!.y + 100);
+
+    const enTextarea = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(enTextarea).toHaveCount(1, { timeout: 5000 });
+    await page.keyboard.type("Hello English Text Box", { delay: 10 });
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
+
+    const enTextBox = primaryPane.locator('[data-testid^="pdf-text-box-"]').filter({ hasText: "Hello English Text Box" });
+    await expect(enTextBox).toHaveCount(1);
+    const enTextComputed = await enTextBox.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return { direction: cs.direction, textAlign: cs.textAlign, dir: el.getAttribute("dir") };
+    });
+    expect(enTextComputed.direction).toBe("ltr");
+    expect(enTextComputed.textAlign).toBe("left");
+    expect(enTextComputed.dir).toBe("ltr");
+
+    // 2. Add Arabic Text Box
+    await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
+    await page.mouse.click(page1Box!.x + 60, page1Box!.y + 220);
+
+    const arTextarea = primaryPane.locator('[data-testid^="pdf-text-input-"]');
+    await expect(arTextarea).toHaveCount(1, { timeout: 5000 });
+    await page.keyboard.type("مرحبا نص صندوق عربي", { delay: 10 });
+    await page.keyboard.press("Escape");
+    await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
+
+    const arTextBox = primaryPane.locator('[data-testid^="pdf-text-box-"]').filter({ hasText: "مرحبا نص صندوق عربي" });
+    await expect(arTextBox).toHaveCount(1);
+    const arTextComputed = await arTextBox.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return { direction: cs.direction, textAlign: cs.textAlign, dir: el.getAttribute("dir") };
+    });
+    expect(arTextComputed.direction).toBe("rtl");
+    expect(arTextComputed.textAlign).toBe("right");
+    expect(arTextComputed.dir).toBe("rtl");
+
+    // 3. Add English Sticky Note
+    await primaryPane.locator('[data-testid="pdf-tool-sticky"]').click();
+    await page.mouse.click(page1Box!.x + 350, page1Box!.y + 100);
+
+    const stickyTextareas = primaryPane.locator('[data-testid^="pdf-sticky-textarea-"]');
+    const enStickyTa = stickyTextareas.last();
+    await expect(enStickyTa).toBeVisible({ timeout: 5000 });
+    await enStickyTa.fill("Hello English Sticky Note");
+    await page.keyboard.press("Escape");
+
+    const enStickyComputed = await enStickyTa.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return { direction: cs.direction, textAlign: cs.textAlign };
+    });
+    expect(enStickyComputed.direction).toBe("ltr");
+    expect(enStickyComputed.textAlign).toBe("left");
+
+    // 4. Add Arabic Sticky Note
+    await primaryPane.locator('[data-testid="pdf-tool-sticky"]').click();
+    await page.mouse.click(page1Box!.x + 350, page1Box!.y + 320);
+
+    const arStickyTa = primaryPane.locator('[data-testid^="pdf-sticky-textarea-"]').last();
+    await expect(arStickyTa).toBeVisible({ timeout: 5000 });
+    await arStickyTa.fill("ملاحظة لاصقة باللغة العربية");
+    await page.keyboard.press("Escape");
+
+    const arStickyComputed = await arStickyTa.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return { direction: cs.direction, textAlign: cs.textAlign };
+    });
+    expect(arStickyComputed.direction).toBe("rtl");
+    expect(arStickyComputed.textAlign).toBe("right");
+
+    // 5. Verify dragging, scaling, and corner handles for Text Box remain completely intact
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await enTextBox.click();
+
+    // Verify all 8 handles exist (4 corners + 4 sides)
+    const nwHandle = primaryPane.locator('[data-testid="pdf-text-resize-handle-nw"]');
+    const neHandle = primaryPane.locator('[data-testid="pdf-text-resize-handle-ne"]');
+    const seHandle = primaryPane.locator('[data-testid="pdf-text-resize-handle-se"]');
+    const swHandle = primaryPane.locator('[data-testid="pdf-text-resize-handle-sw"]');
+    await expect(nwHandle).toBeVisible();
+    await expect(neHandle).toBeVisible();
+    await expect(seHandle).toBeVisible();
+    await expect(swHandle).toBeVisible();
+
+    // Drag move English text box
+    const boxBeforeMove = await enTextBox.boundingBox();
+    expect(boxBeforeMove).not.toBeNull();
+    await page.mouse.move(boxBeforeMove!.x + 20, boxBeforeMove!.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(boxBeforeMove!.x + 70, boxBeforeMove!.y + 30, { steps: 5 });
+    await page.mouse.up();
+
+    const boxAfterMove = await enTextBox.boundingBox();
+    expect(boxAfterMove).not.toBeNull();
+    expect(boxAfterMove!.x).toBeGreaterThan(boxBeforeMove!.x + 30);
+    expect(boxAfterMove!.width).toBeCloseTo(boxBeforeMove!.width, 1);
+    expect(boxAfterMove!.height).toBeCloseTo(boxBeforeMove!.height, 1);
+  });
 });

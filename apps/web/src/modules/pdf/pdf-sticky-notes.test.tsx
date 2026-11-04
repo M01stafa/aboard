@@ -269,6 +269,57 @@ describe("Sticky Note UI & Editing (Sub-Agent 1)", () => {
 
     expect(textarea.style.pointerEvents).toBe("none");
   });
+
+  it("applies direction: ltr and text-align: left for English sticky note, and direction: rtl and text-align: right for Arabic sticky note", () => {
+    const englishSticky = {
+      id: "sticky-en",
+      type: "sticky" as const,
+      pageIndex: 0,
+      x: 50,
+      y: 80,
+      width: 200,
+      height: 180,
+      text: "Hello World from English note",
+      color: "#FEF08A",
+    };
+
+    const arabicSticky = {
+      id: "sticky-ar",
+      type: "sticky" as const,
+      pageIndex: 0,
+      x: 300,
+      y: 80,
+      width: 200,
+      height: 180,
+      text: "مرحبا بالعالم ملاحظة عربية",
+      color: "#FEF08A",
+    };
+
+    act(() => {
+      root.render(
+        <PdfCustomInkLayer
+          pageIndex={0}
+          pageWidth={800}
+          pageHeight={1000}
+          isActive={false}
+          isSelectMode={true}
+          strokes={[]}
+          objects={[englishSticky, arabicSticky]}
+          onAddStroke={vi.fn()}
+        />
+      );
+    });
+
+    const enTextarea = container.querySelector('[data-testid="pdf-sticky-textarea-sticky-en"]') as HTMLTextAreaElement;
+    expect(enTextarea).toBeTruthy();
+    expect(enTextarea.style.direction).toBe("ltr");
+    expect(enTextarea.style.textAlign).toBe("left");
+
+    const arTextarea = container.querySelector('[data-testid="pdf-sticky-textarea-sticky-ar"]') as HTMLTextAreaElement;
+    expect(arTextarea).toBeTruthy();
+    expect(arTextarea.style.direction).toBe("rtl");
+    expect(arTextarea.style.textAlign).toBe("right");
+  });
 });
 
 describe("usePdfAnnotations Sticky Note Management (Sub-Agent 1)", () => {
@@ -389,5 +440,63 @@ describe("usePdfAnnotations Sticky Note Management (Sub-Agent 1)", () => {
     expect(hookResult.customStickyNotes[0][0].y).toBe(-80.5);
     expect(hookResult.customStickyNotes[0][0].width).toBe(150);
     expect(hookResult.customStickyNotes[0][0].height).toBe(120);
+  });
+
+  it("verifies usePdfAnnotations initializes, updates, and propagates direction for sticky notes", () => {
+    let hookResult!: UsePdfAnnotationsResult;
+
+    function TestComponent() {
+      hookResult = usePdfAnnotations({
+        documentId: "doc-test-direction",
+        currentPage: 1,
+      });
+      return null;
+    }
+
+    act(() => {
+      root.render(<TestComponent />);
+    });
+
+    // 1. Initial creation with English text -> direction 'ltr'
+    act(() => {
+      hookResult.handleAddSticky(0, {
+        x: 50,
+        y: 50,
+        text: "English sticky note",
+      });
+    });
+
+    const enStickyId = hookResult.customStickyNotes[0][0].id;
+    expect(hookResult.customStickyNotes[0][0].direction).toBe("ltr");
+    expect(hookResult.getObjectsForPage(0).find((o) => o.id === enStickyId)?.direction).toBe("ltr");
+
+    // 2. Initial creation with Arabic text -> direction 'rtl'
+    act(() => {
+      hookResult.handleAddSticky(0, {
+        x: 100,
+        y: 100,
+        text: "ملاحظة عربية",
+      });
+    });
+
+    const arStickyId = hookResult.customStickyNotes[0][1].id;
+    expect(hookResult.customStickyNotes[0][1].direction).toBe("rtl");
+    expect(hookResult.getObjectsForPage(0).find((o) => o.id === arStickyId)?.direction).toBe("rtl");
+
+    // 3. Updating English sticky note with Arabic text updates direction to 'rtl'
+    act(() => {
+      hookResult.handleUpdateStickyText(0, enStickyId, "تحديث الملاحظة بالعربي");
+    });
+
+    expect(hookResult.customStickyNotes[0].find((s) => s.id === enStickyId)?.direction).toBe("rtl");
+    expect(hookResult.getObjectsForPage(0).find((o) => o.id === enStickyId)?.direction).toBe("rtl");
+
+    // 4. Updating Arabic sticky note with English text updates direction to 'ltr'
+    act(() => {
+      hookResult.handleUpdateStickyText(0, arStickyId, "Now updated to English text");
+    });
+
+    expect(hookResult.customStickyNotes[0].find((s) => s.id === arStickyId)?.direction).toBe("ltr");
+    expect(hookResult.getObjectsForPage(0).find((o) => o.id === arStickyId)?.direction).toBe("ltr");
   });
 });

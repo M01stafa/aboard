@@ -27,6 +27,7 @@ export interface CustomStickyNote {
   color?: string;
   transform?: { x: number; y: number };
   rotation?: number;
+  direction?: "ltr" | "rtl";
 }
 
 export interface CustomTextBox {
@@ -251,7 +252,17 @@ export function extractCustomStickyNotes(json: string): Record<number, CustomSti
   try {
     const parsed = JSON.parse(json);
     if (parsed && typeof parsed === "object" && "customStickyNotes" in parsed) {
-      return (parsed as SerializedAnnotationsPayload).customStickyNotes || {};
+      const raw = (parsed as SerializedAnnotationsPayload).customStickyNotes || {};
+      const result: Record<number, CustomStickyNote[]> = {};
+      for (const [k, list] of Object.entries(raw)) {
+        const pageIdx = parseInt(k, 10);
+        if (Number.isNaN(pageIdx) || !Array.isArray(list)) continue;
+        result[pageIdx] = list.map((s) => ({
+          ...s,
+          direction: s.direction === "rtl" || s.direction === "ltr" ? s.direction : undefined,
+        }));
+      }
+      return result;
     }
   } catch {}
   return {};

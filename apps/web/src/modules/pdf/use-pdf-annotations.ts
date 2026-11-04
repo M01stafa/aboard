@@ -62,9 +62,23 @@ export interface UsePdfAnnotationsResult {
   customStickyNotes: Record<number, CustomStickyNote[]>;
   handleAddSticky: (
     pageIndex: number,
-    coords: { x: number; y: number; width?: number; height?: number; text?: string; color?: string }
+    coords: {
+      x: number;
+      y: number;
+      width?: number;
+      height?: number;
+      text?: string;
+      color?: string;
+      rotation?: number;
+      direction?: "ltr" | "rtl";
+    }
   ) => void;
-  handleUpdateStickyText: (pageIndex: number, id: string, text: string) => void;
+  handleUpdateStickyText: (
+    pageIndex: number,
+    id: string,
+    text: string,
+    direction?: "ltr" | "rtl"
+  ) => void;
   handleDeleteSticky: (pageIndex: number, id: string) => void;
   customTextBoxes: Record<number, CustomTextBox[]>;
   handleAddText: (
@@ -610,6 +624,7 @@ export function usePdfAnnotations({
           contents: st.text,
           color: st.color,
           rotation: st.rotation,
+          direction: st.direction ?? detectTextDirection(st.text ?? ""),
         });
       }
 
@@ -925,7 +940,16 @@ export function usePdfAnnotations({
   const handleAddSticky = useCallback(
     (
       pageIndex: number,
-      coords: { x: number; y: number; width?: number; height?: number; text?: string; color?: string; rotation?: number }
+      coords: {
+        x: number;
+        y: number;
+        width?: number;
+        height?: number;
+        text?: string;
+        color?: string;
+        rotation?: number;
+        direction?: "ltr" | "rtl";
+      }
     ) => {
       const stickyId =
         typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -940,6 +964,9 @@ export function usePdfAnnotations({
       const rotation =
         coords.rotation ?? Math.round((((Math.abs(hash) % 17) - 8) / 10) * 10) / 10;
 
+      const initialDir =
+        coords.direction ?? (coords.text ? detectTextDirection(coords.text) : "ltr");
+
       const newSticky: CustomStickyNote = {
         id: stickyId,
         pageIndex,
@@ -951,6 +978,7 @@ export function usePdfAnnotations({
         color: coords.color ?? "#FEF08A",
         rotation,
         transform: { x: 0, y: 0 },
+        direction: initialDir,
       };
 
       setCustomStickyNotes((prev) => {
@@ -970,10 +998,11 @@ export function usePdfAnnotations({
   );
 
   const handleUpdateStickyText = useCallback(
-    (pageIndex: number, id: string, text: string) => {
+    (pageIndex: number, id: string, text: string, direction?: "ltr" | "rtl") => {
+      const dir = direction ?? detectTextDirection(text);
       setCustomStickyNotes((prev) => {
         const list = prev[pageIndex] || [];
-        const nextList = list.map((st) => (st.id === id ? { ...st, text } : st));
+        const nextList = list.map((st) => (st.id === id ? { ...st, text, direction: dir } : st));
         const next = { ...prev, [pageIndex]: nextList };
         customStickyNotesRef.current = next;
         return next;

@@ -340,4 +340,44 @@ describe("annotation-storage (PDF-4)", () => {
     expect(extracted[0][0].direction).toBe("ltr");
     expect(extracted[0][1].direction).toBe("rtl");
   });
+
+  it("extracts and preserves direction ('ltr' | 'rtl') on custom sticky notes", async () => {
+    const mockProjectService = {
+      putFile: vi.fn(),
+      getFile: vi.fn(),
+    } as unknown as ProjectService;
+
+    const stickiesWithDirection: Record<number, CustomStickyNote[]> = {
+      0: [
+        {
+          id: "sticky-ltr",
+          pageIndex: 0,
+          x: 40,
+          y: 60,
+          width: 200,
+          height: 200,
+          text: "English note content",
+          color: "#FEF08A",
+          direction: "ltr",
+        },
+        {
+          id: "sticky-rtl",
+          pageIndex: 0,
+          x: 260,
+          y: 60,
+          width: 200,
+          height: 200,
+          text: "ملاحظة باللغة العربية",
+          color: "#FEF08A",
+          direction: "rtl",
+        },
+      ],
+    };
+
+    const json = await serializeAnnotations(projectId, pdfHash, [], mockProjectService, {}, stickiesWithDirection, {});
+    const extracted = extractCustomStickyNotes(json);
+    expect(extracted[0]).toHaveLength(2);
+    expect(extracted[0][0].direction).toBe("ltr");
+    expect(extracted[0][1].direction).toBe("rtl");
+  });
 });

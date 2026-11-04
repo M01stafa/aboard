@@ -172,10 +172,11 @@ export function getMaxTextWidth(pageWidth: number, x: number): number {
 }
 
 export function detectTextDirection(text: string): "ltr" | "rtl" {
+  if (!text) return "ltr";
   // Search for the first strong directional character (Arabic / Hebrew vs Latin / Greek / Cyrillic)
-  const match = text.match(/[\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]|[A-Za-z\u00C0-\u024F]/);
+  const match = text.match(/[\u0600-\u06FF\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]|[A-Za-z\u00C0-\u024F]/);
   if (!match) return "ltr";
-  return /[\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]/.test(match[0]) ? "rtl" : "ltr";
+  return /[\u0600-\u06FF\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]/.test(match[0]) ? "rtl" : "ltr";
 }
 
 /**
@@ -515,9 +516,18 @@ export interface PdfCustomInkLayerProps {
   isStickyMode?: boolean;
   onAddSticky?: (
     pageIndex: number,
-    coords: { x: number; y: number; width?: number; height?: number; text?: string; color?: string; rotation?: number }
+    coords: {
+      x: number;
+      y: number;
+      width?: number;
+      height?: number;
+      text?: string;
+      color?: string;
+      rotation?: number;
+      direction?: "ltr" | "rtl";
+    }
   ) => void;
-  onUpdateStickyText?: (pageIndex: number, id: string, text: string) => void;
+  onUpdateStickyText?: (pageIndex: number, id: string, text: string, direction?: "ltr" | "rtl") => void;
   onDeleteSticky?: (pageIndex: number, id: string) => void;
   /** Text mode active: clicking canvas creates a text box */
   isTextMode?: boolean;
@@ -1807,8 +1817,14 @@ export function PdfCustomInkLayer({
         const isEditingThis = obj.type === "text" && editingTextId === obj.id;
         const curX = resizeRect ? resizeRect.x : obj.x;
         const curY = resizeRect ? resizeRect.y : obj.y;
+        const uiDir: "ltr" | "rtl" =
+          typeof document !== "undefined" && document.documentElement.getAttribute("dir") === "rtl"
+            ? "rtl"
+            : "ltr";
         const effectiveDirection = obj.direction ?? detectTextDirection(obj.text || "");
         const textAlign = effectiveDirection === "rtl" ? "right" : "left";
+        const stickyDirection = obj.direction ?? detectTextDirection(obj.text || "");
+        const stickyTextAlign = stickyDirection === "rtl" ? "right" : "left";
         const textFontSize = liveTextFontSizes[obj.id] ?? obj.fontSize ?? 16;
         const preDragSize = dragTextSizes[obj.id];
         const curW = resizeRect
@@ -1887,12 +1903,14 @@ export function PdfCustomInkLayer({
                   }}
                 >
                   <div
+                    dir={uiDir}
                     style={{
                       height: "26px",
                       backgroundColor: "#FDE047",
                       borderTopLeftRadius: "var(--radius-md, 8px)",
                       borderTopRightRadius: "var(--radius-md, 8px)",
                       display: "flex",
+                      direction: uiDir,
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "0 8px",
@@ -1979,10 +1997,13 @@ export function PdfCustomInkLayer({
                       setEditingStickyId(obj.id);
                     }}
                     onChange={(e) => {
-                      onUpdateStickyText?.(pageIndex, obj.id, e.target.value);
+                      const val = e.target.value;
+                      onUpdateStickyText?.(pageIndex, obj.id, val);
                     }}
-                    onBlur={() => {
+                    onBlur={(e) => {
                       setEditingStickyId(null);
+                      const val = e.currentTarget.value;
+                      onUpdateStickyText?.(pageIndex, obj.id, val);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Escape") {
@@ -2005,7 +2026,8 @@ export function PdfCustomInkLayer({
                       lineHeight: "1.4",
                       color: "#78350F",
                       unicodeBidi: "plaintext",
-                      textAlign: "start",
+                      direction: stickyDirection,
+                      textAlign: stickyTextAlign,
                       pointerEvents: editingStickyId === obj.id ? "auto" : "none",
                       boxSizing: "border-box",
                     }}
