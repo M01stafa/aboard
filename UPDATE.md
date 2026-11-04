@@ -2703,3 +2703,18 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** SEC-5, SEC-1
 **Open:** none.
 
+
+## 2026-11-05 — Install Official Supabase Plugin for Antigravity
+**Request:** Run official install command `npx plugins add supabase-community/supabase-plugin --yes`, verify connection, confirm config git-ignore status, and record status.
+**Changes:**
+- Executed `npx plugins add supabase-community/supabase-plugin --yes`: exited with error (`No supported targets detected`).
+- Verified `supabase-community/supabase-plugin` is already installed as Antigravity's official Supabase plugin at `C:\Users\alhmy\.gemini\config\plugins\supabase`.
+- Identified that the plugin requires OAuth browser authentication via the Antigravity plugin card.
+**Checks:**
+- `npx.cmd plugins add supabase-community/supabase-plugin --yes`: code 1 (`No supported targets detected`).
+- `list_plugin_accounts`: confirmed plugin is waiting on OAuth sign-in.
+- `git status`: clean.
+**Related:** SEC-5, SEC-1
+**Open:** Supabase plugin awaiting OAuth sign-in via plugin card.
+
+
