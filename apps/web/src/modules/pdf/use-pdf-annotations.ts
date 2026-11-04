@@ -29,11 +29,14 @@ import {
   type CustomObjectType,
   getAbsoluteStrokeBounds,
   scaleStrokePoints,
+  detectTextDirection,
 } from "./pdf-custom-ink-layer";
 
 /** Default text box styling (matches the design-system danger accent used for annotations). */
 export const DEFAULT_TEXT_COLOR = "#E44234";
 export const DEFAULT_TEXT_FONT_SIZE = 16;
+export const DEFAULT_TEXT_BOX_WIDTH = 250;
+export const DEFAULT_TEXT_BOX_HEIGHT = 100;
 
 export interface UsePdfAnnotationsOptions {
   documentId: string;
@@ -65,7 +68,17 @@ export interface UsePdfAnnotationsResult {
   customTextBoxes: Record<number, CustomTextBox[]>;
   handleAddText: (
     pageIndex: number,
-    coords: { x: number; y: number; text?: string; fontSize?: number; color?: string; id?: string }
+    coords: {
+      x: number;
+      y: number;
+      width?: number;
+      height?: number;
+      text?: string;
+      fontSize?: number;
+      color?: string;
+      id?: string;
+      direction?: "ltr" | "rtl";
+    }
   ) => string;
   handleUpdateText: (pageIndex: number, id: string, newText: string) => void;
   handleUpdateTextBoxSize: (
@@ -600,8 +613,6 @@ export function usePdfAnnotations({
 
       const texts = customTextBoxes[pageIndex] || [];
       for (const tb of texts) {
-        const lines = (tb.text ?? "").split("\n");
-        const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
         const fontSize = tb.fontSize || 16;
         res.push({
           id: tb.id,
@@ -609,19 +620,14 @@ export function usePdfAnnotations({
           pageIndex,
           x: tb.x,
           y: tb.y,
-          width:
-            typeof tb.width === "number" && tb.width > 0
-              ? tb.width
-              : Math.max(24, longest * fontSize * 0.6),
-          height:
-            typeof tb.height === "number" && tb.height > 0
-              ? tb.height
-              : fontSize * 1.4 * Math.max(1, lines.length),
+          width: tb.width && tb.width > 0 ? tb.width : DEFAULT_TEXT_BOX_WIDTH,
+          height: tb.height && tb.height > 0 ? tb.height : DEFAULT_TEXT_BOX_HEIGHT,
           transform: { x: 0, y: 0 },
           text: tb.text,
           contents: tb.text,
           fontSize,
           color: tb.color,
+          direction: tb.direction ?? detectTextDirection(tb.text ?? ""),
         });
       }
 
@@ -963,7 +969,17 @@ export function usePdfAnnotations({
   const handleAddText = useCallback(
     (
       pageIndex: number,
-      coords: { x: number; y: number; text?: string; fontSize?: number; color?: string; id?: string }
+      coords: {
+        x: number;
+        y: number;
+        width?: number;
+        height?: number;
+        text?: string;
+        fontSize?: number;
+        color?: string;
+        id?: string;
+        direction?: "ltr" | "rtl";
+      }
     ): string => {
       const textId =
         coords.id ||
@@ -971,14 +987,20 @@ export function usePdfAnnotations({
           ? crypto.randomUUID()
           : `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
 
+      const initialDir =
+        coords.direction ?? (coords.text ? detectTextDirection(coords.text) : "ltr");
+
       const box: CustomTextBox = {
         id: textId,
         pageIndex,
         x: Math.round(coords.x * 100) / 100,
         y: Math.round(coords.y * 100) / 100,
+        width: coords.width && coords.width > 0 ? coords.width : DEFAULT_TEXT_BOX_WIDTH,
+        height: coords.height && coords.height > 0 ? coords.height : DEFAULT_TEXT_BOX_HEIGHT,
         text: coords.text ?? "",
         fontSize: coords.fontSize ?? DEFAULT_TEXT_FONT_SIZE,
         color: coords.color ?? DEFAULT_TEXT_COLOR,
+        direction: initialDir,
       };
 
       setCustomTextBoxes((prev) => {
@@ -1006,11 +1028,12 @@ export function usePdfAnnotations({
 
   const handleUpdateText = useCallback(
     (pageIndex: number, id: string, newText: string) => {
+      const dir = detectTextDirection(newText);
       setCustomTextBoxes((prev) => {
         const list = prev[pageIndex] || [];
         const next = {
           ...prev,
-          [pageIndex]: list.map((b) => (b.id === id ? { ...b, text: newText } : b)),
+          [pageIndex]: list.map((b) => (b.id === id ? { ...b, text: newText, direction: dir } : b)),
         };
         customTextBoxesRef.current = next;
         return next;

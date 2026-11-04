@@ -39,6 +39,7 @@ export interface CustomTextBox {
   text: string;
   fontSize: number;
   color: string;
+  direction?: "ltr" | "rtl";
 }
 
 export interface SerializedAnnotationsPayload {
@@ -274,6 +275,7 @@ export function extractCustomTextBoxes(json: string): Record<number, CustomTextB
           ...b,
           width: typeof b.width === "number" && !Number.isNaN(b.width) ? b.width : undefined,
           height: typeof b.height === "number" && !Number.isNaN(b.height) ? b.height : undefined,
+          direction: b.direction === "rtl" || b.direction === "ltr" ? b.direction : undefined,
         }));
       }
       return result;

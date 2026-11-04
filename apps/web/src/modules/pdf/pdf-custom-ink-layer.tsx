@@ -162,6 +162,8 @@ export function scaleStrokePoints(
 }
 
 export const MAX_TEXT_WIDTH = 500;
+export const DEFAULT_TEXT_BOX_WIDTH = 250;
+export const DEFAULT_TEXT_BOX_HEIGHT = 100;
 
 export function getMaxTextWidth(pageWidth: number, x: number): number {
   const pWidth = pageWidth > 0 ? pageWidth : 612;
@@ -169,7 +171,7 @@ export function getMaxTextWidth(pageWidth: number, x: number): number {
   return Math.min(500, Math.max(200, available));
 }
 
-export function detectTextDirection(text: string): "rtl" | "ltr" {
+export function detectTextDirection(text: string): "ltr" | "rtl" {
   // Search for the first strong directional character (Arabic / Hebrew vs Latin / Greek / Cyrillic)
   const match = text.match(/[\u0591-\u07FF\uFB1D-\uFDFD\uFE70-\uFEFC]|[A-Za-z\u00C0-\u024F]/);
   if (!match) return "ltr";
@@ -429,6 +431,7 @@ export interface CustomAnnotationObject {
   fontSize?: number;
   color?: string;
   rotation?: number;
+  direction?: "ltr" | "rtl";
 }
 
 /**
@@ -470,7 +473,17 @@ export interface PdfCustomInkLayerProps {
   isTextMode?: boolean;
   onAddText?: (
     pageIndex: number,
-    coords: { x: number; y: number; width?: number; height?: number; text?: string; fontSize?: number; color?: string; id?: string }
+    coords: {
+      x: number;
+      y: number;
+      width?: number;
+      height?: number;
+      text?: string;
+      fontSize?: number;
+      color?: string;
+      id?: string;
+      direction?: "ltr" | "rtl";
+    }
   ) => string | void;
   onUpdateText?: (pageIndex: number, id: string, text: string) => void;
   onUpdateTextBoxSize?: (
@@ -644,70 +657,6 @@ export function PdfCustomInkLayer({
   // Text boxes: edit mode is entered right after creation or via the native dblclick event only.
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const editingTextIdRef = useRef<string | null>(null);
-  const [textSizes, setTextSizes] = useState<Record<string, { width: number; height: number }>>({});
-
-  const textContentKey = useMemo(() => {
-    return pageObjects
-      .filter((o) => o.type === "text")
-      .map((o) => `${o.id}:${o.text ?? ""}:${o.fontSize ?? 16}:${editingTextId === o.id}`)
-      .join("|");
-  }, [pageObjects, editingTextId]);
-
-  // Measure rendered text so the selection box hugs the text (no resize handles for text)
-  // Guarded by dependency on textContentKey and thresholding to avoid infinite re-renders.
-  useLayoutEffect(() => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    if (interactionRef.current?.kind === "drag") return;
-    const next: Record<string, { width: number; height: number }> = {};
-    svg.querySelectorAll<HTMLElement>("[data-text-measure]").forEach((el) => {
-      const id = el.getAttribute("data-text-measure");
-      if (!id) return;
-      const targetObj = pageObjects.find((o) => o.id === id);
-      const maxW = MAX_TEXT_WIDTH;
-      if (el instanceof HTMLTextAreaElement) {
-        el.style.height = "auto";
-        const lines = (el.value || "").split("\n");
-        const longest = lines.reduce((m, l) => Math.max(m, l.length), 0);
-        const fontSize = parseFloat(el.style.fontSize) || 16;
-        const lineH = fontSize * 1.4;
-        const padBorder = 18; // var(--space-1, 8px) * 2 + 2px border
-        const h = Math.max(lineH + padBorder, el.scrollHeight + 2, lines.length * lineH + padBorder);
-        el.style.height = `${h}px`;
-        const rawW = Math.max(64, longest * fontSize * 0.7);
-        const w = Math.min(maxW, rawW);
-        const approxCharsPerLine = Math.max(10, Math.floor(maxW / (fontSize * 0.6)));
-        const totalLines = lines.reduce(
-          (sum, line) => sum + Math.max(1, Math.ceil(line.length / approxCharsPerLine)),
-          0
-        );
-        const contentH = Math.round(Math.max(lineH, totalLines * lineH) * 10) / 10;
-        next[id] = { width: Math.round(w), height: contentH };
-      } else {
-        if (targetObj && targetObj.width > 0 && targetObj.height > 0) {
-          next[id] = { width: Math.round(targetObj.width), height: Math.round(targetObj.height * 10) / 10 };
-        } else if (el.offsetWidth > 0 && el.offsetHeight > 0) {
-          const w = Math.min(maxW, Math.max(64, el.offsetWidth));
-          const h = Math.max(16, el.offsetHeight);
-          next[id] = { width: Math.round(w), height: Math.round(h * 10) / 10 };
-        }
-      }
-    });
-    setTextSizes((prev) => {
-      const nextKeys = Object.keys(next);
-      const prevKeys = Object.keys(prev);
-      if (nextKeys.length !== prevKeys.length) {
-        return next;
-      }
-      const hasMeaningfulChange = nextKeys.some((k) => {
-        const p = prev[k];
-        const n = next[k];
-        if (!p) return true;
-        return Math.abs(p.width - n.width) > 2 || Math.abs(p.height - n.height) > 2;
-      });
-      return hasMeaningfulChange ? next : prev;
-    });
-  }, [textContentKey, pageWidth, pageObjects]);
 
   const lastClickRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
   useEffect(() => {
@@ -717,18 +666,6 @@ export function PdfCustomInkLayer({
     const focusOnce = () => {
       const ta = svgRef.current?.querySelector<HTMLTextAreaElement>(`[data-testid="pdf-text-input-${editingTextId}"]`);
       if (ta) {
-        ta.style.height = "auto";
-        const fontSize = parseFloat(ta.style.fontSize) || 16;
-        const lineH = fontSize * 1.4;
-        const lines = (ta.value || "").split("\n");
-        const padBorder = 18;
-        const maxTextW = MAX_TEXT_WIDTH;
-        const approxCharsPerLine = Math.max(10, Math.floor(maxTextW / (fontSize * 0.6)));
-        const totalEstLines = lines.reduce(
-          (sum, line) => sum + Math.max(1, Math.ceil(line.length / approxCharsPerLine)),
-          0
-        );
-        ta.style.height = `${Math.max(lineH + padBorder, ta.scrollHeight + 2, totalEstLines * lineH + padBorder)}px`;
         if (document.activeElement !== ta) {
           ta.focus();
           const len = ta.value.length;
@@ -778,7 +715,6 @@ export function PdfCustomInkLayer({
     strokeColor,
     strokeWidth,
     strokeOpacity,
-    textSizes,
   });
 
   useEffect(() => {
@@ -812,7 +748,6 @@ export function PdfCustomInkLayer({
       strokeColor,
       strokeWidth,
       strokeOpacity,
-      textSizes,
     };
   });
 
@@ -1099,15 +1034,14 @@ export function PdfCustomInkLayer({
               const obj = (p.objects || []).find((o) => o.id === sid);
               bases[sid] = obj?.transform ?? { x: 0, y: 0 };
               if (obj && obj.type === "text") {
-                const domEl = svg.querySelector(`[data-testid="pdf-text-box-${sid}"]`) as HTMLElement | null;
                 const curTextW =
                   obj.width && obj.width > 0
                     ? obj.width
-                    : (domEl?.offsetWidth || p.textSizes?.[sid]?.width || 64);
+                    : DEFAULT_TEXT_BOX_WIDTH;
                 const curTextH =
                   obj.height && obj.height > 0
                     ? obj.height
-                    : (domEl?.offsetHeight || p.textSizes?.[sid]?.height || 24);
+                    : DEFAULT_TEXT_BOX_HEIGHT;
                 currentTextSizes[sid] = { width: curTextW, height: curTextH };
               }
             }
@@ -1115,15 +1049,14 @@ export function PdfCustomInkLayer({
           if (objType === "text" && !currentTextSizes[targetId]) {
             const obj = (p.objects || []).find((o) => o.id === targetId);
             if (obj) {
-              const domEl = svg.querySelector(`[data-testid="pdf-text-box-${targetId}"]`) as HTMLElement | null;
               const curTextW =
                 obj.width && obj.width > 0
                   ? obj.width
-                  : (domEl?.offsetWidth || p.textSizes?.[targetId]?.width || 64);
+                  : DEFAULT_TEXT_BOX_WIDTH;
               const curTextH =
                 obj.height && obj.height > 0
                   ? obj.height
-                  : (domEl?.offsetHeight || p.textSizes?.[targetId]?.height || 24);
+                  : DEFAULT_TEXT_BOX_HEIGHT;
               currentTextSizes[targetId] = { width: curTextW, height: curTextH };
             }
           }
@@ -1704,47 +1637,20 @@ export function PdfCustomInkLayer({
         const isEditingThis = obj.type === "text" && editingTextId === obj.id;
         const curX = resizeRect ? resizeRect.x : obj.x;
         const curY = resizeRect ? resizeRect.y : obj.y;
-        const textDirection = detectTextDirection(obj.text || "");
-        const textAlign = textDirection === "rtl" ? "right" : "left";
-        const measured = obj.type === "text" ? textSizes[obj.id] : undefined;
+        const effectiveDirection = obj.direction ?? detectTextDirection(obj.text || "");
+        const textAlign = effectiveDirection === "rtl" ? "right" : "left";
         const textFontSize = obj.fontSize || 16;
-        const textLineHeight = textFontSize * 1.4;
-        const maxTextWidth = MAX_TEXT_WIDTH;
-        const textLines = (obj.text || "").split("\n");
-        const longestLineChars = textLines.reduce((m, l) => Math.max(m, l.length), 0);
-        const approxCharsPerLine = Math.max(10, Math.floor(maxTextWidth / (textFontSize * 0.6)));
-        const totalEstimatedLines = textLines.reduce(
-          (sum, line) => sum + Math.max(1, Math.ceil(line.length / approxCharsPerLine)),
-          0
-        );
-        const dynamicContentW = Math.min(
-          maxTextWidth,
-          Math.max(64, longestLineChars * textFontSize * 0.7)
-        );
-        const dynamicContentH = Math.max(
-          textLineHeight,
-          totalEstimatedLines * textLineHeight,
-          measured?.height ?? obj.height
-        );
         const preDragSize = dragTextSizes[obj.id];
         const curW = resizeRect
           ? resizeRect.width
           : obj.type === "text"
-          ? (preDragSize
-              ? preDragSize.width
-              : (obj.width && obj.width > 0 && !isEditingThis
-                  ? Math.min(maxTextWidth, obj.width)
-                  : Math.min(maxTextWidth, measured?.width ?? dynamicContentW)))
-          : (measured?.width ?? obj.width);
+          ? (preDragSize?.width ?? (obj.width && obj.width > 0 ? obj.width : DEFAULT_TEXT_BOX_WIDTH))
+          : obj.width;
         const curH = resizeRect
           ? resizeRect.height
           : obj.type === "text"
-          ? (preDragSize
-              ? preDragSize.height
-              : (obj.height && obj.height > 0 && !isEditingThis
-                  ? Math.max(obj.height, dynamicContentH)
-                  : (measured?.height ?? dynamicContentH)))
-          : (measured?.height ?? obj.height);
+          ? (preDragSize?.height ?? (obj.height && obj.height > 0 ? obj.height : DEFAULT_TEXT_BOX_HEIGHT))
+          : obj.height;
         const handleSize = 8;
 
         const handles: Array<{ pos: ResizeHandlePosition; hx: number; hy: number }> = [
@@ -1937,42 +1843,34 @@ export function PdfCustomInkLayer({
               <foreignObject
                 x={curX}
                 y={curY}
-                width={isEditingThis ? Math.max(curW + 64, 160) : Math.max(curW, 64)}
-                height={isEditingThis ? Math.max(curH + 48, 64) : Math.max(curH, 32)}
-                {...({ dir: "auto" } as React.SVGProps<SVGForeignObjectElement> & { dir?: string })}
+                width={curW}
+                height={curH}
+                {...({ dir: effectiveDirection } as React.SVGProps<SVGForeignObjectElement> & { dir?: "ltr" | "rtl" })}
                 style={{
-                  overflow: "visible",
+                  overflow: "hidden",
                   pointerEvents: isSelectMode ? "auto" : "none",
-                  direction: textDirection,
+                  direction: effectiveDirection,
                   textAlign: textAlign,
                   unicodeBidi: "plaintext",
                 }}
               >
                 {isEditingThis ? (
                   <div
-                    dir="auto"
+                    dir={effectiveDirection}
                     style={{
                       position: "relative",
                       width: "100%",
                       height: "100%",
-                      direction: textDirection,
+                      direction: effectiveDirection,
                       textAlign: textAlign,
                       unicodeBidi: "plaintext",
                     }}
                   >
                     <textarea
                       key={`text-input-${obj.id}`}
-                      ref={(el) => {
-                        if (el) {
-                          el.style.height = "auto";
-                          const targetH = Math.max(textLineHeight + 18, el.scrollHeight + 2, totalEstimatedLines * textLineHeight + 18);
-                          el.style.height = `${targetH}px`;
-                        }
-                      }}
                       data-testid={`pdf-text-input-${obj.id}`}
-                      data-text-measure={obj.id}
                       wrap="soft"
-                      rows={Math.max(1, textLines.length)}
+                      rows={Math.max(1, (obj.text || "").split("\n").length)}
                       spellCheck={false}
                       dir="auto"
                       value={obj.text ?? ""}
@@ -1994,19 +1892,6 @@ export function PdfCustomInkLayer({
                           target.setSelectionRange(newCursorPos, newCursorPos);
                         }
 
-                        target.style.height = "auto";
-                        const lines = nextValue.split("\n");
-                        const estLines = lines.reduce(
-                          (sum, line) => sum + Math.max(1, Math.ceil(line.length / approxCharsPerLine)),
-                          0
-                        );
-                        const targetH = Math.max(
-                          textLineHeight + 18,
-                          target.scrollHeight + 2,
-                          estLines * textLineHeight + 18
-                        );
-                        target.style.height = `${targetH}px`;
-
                         onUpdateText?.(pageIndex, obj.id, nextValue);
 
                         if (typeof requestAnimationFrame === "function") {
@@ -2018,28 +1903,10 @@ export function PdfCustomInkLayer({
                         }
                       }}
                       onChange={(e) => {
-                        const target = e.currentTarget;
-                        target.style.height = "auto";
-                        const lines = target.value.split("\n");
-                        const estLines = lines.reduce(
-                          (sum, line) => sum + Math.max(1, Math.ceil(line.length / approxCharsPerLine)),
-                          0
-                        );
-                        const targetH = Math.max(textLineHeight + 18, target.scrollHeight + 2, estLines * textLineHeight + 18);
-                        target.style.height = `${targetH}px`;
                         onUpdateText?.(pageIndex, obj.id, e.target.value);
                       }}
                       onInput={(e) => {
-                        const target = e.currentTarget;
-                        target.style.height = "auto";
-                        const lines = target.value.split("\n");
-                        const estLines = lines.reduce(
-                          (sum, line) => sum + Math.max(1, Math.ceil(line.length / approxCharsPerLine)),
-                          0
-                        );
-                        const targetH = Math.max(textLineHeight + 18, target.scrollHeight + 2, estLines * textLineHeight + 18);
-                        target.style.height = `${targetH}px`;
-                        onUpdateText?.(pageIndex, obj.id, target.value);
+                        onUpdateText?.(pageIndex, obj.id, e.currentTarget.value);
                       }}
                       onBlur={(e) => {
                         const value = e.currentTarget.value;
@@ -2047,9 +1914,7 @@ export function PdfCustomInkLayer({
                         if (value.trim() === "") {
                           onDeleteText?.(pageIndex, obj.id);
                         } else {
-                          const lockedW = Math.round(curW);
-                          const lockedH = Math.round(curH * 10) / 10;
-                          onUpdateTextBoxSize?.(pageIndex, obj.id, { width: lockedW, height: lockedH });
+                          onUpdateTextBoxSize?.(pageIndex, obj.id, { width: curW, height: curH });
                         }
                       }}
                       onKeyDown={(e) => {
@@ -2061,11 +1926,8 @@ export function PdfCustomInkLayer({
                       }}
                       style={{
                         display: "block",
-                        width: `${Math.max(64, curW)}px`,
-                        minWidth: "64px",
-                        maxWidth: `${maxTextWidth}px`,
-                        height: `${Math.max(textLineHeight + 18, curH)}px`,
-                        minHeight: `${textLineHeight + 18}px`,
+                        width: "100%",
+                        height: "100%",
                         background: "transparent",
                         border: "1px dashed var(--accent-text, #1A63A0)",
                         borderRadius: "var(--radius-sm, 4px)",
@@ -2082,7 +1944,7 @@ export function PdfCustomInkLayer({
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
                         overflowWrap: "break-word",
-                        direction: textDirection,
+                        direction: effectiveDirection,
                         textAlign: textAlign,
                         unicodeBidi: "plaintext",
                         userSelect: "text",
@@ -2091,49 +1953,23 @@ export function PdfCustomInkLayer({
                         pointerEvents: "auto",
                       }}
                     />
-                    <span
-                      aria-hidden="true"
-                      dir="auto"
-                      style={{
-                        position: "absolute",
-                        visibility: "hidden",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                        overflowWrap: "break-word",
-                        maxWidth: `${maxTextWidth}px`,
-                        width: `${Math.max(64, curW)}px`,
-                        fontSize: `${textFontSize}px`,
-                        fontFamily: "var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
-                        lineHeight: "1.4",
-                        padding: "var(--space-1, 8px)",
-                        border: "1px solid transparent",
-                        boxSizing: "border-box",
-                        margin: 0,
-                        pointerEvents: "none",
-                        top: 0,
-                        left: 0,
-                        direction: textDirection,
-                        textAlign: textAlign,
-                        unicodeBidi: "plaintext",
-                      }}
-                    >
-                      {(obj.text ?? "") + (obj.text?.endsWith("\n") ? "\u200B" : "")}
-                    </span>
                   </div>
                 ) : (
                   <div
                     key={`text-display-${obj.id}`}
                     data-testid={`pdf-text-box-${obj.id}`}
-                    data-text-measure={obj.id}
                     data-object-id={obj.id}
                     data-object-type="text"
-                    dir="auto"
+                    dir={effectiveDirection}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      editingTextIdRef.current = obj.id;
+                      setEditingTextId(obj.id);
+                    }}
                     style={{
                       display: "block",
-                      width: `${curW}px`,
-                      minWidth: "64px",
-                      maxWidth: `${maxTextWidth}px`,
-                      height: `${curH}px`,
+                      width: "100%",
+                      height: "100%",
                       color: obj.color || "#E44234",
                       fontSize: `${textFontSize}px`,
                       fontFamily: "var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)",
@@ -2141,7 +1977,8 @@ export function PdfCustomInkLayer({
                       whiteSpace: "pre-wrap",
                       wordBreak: "break-word",
                       overflowWrap: "break-word",
-                      direction: textDirection,
+                      overflow: "hidden",
+                      direction: effectiveDirection,
                       textAlign: textAlign,
                       unicodeBidi: "plaintext",
                       userSelect: "none",
@@ -2225,7 +2062,6 @@ export function PdfCustomInkLayer({
       selectedSet,
       editingStickyId,
       editingTextId,
-      textSizes,
       onUpdateStickyText,
       onUpdateText,
       onUpdateTextBoxSize,

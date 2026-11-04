@@ -2535,3 +2535,27 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server cleanly restarted on port 3000 (HTTP 200 OK).
 **Related:** PDF-1, PDF-4
 **Open:** none.
+
+
+## 2026-11-04 — Fix Direction Persistence on Blur and Stop Text Crawling via Fixed-Size Textarea (Multi-Agent)
+**Request:** Fix direction persistence on blur (English LTR, Arabic RTL) and eradicate text crawling by implementing a fixed-size textarea (250x100px) across 3 sub-agents:
+1. Sub-Agent 1 (Fix Direction Persistence): Added `direction?: "ltr" | "rtl"` to `CustomTextBox` schema and serialized JSON storage; detected text direction on creation and edit; persisted direction in `usePdfAnnotations` state; explicitly applied `dir={effectiveDirection}`, `direction: effectiveDirection`, and `textAlign: effectiveDirection === "rtl" ? "right" : "left"` to `<foreignObject>` and display `<div>` so English text strictly persists as LTR on blur even under an Arabic (`dir="rtl"`) app environment.
+2. Sub-Agent 2 (Fix Crawling via Fixed Textarea): Standardized fixed text box dimensions (`DEFAULT_TEXT_BOX_WIDTH = 250`, `DEFAULT_TEXT_BOX_HEIGHT = 100`); eradicated dynamic width/height recalculation during typing (`dynamicContentW`, line estimation, scrollHeight expansion, and DOM `useLayoutEffect` measurements for text boxes); configured `<textarea>` to fill `width: 100%; height: 100%; resize: none; overflow: hidden;`; rendered blur display `<div>` and selection bounding box within the identical fixed 250x100 bounds, ensuring zero coordinate drift or crawling while typing.
+3. Sub-Agent 3 (E2E Verification & QA): Updated and executed Playwright E2E suite in `apps/web/e2e/pdf-ink-stamp.spec.ts` (8/8 tests passed), verifying English text stays LTR on blur, Arabic text stays RTL on blur, and typing long text keeps anchor coordinates strictly fixed in place.
+**Changes:**
+- `apps/web/src/modules/pdf/annotation-storage.ts`: added `direction?: "ltr" | "rtl"` to `CustomTextBox` and updated `extractCustomTextBoxes` to parse direction.
+- `apps/web/src/modules/pdf/annotation-storage.test.ts`: added unit tests for round-trip serialization and extraction of `direction`.
+- `apps/web/src/modules/pdf/use-pdf-annotations.ts`: added `DEFAULT_TEXT_BOX_WIDTH = 250` and `DEFAULT_TEXT_BOX_HEIGHT = 100`; stored `direction` on creation and edit; returned fixed fallback dimensions in `getObjectsForPage`.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx`: eradicated dynamic text size measuring layout effect; applied fixed 250x100 dimensions; bound `dir={effectiveDirection}`, `direction`, and `textAlign` to display `<div>` and `<foreignObject>`; styled `<textarea>` with `resize: none; overflow: hidden;`.
+- `apps/web/src/modules/pdf/pdf-text-tool.test.tsx`: updated unit tests for fixed 250x100 dimensions, zero crawling, and direction persistence (37/37 tests passed).
+- `apps/web/e2e/pdf-ink-stamp.spec.ts`: updated E2E tests for fixed 250x100 dimensions and verified direction persistence across edit/blur lifecycle (8/8 tests passed).
+**Checks:**
+- `pnpm test src/modules/pdf/`: PASS (113/113 tests across 11 test files).
+- `pnpm test`: PASS (414/414 tests across 48 test files).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm ci:security`: PASS (gitleaks, dependency audit, bundle secret scan).
+- `playwright test e2e/pdf-ink-stamp.spec.ts -g "text tool"`: PASS (8/8 tests passed in 33.1s).
+- Dev server cleanly restarted on port 3000 (HTTP 200 OK).
+**Related:** PDF-1, PDF-4
+**Open:** none.

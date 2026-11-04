@@ -185,7 +185,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(box).not.toBeNull();
     expect(box?.tagName).toBe("DIV");
     expect(box?.textContent).toBe("Hello World");
-    expect(box?.getAttribute("dir")).toBe("auto");
+    expect(box?.getAttribute("dir")).toBe("ltr");
     expect(box?.style.unicodeBidi).toBe("plaintext");
     expect(box?.style.whiteSpace).toBe("pre-wrap");
     expect(container.querySelector("textarea")).toBeNull();
@@ -419,7 +419,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(box?.textContent).toBe("Cmd+Enter commit");
   });
 
-  it("adjusts container height and width dynamically based on multiline content", () => {
+  it("maintains fixed container dimensions (250x100) and zero crawling for multiline content", () => {
     act(() => {
       root.render(<Harness />);
     });
@@ -444,15 +444,13 @@ describe("PDF Text Tool (custom text boxes)", () => {
       textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
     });
 
-    // Check rendered objects from hook
+    // Check rendered objects from hook: fixed to 250x100
     const objects = hookRef.getObjectsForPage(0);
     expect(objects.length).toBe(1);
-    // 3 lines height: 16 * 1.4 * 3 = 67.2
-    expect(objects[0].height).toBeCloseTo(67.2, 1);
-    // Longest line is "Second longer line" (18 chars)
-    expect(objects[0].width).toBeGreaterThanOrEqual(18 * 16 * 0.6);
+    expect(objects[0].width).toBe(250);
+    expect(objects[0].height).toBe(100);
 
-    // Verify rendered div has pre-wrap and displays all lines properly
+    // Verify rendered div has pre-wrap and displays all lines properly inside fixed container
     const div = container.querySelector('[data-testid^="pdf-text-box-"]') as HTMLElement | null;
     expect(div).not.toBeNull();
     expect(div?.style.whiteSpace).toBe("pre-wrap");
@@ -709,8 +707,8 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(objects[0].color).toBe("#1A63A0");
     expect(objects[0].x).toBe(72);
     expect(objects[0].y).toBe(144);
-    expect(objects[0].width).toBeGreaterThanOrEqual(24);
-    expect(objects[0].height).toBeCloseTo(28, 5);
+    expect(objects[0].width).toBe(250);
+    expect(objects[0].height).toBe(100);
     mockGetAnnotations.mockReturnValue([]);
   });
 
@@ -793,7 +791,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
     const fo = container.querySelector("foreignObject") as SVGForeignObjectElement;
     expect(fo.style.direction).toBe("rtl");
     expect(fo.style.textAlign).toBe("right");
-    expect(fo.getAttribute("dir")).toBe("auto");
+    expect(fo.getAttribute("dir")).toBe("rtl");
     expect(fo.style.unicodeBidi).toBe("plaintext");
     expect(textarea.style.direction).toBe("rtl");
     expect(textarea.style.textAlign).toBe("right");
@@ -809,7 +807,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
     expect(div).not.toBeNull();
     expect(div.style.direction).toBe("rtl");
     expect(div.style.textAlign).toBe("right");
-    expect(div.getAttribute("dir")).toBe("auto");
+    expect(div.getAttribute("dir")).toBe("rtl");
     expect(div.style.unicodeBidi).toBe("plaintext");
   });
 
@@ -900,7 +898,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
       expect(getMaxTextWidth(1200, 100)).toBe(500);
     });
 
-    it("clamps textarea to maxTextWidth with word-break and auto-expands vertically when long unbroken text is typed", () => {
+    it("maintains fixed 250x100 textarea with word-break and zero crawling when long unbroken text is typed", () => {
       act(() => {
         root.render(<Harness />);
       });
@@ -925,19 +923,18 @@ describe("PDF Text Tool (custom text boxes)", () => {
       const longText = "A".repeat(300);
       typeInto(textarea, longText);
 
-      // Verify styling properties for wrapping and bounding
-      expect(textarea.style.maxWidth).toBe("500px");
+      // Verify styling properties for wrapping and fixed size (no crawl)
+      expect(textarea.style.width).toBe("100%");
+      expect(textarea.style.height).toBe("100%");
+      expect(textarea.style.resize).toBe("none");
+      expect(textarea.style.overflow).toBe("hidden");
       expect(textarea.style.whiteSpace).toBe("pre-wrap");
       expect(textarea.style.wordBreak).toBe("break-word");
       expect(textarea.style.overflowWrap).toBe("break-word");
 
-      // Verify width does not stretch infinitely (e.g. 3000px)
-      const widthVal = parseFloat(textarea.style.width);
-      expect(widthVal).toBeLessThanOrEqual(500);
-
-      // Verify vertical expansion for wrapped lines (approx 6-7 lines * ~22px > 100px)
-      const heightVal = parseFloat(textarea.style.height);
-      expect(heightVal).toBeGreaterThanOrEqual(100);
+      // Verify foreignObject dimensions are fixed 250x100
+      expect(parseFloat(fo?.getAttribute("width") || "0")).toBe(250);
+      expect(parseFloat(fo?.getAttribute("height") || "0")).toBe(100);
 
       // Verify the foreignObject origin remains strictly fixed in place
       const finalOriginX = parseFloat(fo?.getAttribute("x") || "0");
@@ -946,7 +943,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
       expect(finalOriginY).toBe(initialOriginY);
     });
 
-    it("display div applies maxWidth, word-break, pre-wrap and selection bbox hugs wrapped text", () => {
+    it("display div applies word-break, pre-wrap, overflow hidden and selection bbox matches fixed dimensions", () => {
       const longText = "B".repeat(300);
       const longTextObject = {
         id: "text-long-1",
@@ -954,8 +951,8 @@ describe("PDF Text Tool (custom text boxes)", () => {
         pageIndex: 0,
         x: 72,
         y: 120,
-        width: 3000, // Legacy or unconstrained value
-        height: 24,
+        width: 250,
+        height: 100,
         contents: longText,
         text: longText,
         fontSize: 16,
@@ -980,7 +977,9 @@ describe("PDF Text Tool (custom text boxes)", () => {
 
       const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-long-1"]') as HTMLElement | null;
       expect(displayDiv).not.toBeNull();
-      expect(displayDiv?.style.maxWidth).toBe("500px");
+      expect(displayDiv?.style.width).toBe("100%");
+      expect(displayDiv?.style.height).toBe("100%");
+      expect(displayDiv?.style.overflow).toBe("hidden");
       expect(displayDiv?.style.whiteSpace).toBe("pre-wrap");
       expect(displayDiv?.style.wordBreak).toBe("break-word");
       expect(displayDiv?.style.overflowWrap).toBe("break-word");
@@ -991,13 +990,12 @@ describe("PDF Text Tool (custom text boxes)", () => {
       const bboxRect = bboxGroup?.querySelector("rect");
       expect(bboxRect).not.toBeNull();
 
-      // Bounding box width must be clamped to maxTextWidth (500), never stretching to 3000px
+      // Bounding box matches fixed dimensions (250x100)
       const bboxWidth = parseFloat(bboxRect?.getAttribute("width") || "0");
-      expect(bboxWidth).toBeLessThanOrEqual(500);
+      expect(bboxWidth).toBe(250);
 
-      // Bounding box height must auto-expand vertically for wrapped lines
       const bboxHeight = parseFloat(bboxRect?.getAttribute("height") || "0");
-      expect(bboxHeight).toBeGreaterThanOrEqual(100);
+      expect(bboxHeight).toBe(100);
 
       // Bounding box origin (x, y) must strictly match the object's origin
       const bboxX = parseFloat(bboxRect?.getAttribute("x") || "0");
@@ -1094,13 +1092,13 @@ describe("PDF Text Tool (custom text boxes)", () => {
       expect(displayDiv).not.toBeNull();
       expect(displayDiv.style.direction).toBe("ltr");
       expect(displayDiv.style.textAlign).toBe("left");
-      expect(displayDiv.getAttribute("dir")).toBe("auto");
+      expect(displayDiv.getAttribute("dir")).toBe("ltr");
       expect(displayDiv.style.unicodeBidi).toBe("plaintext");
 
       const fo = displayDiv.closest("foreignObject");
       expect(fo?.style.direction).toBe("ltr");
       expect(fo?.style.textAlign).toBe("left");
-      expect(fo?.getAttribute("dir")).toBe("auto");
+      expect(fo?.getAttribute("dir")).toBe("ltr");
       expect(fo?.style.unicodeBidi).toBe("plaintext");
 
       act(() => {
@@ -1149,13 +1147,13 @@ describe("PDF Text Tool (custom text boxes)", () => {
       expect(displayDiv).not.toBeNull();
       expect(displayDiv.style.direction).toBe("rtl");
       expect(displayDiv.style.textAlign).toBe("right");
-      expect(displayDiv.getAttribute("dir")).toBe("auto");
+      expect(displayDiv.getAttribute("dir")).toBe("rtl");
       expect(displayDiv.style.unicodeBidi).toBe("plaintext");
 
       const fo = displayDiv.closest("foreignObject");
       expect(fo?.style.direction).toBe("rtl");
       expect(fo?.style.textAlign).toBe("right");
-      expect(fo?.getAttribute("dir")).toBe("auto");
+      expect(fo?.getAttribute("dir")).toBe("rtl");
       expect(fo?.style.unicodeBidi).toBe("plaintext");
 
       act(() => {
@@ -1170,7 +1168,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
       expect(textarea.style.unicodeBidi).toBe("plaintext");
     });
 
-    it("verifies mixed text starting with English (Aboard أداة) resolves to direction: ltr, textAlign: left, with dir=auto and unicodeBidi: plaintext", () => {
+    it("verifies mixed text starting with English (Aboard أداة) resolves to direction: ltr, textAlign: left, with dir=ltr on display div and foreignObject", () => {
       const mixedEnObject = {
         id: "text-mixed-en",
         type: "text" as const,
@@ -1204,13 +1202,13 @@ describe("PDF Text Tool (custom text boxes)", () => {
       expect(displayDiv).not.toBeNull();
       expect(displayDiv.style.direction).toBe("ltr");
       expect(displayDiv.style.textAlign).toBe("left");
-      expect(displayDiv.getAttribute("dir")).toBe("auto");
+      expect(displayDiv.getAttribute("dir")).toBe("ltr");
       expect(displayDiv.style.unicodeBidi).toBe("plaintext");
 
       const fo = displayDiv.closest("foreignObject");
       expect(fo?.style.direction).toBe("ltr");
       expect(fo?.style.textAlign).toBe("left");
-      expect(fo?.getAttribute("dir")).toBe("auto");
+      expect(fo?.getAttribute("dir")).toBe("ltr");
       expect(fo?.style.unicodeBidi).toBe("plaintext");
 
       act(() => {
@@ -1225,7 +1223,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
       expect(textarea.style.unicodeBidi).toBe("plaintext");
     });
 
-    it("verifies mixed text starting with Arabic (أداة Aboard) resolves to direction: rtl, textAlign: right, with dir=auto and unicodeBidi: plaintext", () => {
+    it("verifies mixed text starting with Arabic (أداة Aboard) resolves to direction: rtl, textAlign: right, with dir=rtl on display div and foreignObject", () => {
       const mixedArObject = {
         id: "text-mixed-ar",
         type: "text" as const,
@@ -1259,13 +1257,13 @@ describe("PDF Text Tool (custom text boxes)", () => {
       expect(displayDiv).not.toBeNull();
       expect(displayDiv.style.direction).toBe("rtl");
       expect(displayDiv.style.textAlign).toBe("right");
-      expect(displayDiv.getAttribute("dir")).toBe("auto");
+      expect(displayDiv.getAttribute("dir")).toBe("rtl");
       expect(displayDiv.style.unicodeBidi).toBe("plaintext");
 
       const fo = displayDiv.closest("foreignObject");
       expect(fo?.style.direction).toBe("rtl");
       expect(fo?.style.textAlign).toBe("right");
-      expect(fo?.getAttribute("dir")).toBe("auto");
+      expect(fo?.getAttribute("dir")).toBe("rtl");
       expect(fo?.style.unicodeBidi).toBe("plaintext");
 
       act(() => {
@@ -1278,6 +1276,85 @@ describe("PDF Text Tool (custom text boxes)", () => {
       expect(textarea.style.textAlign).toBe("right");
       expect(textarea.getAttribute("dir")).toBe("auto");
       expect(textarea.style.unicodeBidi).toBe("plaintext");
+    });
+
+    it("preserves explicit direction property when rendering text boxes", () => {
+      const explicitRtlObject = {
+        id: "text-explicit-rtl",
+        type: "text" as const,
+        pageIndex: 0,
+        x: 60,
+        y: 100,
+        width: 150,
+        height: 32,
+        contents: "123 Neutral text",
+        text: "123 Neutral text",
+        fontSize: 16,
+        color: "#E44234",
+        direction: "rtl" as const,
+      };
+
+      act(() => {
+        root.render(
+          <PdfCustomInkLayer
+            pageIndex={0}
+            pageWidth={612}
+            pageHeight={792}
+            isActive={false}
+            isSelectMode={true}
+            strokes={[]}
+            onAddStroke={vi.fn()}
+            objects={[explicitRtlObject]}
+          />
+        );
+      });
+
+      const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-explicit-rtl"]') as HTMLDivElement;
+      expect(displayDiv).not.toBeNull();
+      expect(displayDiv.style.direction).toBe("rtl");
+      expect(displayDiv.style.textAlign).toBe("right");
+      expect(displayDiv.getAttribute("dir")).toBe("rtl");
+
+      const fo = displayDiv.closest("foreignObject");
+      expect(fo?.style.direction).toBe("rtl");
+      expect(fo?.style.textAlign).toBe("right");
+      expect(fo?.getAttribute("dir")).toBe("rtl");
+    });
+
+    it("verifies usePdfAnnotations initializes, updates, and propagates direction", () => {
+      act(() => {
+        root.render(<Harness />);
+      });
+
+      // 1. Initial creation with English text detects 'ltr'
+      let id1 = "";
+      act(() => {
+        id1 = hookRef.handleAddText(0, { x: 50, y: 50, text: "Hello World" });
+      });
+      expect(hookRef.customTextBoxes[0].find((b) => b.id === id1)?.direction).toBe("ltr");
+      expect(hookRef.getObjectsForPage(0).find((o) => o.id === id1)?.direction).toBe("ltr");
+
+      // 2. Initial creation with Arabic text detects 'rtl'
+      let id2 = "";
+      act(() => {
+        id2 = hookRef.handleAddText(0, { x: 50, y: 100, text: "مرحبا" });
+      });
+      expect(hookRef.customTextBoxes[0].find((b) => b.id === id2)?.direction).toBe("rtl");
+      expect(hookRef.getObjectsForPage(0).find((o) => o.id === id2)?.direction).toBe("rtl");
+
+      // 3. Updating text from English to Arabic updates direction to 'rtl'
+      act(() => {
+        hookRef.handleUpdateText(0, id1, "مرحبا بالجميع");
+      });
+      expect(hookRef.customTextBoxes[0].find((b) => b.id === id1)?.direction).toBe("rtl");
+      expect(hookRef.getObjectsForPage(0).find((o) => o.id === id1)?.direction).toBe("rtl");
+
+      // 4. Creation with empty text defaults to 'ltr'
+      let id3 = "";
+      act(() => {
+        id3 = hookRef.handleAddText(0, { x: 50, y: 150 });
+      });
+      expect(hookRef.customTextBoxes[0].find((b) => b.id === id3)?.direction).toBe("ltr");
     });
   });
 
@@ -1356,9 +1433,13 @@ describe("PDF Text Tool (custom text boxes)", () => {
       const displayDiv = container.querySelector('[data-testid="pdf-text-box-text-drag-test"]') as HTMLDivElement;
       const bboxRect = container.querySelector('[data-testid="pdf-text-bbox"] rect') as SVGRectElement;
 
-      // 1. Before drag: display div and bbox have identical width and height
-      expect(displayDiv.style.width).toBe("250px");
-      expect(displayDiv.style.height).toBe("68px");
+      // 1. Before drag: display div is 100% and foreignObject / bbox have identical width and height
+      const fo = displayDiv.closest("foreignObject");
+      expect(fo).not.toBeNull();
+      expect(parseFloat(fo?.getAttribute("width") || "0")).toBe(250);
+      expect(parseFloat(fo?.getAttribute("height") || "0")).toBe(68);
+      expect(displayDiv.style.width).toBe("100%");
+      expect(displayDiv.style.height).toBe("100%");
       expect(parseFloat(bboxRect.getAttribute("width") || "0")).toBe(250);
       expect(parseFloat(bboxRect.getAttribute("height") || "0")).toBe(68);
 
@@ -1374,11 +1455,14 @@ describe("PDF Text Tool (custom text boxes)", () => {
         svg.dispatchEvent(new PointerEvent("pointermove", { clientX: 900, clientY: 950, bubbles: true }));
       });
 
-      // Bounding box and display box width & height MUST remain strictly 250 and 68
+      // Bounding box and foreignObject width & height MUST remain strictly 250 and 68
       const displayDuring = container.querySelector('[data-testid="pdf-text-box-text-drag-test"]') as HTMLDivElement;
+      const foDuring = displayDuring.closest("foreignObject");
       const bboxDuring = container.querySelector('[data-testid="pdf-text-bbox"] rect') as SVGRectElement;
-      expect(displayDuring.style.width).toBe("250px");
-      expect(displayDuring.style.height).toBe("68px");
+      expect(parseFloat(foDuring?.getAttribute("width") || "0")).toBe(250);
+      expect(parseFloat(foDuring?.getAttribute("height") || "0")).toBe(68);
+      expect(displayDuring.style.width).toBe("100%");
+      expect(displayDuring.style.height).toBe("100%");
       expect(parseFloat(bboxDuring.getAttribute("width") || "0")).toBe(250);
       expect(parseFloat(bboxDuring.getAttribute("height") || "0")).toBe(68);
 

@@ -302,4 +302,42 @@ describe("annotation-storage (PDF-4)", () => {
     expect(extracted[0][0].width).toBe(280);
     expect(extracted[0][0].height).toBe(64);
   });
+
+  it("extracts and preserves direction ('ltr' | 'rtl') on custom text boxes", async () => {
+    const mockProjectService = {
+      putFile: vi.fn(),
+      getFile: vi.fn(),
+    } as unknown as ProjectService;
+
+    const boxesWithDirection: Record<number, CustomTextBox[]> = {
+      0: [
+        {
+          id: "text-ltr",
+          pageIndex: 0,
+          x: 50,
+          y: 50,
+          text: "English text",
+          fontSize: 16,
+          color: "#E44234",
+          direction: "ltr",
+        },
+        {
+          id: "text-rtl",
+          pageIndex: 0,
+          x: 200,
+          y: 50,
+          text: "نص عربي",
+          fontSize: 16,
+          color: "#E44234",
+          direction: "rtl",
+        },
+      ],
+    };
+
+    const json = await serializeAnnotations(projectId, pdfHash, [], mockProjectService, {}, {}, boxesWithDirection);
+    const extracted = extractCustomTextBoxes(json);
+    expect(extracted[0]).toHaveLength(2);
+    expect(extracted[0][0].direction).toBe("ltr");
+    expect(extracted[0][1].direction).toBe("rtl");
+  });
 });

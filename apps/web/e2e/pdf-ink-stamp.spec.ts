@@ -2025,7 +2025,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     }
   });
 
-  test("text tool: UI polish styling, origin anchoring without crawl during typing, multiline auto-grow, and smooth transition to display mode", async ({ page }) => {
+  test("text tool: UI polish styling, origin anchoring without crawl during typing, fixed 250x100 container, and smooth transition to display mode", async ({ page }) => {
     const pid = "test-pdf-text-ui-polish-anchoring";
     const pdfDoc = await PDFDocument.create();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -2072,7 +2072,6 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
         paddingBottom: s.paddingBottom,
         paddingLeft: s.paddingLeft,
         paddingRight: s.paddingRight,
-        minWidth: s.minWidth,
         cursor: s.cursor,
         fontFamily: s.fontFamily,
       };
@@ -2086,13 +2085,14 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(parseFloat(textareaStyles.paddingBottom)).toBeCloseTo(8, 0);
     expect(parseFloat(textareaStyles.paddingLeft)).toBeCloseTo(8, 0);
     expect(parseFloat(textareaStyles.paddingRight)).toBeCloseTo(8, 0);
-    expect(parseFloat(textareaStyles.minWidth)).toBeGreaterThanOrEqual(64);
     expect(textareaStyles.cursor).toBe("text");
     expect(textareaStyles.fontFamily.toLowerCase()).toContain("sans-serif");
 
-    // a. Verify typing does not move / crawl the box (anchored strictly at origin)
+    // a. Verify initial fixed 250x100 container and origin anchoring
     const initialBox = await textarea.boundingBox();
     expect(initialBox).not.toBeNull();
+    expect(initialBox!.width).toBeCloseTo(250, 0);
+    expect(initialBox!.height).toBeCloseTo(100, 0);
     const initialOriginX = initialBox!.x;
     const initialOriginY = initialBox!.y;
 
@@ -2101,12 +2101,14 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     const initialStoredX = initialBoxes[0].x;
     const initialStoredY = initialBoxes[0].y;
 
-    // Type first phrase: verify origin remains pinned at start
+    // Type first phrase: verify origin remains pinned at start and dimensions stay fixed 250x100
     await page.keyboard.type("First line of notes", { delay: 20 });
     await expect(textarea).toHaveValue("First line of notes");
 
     const boxAfterTyping1 = await textarea.boundingBox();
     expect(boxAfterTyping1).not.toBeNull();
+    expect(boxAfterTyping1!.width).toBeCloseTo(250, 0);
+    expect(boxAfterTyping1!.height).toBeCloseTo(100, 0);
     expect(Math.abs(boxAfterTyping1!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(boxAfterTyping1!.y - initialOriginY)).toBeLessThanOrEqual(2);
 
@@ -2114,9 +2116,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(Math.abs(storedAfter1[0].x - initialStoredX)).toBeLessThan(0.1);
     expect(Math.abs(storedAfter1[0].y - initialStoredY)).toBeLessThan(0.1);
 
-    // b. Verify pressing Enter creates a new line, and text box auto-grows in height
-    const heightBeforeEnter = boxAfterTyping1!.height;
-
+    // b. Verify pressing Enter creates a new line, and text box maintains fixed 250x100 dimensions without crawling
     await page.keyboard.press("Enter");
     await expect(textarea).toBeFocused();
     await page.keyboard.type("Second line with additional details", { delay: 20 });
@@ -2124,8 +2124,8 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
 
     const boxAfterEnter = await textarea.boundingBox();
     expect(boxAfterEnter).not.toBeNull();
-    // Height must expand for the second line by at least 16px (approx 22px for 16px font at 1.4 line-height)
-    expect(boxAfterEnter!.height).toBeGreaterThanOrEqual(heightBeforeEnter + 16);
+    expect(boxAfterEnter!.width).toBeCloseTo(250, 0);
+    expect(boxAfterEnter!.height).toBeCloseTo(100, 0);
     // Origin must STILL remain pinned strictly at origin without vertical or horizontal crawling
     expect(Math.abs(boxAfterEnter!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(boxAfterEnter!.y - initialOriginY)).toBeLessThanOrEqual(2);
@@ -2137,7 +2137,8 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
 
     const boxAfterLine3 = await textarea.boundingBox();
     expect(boxAfterLine3).not.toBeNull();
-    expect(boxAfterLine3!.height).toBeGreaterThanOrEqual(boxAfterEnter!.height + 16);
+    expect(boxAfterLine3!.width).toBeCloseTo(250, 0);
+    expect(boxAfterLine3!.height).toBeCloseTo(100, 0);
     expect(Math.abs(boxAfterLine3!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(boxAfterLine3!.y - initialOriginY)).toBeLessThanOrEqual(2);
 
@@ -2156,7 +2157,6 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
         paddingBottom: s.paddingBottom,
         paddingLeft: s.paddingLeft,
         paddingRight: s.paddingRight,
-        minWidth: s.minWidth,
         fontFamily: s.fontFamily,
         boxSizing: s.boxSizing,
       };
@@ -2166,18 +2166,19 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(parseFloat(displayStyles.paddingBottom)).toBeCloseTo(8, 0);
     expect(parseFloat(displayStyles.paddingLeft)).toBeCloseTo(8, 0);
     expect(parseFloat(displayStyles.paddingRight)).toBeCloseTo(8, 0);
-    expect(parseFloat(displayStyles.minWidth)).toBeGreaterThanOrEqual(64);
     expect(displayStyles.boxSizing).toBe("border-box");
     expect(displayStyles.fontFamily.toLowerCase()).toContain("sans-serif");
 
     const displayBox = await textBox.boundingBox();
     expect(displayBox).not.toBeNull();
+    expect(displayBox!.width).toBeCloseTo(250, 0);
+    expect(displayBox!.height).toBeCloseTo(100, 0);
     // Display box top-left must match the textarea top-left within 2px (zero jump!)
     expect(Math.abs(displayBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(displayBox!.y - initialOriginY)).toBeLessThanOrEqual(2);
   });
 
-  test("text tool: pasting multiline text preserves newlines, auto-expands height, and persists across blur", async ({ page }) => {
+  test("text tool: pasting multiline text preserves newlines, maintains fixed 250x100 container, and persists across blur", async ({ page }) => {
     const pid = "test-pdf-text-paste-multiline";
     const pdfDoc = await PDFDocument.create();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -2214,7 +2215,8 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
 
     const initialBox = await textarea.boundingBox();
     expect(initialBox).not.toBeNull();
-    const initialHeight = initialBox!.height;
+    expect(initialBox!.width).toBeCloseTo(250, 0);
+    expect(initialBox!.height).toBeCloseTo(100, 0);
     const initialOriginX = initialBox!.x;
     const initialOriginY = initialBox!.y;
 
@@ -2238,10 +2240,11 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     // 3. Verify textarea preserves all newlines and value matches normalized text
     await expect(textarea).toHaveValue(expectedNormalizedText);
 
-    // Verify textarea auto-expands height for multiline text (3 lines >= initialHeight + 30)
+    // Verify textarea maintains fixed 250x100 container dimensions for multiline text without crawling
     const textareaAfterPaste = await textarea.boundingBox();
     expect(textareaAfterPaste).not.toBeNull();
-    expect(textareaAfterPaste!.height).toBeGreaterThanOrEqual(initialHeight + 30);
+    expect(textareaAfterPaste!.width).toBeCloseTo(250, 0);
+    expect(textareaAfterPaste!.height).toBeCloseTo(100, 0);
 
     // Verify origin remains anchored during paste
     expect(Math.abs(textareaAfterPaste!.x - initialOriginX)).toBeLessThanOrEqual(2);
@@ -2274,10 +2277,11 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(styles.wordBreak).toBe("break-word");
     expect(styles.overflowWrap).toBe("break-word");
 
-    // Verify display box height accommodates all 3 lines (3 lines * 22.4px = 67.2px >= 60px)
+    // Verify display box maintains fixed 250x100 container dimensions
     const displayBox = await textBox.boundingBox();
     expect(displayBox).not.toBeNull();
-    expect(displayBox!.height).toBeGreaterThanOrEqual(60);
+    expect(displayBox!.width).toBeCloseTo(250, 0);
+    expect(displayBox!.height).toBeCloseTo(100, 0);
 
     // Verify origin stays anchored without crawl across blur
     expect(Math.abs(displayBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
@@ -2289,7 +2293,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(storedAfterBlur[0].text).toBe(expectedNormalizedText);
   });
 
-  test("text tool: pasting long paragraph (280+ characters) auto-wraps within 500px width limit, expands vertically, and anchors strictly at origin", async ({ page }) => {
+  test("text tool: pasting long paragraph (280+ characters) auto-wraps within fixed 250x100 container, and anchors strictly at origin", async ({ page }) => {
     const pid = "test-pdf-text-autowrap-long-string";
     const pdfDoc = await PDFDocument.create();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -2326,6 +2330,8 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
 
     const initialBox = await textarea.boundingBox();
     expect(initialBox).not.toBeNull();
+    expect(initialBox!.width).toBeCloseTo(250, 0);
+    expect(initialBox!.height).toBeCloseTo(100, 0);
     const initialOriginX = initialBox!.x;
     const initialOriginY = initialBox!.y;
 
@@ -2350,13 +2356,12 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     await expect(textarea).toHaveValue(longParagraph);
 
     // 4. Verify textarea bounds during editing:
-    // - Bounding box width must NOT extend infinitely across the page (must be <= 500px)
-    // - Box auto-expands vertically to accommodate the wrapped lines (approx 6-7 lines * ~22px >= 100px)
-    // - The anchor point (x, y) remains strictly fixed in place (< 2px drift)
+    // - Fixed 250x100 container dimensions are strictly maintained
+    // - The anchor point (x, y) remains strictly fixed in place (< 2px drift) without crawling
     const textareaBox = await textarea.boundingBox();
     expect(textareaBox).not.toBeNull();
-    expect(textareaBox!.width).toBeLessThanOrEqual(500);
-    expect(textareaBox!.height).toBeGreaterThanOrEqual(100);
+    expect(textareaBox!.width).toBeCloseTo(250, 0);
+    expect(textareaBox!.height).toBeCloseTo(100, 0);
     expect(Math.abs(textareaBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(textareaBox!.y - initialOriginY)).toBeLessThanOrEqual(2);
 
@@ -2364,13 +2369,11 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     const textareaStyles = await textarea.evaluate((el) => {
       const s = window.getComputedStyle(el);
       return {
-        maxWidth: s.maxWidth,
         whiteSpace: s.whiteSpace,
         wordBreak: s.wordBreak,
         overflowWrap: s.overflowWrap,
       };
     });
-    expect(textareaStyles.maxWidth).toBe("500px");
     expect(textareaStyles.whiteSpace).toBe("pre-wrap");
     expect(textareaStyles.wordBreak).toBe("break-word");
     expect(textareaStyles.overflowWrap).toBe("break-word");
@@ -2385,27 +2388,23 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     await expect(textBox).toHaveText(longParagraph);
 
     // 6. Verify display mode bounds:
-    // - Auto-wraps within bounding box (width <= 500px)
-    // - Does NOT extend infinitely across page (<= 500px)
-    // - Auto-expands vertically (height >= 100px)
+    // - Fixed 250x100 dimensions are maintained
     // - Origin remains strictly fixed in place
     const displayBox = await textBox.boundingBox();
     expect(displayBox).not.toBeNull();
-    expect(displayBox!.width).toBeLessThanOrEqual(500);
-    expect(displayBox!.height).toBeGreaterThanOrEqual(100);
+    expect(displayBox!.width).toBeCloseTo(250, 0);
+    expect(displayBox!.height).toBeCloseTo(100, 0);
     expect(Math.abs(displayBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(displayBox!.y - initialOriginY)).toBeLessThanOrEqual(2);
 
     const displayStyles = await textBox.evaluate((el) => {
       const s = window.getComputedStyle(el);
       return {
-        maxWidth: s.maxWidth,
         whiteSpace: s.whiteSpace,
         wordBreak: s.wordBreak,
         overflowWrap: s.overflowWrap,
       };
     });
-    expect(displayStyles.maxWidth).toBe("500px");
     expect(displayStyles.whiteSpace).toBe("pre-wrap");
     expect(displayStyles.wordBreak).toBe("break-word");
     expect(displayStyles.overflowWrap).toBe("break-word");
@@ -2419,13 +2418,14 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
 
     const bboxRect = await bbox.boundingBox();
     expect(bboxRect).not.toBeNull();
-    // SVG rect attribute width is strictly clamped to maxTextWidth (<= 500px)
+    // SVG rect attribute width & height match fixed 250x100
     const bboxSvgWidth = parseFloat((await bbox.getAttribute("width")) || "0");
-    expect(bboxSvgWidth).toBeLessThanOrEqual(500);
-    // Bounding box rendered width must be <= 502px including 1.5px stroke (never stretching to 2000px+)
-    expect(bboxRect!.width).toBeLessThanOrEqual(502);
-    // Bounding box height must auto-expand to hug wrapped lines
-    expect(bboxRect!.height).toBeGreaterThanOrEqual(100);
+    expect(bboxSvgWidth).toBeCloseTo(250, 0);
+    const bboxSvgHeight = parseFloat((await bbox.getAttribute("height")) || "0");
+    expect(bboxSvgHeight).toBeCloseTo(100, 0);
+    // Bounding box rendered dimensions match 250x100 (within 2px stroke tolerance)
+    expect(Math.abs(bboxRect!.width - 250)).toBeLessThanOrEqual(2);
+    expect(Math.abs(bboxRect!.height - 100)).toBeLessThanOrEqual(2);
     // Bounding box origin must match anchor point
     expect(Math.abs(bboxRect!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(bboxRect!.y - initialOriginY)).toBeLessThanOrEqual(2);
@@ -2588,7 +2588,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(page1Box).not.toBeNull();
     if (!page1Box) return;
 
-    // --- Part A: English text direction ---
+    // --- Part A: English text direction & fixed dimensions ---
     // 1. Activate Text tool and click page
     await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
     const enClickX = page1Box.x + 80;
@@ -2599,20 +2599,46 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     await expect(enTextarea).toHaveCount(1, { timeout: 5000 });
     await expect(enTextarea).toBeFocused();
 
-    // 2. Type English text: "Nusuq luxury brand"
-    const enText = "Nusuq luxury brand";
-    await page.keyboard.type(enText, { delay: 20 });
-    await expect(enTextarea).toHaveValue(enText);
+    const enInitialBox = await enTextarea.boundingBox();
+    expect(enInitialBox).not.toBeNull();
+    expect(enInitialBox!.width).toBeCloseTo(250, 0);
+    expect(enInitialBox!.height).toBeCloseTo(100, 0);
+    const enOriginX = enInitialBox!.x;
+    const enOriginY = enInitialBox!.y;
 
-    // 3. Verify computed direction is 'ltr' and text-align is 'left' in edit mode
-    const enEditStyles = await enTextarea.evaluate((el) => {
+    // 2. Type short English text: "Hello"
+    await page.keyboard.type("Hello", { delay: 20 });
+    await expect(enTextarea).toHaveValue("Hello");
+
+    // Verify computed direction is 'ltr' and text-align is 'left' for "Hello"
+    let enStyles = await enTextarea.evaluate((el) => {
       const cs = window.getComputedStyle(el);
       return { direction: cs.direction, textAlign: cs.textAlign };
     });
-    expect(enEditStyles.direction).toBe("ltr");
-    expect(enEditStyles.textAlign).toBe("left");
+    expect(enStyles.direction).toBe("ltr");
+    expect(enStyles.textAlign).toBe("left");
 
-    // 4. Exit edit mode via Escape and verify computed styles in display mode
+    // 3. Continue typing long English text: " - Nusuq luxury brand"
+    await page.keyboard.type(" - Nusuq luxury brand", { delay: 20 });
+    await expect(enTextarea).toHaveValue("Hello - Nusuq luxury brand");
+
+    // Verify computed direction stays 'ltr' and text-align stays 'left' during editing
+    enStyles = await enTextarea.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return { direction: cs.direction, textAlign: cs.textAlign };
+    });
+    expect(enStyles.direction).toBe("ltr");
+    expect(enStyles.textAlign).toBe("left");
+
+    // Verify anchor coordinates (x, y) strictly fixed without shifting and dimensions remain 250x100
+    const enBoxDuring = await enTextarea.boundingBox();
+    expect(enBoxDuring).not.toBeNull();
+    expect(enBoxDuring!.width).toBeCloseTo(250, 0);
+    expect(enBoxDuring!.height).toBeCloseTo(100, 0);
+    expect(Math.abs(enBoxDuring!.x - enOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(enBoxDuring!.y - enOriginY)).toBeLessThanOrEqual(2);
+
+    // 4. Exit edit mode via Escape and verify computed styles & dimensions in display mode
     await page.keyboard.press("Escape");
     await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
 
@@ -2625,7 +2651,14 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(enDisplayStyles.direction).toBe("ltr");
     expect(enDisplayStyles.textAlign).toBe("left");
 
-    // --- Part B: Arabic text direction ---
+    const enDisplayBox = await enTextBox.boundingBox();
+    expect(enDisplayBox).not.toBeNull();
+    expect(enDisplayBox!.width).toBeCloseTo(250, 0);
+    expect(enDisplayBox!.height).toBeCloseTo(100, 0);
+    expect(Math.abs(enDisplayBox!.x - enOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(enDisplayBox!.y - enOriginY)).toBeLessThanOrEqual(2);
+
+    // --- Part B: Arabic text direction & fixed dimensions ---
     // 5. Activate Text tool again and click page for Arabic text box
     await primaryPane.locator('[data-testid="pdf-tool-text"]').click();
     const arClickX = page1Box.x + 80;
@@ -2636,8 +2669,14 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     await expect(arTextarea).toHaveCount(1, { timeout: 5000 });
     await expect(arTextarea).toBeFocused();
 
-    // 6. Type Arabic text: "نُسُق علامة تجارية فاخرة"
-    const arText = "نُسُق علامة تجارية فاخرة";
+    const arInitialBox = await arTextarea.boundingBox();
+    expect(arInitialBox).not.toBeNull();
+    expect(arInitialBox!.width).toBeCloseTo(250, 0);
+    expect(arInitialBox!.height).toBeCloseTo(100, 0);
+    const arOriginX = arInitialBox!.x;
+    const arOriginY = arInitialBox!.y;
+
+    // 6. Type short Arabic text: "مرحبا"
     await arTextarea.evaluate((el: HTMLTextAreaElement, pasteText: string) => {
       const dt = new DataTransfer();
       dt.setData("text/plain", pasteText);
@@ -2647,18 +2686,49 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
         cancelable: true,
       });
       el.dispatchEvent(pasteEvent);
-    }, arText);
-    await expect(arTextarea).toHaveValue(arText);
+    }, "مرحبا");
+    await expect(arTextarea).toHaveValue("مرحبا");
 
-    // 7. Verify computed direction is 'rtl' and text-align is 'right' in edit mode
-    const arEditStyles = await arTextarea.evaluate((el) => {
+    // Verify computed direction is 'rtl' and text-align is 'right' for "مرحبا"
+    let arStyles = await arTextarea.evaluate((el) => {
       const cs = window.getComputedStyle(el);
       return { direction: cs.direction, textAlign: cs.textAlign };
     });
-    expect(arEditStyles.direction).toBe("rtl");
-    expect(arEditStyles.textAlign).toBe("right");
+    expect(arStyles.direction).toBe("rtl");
+    expect(arStyles.textAlign).toBe("right");
 
-    // 8. Exit edit mode via Escape and verify computed styles in display mode
+    // 7. Update with longer Arabic text: "نُسُق علامة تجارية فاخرة"
+    const arLongText = "نُسُق علامة تجارية فاخرة";
+    await arTextarea.evaluate((el: HTMLTextAreaElement, pasteText: string) => {
+      el.value = "";
+      const dt = new DataTransfer();
+      dt.setData("text/plain", pasteText);
+      const pasteEvent = new ClipboardEvent("paste", {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true,
+      });
+      el.dispatchEvent(pasteEvent);
+    }, arLongText);
+    await expect(arTextarea).toHaveValue(arLongText);
+
+    // Verify computed direction is 'rtl' and text-align is 'right' during editing
+    arStyles = await arTextarea.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return { direction: cs.direction, textAlign: cs.textAlign };
+    });
+    expect(arStyles.direction).toBe("rtl");
+    expect(arStyles.textAlign).toBe("right");
+
+    // Verify anchor coordinates (x, y) strictly fixed without shifting and dimensions remain 250x100
+    const arBoxDuring = await arTextarea.boundingBox();
+    expect(arBoxDuring).not.toBeNull();
+    expect(arBoxDuring!.width).toBeCloseTo(250, 0);
+    expect(arBoxDuring!.height).toBeCloseTo(100, 0);
+    expect(Math.abs(arBoxDuring!.x - arOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(arBoxDuring!.y - arOriginY)).toBeLessThanOrEqual(2);
+
+    // 8. Exit edit mode via Escape and verify computed styles & dimensions in display mode
     await page.keyboard.press("Escape");
     await expect(primaryPane.locator('[data-testid^="pdf-text-input-"]')).toHaveCount(0);
 
@@ -2670,5 +2740,12 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     });
     expect(arDisplayStyles.direction).toBe("rtl");
     expect(arDisplayStyles.textAlign).toBe("right");
+
+    const arDisplayBox = await arTextBox.boundingBox();
+    expect(arDisplayBox).not.toBeNull();
+    expect(arDisplayBox!.width).toBeCloseTo(250, 0);
+    expect(arDisplayBox!.height).toBeCloseTo(100, 0);
+    expect(Math.abs(arDisplayBox!.x - arOriginX)).toBeLessThanOrEqual(2);
+    expect(Math.abs(arDisplayBox!.y - arOriginY)).toBeLessThanOrEqual(2);
   });
 });
