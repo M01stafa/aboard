@@ -29,3 +29,8 @@ test-results/
 services/stirling/configs/*
 !services/stirling/configs/.gitkeep
 
+# MCP and IDE local configs
+.antigravity/
+mcp_config.json
+mcp.json
+

@@ -2688,3 +2688,18 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm ci:security`: PASS.
 **Related:** PDFX-1..5, SEC-8, PDF-1
 **Open:** none.
+
+
+## 2026-11-05 — Manually Configure Supabase MCP Server
+**Request:** Manually create and update the local Antigravity MCP configuration files using the Service Role Key to bypass the IDE UI settings issue after the IDE update invalidated OAuth tokens.
+**Changes:**
+- Updated global Antigravity MCP configuration `C:\Users\alhmy\.gemini\config\mcp_config.json` with stdio transport configuration running `@supabase/mcp-server-supabase` via `npx` with project ref `fmlpkcbpoziwkjuxuyaf` and environment credentials.
+- Created local workspace `.antigravity/mcp.json` matching the schema.
+- Added `.antigravity/`, `mcp_config.json`, and `mcp.json` to `.gitignore` to ensure credentials and local MCP configs are strictly excluded from git tracking.
+**Checks:**
+- `git check-ignore -v .antigravity/mcp.json`: PASS (`.antigravity/` git-ignored).
+- `git status`: verified `.antigravity/mcp.json` untracked and excluded.
+- MCP connection test: `call_mcp_tool` executed; active session Language Server awaiting IDE reload / plugin re-authorization.
+**Related:** SEC-5, SEC-1
+**Open:** none.
+
