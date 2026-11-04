@@ -2718,3 +2718,16 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** Supabase plugin awaiting OAuth sign-in via plugin card.
 
 
+## 2026-11-05 — Configure Official Supabase MCP Endpoint and Install Agent Skills
+**Request:** Configure `~/.gemini/antigravity/mcp_config.json` with official Supabase remote MCP endpoint (`project_ref=fmlpkcbpoziwkjuxuyaf` and features query parameters) and install `supabase/agent-skills`.
+**Changes:**
+- Created `~/.gemini/antigravity/mcp_config.json` and updated `~/.gemini/config/mcp_config.json` and `.antigravity/mcp.json` with the official remote MCP endpoint: `https://mcp.supabase.com/mcp?project_ref=fmlpkcbpoziwkjuxuyaf&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching%2Cfeedback%2Cstorage`.
+- Installed official Supabase agent skills via `npx skills add supabase/agent-skills`: added `supabase-postgres-best-practices` and `supabase` skills to `.agents/skills/`.
+**Checks:**
+- `npx.cmd skills add supabase/agent-skills`: PASS (installed non-interactively for Antigravity).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+**Related:** SEC-5, SEC-1
+**Open:** Complete browser OAuth authentication upon Antigravity restart.
+
+
