@@ -98,23 +98,45 @@
   --shadow-3: 0 12px 28px rgba(0, 0, 0, .60);
 }
 
-/* Global Typography Override */
-*,
-*::before,
-*::after,
+/* Global Typography Override (excludes fontello icon elements) */
 body,
-div,
 input,
 select,
 button,
 textarea,
-.gwt-MenuItem,
 .gwt-MenuBar,
 .gwt-DialogBox,
-.gwt-Label,
 .gwt-Button,
 .gwt-TextBox {
   font-family: var(--font-sans) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+div:not([class*="cirjsicon-"]),
+span:not([class*="cirjsicon-"]),
+label:not([class*="cirjsicon-"]),
+td.gwt-MenuItem,
+.gwt-Label:not([class*="cirjsicon-"]) {
+  font-family: var(--font-sans) !important;
+}
+
+/* Explicit Fontello Icon Font Rules */
+[class^="cirjsicon-"],
+[class*=" cirjsicon-"],
+[class^="cirjsicon-"]::before,
+[class*=" cirjsicon-"]::before,
+[class^="cirjsicon-"]:before,
+[class*=" cirjsicon-"]:before,
+i[class*="cirjsicon-"],
+i[class*="cirjsicon-"]::before,
+i[class*="cirjsicon-"]:before {
+  font-family: "fontello" !important;
+  font-style: normal !important;
+  font-weight: normal !important;
+  speak: never;
+  display: inline-block;
+  text-decoration: inherit;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -170,6 +192,7 @@ body.dark-theme canvas {
   border-radius: 4px !important;
   cursor: pointer !important;
   transition: background-color 120ms ease, color 120ms ease;
+  vertical-align: middle !important;
 }
 
 .gwt-MenuItem:hover,
@@ -181,6 +204,152 @@ body.dark-theme canvas {
 .gwt-MenuItem-disabled {
   color: var(--text-muted) !important;
   opacity: 0.55 !important;
+}
+
+/* Dropdown Menu Icons: vertical centering and consistent modern sizing */
+.gwt-MenuItem [class^="cirjsicon-"],
+.gwt-MenuItem [class*=" cirjsicon-"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+  margin-inline-end: 8px !important;
+  margin-inline-start: 0 !important;
+  color: var(--text-muted) !important;
+}
+
+.gwt-MenuItem:hover [class^="cirjsicon-"],
+.gwt-MenuItem:hover [class*=" cirjsicon-"],
+.gwt-MenuItem-selected [class^="cirjsicon-"],
+.gwt-MenuItem-selected [class*=" cirjsicon-"] {
+  color: var(--accent-text) !important;
+}
+
+/* GWT Toolbar Container: Subtle modern background, bottom border, flex gap */
+div:has(> .cirjsicon-reply),
+div:has(> [class*="cirjsicon-"]) {
+  background-color: var(--bg-surface) !important;
+  background-image: none !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border-card) !important;
+  padding: 4px 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+}
+
+/* Toolbar Icon Buttons (both Fontello font icons and inline SVG icons) */
+div:has(> .cirjsicon-reply) > .gwt-Label[class*="cirjsicon-"],
+div:has(> .cirjsicon-reply) > .gwt-Label:has(svg),
+div:has(> [class*="cirjsicon-"]) > .gwt-Label[class*="cirjsicon-"],
+div:has(> [class*="cirjsicon-"]) > .gwt-Label:has(svg) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  padding: 4px !important;
+  margin: 0 1px !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text-main) !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  transition: background-color 120ms ease, color 120ms ease;
+  box-sizing: border-box !important;
+}
+
+/* Toolbar Icon Buttons Hover State */
+div:has(> .cirjsicon-reply) > .gwt-Label[class*="cirjsicon-"]:hover,
+div:has(> .cirjsicon-reply) > .gwt-Label:has(svg):hover,
+div:has(> [class*="cirjsicon-"]) > .gwt-Label[class*="cirjsicon-"]:hover,
+div:has(> [class*="cirjsicon-"]) > .gwt-Label:has(svg):hover {
+  background-color: var(--bg-subtle) !important;
+  color: var(--accent-text) !important;
+}
+
+/* Toolbar Active Button Highlight */
+div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"],
+div:has(> .cirjsicon-reply) > .gwt-Label[style*="#007bff"],
+div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="rgb(0, 123, 255)"],
+div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="#007bff"] {
+  background-color: var(--blue-100) !important;
+  color: var(--brand-primary) !important;
+}
+
+:root[data-theme="dark"] div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"],
+:root[data-theme="dark"] div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="rgb(0, 123, 255)"],
+body.dark-theme div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"],
+body.dark-theme div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="rgb(0, 123, 255)"] {
+  background-color: var(--bg-subtle) !important;
+  color: var(--tech-300) !important;
+}
+
+/* SVG icons inside toolbar */
+div:has(> .cirjsicon-reply) > .gwt-Label svg,
+div:has(> [class*="cirjsicon-"]) > .gwt-Label svg {
+  width: 22px !important;
+  height: 22px !important;
+  display: block !important;
+}
+
+:root[data-theme="dark"] div:has(> .cirjsicon-reply) > .gwt-Label svg,
+:root[data-theme="dark"] div:has(> [class*="cirjsicon-"]) > .gwt-Label svg,
+body.dark-theme div:has(> .cirjsicon-reply) > .gwt-Label svg,
+body.dark-theme div:has(> [class*="cirjsicon-"]) > .gwt-Label svg {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Toolbar Mode Label */
+div:has(> .cirjsicon-reply) > .gwt-Label:not([class*="cirjsicon-"]):not(:has(svg)),
+div:has(> [class*="cirjsicon-"]) > .gwt-Label:not([class*="cirjsicon-"]):not(:has(svg)) {
+  color: var(--text-muted) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding-left: 8px !important;
+  padding-right: 12px !important;
+  margin-left: auto !important;
+  white-space: nowrap !important;
+}
+
+/* Variant Component Palette Container (dropdown palette for buttons with sub-options) */
+.palette-container {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-card) !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: var(--shadow-3) !important;
+  padding: 6px !important;
+  display: flex;
+  gap: 4px !important;
+}
+
+.palette-container[style*="display: none"],
+.palette-container[style*="none"] {
+  display: none !important;
+}
+
+.palette-container > .gwt-Label {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  padding: 4px !important;
+  border-radius: var(--radius-sm) !important;
+  cursor: pointer !important;
+  transition: background-color 120ms ease;
+}
+
+.palette-container > .gwt-Label:hover {
+  background: var(--bg-subtle) !important;
 }
 
 /* Dialog Styling */

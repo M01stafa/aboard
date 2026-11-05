@@ -2824,3 +2824,17 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: running and healthy at `http://localhost:3000` (HTTP 200).
 **Related:** CIRC-1, CIRC-3, CIRC-5, DESIGN.md
 **Open:** none.
+
+## 2026-11-05 — Diagnose & Restore Circuit Native Icons, Hit Targets & Toolbar Styling
+**Request:** Diagnose why icons in Circuit native menus and GWT toolbar rendered as empty square tofu blocks; restore native icons without touching Java source; resize and pad icons to 32px hit targets per DESIGN.md; fix vertical alignment with menu labels; apply subtle background and card border to native toolbar; verify with screenshot; restart dev server.
+**Changes:**
+- `apps/web/public/circuit/circuitjs.css` (changed): identified root cause where universal selector `*, *::before` with `font-family: var(--font-sans) !important;` overrode the Fontello icon font (`font-family: "fontello"`) on `[class*="cirjsicon-"]` elements and pseudo-elements; restored `font-family: "fontello" !important;` across all `cirjsicon` selectors; adjusted base font rule to exclude icon fonts; scaled toolbar icon buttons to 20px glyphs with 32×32px hit targets, 4px padding, and subtle hover/active states; vertically centered dropdown menu icons with labels at 20×20px; styled GWT toolbar container with `var(--bg-surface)` background, `1px solid var(--border-card)` bottom border, and flex gap; fixed `.palette-container` display state when hidden.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- DOM Inspection & Computed Style Diagnosis: confirmed `beforeFontFamily` was incorrectly evaluated to `Geist` and restored to `fontello`.
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- Playwright visual verification: verified native icons in toolbar (`verified_icons_restored_toolbar.png`), Edit menu (`verified_icons_restored_edit_menu.png`), and Scopes menu (`verified_icons_restored_scopes_menu.png`).
+- Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
+**Related:** CIRC-1, CIRC-7, DESIGN.md
+**Open:** none.
