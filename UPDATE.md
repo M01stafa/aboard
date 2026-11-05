@@ -2838,3 +2838,16 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
 **Related:** CIRC-1, CIRC-7, DESIGN.md
 **Open:** none.
+
+## 2026-11-05 — Modernize Native GWT Toolbar, Menus, Sliders Card & Canvas Blueprint Grid (Batch 2)
+**Request:** Modernize native GWT toolbar, top menubar and dropdown menus, wrap right-side floating controls in a modern card container with tech blue sliders, remove crude `<` and `>` arrow brackets, improve Power Brightness contrast, and apply a 20x20px blueprint grid to the canvas; verify via Playwright screenshots; restart dev server.
+**Changes:**
+- `apps/web/public/circuit/circuitjs.css` (changed): styled horizontal menubar with `var(--bg-surface)`, `1px solid var(--border-card)` bottom border, and rounded hover states; styled dropdown menus with `border-radius: var(--radius-sm)`, `box-shadow: var(--shadow-3)`, and `var(--space-1)` padding; added vertical dividers (`1px solid var(--border-card)`) between 24-icon toolbar functional categories (History, Clipboard/Search, Viewport, Components); wrapped right-side controls in modern card (`var(--bg-surface)`, `1px solid var(--border-card)`, `var(--radius-md)`, `var(--shadow-2)`); hid legacy blank branding iframe; clipped crude canvas `<` `>` bracket arrows with `clip-path`; styled sliders with tech blue hue filter; improved "Power Brightness" disabled contrast; applied 20x20px subtle blueprint grid pattern to canvas parent with multiply blend mode in light theme and screen blend mode in dark theme.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- Playwright visual verification: verified Advanced mode menubar and toolbar with category dividers (`batch2_verified_advanced_menus_and_canvas.png`), open dropdown menu styling (`batch2_verified_dropdown_menu_open.png`), and Simple mode with canvas blueprint grid and right-side card (`batch2_verified_simple_toolbar_and_grid.png`).
+- Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
+**Related:** CIRC-1, CIRC-3, CIRC-5, CIRC-7, DESIGN.md
+**Open:** none.
