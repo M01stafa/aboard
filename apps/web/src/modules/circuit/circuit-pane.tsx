@@ -426,42 +426,20 @@ export function CircuitPane({
       <div
         data-testid="circuit-pane-header"
         style={{
-          blockSize: "var(--control-sm)",
-          minBlockSize: "var(--control-sm)",
+          blockSize: "var(--space-4)",
+          minBlockSize: "var(--space-4)",
           paddingInline: "var(--space-2)",
           backgroundColor: "var(--bg-subtle)",
           borderBlockEnd: "1px solid var(--border-card)",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: "flex-end",
           fontSize: "0.75rem",
           fontFamily: "var(--font-sans)",
           color: "var(--text-muted)",
           boxSizing: "border-box",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-          <span style={{ fontWeight: "var(--weight-semibold)", color: "var(--text-main)" }}>
-            {tab.title}
-          </span>
-          <span
-            data-testid="sim-status-badge"
-            style={{
-              fontSize: "0.6875rem",
-              fontFamily: "var(--font-mono)",
-              display: "inline-flex",
-              alignItems: "center",
-              paddingInline: "var(--space-1)",
-              borderRadius: "var(--radius-sm)",
-              backgroundColor: isSimRunning ? "var(--badge-tech-bg)" : "var(--bg-surface)",
-              color: isSimRunning ? "var(--badge-tech-fg)" : "var(--text-muted)",
-              border: `1px solid ${isSimRunning ? "var(--badge-tech-bd)" : "var(--border-card)"}`,
-            }}
-          >
-            {isSimRunning ? t("circuit.simRunning") : t("circuit.simPaused")}
-          </span>
-        </div>
-
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
           {isAdvancedMenu && (
             <button

@@ -2806,3 +2806,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server responsive: HTTP 200 on `http://localhost:3000`.
 **Related:** Phase 7 / Circuit
 **Open:** none.
+
+## 2026-11-05 — Visual UI Audit & Circuit Module Batch 1 Styling Overrides
+**Request:** Multi-agent visual UI audit of the Circuit module (Top Bars & Canvas, Sidebars/Dialogs, Bottom Bar & Oscilloscope) against DESIGN.md; save audit screenshots in local artifacts folder; fix Top Bar title redundancy and compressed height; apply global GWT CSS overrides (Geist/Alexandria typography, flat menus, tech blue sliders, card borders & rounded radii); set blueprint canvas background.
+**Changes:**
+- `.antigravity/artifacts/circuit-ui/` (created): stored 15 audit and verification screenshots (`sub1_*`, `sub2_*`, `sub3_*`, `batch1_verified_*`); excluded from git tracking via `.gitignore` (`.antigravity/`).
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): removed duplicate `{tab.title}` and duplicate `sim-status-badge` from `circuit-pane-header`, leaving only single execution control in `CircuitToolbar`; compressed header height to `var(--space-4)` (32px) with right-aligned action buttons.
+- `apps/web/public/circuit/circuitjs.css` (changed): embedded full Aboard DESIGN.md design tokens; applied `font-family: var(--font-sans) !important;` to all elements; removed glossy gradients on menubars; styled dropdowns and dialogs with `1px solid var(--border-card)` and `border-radius: var(--radius-sm)`; converted red canvas sliders (`#FF0000`) to tech blue (`var(--accent-text)`) via canvas hue filter; tinted canvas background to blueprint `--bg-subtle` (`#F5F3EC`).
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm test`: PASS (429/429 tests passed across 49 files).
+- `pnpm --filter web exec playwright test e2e/circuit-toolbar.spec.ts`: PASS (1/1 passed).
+- `pnpm --filter web exec playwright test e2e/circuit-module.spec.ts`: PASS (1/1 passed).
+- Playwright visual verification: verified Geist typography, blue sliders, collapsed topbar, and blueprint canvas background (`batch1_verified_*.png`).
+- Dev server: running and healthy at `http://localhost:3000` (HTTP 200).
+**Related:** CIRC-1, CIRC-3, CIRC-5, DESIGN.md
+**Open:** none.
