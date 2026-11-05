@@ -2851,3 +2851,16 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
 **Related:** CIRC-1, CIRC-3, CIRC-5, CIRC-7, DESIGN.md
 **Open:** none.
+
+## 2026-11-06 — Fix Advanced Toolbar Styling, Right Panel Z-Index & Hide Duplicate Buttons (Batch 3)
+**Request:** Modernize native GWT toolbar in Advanced mode to stretch full width with clean backgrounds and no legacy cutoffs; fix right-side floating panel clipping, high z-index (z-index: 50) and top positioning relative to headers; hide duplicate Reset and RUN / Stop buttons inside right-side panel; verify via Playwright screenshots; restart dev server.
+**Changes:**
+- `apps/web/public/circuit/circuitjs.css` (changed): set toolbar wrapper to full width (`right: 0px !important; width: 100% !important; z-index: 25 !important;`) across the top; un-clipped right-side panel wrapper with `overflow: visible !important; z-index: 50 !important;`; set floating card positioning to `top: 16px` (Simple mode) and `top: 56px` (Advanced mode below menubar/toolbar) with `z-index: 50 !important;` and `width: 154px`; hid duplicate native Reset and RUN / Stop buttons in right-side card (`.verticalPanel tr:has(.topButton), .verticalPanel .topButton { display: none !important; }`); hid stray file upload element (`.verticalPanel input[type="file"], .verticalPanel .gwt-FileUpload, .offScreen`).
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- Playwright visual verification: verified full-width modernized Advanced toolbar, right-side card positioning at `top: 56px` with zero clipping and high z-index (`batch3_verified_advanced_mode.png`), and Simple mode floating card with duplicate buttons hidden (`batch3_verified_simple_mode.png`).
+- Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
+**Related:** CIRC-1, CIRC-3, CIRC-7, DESIGN.md
+**Open:** none.

@@ -263,6 +263,14 @@ body.dark-theme canvas:not(.verticalPanel canvas) {
   color: var(--accent-text) !important;
 }
 
+/* GWT Toolbar Wrapper: Full width stretching across top */
+div:has(> div > .cirjsicon-reply) {
+  right: 0px !important;
+  width: 100% !important;
+  background: var(--bg-surface) !important;
+  z-index: 25 !important;
+}
+
 /* GWT Toolbar Container: Subtle modern background, bottom border, flex gap */
 div:has(> .cirjsicon-reply),
 div:has(> [class*="cirjsicon-"]) {
@@ -270,12 +278,13 @@ div:has(> [class*="cirjsicon-"]) {
   background-image: none !important;
   border: none !important;
   border-bottom: 1px solid var(--border-card) !important;
-  padding: 4px 12px !important;
+  padding: 4px 16px !important;
   display: flex !important;
   align-items: center !important;
   gap: 3px !important;
   box-shadow: none !important;
   box-sizing: border-box !important;
+  width: 100% !important;
 }
 
 /* Category Dividers between Functional Groups */
@@ -522,42 +531,50 @@ textarea:focus {
   box-shadow: 0 0 0 2px rgba(79, 158, 213, 0.25) !important;
 }
 
-/* Right-hand Floating Controls Panel: Modern Card Style */
+/* Right-hand Floating Controls Panel: Modern Card Style with High Z-Index */
+div:has(> .verticalPanel) {
+  overflow: visible !important;
+  z-index: 50 !important;
+}
+
 .verticalPanel,
 #painel {
+  position: absolute !important;
+  top: 16px !important;
+  right: 14px !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 50 !important;
   background: var(--bg-surface) !important;
   border: 1px solid var(--border-card) !important;
   border-radius: var(--radius-md) !important;
   box-shadow: var(--shadow-2) !important;
-  padding: 12px 10px !important;
-  margin: 10px 10px 10px 0 !important;
-  width: calc(100% - 10px) !important;
+  padding: 16px 12px !important;
+  width: 154px !important;
   box-sizing: border-box !important;
 }
 
-/* Hide legacy empty branding iframe at bottom of right panel */
+/* In Advanced Mode: position below the top menubar and native toolbar */
+body:has(.gwt-MenuBar) #painel,
+body:has(.gwt-MenuBar) .verticalPanel,
+body:has(.gwt-MenuBar-horizontal) #painel,
+body:has(.gwt-MenuBar-horizontal) .verticalPanel {
+  top: 56px !important;
+}
+
+/* Hide offscreen file upload input and legacy empty branding iframe */
+.verticalPanel input[type="file"],
+.verticalPanel .gwt-FileUpload,
+.offScreen,
 .verticalPanel .gwt-Frame,
 .verticalPanel iframe {
   display: none !important;
 }
 
-/* Action buttons inside right panel (Reset, RUN/Stop) */
+/* Hide duplicate Reset and RUN / Stop buttons inside right panel (use React toolbar instead) */
+.verticalPanel tr:has(.topButton),
 .verticalPanel .topButton {
-  background: var(--bg-surface) !important;
-  border: 1px solid var(--border-input) !important;
-  border-radius: var(--radius-sm) !important;
-  padding: 4px 10px !important;
-  font-size: 12px !important;
-  font-weight: 600 !important;
-  color: var(--text-main) !important;
-  cursor: pointer !important;
-  transition: all 120ms ease !important;
-}
-
-.verticalPanel .topButton:hover {
-  background: var(--bg-subtle) !important;
-  border-color: var(--accent-text) !important;
-  color: var(--accent-text) !important;
+  display: none !important;
 }
 
 /* Slider Section Labels in Right Panel */
