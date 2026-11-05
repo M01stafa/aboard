@@ -2795,3 +2795,14 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Stopped all previous dev servers, deleted `apps/web/.next`, and restarted `pnpm dev`: running at `http://localhost:3000` (HTTP 200).
 **Related:** PDF-1, PDF-4
 **Open:** none.
+
+## 2026-11-05 — Restart Dev Server
+**Request:** Restart dev server for manual testing of the Circuit Simulator module.
+**Changes:**
+- Cleared `apps/web/.next` cache.
+- Restarted `pnpm dev` in background.
+- Verified HTTP 200 on `http://localhost:3000`.
+**Checks:**
+- Dev server responsive: HTTP 200 on `http://localhost:3000`.
+**Related:** Phase 7 / Circuit
+**Open:** none.
