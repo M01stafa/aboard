@@ -80,6 +80,11 @@
   --shadow-1: 0 1px 3px rgba(0, 44, 140, .08);
   --shadow-2: 0 4px 12px rgba(0, 44, 140, .14);
   --shadow-3: 0 12px 28px rgba(5, 11, 23, .22);
+  --overlay-backdrop: rgba(5, 11, 23, 0.60);
+  --btn-primary-bg: var(--blue-900);
+  --btn-primary-hover: var(--blue-925);
+  --btn-primary-text: #FFFFFF;
+  --control-md: 36px;
 }
 
 :root[data-theme="dark"], body.dark-theme {
@@ -96,6 +101,10 @@
   --accent-text-strong: var(--tech-300);
   --focus-ring: var(--tech-500);
   --shadow-3: 0 12px 28px rgba(0, 0, 0, .60);
+  --overlay-backdrop: rgba(0, 0, 0, 0.65);
+  --btn-primary-bg: var(--blue-600);
+  --btn-primary-hover: var(--blue-700);
+  --btn-primary-text: #FFFFFF;
 }
 
 /* Global Typography Override (excludes fontello icon elements) */
@@ -141,18 +150,41 @@ i[class*="cirjsicon-"]:before {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Global Background and Canvas Blueprint Tint */
+/* Global Background and Canvas Blueprint Full-Viewport Grid Tint */
+html,
 body {
   background-color: var(--bg-body) !important;
-  background-image: none !important;
+  background-image: 
+    linear-gradient(to right, color-mix(in srgb, var(--border-card) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border-card) 55%, transparent) 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
   color: var(--text-main) !important;
   margin: 0;
   padding: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
 }
 
-/* Canvas Blueprint 20x20 Grid Pattern */
+:root[data-theme="dark"] html,
+:root[data-theme="dark"] body,
+body.dark-theme,
+html.dark-theme {
+  background-color: var(--bg-body) !important;
+  background-image: 
+    linear-gradient(to right, color-mix(in srgb, var(--border-card) 60%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border-card) 60%, transparent) 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
+}
+
+/* Canvas Container: Force full width (override GWT LayoutPanel inline inset: 0 166px 0 0) */
 div:has(> canvas[style*="position: absolute"]) {
-  background-color: var(--bg-subtle) !important;
+  inset: 0px !important;
+  right: 0px !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  z-index: 1 !important;
+  background-color: transparent !important;
   background-image: 
     linear-gradient(to right, color-mix(in srgb, var(--border-card) 55%, transparent) 1px, transparent 1px),
     linear-gradient(to bottom, color-mix(in srgb, var(--border-card) 55%, transparent) 1px, transparent 1px) !important;
@@ -161,7 +193,7 @@ div:has(> canvas[style*="position: absolute"]) {
 
 :root[data-theme="dark"] div:has(> canvas[style*="position: absolute"]),
 body.dark-theme div:has(> canvas[style*="position: absolute"]) {
-  background-color: var(--bg-body) !important;
+  background-color: transparent !important;
   background-image: 
     linear-gradient(to right, color-mix(in srgb, var(--border-card) 60%, transparent) 1px, transparent 1px),
     linear-gradient(to bottom, color-mix(in srgb, var(--border-card) 60%, transparent) 1px, transparent 1px) !important;
@@ -171,6 +203,11 @@ body.dark-theme div:has(> canvas[style*="position: absolute"]) {
 canvas {
   background-color: var(--bg-subtle) !important;
   mix-blend-mode: multiply !important;
+}
+
+/* Stretch main canvas full width across viewport */
+canvas[style*="position: absolute"] {
+  width: 100% !important;
 }
 
 :root[data-theme="dark"] canvas:not(.verticalPanel canvas),
@@ -189,6 +226,8 @@ body.dark-theme canvas:not(.verticalPanel canvas) {
   color: var(--text-main) !important;
   padding: 4px 8px !important;
   box-shadow: none !important;
+  position: relative !important;
+  z-index: 60 !important;
 }
 
 .gwt-MenuBar-horizontal .gwt-MenuItem {
@@ -207,26 +246,43 @@ body.dark-theme canvas:not(.verticalPanel canvas) {
   color: var(--accent-text) !important;
 }
 
-/* Dropdown Menus and Popups */
+/* Dropdown Menus, Context Menus, and Popups */
 .gwt-MenuBar-vertical,
 .gwt-MenuBarPopup,
-.gwt-PopupPanel {
+.gwt-PopupPanel:not(.gwt-DialogBox) {
   background: var(--bg-surface) !important;
   background-image: none !important;
   border: 1px solid var(--border-card) !important;
   border-radius: var(--radius-sm) !important;
   box-shadow: var(--shadow-3) !important;
   padding: var(--space-1) !important;
+  min-width: 320px !important;
+  box-sizing: border-box !important;
+  z-index: 80 !important;
+}
+
+.gwt-MenuBar-vertical table,
+.gwt-MenuBarPopup table,
+.gwt-PopupPanel:not(.gwt-DialogBox) table {
+  min-width: 300px !important;
+  width: 100% !important;
+  border-collapse: separate !important;
 }
 
 .gwt-MenuItem {
   color: var(--text-main) !important;
   font-size: 13px !important;
-  padding: 6px 12px !important;
+  padding: 6px 14px !important;
   border-radius: 4px !important;
   cursor: pointer !important;
   transition: background-color 120ms ease, color 120ms ease;
   vertical-align: middle !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
 }
 
 .gwt-MenuItem:hover,
@@ -238,6 +294,27 @@ body.dark-theme canvas:not(.verticalPanel canvas) {
 .gwt-MenuItem-disabled {
   color: var(--text-muted) !important;
   opacity: 0.55 !important;
+}
+
+/* Accelerator shortcut labels in dropdowns and context menus */
+.gwt-MenuItem div[style*="position:absolute"],
+.gwt-MenuItem div[style*="position: absolute"] {
+  position: relative !important;
+  right: auto !important;
+  margin-inline-start: auto !important;
+  padding-inline-start: 16px !important;
+  color: var(--text-muted) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.02em !important;
+  opacity: 0.85 !important;
+}
+
+/* Remove hardcoded fixed-width spacer span that triggered text collisions */
+.gwt-MenuItem > span[style*="width: 60px"],
+.gwt-MenuItem > span[style*="width:60px"],
+.gwt-MenuItem > span[style*="width: 40px"] {
+  display: none !important;
 }
 
 /* Dropdown Menu Icons: vertical centering and consistent modern sizing */
@@ -456,25 +533,198 @@ div:has(> [class*="cirjsicon-"]) > .gwt-Label:not([class*="cirjsicon-"]):not(:ha
   background: var(--bg-subtle) !important;
 }
 
-/* Dialog Styling */
-.gwt-DialogBox {
-  background: var(--bg-surface) !important;
-  border: 1px solid var(--border-card) !important;
-  border-radius: var(--radius-sm) !important;
-  box-shadow: var(--shadow-3) !important;
-  padding: 12px !important;
+/* Dialog Styling (GWT DialogBox & Backdrop Overlay) */
+.gwt-DialogBox::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-backdrop) !important;
+  backdrop-filter: blur(2px) !important;
+  z-index: -1;
+  pointer-events: none;
 }
 
+.gwt-PopupPanelGlass {
+  background: var(--overlay-backdrop) !important;
+  backdrop-filter: blur(2px) !important;
+  opacity: 1 !important;
+}
+
+.gwt-DialogBox {
+  z-index: 100 !important;
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-card) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-3) !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+/* Remove GWT 3x3 table decoration corners */
+.gwt-DialogBox .dialogTopLeft,
+.gwt-DialogBox .dialogTopRight,
+.gwt-DialogBox .dialogMiddleLeft,
+.gwt-DialogBox .dialogMiddleRight,
+.gwt-DialogBox .dialogBottomLeft,
+.gwt-DialogBox .dialogBottomRight,
+.gwt-DialogBox .dialogBottomCenter {
+  display: none !important;
+}
+
+.gwt-DialogBox .dialogTopCenter,
+.gwt-DialogBox .dialogMiddleCenter {
+  display: block !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.gwt-DialogBox table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+}
+
+/* Dialog Title / Caption Bar with Close [X] */
 .gwt-DialogBox .Caption {
   background: var(--bg-subtle) !important;
   color: var(--text-main) !important;
-  border-bottom: 1px solid var(--border-card) !important;
-  border-radius: calc(var(--radius-sm) - 2px) calc(var(--radius-sm) - 2px) 0 0 !important;
   font-weight: 600 !important;
   font-size: 14px !important;
-  padding: 8px 12px !important;
-  margin-bottom: 12px !important;
+  padding: 12px 18px !important;
+  border-bottom: 1px solid var(--border-card) !important;
   cursor: move !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.gwt-DialogBox .Caption::after {
+  content: "✕";
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.gwt-DialogBox .Caption:hover::after {
+  color: var(--text-main);
+  background: var(--bg-surface);
+}
+
+/* Dialog Content Area */
+.gwt-DialogBox .dialogContent,
+.gwt-DialogBox .dialogMiddleCenterInner {
+  padding: 16px 20px !important;
+  background: var(--bg-surface) !important;
+}
+
+.gwt-DialogBox .gwt-Label,
+.gwt-DialogBox .topSpace {
+  color: var(--text-main) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  margin-top: 8px !important;
+  margin-bottom: 4px !important;
+}
+
+/* Dialog Form Inputs & Selects */
+.gwt-DialogBox .gwt-TextBox,
+.gwt-DialogBox input[type="text"],
+.gwt-DialogBox select,
+.gwt-DialogBox .gwt-ListBox {
+  height: 32px !important;
+  min-height: 32px !important;
+  background: var(--input-bg) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-input) !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 4px 10px !important;
+  font-size: 13px !important;
+  box-sizing: border-box !important;
+}
+
+.gwt-DialogBox .gwt-TextBox:focus,
+.gwt-DialogBox input[type="text"]:focus,
+.gwt-DialogBox select:focus,
+.gwt-DialogBox .gwt-ListBox:focus {
+  border-color: var(--focus-ring) !important;
+  box-shadow: 0 0 0 2px rgba(79, 158, 213, 0.25) !important;
+}
+
+/* Stepper - / + Buttons */
+.gwt-DialogBox button.gwt-Button[style*="width: 2em"],
+.gwt-DialogBox button.gwt-Button[style*="width:2em"] {
+  height: 32px !important;
+  width: 32px !important;
+  background: var(--bg-subtle) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--border-card) !important;
+  border-radius: var(--radius-sm) !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 4px !important;
+  transition: all 120ms ease !important;
+}
+
+.gwt-DialogBox button.gwt-Button[style*="width: 2em"]:hover,
+.gwt-DialogBox button.gwt-Button[style*="width:2em"]:hover {
+  background: var(--border-card) !important;
+  color: var(--accent-text) !important;
+}
+
+/* Dialog Bottom Action Buttons (OK, Cancel, Apply) */
+.gwt-DialogBox table.topSpace button.gwt-Button,
+.gwt-DialogBox button.gwt-Button:not([style*="width"]) {
+  min-height: 34px !important;
+  min-width: 80px !important;
+  padding: 6px 16px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: var(--radius-sm) !important;
+  cursor: pointer !important;
+  transition: all 120ms ease !important;
+  margin: 4px !important;
+  border: 1px solid var(--border-card) !important;
+  background: var(--bg-surface) !important;
+  color: var(--text-main) !important;
+}
+
+.gwt-DialogBox table.topSpace button.gwt-Button:hover,
+.gwt-DialogBox button.gwt-Button:not([style*="width"]):hover {
+  background: var(--bg-subtle) !important;
+  border-color: var(--accent-text) !important;
+  color: var(--accent-text) !important;
+}
+
+/* Primary Action Buttons (OK, Apply) */
+.gwt-DialogBox table.topSpace td:not(:last-child) button.gwt-Button {
+  background: var(--btn-primary-bg) !important;
+  border-color: var(--btn-primary-bg) !important;
+  color: var(--btn-primary-text, #FFFFFF) !important;
+}
+
+.gwt-DialogBox table.topSpace td:not(:last-child) button.gwt-Button:hover {
+  background: var(--btn-primary-hover) !important;
+  border-color: var(--btn-primary-hover) !important;
+}
+
+/* Cancel / Close button */
+.gwt-DialogBox table.topSpace td:last-child button.gwt-Button {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-card) !important;
+  color: var(--text-main) !important;
+}
+
+.gwt-DialogBox table.topSpace td:last-child button.gwt-Button:hover {
+  background: var(--bg-subtle) !important;
+  border-color: var(--border-input) !important;
 }
 
 /* Buttons */
@@ -535,10 +785,12 @@ textarea:focus {
 div:has(> .verticalPanel) {
   overflow: visible !important;
   z-index: 50 !important;
+  pointer-events: none !important;
 }
 
 .verticalPanel,
 #painel {
+  pointer-events: auto !important;
   position: absolute !important;
   top: 16px !important;
   right: 14px !important;

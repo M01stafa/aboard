@@ -2864,3 +2864,17 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
 **Related:** CIRC-1, CIRC-3, CIRC-7, DESIGN.md
 **Open:** none.
+
+
+## 2026-11-06 — Extend Canvas Grid to Full Width & Finalize GWT Dialogs / Menus Styling (Batch 4)
+**Request:** Extend blueprint grid to 100% full screen across entire iframe viewport (eliminating beige right-side gap behind floating panel); modernize GWT dialogs (including "Other Options") with backdrop overlay, clean Caption title bar with Close [X], modern inputs and styled primary/secondary buttons; modernize dropdowns and context menus with proper width constraints and flex layout to eliminate shortcut accelerator text collisions; verify via Playwright screenshots; restart dev server.
+**Changes:**
+- `apps/web/public/circuit/circuitjs.css` (changed): extended blueprint 20x20px grid to `html` and `body` with `100vw` / `100vh` and `overflow: hidden`; forced main canvas container to `inset: 0 !important; width: 100% !important; z-index: 1 !important;` (overriding GWT LayoutPanel inline `inset: 0 166px 0 0`); stretched main canvas width to `100% !important;`; set east panel container `pointer-events: none` and floating card `pointer-events: auto` to allow clicks to pass through to canvas beneath; styled GWT dialogs (`.gwt-DialogBox`) with `background: var(--bg-surface)`, `border-radius: var(--radius-md)`, `box-shadow: var(--shadow-3)`, full-viewport blur backdrop overlay (`.gwt-DialogBox::before`, `.gwt-PopupPanelGlass`), clean `.Caption` title bar with interactive Close [X] indicator, 32px height modern form inputs (`var(--border-input)`, `var(--input-bg)`), 32x32px stepper buttons, and modern primary (`var(--btn-primary-bg)`) and cancel buttons; styled dropdowns and context menus (`.gwt-MenuBarPopup`, `.gwt-PopupPanel:not(.gwt-DialogBox)`) with `min-width: 320px !important; z-index: 80 !important;` and `.gwt-MenuItem` with `display: flex !important; justify-content: space-between !important;` with accelerator shortcut pushed to the far right (`margin-inline-start: auto`) and hidden fixed-width spacer spans, completely eliminating text collisions.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- Playwright visual verification: verified full-width 100% grid across viewport (`batch4_verified_full_width_grid.png`), right-click context menu with zero text collisions (`batch4_verified_context_menu.png`), and modernized "Other Options" dialog with backdrop overlay and styled buttons (`batch4_verified_other_options_dialog.png`).
+- Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
+**Related:** CIRC-1, CIRC-3, CIRC-7, DESIGN.md
+**Open:** none.
