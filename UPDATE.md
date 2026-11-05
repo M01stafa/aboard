@@ -2773,3 +2773,25 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: running and healthy at `http://localhost:3000` (HTTP 200).
 **Related:** PDF-1, PDF-4
 **Open:** none.
+
+## 2026-11-05 — Fix Text Box Overflow on the Right Side
+**Request:** Fix text box overflow outside the bounding box when placed on the right side of the PDF page.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx` (changed):
+  - In `p.isTextMode`: when clicked near the right edge (`pt.x + defaultW > pWidth - 16`), safely anchors the box `safeX` to fit inside the page margin so width remains in sync with annotations state.
+  - In `measureTextHeight`: configured `measurer` with `border: 1px solid transparent` and `boxSizing: border-box` to mirror exact DOM box model metrics.
+  - In `onInput`, `onChange`, `onPaste`, and `ref`: dynamically computes `autoH = measureTextHeight(val, curW, textFontSize)` and sizes `targetH = Math.max(36, target.scrollHeight || 0, minHByLines, autoH)` so soft-wrapped lines expand the container immediately without manual newlines.
+  - In editing wrapper `<div>`: applied `boxSizing: "border-box"`.
+- `apps/web/src/modules/pdf/page-operations.ts` (changed):
+  - Calculated `wrapW = Math.max(40, Math.min(boxW - 16, maxTextWidth - 16))` for `wrapLineForPdf` to align PDF text wrapping with browser DOM box width.
+- `apps/web/e2e/pdf-text-tool-rtl.spec.ts` (changed):
+  - Added automated Playwright test creating a text box on the far right side of the page, typing a long sentence, and verifying the text wraps inside the box with zero overflow outside the dashed bounding box.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (60/60 unit tests passed across `bidiText.test.ts`, `page-operations.test.ts`, and `pdf-text-tool.test.tsx`).
+- `pnpm exec playwright test e2e/pdf-text-tool-rtl.spec.ts`: PASS (2/2 tests passed in 6.3s).
+- Stopped all previous dev servers, deleted `apps/web/.next`, and restarted `pnpm dev`: running at `http://localhost:3000` (HTTP 200).
+**Related:** PDF-1, PDF-4
+**Open:** none.

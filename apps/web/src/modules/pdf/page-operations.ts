@@ -305,11 +305,12 @@ export function drawCustomTextBoxesOnDoc(
       const lineHeight = fontSize * 1.4;
       const boxW = box.width && box.width > 0 ? box.width : 250;
       const maxTextWidth = getMaxTextWidth(pageWidth, box.x);
+      const wrapW = Math.max(40, Math.min(boxW - 16, maxTextWidth - 16));
       const rawLines = box.text.split("\n");
       const wrappedLines: string[] = [];
 
       for (const rawLine of rawLines) {
-        const subLines = wrapLineForPdf(rawLine, font, fontSize, maxTextWidth);
+        const subLines = wrapLineForPdf(rawLine, font, fontSize, wrapW);
         wrappedLines.push(...subLines);
       }
 

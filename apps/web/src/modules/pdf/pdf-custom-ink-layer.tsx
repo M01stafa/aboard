@@ -203,6 +203,7 @@ export function measureTextHeight(
       measurer.style.wordBreak = "break-word";
       measurer.style.overflowWrap = "break-word";
       measurer.style.boxSizing = "border-box";
+      measurer.style.border = "1px solid transparent";
       measurer.style.fontFamily = "var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)";
       measurer.style.padding = "8px";
       document.body.appendChild(measurer);
@@ -878,9 +879,15 @@ export function PdfCustomInkLayer({
         e.stopPropagation();
         const pt = toPagePoint(e.clientX, e.clientY);
         if (!pt) return;
+        const pWidth = p.pageWidth || 612;
+        const defaultW = DEFAULT_TEXT_BOX_WIDTH;
+        const safeX =
+          pt.x + defaultW > pWidth - 16 ? Math.max(0, pWidth - defaultW - 16) : pt.x;
+        const safeW = Math.min(defaultW, Math.max(120, pWidth - safeX - 16));
         const newId = p.onAddText?.(p.pageIndex, {
-          x: pt.x,
+          x: safeX,
           y: pt.y,
+          width: safeW,
           text: "",
           fontSize: 16,
           color: p.strokeColor || "#E44234",
@@ -2075,6 +2082,7 @@ export function PdfCustomInkLayer({
                       position: "relative",
                       width: "100%",
                       height: "100%",
+                      boxSizing: "border-box",
                       direction: effectiveDirection,
                       textAlign: textAlign,
                       unicodeBidi: "plaintext",
@@ -2087,7 +2095,8 @@ export function PdfCustomInkLayer({
                           el.style.height = "auto";
                           const lines = (obj.text || "").split("\n");
                           const minHByLines = Math.round(lines.length * textFontSize * 1.4 + 18);
-                          const targetH = Math.max(36, el.scrollHeight || 0, minHByLines);
+                          const autoH = measureTextHeight(obj.text || "", curW, textFontSize);
+                          const targetH = Math.max(36, el.scrollHeight || 0, minHByLines, autoH);
                           el.style.height = `${targetH}px`;
                           if (editingHeights[obj.id] !== targetH) {
                             setEditingHeights((prev) => ({ ...prev, [obj.id]: targetH }));
@@ -2121,7 +2130,8 @@ export function PdfCustomInkLayer({
                         target.style.height = "auto";
                         const lines = nextValue.split("\n");
                         const minHByLines = Math.round(lines.length * textFontSize * 1.4 + 18);
-                        const targetH = Math.max(36, target.scrollHeight || 0, minHByLines);
+                        const autoH = measureTextHeight(nextValue, curW, textFontSize);
+                        const targetH = Math.max(36, target.scrollHeight || 0, minHByLines, autoH);
                         target.style.height = `${targetH}px`;
                         setEditingHeights((prev) => ({ ...prev, [obj.id]: targetH }));
 
@@ -2141,7 +2151,8 @@ export function PdfCustomInkLayer({
                         target.style.height = "auto";
                         const lines = val.split("\n");
                         const minHByLines = Math.round(lines.length * textFontSize * 1.4 + 18);
-                        const targetH = Math.max(36, target.scrollHeight || 0, minHByLines);
+                        const autoH = measureTextHeight(val, curW, textFontSize);
+                        const targetH = Math.max(36, target.scrollHeight || 0, minHByLines, autoH);
                         target.style.height = `${targetH}px`;
                         setEditingHeights((prev) => ({ ...prev, [obj.id]: targetH }));
                         onUpdateText?.(pageIndex, obj.id, val);
@@ -2152,7 +2163,8 @@ export function PdfCustomInkLayer({
                         target.style.height = "auto";
                         const lines = val.split("\n");
                         const minHByLines = Math.round(lines.length * textFontSize * 1.4 + 18);
-                        const targetH = Math.max(36, target.scrollHeight || 0, minHByLines);
+                        const autoH = measureTextHeight(val, curW, textFontSize);
+                        const targetH = Math.max(36, target.scrollHeight || 0, minHByLines, autoH);
                         target.style.height = `${targetH}px`;
                         setEditingHeights((prev) => ({ ...prev, [obj.id]: targetH }));
                         onUpdateText?.(pageIndex, obj.id, val);
@@ -2164,8 +2176,8 @@ export function PdfCustomInkLayer({
                           onDeleteText?.(pageIndex, obj.id);
                         } else {
                           const finalH = Math.max(36, e.currentTarget.scrollHeight, measureTextHeight(value, curW, textFontSize));
-                          onUpdateText?.(pageIndex, obj.id, value);
                           onUpdateTextBoxSize?.(pageIndex, obj.id, { width: curW, height: finalH });
+                          onUpdateText?.(pageIndex, obj.id, value);
                         }
                       }}
                       onKeyDown={(e) => {
