@@ -2956,3 +2956,26 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
 **Related:** CIRC-1, CIRC-3, CIRC-5, CIRC-7, DESIGN.md
 **Open:** none.
+
+
+## 2026-11-06 — Eliminate Double Scrollbars and Fix Layering in Circuit Menus
+**Request:** Eliminate double scrollbars and fix the layered "page inside a page" effect in Circuit native GWT menus (evident when opening tall menus like "Circuits" and "Draw -> Passive Components"); remove duplicate nested scroll containers and legacy GWT 3x3 table decoration corners (`menuPopupTopLeft`, `menuPopupMiddleRight`, etc.) that created the double scrollbar and beige divider; ensure main page and canvas never scroll; style single slim modern scrollbar; verify via Playwright; restart dev server.
+**Changes:**
+- `apps/web/public/circuit/circuitjs.css` (changed):
+  - Completely hid all legacy GWT 9-slice table decoration cells (`.menuPopupTopLeft`, `.menuPopupTopCenter`, `.menuPopupTopRight`, `.menuPopupMiddleLeft`, `.menuPopupMiddleRight`, `.menuPopupBottomLeft`, `.menuPopupBottomCenter`, `.menuPopupBottomRight`, and `.popup*` counterparts) with `display: none !important; width: 0 !important; height: 0 !important; padding: 0 !important; margin: 0 !important; border: none !important; background: none !important;` to eliminate the vertical beige stripe and corner image artifacts.
+  - Reset inner `.gwt-MenuBar-vertical` to be transparent, non-scrolling, and borderless (`background: transparent !important; border: none !important; box-shadow: none !important; max-height: none !important; overflow: visible !important; width: 100% !important;`), eliminating the duplicate nested scrolling container.
+  - Made `.gwt-MenuBarPopup` the single flat modern card container with `max-height: calc(100vh - 100px) !important; overflow-y: auto !important; overflow-x: hidden !important; overscroll-behavior: contain !important; border: 1px solid var(--border-card) !important; border-radius: var(--radius-sm) !important; box-shadow: var(--shadow-3) !important; padding: var(--space-1) 0 !important;`.
+  - Added modern thin single scrollbar on `.gwt-MenuBarPopup` (`width: 6px !important;` with thumb `var(--border-input)` and hover `var(--text-muted)`).
+  - Enforced `overflow: hidden !important; width: 100vw !important; height: 100vh !important; overscroll-behavior: none !important;` on `html, body, .gwt-SplitLayoutPanel, #main-container, [class*="SplitLayoutPanel"]`.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm test src/modules/circuit`: PASS (18/18 tests passed).
+- Playwright verification:
+  - "Circuits" -> "A/C Circuits" (`circuits_double_scrollbar_check.png`): exactly single-layer flat modern cards, zero double scrollbars, zero beige vertical stripes, perfect submenu alignment.
+  - "Draw" -> "Passive Components" (`passive_components_menu_fixed.png`): flat, seamless cards, no nested frames.
+  - Tall menu viewport overflow test (`passive_components_overflow_scrollbar.png`): single 6px modern scrollbar, 0 scroll on window or canvas (`windowScrollY: 0`, `iframeScrollTop: 0`).
+- Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
+**Related:** CIRC-1, CIRC-3, CIRC-5, CIRC-7, DESIGN.md
+**Open:** none.

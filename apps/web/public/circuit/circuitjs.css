@@ -152,7 +152,10 @@ i[class*="cirjsicon-"]:before {
 
 /* Global Background and Canvas Blueprint Full-Viewport Grid Tint */
 html,
-body {
+body,
+.gwt-SplitLayoutPanel,
+#main-container,
+[class*="SplitLayoutPanel"] {
   background-color: var(--bg-body) !important;
   background-image: 
     linear-gradient(to right, color-mix(in srgb, var(--border-card) 55%, transparent) 1px, transparent 1px),
@@ -268,8 +271,69 @@ div:has(> .gwt-MenuBar-horizontal) {
   color: var(--accent-text) !important;
 }
 
-/* Dropdown Menus, Context Menus, and Popups */
-.gwt-MenuBar-vertical,
+/* Remove legacy GWT 9-slice table decoration cells that cause double borders and beige artifacts */
+.gwt-MenuBarPopup .menuPopupTopLeft,
+.gwt-MenuBarPopup .menuPopupTopRight,
+.gwt-MenuBarPopup .menuPopupMiddleLeft,
+.gwt-MenuBarPopup .menuPopupMiddleRight,
+.gwt-MenuBarPopup .menuPopupBottomLeft,
+.gwt-MenuBarPopup .menuPopupBottomRight,
+.gwt-MenuBarPopup .menuPopupTopCenter,
+.gwt-MenuBarPopup .menuPopupBottomCenter,
+.gwt-DecoratedPopupPanel .popupTopLeft,
+.gwt-DecoratedPopupPanel .popupTopRight,
+.gwt-DecoratedPopupPanel .popupMiddleLeft,
+.gwt-DecoratedPopupPanel .popupMiddleRight,
+.gwt-DecoratedPopupPanel .popupBottomLeft,
+.gwt-DecoratedPopupPanel .popupBottomRight,
+.gwt-DecoratedPopupPanel .popupTopCenter,
+.gwt-DecoratedPopupPanel .popupBottomCenter {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: none !important;
+}
+
+.gwt-MenuBarPopup .menuPopupMiddleCenter,
+.gwt-MenuBarPopup .menuPopupMiddleCenterInner,
+.gwt-MenuBarPopup .menuPopupContent,
+.gwt-DecoratedPopupPanel .popupMiddleCenter,
+.gwt-DecoratedPopupPanel .popupMiddleCenterInner,
+.gwt-DecoratedPopupPanel .popupContent {
+  display: block !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+.gwt-MenuBarPopup table,
+.gwt-DecoratedPopupPanel table {
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  width: 100% !important;
+}
+
+/* Inner MenuBar: transparent, non-scrolling content wrapper */
+.gwt-MenuBar-vertical {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Outer MenuBarPopup: the single scrolling flat card container */
 .gwt-MenuBarPopup,
 .gwt-PopupPanel:not(.gwt-DialogBox) {
   background: var(--bg-surface) !important;
@@ -277,37 +341,35 @@ div:has(> .gwt-MenuBar-horizontal) {
   border: 1px solid var(--border-card) !important;
   border-radius: var(--radius-sm) !important;
   box-shadow: var(--shadow-3) !important;
-  padding: var(--space-1) !important;
-  min-width: 320px !important;
-  max-height: calc(100vh - 145px) !important;
+  padding: var(--space-1) 0 !important;
+  min-width: 300px !important;
+  max-height: calc(100vh - 100px) !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   overscroll-behavior: contain !important;
   box-sizing: border-box !important;
   z-index: 80 !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--border-input) transparent !important;
 }
 
-/* Slim scrollbar for tall dropdowns and submenus */
-.gwt-MenuBar-vertical::-webkit-scrollbar,
+/* Modern single slim scrollbar on the popup */
 .gwt-MenuBarPopup::-webkit-scrollbar,
 .gwt-PopupPanel:not(.gwt-DialogBox)::-webkit-scrollbar {
   width: 6px !important;
 }
 
-.gwt-MenuBar-vertical::-webkit-scrollbar-track,
 .gwt-MenuBarPopup::-webkit-scrollbar-track,
 .gwt-PopupPanel:not(.gwt-DialogBox)::-webkit-scrollbar-track {
   background: transparent !important;
 }
 
-.gwt-MenuBar-vertical::-webkit-scrollbar-thumb,
 .gwt-MenuBarPopup::-webkit-scrollbar-thumb,
 .gwt-PopupPanel:not(.gwt-DialogBox)::-webkit-scrollbar-thumb {
-  background: var(--border-card) !important;
-  border-radius: var(--radius-full) !important;
+  background: var(--border-input) !important;
+  border-radius: var(--radius-sm) !important;
 }
 
-.gwt-MenuBar-vertical::-webkit-scrollbar-thumb:hover,
 .gwt-MenuBarPopup::-webkit-scrollbar-thumb:hover,
 .gwt-PopupPanel:not(.gwt-DialogBox)::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted) !important;
