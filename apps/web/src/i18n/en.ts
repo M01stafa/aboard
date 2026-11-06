@@ -156,6 +156,7 @@ export const en = {
     sendingToBoard: "Sending…",
     sentToBoardSuccess: "Circuit sent to whiteboard",
     sendToBoardError: "Failed to send circuit to whiteboard",
+    sendToBoardNoBoardOpen: "Open a whiteboard tab to send circuit",
     runSim: "Run",
     pauseSim: "Pause",
     reset: "Reset",

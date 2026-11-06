@@ -158,6 +158,7 @@ export const ar: TranslationDictionary = {
     sendingToBoard: "جارٍ الإرسال…",
     sentToBoardSuccess: "تم إرسال الدائرة إلى اللوحة البيضاء",
     sendToBoardError: "فشل إرسال الدائرة إلى اللوحة البيضاء",
+    sendToBoardNoBoardOpen: "افتح تبويب سبورة بيضاء لإرسال الدائرة",
     runSim: "تشغيل",
     pauseSim: "إيقاف مؤقت",
     reset: "إعادة تعيين",

@@ -172,4 +172,37 @@ test.describe("Circuit Simulator Module Integration (Task 24 / CIRC-1, CIRC-2, C
       expect(circuitAfterReload).toContain("1000");
     }).toPass({ timeout: 15000 });
   });
+
+  test("Send to Board button is disabled when only Circuit is open, and becomes enabled when a Board is opened side-by-side", async ({
+    page,
+  }) => {
+    // 1. Navigate to workspace with only Circuit open
+    await page.goto(`/workspace?p=${projectId}-dest-check&kind=circuit`);
+
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    const sendToBoardBtn = page.locator('[data-testid="circuit-send-to-board-btn"]');
+    await expect(sendToBoardBtn).toBeVisible();
+
+    // 2. Verify button is disabled and shows appropriate tooltip because no Board tab is open
+    await expect(sendToBoardBtn).toBeDisabled();
+    await expect(sendToBoardBtn).toHaveAttribute("title", /Open a whiteboard tab to send circuit/i);
+
+    // 3. Add a Board tab via '+' menu
+    const addTabBtn = page.locator('[data-testid="add-tab-btn"]');
+    await addTabBtn.click();
+    await page.locator('[data-testid="add-tab-board"]').click();
+    await expect(page.locator(".ws-tab-btn")).toHaveCount(2);
+
+    // 4. Open side-by-side using vertical split view
+    const splitVerticalBtn = page.locator('[data-testid="split-vertical-btn"]');
+    await expect(splitVerticalBtn).toBeVisible();
+    await splitVerticalBtn.click();
+
+    // Verify split layout is active
+    await expect(page.locator('.pane[data-slot="secondary"]')).toBeVisible();
+
+    // 5. In side-by-side view, verify Send to Board button is now enabled
+    await expect(sendToBoardBtn).toBeEnabled({ timeout: 10000 });
+    await expect(sendToBoardBtn).toHaveAttribute("title", /Send to Board/i);
+  });
 });

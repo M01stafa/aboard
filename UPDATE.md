@@ -3022,3 +3022,25 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** CIRC-1, CIRC-4, BOARD-2, SEC-7, DESIGN.md
 **Open:** none.
 
+
+## 2026-11-06 — Disable "Send to Board" in Circuit Pane When No Board is Open
+**Request:** Disable "Send to Board" button in Circuit pane whenever no Board tab is open in the workspace, matching the destination-check behavior of "Send to PDF" in the Board pane and "Send to Board" in the PDF pane. Update button visual styling (cursor: not-allowed, opacity: 0.6) and title tooltip; add unit and e2e tests; restart dev server.
+**Changes:**
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): added `hasBoardOpen?: boolean` and `hasBoardTab?: boolean` props; resolved `isBoardOpen = hasBoardOpen ?? hasBoardTab ?? false`; disabled button when `!isAttached || isExportingToBoard || !isBoardOpen`; updated style (`cursor: not-allowed`, `opacity: 0.6`, `color: var(--text-muted)`) and title tooltip (`t("circuit.sendToBoardNoBoardOpen")`); guarded `handleSendToBoard` against execution when no board is open.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): passed `hasBoardOpen={hasBoard}` and `hasBoardTab={hasBoard}` to `<CircuitPane />`.
+- `apps/web/src/i18n/en.ts` (changed): added `circuit.sendToBoardNoBoardOpen: "Open a whiteboard tab to send circuit"`.
+- `apps/web/src/i18n/ar.ts` (changed): added `circuit.sendToBoardNoBoardOpen: "افتح تبويب سبورة بيضاء لإرسال الدائرة"`.
+- `apps/web/src/modules/circuit/circuit-pane.test.tsx` (changed): added unit test asserting disabled state, tooltip, cursor, and opacity when `hasBoardOpen` is false, and enabled state when `hasBoardOpen` is true with attached simulator.
+- `apps/web/e2e/circuit-module.spec.ts` (changed): added Playwright e2e test verifying Send to Board button is disabled when only Circuit is open, and becomes enabled when a Board tab is opened side-by-side.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm test src/modules/circuit`: PASS (19/19 tests passed).
+- `pnpm test`: PASS (49/49 test files passed, 431/431 tests passed).
+- Playwright E2E (`pnpm test:e2e circuit-module`): PASS (2/2 tests passed, including side-by-side board open verification).
+- Dev server: stopped, `.next` cache deleted, restarted with `pnpm dev` and running at `http://localhost:3000` (HTTP 200).
+**Related:** CIRC-1, CIRC-5, INT-1, INT-4, DESIGN.md
+**Open:** none.
+
+

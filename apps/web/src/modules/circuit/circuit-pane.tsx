@@ -13,6 +13,8 @@ export interface CircuitPaneProps {
   projectId: string;
   tab: Tab;
   visible: boolean;
+  hasBoardOpen?: boolean;
+  hasBoardTab?: boolean;
   onMount?: (tabId: string, token: string) => void;
   pauseWhenHiddenDefault?: boolean;
 }
@@ -32,9 +34,12 @@ export function CircuitPane({
   projectId,
   tab,
   visible,
+  hasBoardOpen,
+  hasBoardTab,
   onMount,
   pauseWhenHiddenDefault,
 }: CircuitPaneProps) {
+  const isBoardOpen = hasBoardOpen ?? hasBoardTab ?? false;
   const { t, resolvedTheme: i18nTheme, language } = useI18n();
 
   // Track DOM data-theme attribute in addition to i18n theme context
@@ -146,6 +151,7 @@ export function CircuitPane({
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
 
   const handleSendToBoard = useCallback(async () => {
+    if (!isBoardOpen || !isAttached || isExportingToBoard) return;
     setIsExportingToBoard(true);
     try {
       const svg = await adapter.requestSVG();
@@ -159,7 +165,7 @@ export function CircuitPane({
     } finally {
       setIsExportingToBoard(false);
     }
-  }, [adapter, tab.itemId, tab.id]);
+  }, [isBoardOpen, isAttached, isExportingToBoard, adapter, tab.itemId, tab.id]);
 
   // Preserve circuit text during theme reload or advanced menu toggle
   const preservedCircuitRef = useRef<string | null>(null);
@@ -524,7 +530,7 @@ export function CircuitPane({
             type="button"
             data-testid="circuit-send-to-board-btn"
             onClick={handleSendToBoard}
-            disabled={isExportingToBoard || !isAttached}
+            disabled={!isAttached || isExportingToBoard || !isBoardOpen}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -534,13 +540,13 @@ export function CircuitPane({
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--border-card)",
               backgroundColor: "var(--bg-surface)",
-              color: isAttached ? "var(--text-main)" : "var(--text-muted)",
+              color: (!isAttached || !isBoardOpen) ? "var(--text-muted)" : "var(--text-main)",
               fontSize: "0.75rem",
               fontWeight: 500,
-              cursor: isExportingToBoard ? "wait" : !isAttached ? "not-allowed" : "pointer",
-              opacity: isAttached ? 1 : 0.6,
+              cursor: isExportingToBoard ? "wait" : (!isAttached || !isBoardOpen) ? "not-allowed" : "pointer",
+              opacity: (!isAttached || !isBoardOpen) ? 0.6 : 1,
             }}
-            title={t("circuit.sendToBoard")}
+            title={!isBoardOpen ? t("circuit.sendToBoardNoBoardOpen") : t("circuit.sendToBoard")}
           >
             <span>📋</span>
             <span>{isExportingToBoard ? t("circuit.sendingToBoard") : t("circuit.sendToBoard")}</span>

@@ -1920,6 +1920,8 @@ export function WorkspaceHost({
                     projectId={projectId || "demo"}
                     tab={tab}
                     visible={slot !== "hidden"}
+                    hasBoardOpen={hasBoard}
+                    hasBoardTab={hasBoard}
                     onMount={onPaneMount}
                   />
                 ) : tab.kind === "board" ? (

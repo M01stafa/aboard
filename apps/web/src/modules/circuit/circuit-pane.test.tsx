@@ -209,4 +209,64 @@ describe("CircuitPane Component (Task 24 / CIRC-1, CIRC-2, CIRC-3, CIRC-4)", () 
     await renderPane(true, true);
     expect(mockSim.setSimRunning).toHaveBeenCalledWith(true);
   });
+
+  it("disables 'Send to Board' button when hasBoardOpen is false and enables it when hasBoardOpen is true with attached simulator", async () => {
+    const mockSim = createMockSim();
+
+    // 1. Render without board open
+    await act(async () => {
+      root.render(
+        React.createElement(
+          I18nProvider,
+          null,
+          React.createElement(CircuitPane, {
+            projectId: "test-proj",
+            tab: { id: "tab-c-send", kind: "circuit", itemId: "item-c-send", title: "Send Test" },
+            visible: true,
+            hasBoardOpen: false,
+          })
+        )
+      );
+    });
+
+    const iframe = container.querySelector<HTMLIFrameElement>('iframe[data-testid="circuit-iframe"]');
+    expect(iframe).toBeTruthy();
+
+    Object.defineProperty(iframe, "contentWindow", {
+      value: { CircuitJS1: mockSim },
+      writable: true,
+    });
+
+    await act(async () => {
+      iframe?.dispatchEvent(new Event("load"));
+    });
+
+    const sendBtn = container.querySelector<HTMLButtonElement>('[data-testid="circuit-send-to-board-btn"]');
+    expect(sendBtn).toBeTruthy();
+    expect(sendBtn?.disabled).toBe(true);
+    expect(sendBtn?.style.cursor).toBe("not-allowed");
+    expect(sendBtn?.style.opacity).toBe("0.6");
+    expect(sendBtn?.getAttribute("title")).toBe("Open a whiteboard tab to send circuit");
+
+    // 2. Render with board open
+    await act(async () => {
+      root.render(
+        React.createElement(
+          I18nProvider,
+          null,
+          React.createElement(CircuitPane, {
+            projectId: "test-proj",
+            tab: { id: "tab-c-send", kind: "circuit", itemId: "item-c-send", title: "Send Test" },
+            visible: true,
+            hasBoardOpen: true,
+          })
+        )
+      );
+    });
+
+    expect(sendBtn?.disabled).toBe(false);
+    expect(sendBtn?.style.cursor).toBe("pointer");
+    expect(sendBtn?.style.opacity).toBe("1");
+    expect(sendBtn?.getAttribute("title")).toBe("Send to Board");
+  });
 });
