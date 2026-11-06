@@ -136,6 +136,7 @@ export function CircuitPane({
   const wasRunningBeforeHiddenRef = useRef<boolean>(false);
 
   // Track simulation state for UI indicator badge and toolbar
+  const [isAttached, setIsAttached] = useState<boolean>(() => adapter.isAttached());
   const [isSimRunning, setIsSimRunning] = useState<boolean>(true);
   const [isExportingToBoard, setIsExportingToBoard] = useState<boolean>(false);
 
@@ -210,6 +211,9 @@ export function CircuitPane({
     }
 
     adapter.attach(iframe.contentWindow);
+    if (adapter.isAttached()) {
+      setIsAttached(true);
+    }
     requestAnimationFrame(() => {
       dispatchResize();
     });
@@ -222,6 +226,7 @@ export function CircuitPane({
   useEffect(() => {
     // 1. When the simulator is ready: sync running state and pause-when-hidden
     const unsubscribeReady = adapter.onReady((api) => {
+      setIsAttached(true);
       setIsSimRunning(api.isRunning());
       requestAnimationFrame(() => {
         dispatchResize();
@@ -519,7 +524,7 @@ export function CircuitPane({
             type="button"
             data-testid="circuit-send-to-board-btn"
             onClick={handleSendToBoard}
-            disabled={isExportingToBoard}
+            disabled={isExportingToBoard || !isAttached}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -529,10 +534,11 @@ export function CircuitPane({
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--border-card)",
               backgroundColor: "var(--bg-surface)",
-              color: "var(--text-main)",
+              color: isAttached ? "var(--text-main)" : "var(--text-muted)",
               fontSize: "0.75rem",
               fontWeight: 500,
-              cursor: isExportingToBoard ? "wait" : "pointer",
+              cursor: isExportingToBoard ? "wait" : !isAttached ? "not-allowed" : "pointer",
+              opacity: isAttached ? 1 : 0.6,
             }}
             title={t("circuit.sendToBoard")}
           >

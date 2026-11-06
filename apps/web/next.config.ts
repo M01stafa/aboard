@@ -87,6 +87,14 @@ const nextConfig: NextConfig = {
   experimental: {
     agentUpgrade: "security",
   },
+  async rewrites() {
+    return [
+      {
+        source: "/canvas2svg.js",
+        destination: "/circuit/canvas2svg.js",
+      },
+    ];
+  },
   async headers() {
     return [
       // General app pages (mutually exclusive with /circuit/ via negative lookahead)

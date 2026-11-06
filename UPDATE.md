@@ -3000,3 +3000,25 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
 **Related:** CIRC-1, CIRC-7, LAUNCH-1, DESIGN.md
 **Open:** none.
+
+
+## 2026-11-06 — Fix Circuit SVG Export onsvgrendered Timeout and canvas2svg Path Resolution
+**Request:** Diagnose and resolve console error `Timeout waiting for onsvgrendered (10000ms)` at `src/modules/circuit/circuit-adapter.ts:300:16` when exporting circuits or clicking "Send to Board". Ensure `canvas2svg.js` resolves cleanly, SVG renders asynchronously without timing out, "Send to Board" cleanly dispatches to Whiteboard, and the Send to Board button is disabled until adapter attachment.
+**Changes:**
+- `apps/web/public/canvas2svg.js` (created): added public copy of `canvas2svg.js` at root public directory to handle GWT `ScriptInjector` default resolution against host window (`/workspace`).
+- `apps/web/next.config.ts` (changed): added rewrite `/canvas2svg.js` -> `/circuit/canvas2svg.js` to ensure route compatibility in development and production deployments.
+- `apps/web/public/circuit/circuitjs.html` (changed): added `<script language="javascript" src="canvas2svg.js"></script>` to preload the SVG rendering library before GWT initialization.
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): added `isAttached` state hooked into `adapter.onReady` and `adapter.attach`; updated `data-testid="circuit-send-to-board-btn"` to disable when `!isAttached || isExportingToBoard`, showing proper disabled visual feedback (`cursor: not-allowed`, `opacity: 0.6`).
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm test src/modules/circuit`: PASS (18/18 tests passed).
+- `pnpm test`: PASS (49/49 test files passed, 430/430 tests passed).
+- `pnpm ci:security`: PASS (Gitleaks passed, high/critical prod dependency audit passed, .next secret scan passed).
+- Playwright verification:
+  - `debug-svg-details.mjs`: `sim.getCircuitAsSVG()` resolved `onsvgrendered` immediately, returning 6,974 bytes of well-formed SVG without timeout.
+  - `test-click-send-to-board.mjs`: clicking `circuit-send-to-board-btn` cleanly exported SVG and dispatched `circuit:to-board` to Excalidraw whiteboard with zero timeout errors.
+**Related:** CIRC-1, CIRC-4, BOARD-2, SEC-7, DESIGN.md
+**Open:** none.
+
