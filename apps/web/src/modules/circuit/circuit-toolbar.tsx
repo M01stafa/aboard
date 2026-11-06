@@ -211,6 +211,7 @@ export interface CircuitToolbarProps {
   speed: CircuitSpeed;
   onChangeSpeed: (speed: CircuitSpeed) => void;
   onToggleAdvancedMenu: () => void;
+  isAdvancedMenu?: boolean;
 }
 
 export function CircuitToolbar({
@@ -222,6 +223,7 @@ export function CircuitToolbar({
   speed,
   onChangeSpeed,
   onToggleAdvancedMenu,
+  isAdvancedMenu = false,
 }: CircuitToolbarProps) {
   const { t } = useI18n();
 
@@ -781,8 +783,8 @@ export function CircuitToolbar({
           type="button"
           data-testid="circuit-advanced-toggle-btn"
           onClick={onToggleAdvancedMenu}
-          aria-label={t("circuit.advancedMenu")}
-          title={t("circuit.advancedMenuTooltip")}
+          aria-label={isAdvancedMenu ? t("circuit.returnToCustom") : t("circuit.advancedMenu")}
+          title={isAdvancedMenu ? t("circuit.returnToCustom") : t("circuit.advancedMenuTooltip")}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -790,20 +792,20 @@ export function CircuitToolbar({
             height: "var(--control-sm)",
             paddingInline: "var(--space-1)",
             borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--border-card)",
-            backgroundColor: "var(--bg-surface)",
-            color: "var(--text-main)",
+            border: isAdvancedMenu ? "1px solid var(--accent-text)" : "1px solid var(--border-card)",
+            backgroundColor: isAdvancedMenu ? "var(--bg-subtle)" : "var(--bg-surface)",
+            color: isAdvancedMenu ? "var(--accent-text)" : "var(--text-main)",
             fontSize: "13px",
             fontWeight: 500,
             cursor: "pointer",
-            transition: "background-color 150ms ease",
+            transition: "background-color 150ms ease, color 150ms ease, border-color 150ms ease",
           }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
-          <span>{t("circuit.advancedMenu")}</span>
+          <span>{isAdvancedMenu ? t("circuit.returnToCustom") : t("circuit.advancedMenu")}</span>
         </button>
       </div>
     </div>

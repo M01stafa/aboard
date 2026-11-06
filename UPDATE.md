@@ -2913,3 +2913,26 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
 **Related:** CIRC-1, CIRC-7, STORE-1, WS-4
 **Open:** none.
+
+
+## 2026-11-06 — Keep Custom React Toolbar Visible in Advanced Mode
+**Request:** Keep custom React toolbar (`CircuitToolbar`) always visible at the top of the Circuit module in both Simple and Advanced modes so users always have access to Run/Pause, Reset, and Components; ensure native GWT menubar and toolbar render seamlessly directly below the custom toolbar in Advanced mode; verify via Playwright screenshots; restart dev server.
+**Changes:**
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): removed `!isAdvancedMenu` condition so `<CircuitToolbar>` is rendered permanently at the top of the pane; passed `isAdvancedMenu` to `CircuitToolbar`; removed redundant duplicate toggle button from `circuit-pane-header` since `CircuitToolbar` now manages the toggle in both modes.
+- `apps/web/src/modules/circuit/circuit-toolbar.tsx` (changed): added `isAdvancedMenu?: boolean` to `CircuitToolbarProps`; updated the toggle button to render "Switch to Simple Toolbar" with active subtle highlight when in Advanced mode and "Advanced" when in Simple mode.
+- `apps/web/src/modules/circuit/circuit-pane.test.tsx` (changed): updated test to verify that custom toolbar remains rendered when Advanced mode is toggled.
+- `apps/web/src/modules/circuit/circuit-toolbar.test.tsx` (changed): added unit test verifying button label renders "Switch to Simple Toolbar" when `isAdvancedMenu: true`.
+- `apps/web/e2e/circuit-toolbar.spec.ts` (changed): updated E2E test to verify that custom toolbar is visible in both Simple and Advanced modes and that toggling happens directly from the toolbar button.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm test src/modules/circuit`: PASS (18/18 tests passed).
+- `pnpm test:e2e circuit-toolbar`: PASS (Playwright test passed in 1.5s).
+- Playwright visual verification:
+  - Simple mode screenshot (`always_toolbar_simple_mode.png`): Custom React toolbar rendered at top with Run/Pause, Reset, Speed, Components, and "Advanced".
+  - Advanced mode screenshot (`always_toolbar_advanced_mode.png`): Custom React toolbar rendered at very top (`bottom: 136px`), GWT native menus and toolbar rendered directly below it (`top: 136px`), and "Switch to Simple Toolbar" button active.
+  - Return to Simple mode: verified seamless return without warnings or dialog prompts (`dialogDetected: false`).
+- Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
+**Related:** CIRC-1, CIRC-3, CIRC-5, CIRC-7, DESIGN.md
+**Open:** none.

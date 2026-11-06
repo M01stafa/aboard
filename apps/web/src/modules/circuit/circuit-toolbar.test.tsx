@@ -203,10 +203,25 @@ describe("CircuitToolbar (Task 42 / CIRC-5)", () => {
 
     const advancedBtn = container.querySelector('[data-testid="circuit-advanced-toggle-btn"]') as HTMLButtonElement;
     expect(advancedBtn).not.toBeNull();
+    expect(advancedBtn.textContent).toContain("Advanced");
 
     act(() => {
       advancedBtn.click();
     });
     expect(onToggleAdvancedMenu).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders switch to simple toolbar text when isAdvancedMenu is true", () => {
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <CircuitToolbar {...createDefaultProps({ isAdvancedMenu: true })} />
+        </I18nProvider>
+      );
+    });
+
+    const toggleBtn = container.querySelector('[data-testid="circuit-advanced-toggle-btn"]') as HTMLButtonElement;
+    expect(toggleBtn).not.toBeNull();
+    expect(toggleBtn.textContent).toContain("Switch to Simple Toolbar");
   });
 });

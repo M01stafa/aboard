@@ -127,16 +127,12 @@ test.describe("Circuit Simulator Custom Toolbar (Task 42 / CIRC-5)", () => {
     // Click Advanced button in toolbar
     await advancedBtn.click();
 
-    // Toolbar is hidden
-    await expect(toolbar).not.toBeVisible();
+    // Toolbar remains visible at all times (in both Simple and Advanced modes)
+    await expect(toolbar).toBeVisible();
 
     // Verify iframe reloads with hideMenu=false (native menu visible)
     const iframe = circuitPane.locator('iframe[data-testid="circuit-iframe"]');
     await expect(iframe).toHaveAttribute("src", /hideMenu=false/);
-
-    // In the header strip, the return button is visible
-    const returnBtn = circuitPane.locator('[data-testid="circuit-pane-header"] [data-testid="circuit-advanced-toggle-btn"]');
-    await expect(returnBtn).toBeVisible();
 
     // Wait for iframe to reload with simulator attached
     await page.waitForFunction(() => {
@@ -149,10 +145,10 @@ test.describe("Circuit Simulator Custom Toolbar (Task 42 / CIRC-5)", () => {
       return sim !== undefined && (sim.getElements?.().length ?? 0) > 0;
     }, { timeout: 25000 });
 
-    // Click return button to restore custom toolbar
-    await returnBtn.click();
+    // Click toggle button in toolbar to return to Simple mode
+    await advancedBtn.click();
 
-    // Verify toolbar is restored
+    // Verify toolbar is still visible and iframe returned to hideMenu=true
     await expect(toolbar).toBeVisible();
     await expect(iframe).toHaveAttribute("src", /hideMenu=true/);
   });

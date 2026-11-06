@@ -501,32 +501,6 @@ export function CircuitPane({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-          {isAdvancedMenu && (
-            <button
-              type="button"
-              data-testid="circuit-advanced-toggle-btn"
-              onClick={handleToggleAdvancedMenu}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "var(--space-1)",
-                height: "var(--control-sm)",
-                paddingInline: "var(--space-2)",
-                borderRadius: "var(--radius-sm)",
-                border: "1px solid var(--border-card)",
-                backgroundColor: "var(--bg-surface)",
-                color: "var(--text-main)",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-              title={t("circuit.returnToCustom")}
-            >
-              <span>⚙️</span>
-              <span>{t("circuit.returnToCustom")}</span>
-            </button>
-          )}
-
           <button
             type="button"
             data-testid="circuit-send-to-board-btn"
@@ -578,20 +552,19 @@ export function CircuitPane({
         </div>
       </div>
 
-      {/* Custom React Toolbar (visible when native menu is hidden) */}
-      {!isAdvancedMenu && (
-        <CircuitToolbar
-          adapter={adapter}
-          isSimRunning={isSimRunning}
-          onToggleRun={handleToggleRun}
-          onReset={handleReset}
-          onSelectComponent={handleSelectComponent}
-          selectedComponent={selectedComponent}
-          speed={speed}
-          onChangeSpeed={handleChangeSpeed}
-          onToggleAdvancedMenu={handleToggleAdvancedMenu}
-        />
-      )}
+      {/* Custom React Toolbar (always visible at top of Circuit pane) */}
+      <CircuitToolbar
+        adapter={adapter}
+        isSimRunning={isSimRunning}
+        onToggleRun={handleToggleRun}
+        onReset={handleReset}
+        onSelectComponent={handleSelectComponent}
+        selectedComponent={selectedComponent}
+        speed={speed}
+        onChangeSpeed={handleChangeSpeed}
+        onToggleAdvancedMenu={handleToggleAdvancedMenu}
+        isAdvancedMenu={isAdvancedMenu}
+      />
 
       {/* Same-origin Iframe (fills the pane) */}
       <div

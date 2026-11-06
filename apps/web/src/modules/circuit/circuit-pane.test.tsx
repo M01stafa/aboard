@@ -95,8 +95,8 @@ describe("CircuitPane Component (Task 24 / CIRC-1, CIRC-2, CIRC-3, CIRC-4)", () 
       advancedBtn.click();
     });
 
-    // After toggling advanced menu: custom toolbar is hidden and iframe has hideMenu=false
-    expect(container.querySelector('[data-testid="circuit-toolbar"]')).toBeNull();
+    // After toggling advanced menu: custom toolbar remains visible at all times and iframe has hideMenu=false
+    expect(container.querySelector('[data-testid="circuit-toolbar"]')).not.toBeNull();
     const advancedSrc = iframe?.getAttribute("src") || "";
     expect(advancedSrc).toContain("hideMenu=false");
 
