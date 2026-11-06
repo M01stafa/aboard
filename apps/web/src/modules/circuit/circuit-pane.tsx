@@ -482,6 +482,7 @@ export function CircuitPane({
   return (
     <div
       data-testid={`pane-circuit-${tab.id}`}
+      className="circuit-pane"
       data-pane-id={tab.id}
       data-identity-token={identityToken}
       style={{

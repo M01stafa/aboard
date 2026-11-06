@@ -1193,6 +1193,7 @@ export function WorkspaceHost({
   return (
     <div
       data-testid="workspace-host"
+      className="workspace-container"
       style={{
         display: "flex",
         flexDirection: "column",

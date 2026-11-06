@@ -2979,3 +2979,24 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
 **Related:** CIRC-1, CIRC-3, CIRC-5, CIRC-7, DESIGN.md
 **Open:** none.
+
+
+## 2026-11-06 — Fix Broken Launcher Scrolling and Scope Circuit Overflow Correctly
+**Request:** Restore scrolling on the main Launcher page (Home page) so users can scroll down to "Recent Projects" and footer links; hide native scrollbar visually on `body` for a clean aesthetic (`scrollbar-width: none;`); scope `overflow: hidden` strictly to the Workspace and Circuit containers; ensure Circuit dropdown menus still have zero double scrollbars and single-layer scrolling; verify via Playwright; restart dev server.
+**Changes:**
+- `apps/web/src/theme/tokens.css` (changed): removed global `overflow: hidden; height: 100%;` from `html, body`; set `body` to `min-height: 100%; overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none;` and `body::-webkit-scrollbar { display: none; }` so pages scroll seamlessly without unsightly scrollbars; scoped `overflow: hidden !important; overscroll-behavior: none !important;` to `html:has(.workspace-container)`, `body:has(.workspace-container)`, `.workspace-container`, `.circuit-pane`, and `[data-testid="workspace-host"]`.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): added `className="workspace-container"` to `[data-testid="workspace-host"]` so the `:has(.workspace-container)` rule reliably locks root scrolling when workspace is open.
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): added `className="circuit-pane"` to root pane wrapper.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm test src/modules/circuit`: PASS (18/18 tests passed).
+- `pnpm test src/workspace`: PASS (15/15 tests passed).
+- Playwright verification (`test-launcher-and-circuit.mjs`):
+  - Launcher (/): `bodyScrollHeight: 1076`, `windowInnerHeight: 750`, `bodyOverflowY: "auto"`, `scrollbarWidth: "none"`, scrolling down succeeds (`scrollY: 326`), revealing "Recent Projects" and footer (`launcher_scrolled_recent_projects.png`).
+  - Workspace (/workspace): `windowScrollY: 0`, `windowScrollX: 0`, `bodyOverflowY: "hidden"` (viewport completely locked).
+  - Circuit Menus: "Draw" -> "Outputs and Labels" (`circuit_outputs_and_labels_fixed.png`) and "Circuits" -> "A/C Circuits" (`circuit_circuits_fixed.png`) remain flat, single-layer cards with 0 double scrollbars.
+- Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
+**Related:** CIRC-1, CIRC-7, LAUNCH-1, DESIGN.md
+**Open:** none.
