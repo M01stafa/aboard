@@ -159,8 +159,8 @@ body {
     linear-gradient(to bottom, color-mix(in srgb, var(--border-card) 55%, transparent) 1px, transparent 1px) !important;
   background-size: 20px 20px !important;
   color: var(--text-main) !important;
-  margin: 0;
-  padding: 0;
+  margin: 0 !important;
+  padding: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
   overflow: hidden !important;
@@ -177,11 +177,8 @@ html.dark-theme {
   background-size: 20px 20px !important;
 }
 
-/* Canvas Container: Force full width (override GWT LayoutPanel inline inset: 0 166px 0 0) */
+/* Canvas Container: Keep GWT natural layout geometry and apply blueprint grid */
 div:has(> canvas[style*="position: absolute"]) {
-  inset: 0px !important;
-  right: 0px !important;
-  width: 100% !important;
   overflow: hidden !important;
   z-index: 1 !important;
   background-color: transparent !important;
@@ -205,38 +202,60 @@ canvas {
   mix-blend-mode: multiply !important;
 }
 
-/* Stretch main canvas full width across viewport */
-canvas[style*="position: absolute"] {
-  width: 100% !important;
-}
-
 :root[data-theme="dark"] canvas:not(.verticalPanel canvas),
 body.dark-theme canvas:not(.verticalPanel canvas) {
   background-color: var(--bg-body) !important;
   mix-blend-mode: screen !important;
 }
 
+/* GWT Menubar Container: Ensure menubar sits on top without clipping */
+div:has(> .gwt-MenuBar-horizontal) {
+  overflow: visible !important;
+  z-index: 60 !important;
+  height: 30px !important;
+}
+
 /* GWT Menubar: Flatten, Remove Glossy Blue Gradients */
-.gwt-MenuBar,
 .gwt-MenuBar-horizontal {
   background: var(--bg-surface) !important;
   background-image: none !important;
   border: none !important;
   border-bottom: 1px solid var(--border-card) !important;
   color: var(--text-main) !important;
-  padding: 4px 8px !important;
+  padding: 0 6px !important;
   box-shadow: none !important;
-  position: relative !important;
+  position: absolute !important;
+  inset: 0px !important;
+  width: 100% !important;
+  height: 30px !important;
+  box-sizing: border-box !important;
   z-index: 60 !important;
 }
 
+.gwt-MenuBar-horizontal table {
+  height: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+.gwt-MenuBar-horizontal tr {
+  height: 100% !important;
+}
+
+/* Horizontal Menubar Items: Keep table-cell display to prevent vertical row collapse */
 .gwt-MenuBar-horizontal .gwt-MenuItem {
-  padding: 6px 12px !important;
+  display: table-cell !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  height: 24px !important;
+  padding: 2px 10px !important;
   font-weight: 500 !important;
   font-size: 13px !important;
+  line-height: 20px !important;
   border-radius: var(--radius-sm) !important;
   color: var(--text-main) !important;
   cursor: pointer !important;
+  box-sizing: border-box !important;
   transition: background-color 120ms ease, color 120ms ease;
 }
 
@@ -269,7 +288,10 @@ body.dark-theme canvas:not(.verticalPanel canvas) {
   border-collapse: separate !important;
 }
 
-.gwt-MenuItem {
+/* Vertical and Popup Menu Items: Flex only in vertical/popup menus */
+.gwt-MenuBar-vertical .gwt-MenuItem,
+.gwt-MenuBarPopup .gwt-MenuItem,
+.gwt-PopupPanel:not(.gwt-DialogBox) .gwt-MenuItem {
   color: var(--text-main) !important;
   font-size: 13px !important;
   padding: 6px 14px !important;
@@ -285,8 +307,12 @@ body.dark-theme canvas:not(.verticalPanel canvas) {
   box-sizing: border-box !important;
 }
 
-.gwt-MenuItem:hover,
-.gwt-MenuItem-selected {
+.gwt-MenuBar-vertical .gwt-MenuItem:hover,
+.gwt-MenuBar-vertical .gwt-MenuItem-selected,
+.gwt-MenuBarPopup .gwt-MenuItem:hover,
+.gwt-MenuBarPopup .gwt-MenuItem-selected,
+.gwt-PopupPanel:not(.gwt-DialogBox) .gwt-MenuItem:hover,
+.gwt-PopupPanel:not(.gwt-DialogBox) .gwt-MenuItem-selected {
   background: var(--bg-subtle) !important;
   color: var(--accent-text) !important;
 }
@@ -294,6 +320,24 @@ body.dark-theme canvas:not(.verticalPanel canvas) {
 .gwt-MenuItem-disabled {
   color: var(--text-muted) !important;
   opacity: 0.55 !important;
+}
+
+/* Inner shortcut wrapper in vertical dropdowns */
+.gwt-MenuBar-vertical .gwt-MenuItem > div[style*="white-space"],
+.gwt-MenuBarPopup .gwt-MenuItem > div[style*="white-space"],
+.gwt-PopupPanel:not(.gwt-DialogBox) .gwt-MenuItem > div[style*="white-space"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+}
+
+.gwt-MenuBar-vertical .gwt-MenuItem > div[style*="white-space"] > div:first-child,
+.gwt-MenuBarPopup .gwt-MenuItem > div[style*="white-space"] > div:first-child,
+.gwt-PopupPanel:not(.gwt-DialogBox) .gwt-MenuItem > div[style*="white-space"] > div:first-child {
+  width: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
 }
 
 /* Accelerator shortcut labels in dropdowns and context menus */

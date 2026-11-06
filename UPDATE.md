@@ -2878,3 +2878,20 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
 **Related:** CIRC-1, CIRC-3, CIRC-7, DESIGN.md
 **Open:** none.
+
+
+## 2026-11-06 — Fix Circuit Canvas Regressions: Menus Visibility, Mouse Offset & Dropdown Position
+**Request:** Diagnose and resolve three regressions caused by Batch 4 CSS: top menubar items disappeared, mouse clicks misaligned on canvas, and File dropdown opened at bottom of screen; coordinate via sub-agents; verify with Playwright tests; restart dev server.
+**Changes:**
+- `apps/web/public/circuit/circuitjs.css` (changed): restricted `display: flex !important;` strictly to vertical popup menus (`.gwt-MenuBar-vertical .gwt-MenuItem`, `.gwt-MenuBarPopup .gwt-MenuItem`, `.gwt-PopupPanel .gwt-MenuItem`), keeping `.gwt-MenuBar-horizontal .gwt-MenuItem` as `display: table-cell !important;` so all 7 top menu items lay out side-by-side with positive width and exact 29px height; positioned `.gwt-MenuBar-horizontal` at `position: absolute !important; inset: 0px !important; height: 30px !important;` with `z-index: 60 !important;` preventing menubar height inflation and fixing File dropdown popup positioning directly below the menu item (`top: 30px`, `left: 6px`); removed geometry overrides (`inset: 0px !important; width: 100% !important;`) on `div:has(> canvas[style*="position: absolute"])` and removed `canvas[style*="position: absolute"] { width: 100% !important; }`, restoring 1:1 pixel mapping (`scaleX = 1.0000`, `scaleY = 1.0000`) and 0px click offset across canvas; ensured `html, body` have `margin: 0 !important; padding: 0 !important; width: 100vw !important; height: 100vh !important; overflow: hidden !important;` extending the 20x20px blueprint grid across the entire viewport without scrollbars.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- Playwright automated regression test suite (`scratch/test-regressions-qa.cjs`):
+  - Test Case 1 (Menus Visible): PASS — all 7 menu items (File, Edit, Draw, Scopes, Options, Tools, Circuits) visible side-by-side with height 29px.
+  - Test Case 2 (File Dropdown Position): PASS — dropdown opens flush at `top: 30px` directly under the File button (1px gap).
+  - Test Case 3 (Mouse Offset & Component Drawing): PASS — `scaleX = 1.000`, `scaleY = 1.000`, `diffX = 0px`, `diffY = 0px`, successfully drew component by mouse drag.
+- Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
+**Related:** CIRC-1, CIRC-3, CIRC-7, DESIGN.md
+**Open:** none.
