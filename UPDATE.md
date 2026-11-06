@@ -2895,3 +2895,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
 **Related:** CIRC-1, CIRC-3, CIRC-7, DESIGN.md
 **Open:** none.
+
+
+## 2026-11-06 — Bypass "Leave Site" Browser Prompt During Circuit Toolbar Toggling
+**Request:** Eliminate browser native "Leave site? Changes you made may not be saved." warning when toggling between Advanced and Simple toolbars in the Circuit module, while preserving actual navigation protection for real tab/window closing; verify via Playwright; restart dev server.
+**Changes:**
+- `apps/web/src/core/storage/save-queue.ts` (changed): added `bypassBeforeUnload` flag with `setBypassBeforeUnload(bypass: boolean)` method to temporarily suppress beforeunload dialog prompt during internal toolbar toggling and theme reloads while ensuring real navigation protection remains fully functional.
+- `apps/web/src/core/storage/project-service.ts` (changed): added `setBypassBeforeUnload(bypass: boolean)` delegating to `SaveQueue`.
+- `apps/web/src/core/storage/save-queue.test.ts` (changed): added unit tests for `setBypassBeforeUnload` proving beforeunload prompt is silenced during bypass and re-enabled afterward.
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): in `handleToggleAdvancedMenu`, explicitly exported current circuit, flushed pending writes via `await projectService.flushNow()`, enabled `projectService.setBypassBeforeUnload(true)`, and cleared/suppressed GWT's internal `window.onbeforeunload` on the iframe before changing `iframeSrc`; re-enabled beforeunload protection in `handleIframeLoad` once new iframe instance finishes loading; added cleanup in `useEffect`.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm test`: 49 test files passed (429 of 429 tests).
+- Playwright verification: verified drawing components, toggling Simple -> Advanced, drawing in Advanced, and toggling back to Simple triggers 0 browser dialogs, while real window `beforeunload` listener remains active.
+- Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
+**Related:** CIRC-1, CIRC-7, STORE-1, WS-4
+**Open:** none.

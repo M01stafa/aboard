@@ -757,6 +757,13 @@ export class ProjectService {
   }
 
   /**
+   * Temporarily bypasses beforeunload prompt gating (e.g. during internal toolbar/theme reloads).
+   */
+  setBypassBeforeUnload(bypass: boolean): void {
+    this.saveQueue?.setBypassBeforeUnload(bypass);
+  }
+
+  /**
    * Lists all binary files stored for a project.
    */
   async listFiles(

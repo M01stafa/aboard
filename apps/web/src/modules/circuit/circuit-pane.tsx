@@ -191,6 +191,9 @@ export function CircuitPane({
 
   // Handle iframe load event and attach adapter
   const handleIframeLoad = useCallback(() => {
+    // Re-enable beforeunload guard once iframe has loaded after a toggle or theme reload
+    projectService.setBypassBeforeUnload(false);
+
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
     adapter.attach(iframe.contentWindow);
@@ -276,6 +279,13 @@ export function CircuitPane({
     };
   }, [adapter, projectId, tab.itemId, tab.title, dispatchResize]);
 
+  // Ensure beforeunload bypass is restored if component unmounts
+  useEffect(() => {
+    return () => {
+      projectService.setBypassBeforeUnload(false);
+    };
+  }, []);
+
   // Handle Theme and Language Changes (CIRC-3)
   useEffect(() => {
     const themeChanged = prevThemeRef.current !== resolvedTheme;
@@ -296,6 +306,28 @@ export function CircuitPane({
           }
         } catch (err) {
           console.error("Failed to export circuit before theme reload:", err);
+        }
+      }
+
+      // Explicitly flush queue and temporarily bypass beforeunload prompt on theme reload
+      void projectService.flushNow();
+      projectService.setBypassBeforeUnload(true);
+
+      // Suppress iframe GWT beforeunload on theme reload
+      const iframe = iframeRef.current;
+      if (iframe?.contentWindow) {
+        try {
+          iframe.contentWindow.onbeforeunload = null;
+          iframe.contentWindow.addEventListener(
+            "beforeunload",
+            (e) => {
+              e.stopImmediatePropagation();
+              delete (e as unknown as { returnValue?: unknown }).returnValue;
+            },
+            true
+          );
+        } catch {
+          // Cross-origin safety
         }
       }
 
@@ -334,7 +366,7 @@ export function CircuitPane({
     [adapter]
   );
 
-  const handleToggleAdvancedMenu = useCallback(() => {
+  const handleToggleAdvancedMenu = useCallback(async () => {
     const nextAdvanced = !isAdvancedMenu;
 
     // 1. Export current circuit before reload to preserve user changes
@@ -350,10 +382,38 @@ export function CircuitPane({
       }
     }
 
+    // 2. Explicitly flush save queue to ensure all changes are written before reload
+    try {
+      await projectService.flushNow();
+    } catch (err) {
+      console.warn("Failed to flush projectService queue before toggling toolbar:", err);
+    }
+
+    // 3. Temporarily bypass beforeunload guard during toolbar toggle
+    projectService.setBypassBeforeUnload(true);
+
+    // 4. Disable iframe's GWT Window.ClosingHandler before reloading iframe
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      try {
+        iframe.contentWindow.onbeforeunload = null;
+        iframe.contentWindow.addEventListener(
+          "beforeunload",
+          (e) => {
+            e.stopImmediatePropagation();
+            delete (e as unknown as { returnValue?: unknown }).returnValue;
+          },
+          true
+        );
+      } catch {
+        // Cross-origin safety
+      }
+    }
+
     initialLoadDoneRef.current = false;
     setIsAdvancedMenu(nextAdvanced);
 
-    // 2. Reload iframe with native menu visible (hideMenu: false) or hidden (hideMenu: true)
+    // 5. Reload iframe with native menu visible (hideMenu: false) or hidden (hideMenu: true)
     setIframeSrc(
       buildCircuitUrl({
         theme: resolvedTheme,

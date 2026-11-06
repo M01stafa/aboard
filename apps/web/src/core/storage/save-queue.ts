@@ -421,11 +421,24 @@ export class SaveQueue {
     return count > 0;
   }
 
+  private bypassBeforeUnload = false;
+
+  /**
+   * Temporarily bypasses beforeunload prompt gating (e.g. during internal toolbar/theme reloads).
+   */
+  public setBypassBeforeUnload(bypass: boolean): void {
+    this.bypassBeforeUnload = bypass;
+  }
+
   /**
    * Handles beforeunload event: flushes immediately and only prompts
    * if outbox holds unsynced Drive entries (WS-4). Never prompts in local mode.
    */
   public handleBeforeUnload(event: BeforeUnloadEvent): boolean {
+    if (this.bypassBeforeUnload) {
+      return false;
+    }
+
     // 1. Flush immediately on tab close
     void this.flushNow();
 

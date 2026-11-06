@@ -332,6 +332,26 @@ describe("SaveQueue (Task 21 / STORE-1, STORE-3, STORE-9, WS-3, WS-4)", () => {
     expect(promptedDrive).toBe(true);
     expect(driveEvent.preventDefault).toHaveBeenCalled();
     expect(driveEvent.returnValue).toBe("");
+
+    // 3. Bypass during toolbar toggle or internal reload suppresses the dialog
+    queue.setBypassBeforeUnload(true);
+    const bypassEvent = {
+      preventDefault: vi.fn(),
+      returnValue: undefined as string | undefined,
+    } as unknown as BeforeUnloadEvent;
+    const promptedBypass = queue.handleBeforeUnload(bypassEvent);
+    expect(promptedBypass).toBe(false);
+    expect(bypassEvent.preventDefault).not.toHaveBeenCalled();
+
+    // 4. Re-enabling bypass restores normal navigation protection
+    queue.setBypassBeforeUnload(false);
+    const restoreEvent = {
+      preventDefault: vi.fn(),
+      returnValue: undefined as string | undefined,
+    } as unknown as BeforeUnloadEvent;
+    const promptedRestore = queue.handleBeforeUnload(restoreEvent);
+    expect(promptedRestore).toBe(true);
+    expect(restoreEvent.preventDefault).toHaveBeenCalled();
   });
 
   it("structures Drive upload cadence (3s idle, 30s continuous) without calling Drive code", async () => {
