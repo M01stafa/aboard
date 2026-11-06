@@ -2936,3 +2936,23 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
 **Related:** CIRC-1, CIRC-3, CIRC-5, CIRC-7, DESIGN.md
 **Open:** none.
+
+
+## 2026-11-06 — Fix GWT Submenu Layout Shift and Menu Alignment in Circuit Module
+**Request:** Stop upward layout shift when hovering over tall submenus (e.g. "Passive Components"); ensure page, canvas, and headers remain completely static; fix menu item text alignment and shortcut accelerator placement so text does not jump to the opposite side; verify via Playwright; restart dev server.
+**Changes:**
+- `apps/web/public/circuit/circuitjs.css` (changed): capped `.gwt-MenuBarPopup` with `max-height: calc(100vh - 145px) !important;` and `overflow-y: auto !important; overscroll-behavior: contain !important;` with custom slim scrollbar so long submenus never exceed the viewport; locked `html, body` inside iframe to `position: fixed !important; inset: 0 !important; overflow: hidden !important; overscroll-behavior: none !important;`; changed `.gwt-MenuItem` from `justify-content: space-between` to `justify-content: flex-start !important; direction: ltr !important; text-align: start !important;` and gave shortcut labels `margin-left: auto !important; margin-inline-start: auto !important; padding-left: 24px !important;` and `.subMenuIcon` `text-align: right !important; padding-right: 8px !important;`, ensuring every menu item label starts consistently on the left and all shortcuts and submenu arrows align cleanly on the right.
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): added `overflow: "hidden"` to `circuit-iframe-container`; added scroll lock listener on iframe `contentWindow` in `handleIframeLoad` to immediately neutralize any browser-induced `scrollTop` / `scrollLeft` shifts.
+- `apps/web/src/theme/tokens.css` (changed): locked `html, body` with `height: 100%; margin: 0; padding: 0; overflow: hidden; overscroll-behavior: none;` preventing the root window from scrolling under any circumstances.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm test src/modules/circuit`: PASS (18/18 tests passed).
+- `pnpm test:e2e circuit-toolbar`: PASS (Playwright test passed in 1.4s).
+- Playwright layout shift & alignment verification (`scratch/reproduce-shift.mjs`):
+  - Verified hovering over bottom-most submenu items ("Add Potentiometer", "Add Gyrator"): `windowScrollY = 0`, `windowScrollX = 0`, `iframeScrollTop = 0`, `documentScrollTop = 0`, `bodyScrollTop = 0` (0px layout shift).
+  - Verified 100% consistent start alignment for all items in both LTR and RTL environments (`submenu_layout_shift_fixed.png`, `submenu_alignment_fixed.png`).
+- Dev server: stopped, `.next` cache cleared, restarted and running at `http://localhost:3000` (HTTP 200).
+**Related:** CIRC-1, CIRC-3, CIRC-5, CIRC-7, DESIGN.md
+**Open:** none.

@@ -196,6 +196,19 @@ export function CircuitPane({
 
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
+
+    // Prevent any programmatic or browser-focus scroll inside the iframe
+    try {
+      const cw = iframe.contentWindow;
+      cw.addEventListener("scroll", () => {
+        if (cw.scrollX !== 0 || cw.scrollY !== 0) {
+          cw.scrollTo(0, 0);
+        }
+      });
+    } catch {
+      // cross-origin safety
+    }
+
     adapter.attach(iframe.contentWindow);
     requestAnimationFrame(() => {
       dispatchResize();
@@ -579,6 +592,7 @@ export function CircuitPane({
           position: "relative",
           minHeight: 0,
           minBlockSize: 0,
+          overflow: "hidden",
         }}
       >
         <iframe
