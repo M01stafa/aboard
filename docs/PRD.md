@@ -33,8 +33,8 @@ Students juggle separate apps for lecture PDFs, sketching/explaining, and circui
 **Non-goals (this release)**
 - Offline use (no service worker; browser storage is only a save buffer and cache).
 - Real-time collaboration or sharing inside the app (users share `.alpha` files or Drive links).
-- Embedding Stirling-PDF's own interface; mobile/desktop native apps.
-- Storing user files on our servers (except transient processing in online PDF tools).
+- Mobile/desktop native apps.
+- Storing user files on our servers.
 - Re-implementing any tool engine. We integrate, we do not rewrite.
 
 ## A4. Users
@@ -52,14 +52,12 @@ Primary device: laptop/desktop (full workspace). Phone/tablet: single-pane viewi
 
 | Release | Contents | Phases (`docs/PROGRESS.md`) |
 |---|---|---|
-| **R1 — Beta/MVP** | Accounts, launcher, workspace (tabs + split), board, circuit (native UI with brand colors), PDF viewer + annotations, local storage, Google Drive storage, `.alpha` export/import, PDF→board and circuit→board, legal pages, security controls (`SEC`) | 0–8, 11 |
-| **R2** | Online PDF tools (OCR, Office↔PDF, compress, merge/split) via Stirling | 9 |
-| **R3** | Custom circuit toolbar and redesigned PDF toolbars, study templates | 10 |
+| **R1 — Beta/MVP** | Accounts, launcher, workspace (tabs + split), board, circuit, PDF viewer + annotations, local storage, Google Drive storage, `.alpha` export/import, cross-tool actions, custom circuit toolbar, legal pages, security controls (`SEC`) | 0–8, 10, 11 |
 | **Later** | Guest mode, project duplication/search, sharing, offline mode, more languages | — |
 
 A private beta can run while the Google OAuth app is in *Testing* (max 100 test users; Drive links expire after 7 days). Public launch requires the OAuth app to be published and verified (Tech §5.3, §20).
 
-Priorities: **P0** = required for R1; **P1** = R2/R3 or first update after R1; **P2** = later.
+Priorities: **P0** = required for R1; **P1** = first update after R1; **P2** = later.
 
 ## A6. Functional requirements
 
@@ -159,23 +157,14 @@ Priorities: **P0** = required for R1; **P1** = R2/R3 or first update after R1; *
 | ALPHA-7 | Export directly to Google Drive | P1 | — |
 | ALPHA-8 | Large exports stream to disk where the browser allows (Chromium desktop); capped in-memory export elsewhere with a clear message | P0 | 500 MB export succeeds on Chrome desktop |
 
-### A6.10 Online PDF tools (`PDFX`) — R2
-| ID | Requirement | Pri | Acceptance criteria |
-|---|---|---|---|
-| PDFX-1 | OCR (make scanned PDF searchable) | P1 | Result saved into the project as a new PDF |
-| PDFX-2 | Office → PDF and PDF → Office conversion | P1 | — |
-| PDFX-3 | Compress, merge, split | P1 | — |
-| PDFX-4 | Only signed-in users; per-user limits (size, rate, concurrency); progress and cancel | P1 | Requests without a valid login are rejected; Stirling is not reachable from the internet |
-| PDFX-5 | One-time notice that these tools upload the file to our server for processing | P1 | Notice shown before first use |
-
-### A6.11 Legal and compliance (`LEGAL`)
+### A6.10 Legal and compliance (`LEGAL`)
 | ID | Requirement | Pri |
 |---|---|---|
 | LEGAL-1 | Privacy policy and terms of use pages (required for Google verification); describe Drive usage and Limited Use compliance | P0 (launch) |
 | LEGAL-2 | Open-source licenses page and link to the public source of the CircuitJS1 fork (GPL) | P0 (launch) |
 | LEGAL-3 | Account and data deletion instructions | P0 (launch) |
 
-### A6.12 Security and privacy (`SEC`)
+### A6.11 Security and privacy (`SEC`)
 | ID | Requirement | Pri | Acceptance criteria |
 |---|---|---|---|
 | SEC-1 | **Strict per-user isolation in the database:** row-level security (RLS) enabled on every table, least-privilege grants, no access for the anonymous role | P0 | Automated RLS test suite passes in CI; a signed-in user cannot read, change, delete or create rows for another user even when they know the other user's IDs; a CI guard finds no table without RLS |
@@ -185,7 +174,6 @@ Priorities: **P0** = required for R1; **P1** = R2/R3 or first update after R1; *
 | SEC-5 | **API keys and secrets protected:** no secret in the browser bundle or repository; public keys restricted; documented rotation | P0 | Bundle grep and secret scanning pass in CI; Picker key restricted by API and referrer; rotation runbook rehearsed once |
 | SEC-6 | **HTTP requests secured:** every endpoint authenticated (except the OAuth callback), input-validated, size-limited and rate-limited; exact-origin CORS; HTTPS with security headers and CSP | P0 | Endpoint inventory (Tech §14.5) matches the implementation; exceeding a limit returns 429; unknown origins receive no CORS headers; a security-header scan passes |
 | SEC-7 | Imported and embedded content is treated as data, never as code | P0 | Zip bomb, path traversal and oversized `.alpha` files are rejected; project titles, element text and links cannot inject HTML or script; circuit SVG is never inlined into the page |
-| SEC-8 | Online PDF tools isolated from the internet and from other users | P1 (R2) | Stirling is unreachable externally; no file names or content in logs; per-user limits enforced |
 | SEC-9 | Account protection: email confirmation, CAPTCHA, auth rate limits; MFA optional | P0 (MFA P1) | Settings applied as listed in Tech §14.7 |
 | SEC-10 | Supply-chain controls | P0 | Pinned versions, lockfile, dependency audit and secret scanning in CI; script-execution check on every CircuitJS1 merge |
 | SEC-11 | Incident readiness | P0 | Key-rotation runbook, alerts on authentication/error spikes, published security contact |
@@ -202,10 +190,10 @@ The step-by-step flows (sign-up with Google, sign-up with email, create, open on
 | **Performance** *(proposed)* | Workspace interactive within 3 s on a mid-range laptop with broadband; autosave never blocks typing/drawing; first PDF page within 5 s for a 50 MB file |
 | **Compatibility** | Latest two versions of Chrome, Edge, Firefox, Safari (macOS and iOS), Chrome on Android. Split view only ≥ 768 px |
 | **Security** | Requirements `SEC-1…SEC-12` and Tech §14: per-user isolation through RLS and least-privilege grants; secrets never in the browser; Google tokens encrypted on the server and never stored in the browser; Google access tokens in memory only; authenticated, validated and rate-limited endpoints; exact-origin CORS; security headers and CSP |
-| **Privacy** | User content is not stored on our servers; files sent to online PDF tools are processed and deleted; no Drive content, file names or PDF text sent to analytics or logs |
+| **Privacy** | User content is not stored on our servers; no Drive content, file names or PDF text sent to analytics or logs |
 | **Accessibility** | App shell (launcher, tabs, dialogs, settings) keyboard-operable and screen-reader labelled, aiming at WCAG 2.2 AA; embedded tools follow their upstream accessibility |
 | **Internationalization** | Arabic (RTL) and English; logical CSS properties; dates/numbers localized |
-| **Scalability and cost** | Server cost independent of stored content; Supabase load limited to the project index and token calls; Stirling cost bounded by per-user limits |
+| **Scalability and cost** | Server cost independent of stored content; Supabase load limited to the project index and token calls |
 | **Maintainability** | Each tool behind an adapter; exact version pins; CircuitJS1 patches isolated and listed; upstream merge monthly |
 | **Licensing** | Compliance with MIT/GPL/Apache/BSD terms (Tech §16) |
 
@@ -229,7 +217,7 @@ Collect only aggregate, content-free events (sign-up, project created, tool open
 ## A11. Dependencies, assumptions, constraints
 - **Google:** OAuth app verification (basic, because `drive.file` is non-sensitive), a domain with privacy policy and terms; Drive API rate limits; Picker API.
 - **Supabase:** Auth, Postgres, Edge Functions.
-- **Upstream projects:** Excalidraw 0.18.1 (MIT), CircuitJS1 fork of `pfalstad/circuitjs1` (GPL-2.0-or-later), EmbedPDF (MIT), Stirling-PDF official image (MIT core).
+- **Upstream projects:** Excalidraw 0.18.1 (MIT), CircuitJS1 fork of `pfalstad/circuitjs1` (GPL-2.0-or-later), EmbedPDF (MIT).
 - **Assumption:** most users have a Google account; many students use it already.
 - **Assumption:** students accept that local-only projects live in one browser unless exported or moved to Drive.
 - **Constraint:** the CircuitJS1 fork's source must be published.
@@ -241,8 +229,7 @@ Collect only aggregate, content-free events (sign-up, project created, tool open
 | Google verification delay | Cannot onboard beyond 100 test users | Start verification during Phase 7; legal pages ready early |
 | Users confused between local and Drive projects | Think files are lost | Clear storage badges (LAUNCH-2), persistent save status (WS-3), one-click "Save to Google Drive" |
 | Browser data cleared in local mode | Lost projects | Silent persistence request, Drive offer after first project, periodic export reminder |
-| Online PDF tools abused or costly | Server cost | Auth, per-user limits, size caps (PDFX-4) |
-| Medical students upload patient-identifiable material | Privacy/legal exposure | Terms clause and in-app notice for online tools; decision in Q11 |
+| Medical students upload patient-identifiable material | Privacy/legal exposure | Terms clause; decision in Q11 |
 | GPL obligations misunderstood | Legal risk | Public fork, licenses page; legal review before launch (Q6) |
 | Three engines in one app is heavy on phones | Poor mobile experience | Lazy-load modules, pause hidden circuits, disable split on small screens |
 | Scope creep | Delay | P0/P1 split in A5; R2/R3 gated |
@@ -255,14 +242,14 @@ Collect only aggregate, content-free events (sign-up, project created, tool open
 | Q1 | Final product name | **Decided: Aboard** (short for “Alpha board”). The `.alpha` file extension is kept as chosen by the owner |
 | Q2 | Email sign-in method | Email one-time link/code (no passwords to manage) |
 | Q3 | Guest mode without account | Not in R1 |
-| Q4 | Business model and limits | Free in R1; per-user daily limits on online PDF tools |
-| Q5 | Include online PDF tools in R1? | No, R2 |
+| Q4 | Business model and limits | Free in R1 |
+| Q5 | Include online PDF tools in R1? | Dropped (owner decision, 2026-11-04) |
 | Q6 | Open-source the whole app (GPL-compatible) or only the CircuitJS fork? | Decide with legal advice before launch; simplest safe path is open-sourcing the whole app |
 | Q7 | Hosting for the Next.js app | Vercel |
 | Q8 | Target beta date and first cohort size | Needed to schedule Google verification |
 | Q9 | Analytics tool | A privacy-friendly tool, events per A10 only |
 | Q10 | Languages beyond Arabic and English | None in R1 |
-| Q11 | Policy for patient-identifiable data | Terms clause + warning in online tools; no scanning |
+| Q11 | Policy for patient-identifiable data | Terms clause; no scanning |
 | Q12 | Require MFA (optional or mandatory)? | Optional in R1 (SEC-9); reconsider after launch |
 
 ## A14. Glossary
@@ -285,7 +272,6 @@ Collect only aggregate, content-free events (sign-up, project created, tool open
 | INT | §8 | modules.md |
 | STORE | §10, §11 | google-drive.md, storage-layer.md |
 | ALPHA | §12 | alpha-format.md |
-| PDFX | §7.4, §13 | modules.md, setup-and-deploy.md |
 | SEC | §9, §10, §14 | database.md, google-drive.md, security.md |
 | LEGAL | §14.11, §16 | security.md, architecture.md |
 | Release plan | §19 | `docs/PROGRESS.md` |

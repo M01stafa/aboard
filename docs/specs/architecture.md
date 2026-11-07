@@ -12,7 +12,6 @@
 |---|---|---|
 | Excalidraw | npm `@excalidraw/excalidraw@0.18.1` (MIT) | `excalidraw_architecture.md` + Appendix A.2 |
 | CircuitJS1 | **Your fork of `github.com/pfalstad/circuitjs1`** (GPL-2.0-or-later) | `circuitjs1_architecture.md` + Appendix A.1 |
-| Stirling-PDF | Docker image `docker.stirlingpdf.com/stirlingtools/stirling-pdf:latest` | `stirling_pdf_architecture.md` + Appendix A.3 |
 | Google Drive API v3 | User file storage | developers.google.com/workspace/drive/api |
 | Google Picker API | Let users pick existing Drive files (PDFs, `.alpha`) | developers.google.com/workspace/drive/picker |
 | Supabase | Auth, Postgres (index only), Edge Functions | supabase.com/docs |
@@ -51,10 +50,9 @@ Users choose nothing up front: Google sign-in with Drive consent → **Drive mod
 |---|---|
 | Excalidraw | Full package feature set. Live collaboration is out of scope (it lives in the excalidraw.com app, not the npm package). |
 | CircuitJS1 | Custom toolbar for common actions + an "Advanced menu" toggle that re-shows the native menu (`hideMenu=false`), so every engine feature stays reachable. Dropbox, Google Drive loaders and short URLs inside CircuitJS are disabled (the app handles storage). |
-| Stirling-PDF | Curated tools first (OCR, Office→PDF, PDF→Office, compress, merge, split, PDF/A); later, forms generated from Stirling's OpenAPI spec. |
 
 ### 2.4 Non-goals (this version)
-Offline use, real-time multi-user editing, embedding Stirling's own UI, sharing projects with other users inside the app (users share `.alpha` files instead).
+Offline use, real-time multi-user editing, sharing projects with other users inside the app (users share `.alpha` files instead).
 
 ---
 
@@ -66,8 +64,8 @@ Offline use, real-time multi-user editing, embedding Stirling's own UI, sharing 
 | ADR-2 | Each tool is a module behind a typed adapter; no code merging | Three toolchains (TS/React, Java/GWT, Java/Spring) |
 | ADR-3 | Excalidraw as a React component | Same stack, imperative API |
 | ADR-4 | CircuitJS1 as a same-origin iframe (`/circuit/`) built from your fork | GWT owns its DOM; clean isolation and GPL boundary |
-| ADR-5 | PDF engine: EmbedPDF (PDFium WASM, MIT) + `@cantoo/pdf-lib` | Same stack as Stirling's current frontend; portable annotation import/export API |
-| ADR-6 | Stirling on a private network behind an auth gateway | Needs LibreOffice/OCRmyPDF/Tesseract; must not be publicly callable |
+| ADR-5 | PDF engine: EmbedPDF (PDFium WASM, MIT) + `@cantoo/pdf-lib` | Portable annotation import/export API, PDFium WASM rendering, pure client-side PDF manipulation |
+| ADR-6 | Server-side PDF tools dropped (2026-11-04) | App is 100% client-side; runs in browser only |
 | ADR-7 | **Storage behind a `StorageProvider` interface** with `DriveProvider` and `LocalProvider` | Modules never know where data lives; a future provider (e.g. Supabase for small items) plugs in without touching modules |
 | ADR-8 | **Google OAuth scope `drive.file` only** | Non-sensitive scope with streamlined verification; the app sees only files it created or the user picked |
 | ADR-9 | **Refresh tokens stored server-side, encrypted (AES-256-GCM), in a table with no client access**; exchanged by Supabase Edge Functions | The client secret and long-lived tokens never reach the browser |
@@ -105,12 +103,12 @@ Offline use, real-time multi-user editing, embedding Stirling's own UI, sharing 
 │ Project service ── StorageProvider ──┬── DriveProvider ── DriveApi ── DriveTokenManager            │
 │                                      └── LocalProvider                                             │
 │ SaveQueue (outbox) │ Dexie (IndexedDB: buffer + cache + local mode) │ .alpha exporter/importer     │
-│ App bus (mitt) │ Zustand stores │ Stirling client                                                  │
-└─────────┬───────────────────────────────┬──────────────────────────────┬───────────────────────────┘
-          │ supabase-js                   │ Bearer access token          │ Bearer Supabase JWT
-          ▼                               ▼                              ▼
-  Supabase                         Google Drive API v3             VPS: Caddy → pdf-gateway
-  ├ Auth (email, Google)           (user's own Drive:              → Stirling-PDF (private network)
+│ App bus (mitt) │ Zustand stores                                                                    │
+└─────────┬───────────────────────────────┬──────────────────────────────────────────────────────────┘
+          │ supabase-js                   │ Bearer access token
+          ▼                               ▼
+  Supabase                         Google Drive API v3
+  ├ Auth (email, Google)           (user's own Drive:
   ├ Postgres: profiles, projects    My Drive/Aboard/...)
   │   index, google_drive_links
   └ Edge Functions: drive-connect, drive-callback, drive-link-token,
@@ -178,7 +176,6 @@ CI test: a mount counter per module must stay at 1 while switching tabs, splitti
 |---|---|---|
 | Excalidraw | MIT | Notice |
 | CircuitJS1 fork | GPL-2.0-or-later | Publish complete source of the fork (link in About), keep notices. Whether the shell + iframe form a combined work is a gray area; simplest safe path is open-sourcing the whole app under a GPL-compatible license |
-| Stirling-PDF (unmodified image as a service) | MIT except `app/proprietary/`, `app/saas/`, `engine/`, `frontend/editor/src/{proprietary,desktop,saas,cloud,prototypes,portal,portal-saas}/` | Do not copy code from excluded directories; do not use Stirling branding |
 | EmbedPDF, `@cantoo/pdf-lib`, `hash-wasm`, supabase-js, zustand, mitt | MIT | Notices |
 | `@zip.js/zip.js` | BSD-3-Clause | Notice |
 | `dexie` | Apache-2.0 | Notice |
@@ -227,8 +224,7 @@ aboard/
 │       │   ├── supabase.ts
 │       │   ├── storage/               # types, ProjectService, LocalProvider, DriveProvider, SaveQueue, db.ts (Dexie)
 │       │   ├── drive/                 # tokens.ts, api.ts, layout.ts (folders/appProperties), picker.ts, conflicts.ts
-│       │   ├── alpha/                 # manifest.ts (zod), export.ts, import.ts, limits.ts
-│       │   └── stirling.ts
+│       │   └── alpha/                 # manifest.ts (zod), export.ts, import.ts, limits.ts
 │       ├── theme/  └── i18n/
 ├── supabase/
 │   ├── config.toml
@@ -242,7 +238,6 @@ aboard/
 │       ├── drive-token/index.ts
 │       └── drive-disconnect/index.ts
 ├── vendor/circuitjs1/                 # git submodule → your fork of pfalstad/circuitjs1 (+ PATCHES.md)
-├── services/{gateway/, deploy/, stirling/}
 ├── scripts/{build-circuit.sh, copy-excalidraw-fonts.mjs}
 └── docs/
     ├── PRD.md                         # product requirements (what/why)

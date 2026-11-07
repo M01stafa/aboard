@@ -54,7 +54,6 @@ Specs: `docs/specs/architecture.md` (§3.1 Next.js rules, §6 workspace, §15 th
 - EmbedPDF `AnnotationPluginPackage` and `SelectionPluginPackage` require `InteractionManagerPluginPackage` in the batch registration array.
 - The original PDF is immutable. Page operations create a new PDF item/version; warn that annotations do not carry over.
 - "Download annotated PDF" builds a new file with the export plugin. Do not use `pdf-lib` (unmaintained); use `@cantoo/pdf-lib`.
-- Online tools go through `src/core/stirling.ts` to the gateway with the Supabase JWT; results are saved into the project like any PDF.
 
 ## Cross-tool actions (spec §8)
 - Typed `mitt` bus; payloads carry `Blob`s, converted to data URLs only at the Excalidraw boundary.

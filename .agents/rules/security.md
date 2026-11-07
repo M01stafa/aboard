@@ -5,7 +5,7 @@ description: "Aboard security rules for every change: user isolation (RLS), secr
 
 # Security rules (always on)
 
-Principle: deny by default, least privilege, never trust the browser. These rules implement `SEC-1…SEC-12` in `docs/PRD.md`. Full specification, code and tests: `docs/specs/security.md` (§14). Read it before any change to auth, database, Drive, Edge Functions, the gateway, headers, or import/export.
+Principle: deny by default, least privilege, never trust the browser. These rules implement `SEC-1…SEC-12` in `docs/PRD.md`. Full specification, code and tests: `docs/specs/security.md` (§14). Read it before any change to auth, database, Drive, Edge Functions, headers, or import/export.
 
 ## 1. User isolation — a user can never reach another user's data (SEC-1, SEC-3, SEC-4)
 - Every table in `public` has `enable row level security` in the **same migration** that creates it. A table without RLS must never exist.
@@ -20,9 +20,9 @@ Principle: deny by default, least privilege, never trust the browser. These rule
 
 ## 2. Secrets and API keys (SEC-5)
 - Anything that reaches the browser is public. Every `NEXT_PUBLIC_*` value is inlined into the bundle: never put a secret in one.
-- Public by design: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (safe only because of RLS), `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `NEXT_PUBLIC_GOOGLE_APP_ID`, `NEXT_PUBLIC_PDF_API_URL`.
+- Public by design: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (safe only because of RLS), `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `NEXT_PUBLIC_GOOGLE_APP_ID`.
 - `NEXT_PUBLIC_GOOGLE_API_KEY` (Picker) is public but must be restricted in Google Cloud: API = Picker only, HTTP referrers = our domains only.
-- Secrets live only in Supabase Edge Function secrets: `GOOGLE_CLIENT_SECRET`, `TOKEN_ENC_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (bypasses RLS). Never in the web app, Vercel env, gateway, repo, logs, tests or screenshots.
+- Secrets live only in Supabase Edge Function secrets: `GOOGLE_CLIENT_SECRET`, `TOKEN_ENC_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (bypasses RLS). Never in the web app, Vercel env, repo, logs, tests or screenshots.
 - `.env*` files are git-ignored. Never commit real values; use `.env.example` with placeholders.
 - No secret may be hard-coded in any tracked file, including spikes/. Config files must read secrets from environment variables; .env.example may show placeholders only.
 - Next.js server code that reads a secret imports `server-only`.
@@ -39,7 +39,7 @@ Principle: deny by default, least privilege, never trust the browser. These rule
 - Order in every endpoint: authenticate (`requireUser`) → rate-limit → validate input with `zod` (types, lengths, enums, reject unknown fields) → act.
 - Exception: `drive-callback` has no bearer token; it is protected by a one-time `state` (10 minutes) + PKCE and an IP rate limit.
 - CORS: exact origin allow-list from env; never `*`, never reflect an arbitrary `Origin`; unknown origins get no CORS headers.
-- Rate-limit every endpoint (`check_rate_limit`); the limiter fails closed. Body limits: functions ≤ 64 KB, gateway per `MAX_UPLOAD_MB`. Timeouts on all outbound calls.
+- Rate-limit every endpoint (`check_rate_limit`); the limiter fails closed. Body limits: functions ≤ 64 KB. Timeouts on all outbound calls.
 - Redirects only to validated relative paths (no `//`, no backslashes).
 - Clients get generic errors (`{ code }`). Logs never contain tokens, request bodies, file names, Drive IDs or document text.
 - No string-built SQL; use the Supabase client or `rpc`.
@@ -54,13 +54,9 @@ Principle: deny by default, least privilege, never trust the browser. These rule
 - Only third-party script allowed: `https://apis.google.com` (Picker), loaded on demand.
 - After every upstream merge of the CircuitJS fork run `grep -rn "eval(\|new Function\|\$wnd.eval" vendor/circuitjs1/src` and report any new hit (the iframe is same-origin).
 
-## 6. Online PDF tools (SEC-8)
-- Stirling runs only on the Docker `internal` network with no published port. The browser talks only to `services/gateway`.
-- The gateway verifies the Supabase JWT, allow-lists tool names, checks file magic bytes, enforces size/rate/concurrency limits, streams bodies, and never logs file names or content.
-
-## 7. Supply chain and CI (SEC-10)
+## 6. Supply chain and CI (SEC-10)
 - Exact version pins for engines, committed lockfile, `--frozen-lockfile` in CI, dependency audit, gitleaks pre-commit + CI, bundle grep for `service_role`, `GOOGLE_CLIENT_SECRET`, `TOKEN_ENC_KEY`, `-----BEGIN`.
 - CI guard query must return zero rows: `select tablename from pg_tables where schemaname = 'public' and not rowsecurity;`
 
-## 8. When to stop and ask the owner
+## 7. When to stop and ask the owner
 Stop and ask before: changing RLS, grants or policies on an existing table; changing OAuth scopes; adding an endpoint or a third-party script; deleting user data; any change to token storage or encryption. Before declaring such a change done, run skill `security-review`.

@@ -1,6 +1,121 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <script>
+      (function() {
+        try {
+          var params = new URLSearchParams(window.location.search);
+          var isDark = params.get('whiteBackground') === 'false' || params.get('theme') === 'dark';
+          var isRTL = params.get('lang') === 'ar';
+          var docEl = document.documentElement;
+
+          if (isDark) {
+            docEl.setAttribute('data-theme', 'dark');
+            docEl.classList.add('dark-theme');
+          } else {
+            docEl.setAttribute('data-theme', 'light');
+            docEl.classList.remove('dark-theme');
+          }
+
+          if (isRTL) {
+            docEl.setAttribute('dir', 'rtl');
+            docEl.setAttribute('lang', 'ar');
+          } else {
+            docEl.setAttribute('dir', 'ltr');
+            docEl.setAttribute('lang', 'en');
+          }
+
+          function applyThemeToBody() {
+            if (!document.body) return;
+            if (isDark) {
+              document.body.classList.add('dark-theme');
+              document.body.setAttribute('data-theme', 'dark');
+            } else {
+              document.body.classList.remove('dark-theme');
+              document.body.setAttribute('data-theme', 'light');
+            }
+            if (isRTL) {
+              document.body.setAttribute('dir', 'rtl');
+            }
+          }
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', applyThemeToBody);
+          } else {
+            applyThemeToBody();
+          }
+
+          // Listen for theme / lang postMessage updates
+          window.addEventListener('message', function(ev) {
+            if (!ev || !ev.data) return;
+            if (ev.data.type === 'theme-change' || typeof ev.data.whiteBackground === 'boolean' || ev.data.theme) {
+              var dark = ev.data.theme === 'dark' || ev.data.whiteBackground === false;
+              if (dark) {
+                docEl.setAttribute('data-theme', 'dark');
+                docEl.classList.add('dark-theme');
+                if (document.body) {
+                  document.body.classList.add('dark-theme');
+                  document.body.setAttribute('data-theme', 'dark');
+                }
+              } else {
+                docEl.setAttribute('data-theme', 'light');
+                docEl.classList.remove('dark-theme');
+                if (document.body) {
+                  document.body.classList.remove('dark-theme');
+                  document.body.setAttribute('data-theme', 'light');
+                }
+              }
+            }
+          });
+
+          // Continuously suppress About menu item & AboutBox dialog
+          function suppressAbout() {
+            var menuItems = document.querySelectorAll('.gwt-MenuItem');
+            for (var i = 0; i < menuItems.length; i++) {
+              var item = menuItems[i];
+              if (
+                item.querySelector('.cirjsicon-info-circled') ||
+                item.textContent.trim().toLowerCase().indexOf('about') === 0
+              ) {
+                item.style.setProperty('display', 'none', 'important');
+                item.style.setProperty('visibility', 'hidden', 'important');
+                var parentTr = item.closest('tr');
+                if (parentTr) {
+                  parentTr.style.setProperty('display', 'none', 'important');
+                  var prev = parentTr.previousElementSibling;
+                  if (prev && prev.classList.contains('gwt-MenuItemSeparator')) {
+                    prev.style.setProperty('display', 'none', 'important');
+                  }
+                }
+              }
+            }
+
+            var popups = document.querySelectorAll('.gwt-PopupPanel, .gwt-DialogBox');
+            for (var j = 0; j < popups.length; j++) {
+              var p = popups[j];
+              if (p.querySelector('iframe[src*="about.html"]')) {
+                p.style.setProperty('display', 'none', 'important');
+                p.style.setProperty('visibility', 'hidden', 'important');
+              }
+            }
+          }
+
+          if (typeof MutationObserver !== 'undefined') {
+            var observer = new MutationObserver(function() {
+              suppressAbout();
+            });
+            observer.observe(docEl, { childList: true, subtree: true });
+          }
+
+          document.addEventListener('DOMContentLoaded', function() {
+            suppressAbout();
+            setInterval(suppressAbout, 250);
+          });
+        } catch (e) {
+          console.error('[circuitjs] Init script error:', e);
+        }
+      })();
+    </script>
     <link rel="stylesheet" href="circuitjs.css">
   
     <!-- Properties can be specified to influence deferred binding -->

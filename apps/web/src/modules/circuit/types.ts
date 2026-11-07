@@ -42,6 +42,7 @@ export interface CircuitUrlOptions {
   hideInfoBox?: boolean;
   running?: boolean;
   editable?: boolean;
+  IECGates?: boolean;
   positiveColor?: string;
   negativeColor?: string;
   selectColor?: string;

@@ -11,7 +11,7 @@ export interface ComponentItem {
   id: string;
   className: string;
   labelKey: I18nKey;
-  category: "basic" | "sources" | "semiconductors" | "outputs";
+  category: "basic" | "sources" | "semiconductors" | "gates" | "outputs";
   iconSvg: React.ReactNode;
 }
 
@@ -175,6 +175,111 @@ export const CIRCUIT_COMPONENTS: readonly ComponentItem[] = [
     ),
   },
 
+  // Logic Gates
+  {
+    id: "inverter",
+    className: "InverterElm",
+    labelKey: "circuit.compInverter",
+    category: "gates",
+    iconSvg: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="2" y1="12" x2="6" y2="12" />
+        <polygon points="6 6, 16 12, 6 18" />
+        <circle cx="18" cy="12" r="2" />
+        <line x1="20" y1="12" x2="22" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    id: "and-gate",
+    className: "AndGateElm",
+    labelKey: "circuit.compAndGate",
+    category: "gates",
+    iconSvg: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="2" y1="8" x2="8" y2="8" />
+        <line x1="2" y1="16" x2="8" y2="16" />
+        <path d="M8 5v14h4a7 7 0 0 0 0-14z" />
+        <line x1="19" y1="12" x2="22" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    id: "nand-gate",
+    className: "NandGateElm",
+    labelKey: "circuit.compNandGate",
+    category: "gates",
+    iconSvg: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="2" y1="8" x2="7" y2="8" />
+        <line x1="2" y1="16" x2="7" y2="16" />
+        <path d="M7 5v14h3a7 7 0 0 0 0-14z" />
+        <circle cx="18" cy="12" r="1.5" />
+        <line x1="19.5" y1="12" x2="22" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    id: "or-gate",
+    className: "OrGateElm",
+    labelKey: "circuit.compOrGate",
+    category: "gates",
+    iconSvg: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="2" y1="8" x2="6" y2="8" />
+        <line x1="2" y1="16" x2="6" y2="16" />
+        <path d="M6 5c2 4 2 10 0 14 5 0 9-3 12-7-3-4-7-7-12-7z" />
+        <line x1="18" y1="12" x2="22" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    id: "nor-gate",
+    className: "NorGateElm",
+    labelKey: "circuit.compNorGate",
+    category: "gates",
+    iconSvg: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="2" y1="8" x2="5" y2="8" />
+        <line x1="2" y1="16" x2="5" y2="16" />
+        <path d="M5 5c2 4 2 10 0 14 5 0 8-3 11-7-3-4-6-7-11-7z" />
+        <circle cx="17.5" cy="12" r="1.5" />
+        <line x1="19" y1="12" x2="22" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    id: "xor-gate",
+    className: "XorGateElm",
+    labelKey: "circuit.compXorGate",
+    category: "gates",
+    iconSvg: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="2" y1="8" x2="4" y2="8" />
+        <line x1="2" y1="16" x2="4" y2="16" />
+        <path d="M4 5c2 4 2 10 0 14" />
+        <path d="M7 5c2 4 2 10 0 14 5 0 9-3 12-7-3-4-7-7-12-7z" />
+        <line x1="19" y1="12" x2="22" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    id: "xnor-gate",
+    className: "XnorGateElm",
+    labelKey: "circuit.compXnorGate",
+    category: "gates",
+    iconSvg: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="2" y1="8" x2="3" y2="8" />
+        <line x1="2" y1="16" x2="3" y2="16" />
+        <path d="M3 5c2 4 2 10 0 14" />
+        <path d="M6 5c2 4 2 10 0 14 4 0 8-3 11-7-3-4-7-7-11-7z" />
+        <circle cx="18.5" cy="12" r="1.5" />
+        <line x1="20" y1="12" x2="22" y2="12" />
+      </svg>
+    ),
+  },
+
   // Outputs & Tools
   {
     id: "probe",
@@ -212,6 +317,11 @@ export interface CircuitToolbarProps {
   onChangeSpeed: (speed: CircuitSpeed) => void;
   onToggleAdvancedMenu: () => void;
   isAdvancedMenu?: boolean;
+  isBoardOpen?: boolean;
+  isExportingToBoard?: boolean;
+  onSendToBoard?: () => void;
+  pauseWhenHidden?: boolean;
+  onTogglePauseWhenHidden?: (checked: boolean) => void;
 }
 
 export function CircuitToolbar({
@@ -224,6 +334,11 @@ export function CircuitToolbar({
   onChangeSpeed,
   onToggleAdvancedMenu,
   isAdvancedMenu = false,
+  isBoardOpen = false,
+  isExportingToBoard = false,
+  onSendToBoard,
+  pauseWhenHidden,
+  onTogglePauseWhenHidden,
 }: CircuitToolbarProps) {
   const { t } = useI18n();
 
@@ -278,12 +393,13 @@ export function CircuitToolbar({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: "var(--space-1)",
-        padding: "var(--space-1) var(--space-2)",
+        gap: "var(--space-2)",
+        padding: "0 var(--space-2)",
         backgroundColor: "var(--bg-surface)",
         borderBottom: "1px solid var(--border-card)",
         boxSizing: "border-box",
-        height: "var(--space-6)",
+        height: "var(--control-md)",
+        minHeight: "var(--control-md)",
         position: "relative",
         zIndex: 20,
       }}
@@ -510,6 +626,8 @@ export function CircuitToolbar({
                 boxShadow: "var(--shadow-3)",
                 padding: "var(--space-2)",
                 width: "calc(var(--space-8) * 5)",
+                maxHeight: "calc(100vh - var(--space-8) * 2)",
+                overflowY: "auto",
                 zIndex: 100,
                 display: "flex",
                 flexDirection: "column",
@@ -691,6 +809,64 @@ export function CircuitToolbar({
                 </div>
               </div>
 
+              {/* Category: Logic Gates */}
+              <div>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                    color: "var(--text-muted)",
+                    marginBottom: "var(--space-1)",
+                  }}
+                >
+                  {t("circuit.catGates")}
+                </div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, 1fr)",
+                    gap: "var(--space-1)",
+                  }}
+                >
+                  {CIRCUIT_COMPONENTS.filter((c) => c.category === "gates").map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      data-testid={`circuit-comp-${item.id}-btn`}
+                      onClick={() => {
+                        onSelectComponent(item.className, t(item.labelKey));
+                        setIsPaletteOpen(false);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-1)",
+                        padding: "var(--space-1)",
+                        borderRadius: "var(--radius-sm)",
+                        border: selectedComponent === item.className
+                          ? "1px solid var(--accent-text)"
+                          : "1px solid var(--border-card)",
+                        backgroundColor: selectedComponent === item.className
+                          ? "var(--bg-subtle)"
+                          : "var(--bg-surface)",
+                        color: "var(--text-main)",
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        textAlign: "start",
+                      }}
+                    >
+                      <span style={{ color: "var(--accent-text)", display: "flex" }}>
+                        {item.iconSvg}
+                      </span>
+                      <span>{t(item.labelKey)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Category: Outputs & Tools */}
               <div>
                 <div
@@ -777,8 +953,68 @@ export function CircuitToolbar({
         )}
       </div>
 
-      {/* Secondary / Advanced Toggle Group */}
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+      {/* Secondary / Integration & Advanced Toggle Group */}
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+        {/* Send to Board Button */}
+        {onSendToBoard && (
+          <button
+            type="button"
+            data-testid="circuit-send-to-board-btn"
+            onClick={onSendToBoard}
+            disabled={isExportingToBoard || !isBoardOpen}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "var(--space-1)",
+              height: "var(--control-sm)",
+              paddingInline: "var(--space-2)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-card)",
+              backgroundColor: "var(--bg-surface)",
+              color: !isBoardOpen ? "var(--text-muted)" : "var(--text-main)",
+              fontSize: "12px",
+              fontWeight: 500,
+              cursor: isExportingToBoard ? "wait" : !isBoardOpen ? "not-allowed" : "pointer",
+              opacity: !isBoardOpen ? 0.6 : 1,
+              transition: "background-color 150ms ease, opacity 150ms ease",
+            }}
+            title={!isBoardOpen ? t("circuit.sendToBoardNoBoardOpen") : t("circuit.sendToBoard")}
+          >
+            <span>📋</span>
+            <span>{isExportingToBoard ? t("circuit.sendingToBoard") : t("circuit.sendToBoard")}</span>
+          </button>
+        )}
+
+        {/* Pause when hidden Checkbox */}
+        {typeof pauseWhenHidden === "boolean" && onTogglePauseWhenHidden && (
+          <label
+            data-testid="pause-when-hidden-label"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "var(--space-1)",
+              cursor: "pointer",
+              fontSize: "12px",
+              color: "var(--text-muted)",
+              userSelect: "none",
+            }}
+          >
+            <input
+              type="checkbox"
+              data-testid="pause-when-hidden-checkbox"
+              checked={pauseWhenHidden}
+              onChange={(e) => onTogglePauseWhenHidden(e.target.checked)}
+              style={{
+                accentColor: "var(--brand-primary)",
+                cursor: "pointer",
+              }}
+            />
+            <span>{t("circuit.pauseWhenHidden")}</span>
+          </label>
+        )}
+
+        <div style={{ width: "1px", height: "18px", backgroundColor: "var(--border-card)" }} />
+
         <button
           type="button"
           data-testid="circuit-advanced-toggle-btn"

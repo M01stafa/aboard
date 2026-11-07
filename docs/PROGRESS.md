@@ -10,11 +10,11 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | 10 — UI redesign (Completed) |
-| Current task | Verify remote Supabase schema via Supabase CLI |
-| Last updated | 2026-11-05 |
-| Next step | Task 44 — Publish the Legal Pages and Implement Account Deletion |
-| Blockers | None (Remote Supabase database migration status verified in sync via Supabase CLI; 0001_init.sql confirmed applied) |
+| Active phase | Side campaign — Circuit UI visual polish (owner-driven, outside TASKS.md) |
+| Current task | Continue Circuit UI polish |
+| Last updated | 2026-11-06 |
+| Next step | Finish Circuit UI fixes; then push all local commits and verify CI; then Phase 11 Task 44 |
+| Blockers | none |
 
 ## Phases
 
@@ -26,18 +26,18 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 |---|---|---|---|
 | **0. Spikes** | Done (2026-10-13) | **S1** Excalidraw in Next.js (`dynamic` + `ssr:false`, CSS import, React Strict Mode double mount, self-hosted fonts, `refresh()`). **S2** Build the CircuitJS fork with Gradle 8.7, `/circuit/`, API attach, export/import, SVG, served from `public/circuit/` inside the Next.js app and attached correctly after a Strict Mode double mount. **S3** EmbedPDF: 50 MB PDF, highlights, `exportAnnotations`/`importAnnotations` round-trip including a stamp. **S4** Google: test-mode OAuth client, `drive-connect`/`callback`/`token` deployed, create folder + multipart + **resumable 100 MB upload from the browser** (Location/Range headers readable), Picker opens; no Google token left in browser storage after sign-in (§10.1). **S5** `.alpha`: export/import 500 MB on Chrome (stream) and 200 MB on iPhone; check file name keeps `.alpha`. | Written spike report (`docs/spikes/S<n>.md`) with versions and open issues |
 | **1. Foundation** | Done (2026-10-14) | Next.js app, routes, theme, RTL/i18n, Supabase Auth (email + Google), migration 0001, workspace host with placeholder panes, **hardened migration + pgTAP RLS suite + CI guards (gitleaks, bundle grep) (§9, §14.3, §14.9)** | Mount counter stays 1 during tab/split changes; RLS test: user A cannot read B's `projects`; client cannot read `google_drive_links` |
-| **2. Storage core + local mode** | In progress | Dexie schema, `LocalProvider`, `ProjectService`, SaveQueue, save status, silent persistence, project index sync | Create project → reload → data intact; no prompt appears in Chrome/Safari/Firefox |
-| **3. Circuit module** | In progress | Fork patches a–e, build script, adapter, saving via ProjectService | Circuit survives reload; no extra service worker registered |
+| **2. Storage core + local mode** | Done (2026-10-16) | Dexie schema, `LocalProvider`, `ProjectService`, SaveQueue, save status, silent persistence, project index sync | Create project → reload → data intact; no prompt appears in Chrome/Safari/Firefox |
+| **3. Circuit module** | Done (2026-10-17) | Fork patches a–e, build script, adapter, saving via ProjectService | Circuit survives reload; no extra service worker registered |
 | **4. Board module** | Done (2026-10-17) | Excalidraw pane, files via `putFile`, templates panel | Board with images survives reload |
 | **5. PDF module** | Done (2026-10-18) | Viewer, annotations JSON, page operations, annotated download | Annotations survive reload; annotated download opens with highlights in another viewer |
-| **6. `.alpha` export/import** | In progress | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
+| **6. `.alpha` export/import** | Done (2026-10-18) | §12 complete, limits, iOS handling | Export on device A, import on device B (different browser): identical project; tampered file rejected |
 | **7. Google Drive** | Done (2026-10-19) | Edge Functions (§10), Path A + B, `DriveProvider`, cache + eviction, conflicts, error handling, mode moves, Picker, rate limits (§10.4), provider-token handling (§10.1) | Same project edited on two devices stays consistent; revoking access in Google account → reconnect banner, no data loss; Drive full simulated → local saving continues; automated check: no Google token in `localStorage`/IndexedDB; exceeding a rate limit returns 429 |
 | **8. Integration** | Done (2026-10-19) | §8 actions | All four actions work across modes |
-| **9. Stirling** | Dropped | Permanently dropped by owner; services/ and all Docker infrastructure purged from repo | Zero server dependencies for PDF tools; 100% client-side |
+| **9. Stirling** | Permanently dropped (owner, 2026-11-04) — Stirling, Gateway and Docker purged from the repo. | — | — |
 | **10. UI redesign** | Done (2026-10-21) | Circuit toolbar via `runCommand`, advanced menu toggle, PDF toolbars, unified styling | Every circuit action reachable |
 | **11. Launch prep** | Not started | **§14.12 security checklist signed off**, security headers/CSP, privacy policy, terms, third-party notices, fork source published, Google app published + brand verification, monitoring | Google verification approved; refresh tokens no longer expire after 7 days |
 
-Release mapping (`docs/PRD.md` A5): R1 = phases 0–8 and 11 · R2 = phase 9 · R3 = phase 10.
+Release mapping (`docs/PRD.md` A5): R1 = phases 0–8, 10, 11 · R2/R3 removed (Phase 9 dropped, Phase 10 reclassified into R1).
 
 ## VERIFY log
 
@@ -60,10 +60,10 @@ Status values: `Open` · `Confirmed` · `Changed (spec updated)`
 | V10 | Drive "Open with" integration requirements | google-drive.md §10.11 | Later | Open | |
 | V11 | `.alpha` download keeps its extension on iOS Safari | alpha-format.md §12.1 | 0 (S5) | Changed (spec updated) | In-memory path built; physical iPhone Safari checks deferred by owner to Task 31/32; spec updated / 2026-10-13 |
 | V12 | pgTAP: inserting minimal rows into `auth.users` works in the local stack | security.md §14.3 | 1 | Confirmed | Confirmed in Task 13: minimal rows into auth.users (id, email) trigger profile creation; all 17 pgTAP assertions pass / 2026-10-14 |
-| V13 | Gateway JWT verification: JWKS vs legacy JWT secret | security.md §14.4, setup-and-deploy.md §13 | 9 | Confirmed | Confirmed in Task 40: Remote JWKS (`auth/v1/.well-known/jwks.json`) via `jose.createRemoteJWKSet` verifies asymmetric RS256/ES256 Supabase JWTs without shared secrets / 2026-10-21 |
+| V13 | Dropped with Phase 9 | — | 9 | Changed (spec updated) | Dropped with Phase 9 / 2026-11-04 |
 | V14 | CSP needs of Picker, Supabase and GWT; `headers()` precedence; COOP with Google popups | security.md §14.5 | 0 (S1/S4) | Changed (spec updated) | Confirmed in Spikes S1, S2, S4: CSP directives for Excalidraw, GWT `/circuit/`, EmbedPDF, Google; COOP verified; spec updated / 2026-10-13 |
 | V15 | Supabase Auth: refresh-token rotation/reuse detection default; leaked-password protection availability | security.md §14.7 | 1 | Open | |
-| V16 | Stirling setting name to disable unneeded endpoints | security.md §14.8 | 9 | Confirmed | Confirmed in Task 40: Stirling is isolated on Docker internal network with zero published ports; gateway enforces strict tool allow-list (`ocr`, `compress`, `office-to-pdf`) / 2026-10-21 |
+| V16 | Dropped with Phase 9 | — | 9 | Changed (spec updated) | Dropped with Phase 9 / 2026-11-04 |
 | V17 | Supabase API key rotation procedure | security.md §14.10 | 11 | Open | |
 | V18 | JDK version for the CircuitJS fork build (GWT 2.8.2) | setup-and-deploy.md §5.2 | 0 (S2) | Changed (spec updated) | Confirmed in Spike S2: OpenJDK 11 builds GWT 2.8.2 cleanly with Gradle 8.7; JDK 17 not required; spec updated / 2026-10-13 |
 | V19 | Current `zod` major version | setup-and-deploy.md §5.6 | 1 | Open | |
@@ -75,7 +75,7 @@ Owner decisions already made. Do not re-open them without the owner.
 
 | Date | Decision |
 |---|---|
-| 2026-10-06 | Shell + independent tool modules; no code merging between Excalidraw, CircuitJS1 and Stirling-PDF |
+| 2026-10-06 | Shell + independent tool modules; no code merging between Excalidraw and CircuitJS1 |
 | 2026-10-07 | Online-only for this version (no service worker / offline mode) |
 | 2026-10-07 | User content lives in the user's Google Drive (scope `drive.file`) or only in the browser (IndexedDB); Supabase holds accounts, a small project index and encrypted Google tokens only |
 | 2026-10-07 | Project export format is `.alpha` (ZIP container); it must work in both storage modes |
@@ -110,7 +110,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-14 | Built WorkspaceHost with stable DOM panes, CSS grid data-slot layout, draggable divider with transparent drag shield, RTL mirroring, below-768px auto-collapse, Vitest happy-dom mount-counter test (0 remounts across 5 tab switches, 3 split toggles, 2 pane swaps, 1 close), and Playwright keep-alive test with active iframe (Task 18 / WS-1, WS-2) |
 | 2026-10-15 | Verified drag over iframe with Playwright; added .drag-shield CSS rule (position: fixed; inset: 0; z-index: 9999); enforced 320px floor in split clamp; updated DESIGN.md §4.2 and bumped version to 2.1.1 (Task 18 follow-up) |
 | 2026-10-15 | Task 19: Built per-user IndexedDB schema (projects, items, files, outbox, meta) via Dexie@4.4.1 under aboard:<userId>; deviceId stored in meta; shared-computer flag stored in sessionStorage under aboard:shared_computer; extended signOut closes DB and wipes aboard:<userId> if flag set; extracted E2E helper mockSignIn/mockSignOut; verified SEC-4 via Playwright (Task 19 / SEC-4) |
-| 2026-10-15 | Task 20: Built StorageProvider interface, LocalProvider (with pinned=true on every write), ProjectService (single gateway for tools), streaming SHA-256 via hash-wasm for content-addressed binary files, architectural boundary test, and 13 unit tests across ProjectService and LocalProvider (Task 20 / STORE-1, STORE-7) |
+| 2026-10-15 | Task 20: Built StorageProvider interface, LocalProvider (with pinned=true on every write), ProjectService (single access layer for tools), streaming SHA-256 via hash-wasm for content-addressed binary files, architectural boundary test, and 13 unit tests across ProjectService and LocalProvider (Task 20 / STORE-1, STORE-7) |
 | 2026-10-15 | Task 21: Built framework-agnostic SaveQueue with 500 ms debounce, per-item coalescing, dirty→clean local transition, structured Drive cadence (3s/30s), flush hooks, beforeunload gating (never prompts in local mode), silent persistence via navigator.storage.persist() skipping Firefox per STORE-9, top bar SaveStatusIndicator with 5 states (WS-3) via theme tokens/i18n, and Playwright test proving STORE-1 |
 | 2026-10-16 | Task 22: Connected launcher to Supabase project index with touch_updated_at trigger handling updatedAt; storage badges mapped to theme tokens (--badge-tech for Drive, --badge-primary for this device, --badge-bronze for another device); rename & delete implemented (local path deletes Dexie + Supabase row, Drive delete stubbed with notice); Playwright E2E test verified create/reload/rename/delete lifecycle |
 | 2026-10-16 | Owner decision: keep the repository public and keep the same Google API key. The historical commit that contains the key is accepted; the key will be hidden from the current tree only. Rotation deferred. |
@@ -131,12 +131,13 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-10-19 | Task 37: Implemented bidirectional project mode migration (Local <-> Drive) in ProjectService with unpinning/pinning and optional Drive folder trashing; integrated Google Picker API for PDF and .alpha files; added Export to Drive saving to Aboard/Exports/; prompt banner for moving local projects to Drive. |
 | 2026-10-19 | Task 38: Built typed event bus in core/bus.ts using mitt; implemented target board selection across all 4 priorities (explicit -> visible split board -> MRU -> new board); implemented PDF Page to Board (INT-1) rendering WebP at scale 2 with annotations, compressing >4MB, saving via putFile, and inserting locked image element into Excalidraw; implemented Circuit to Board (INT-2) converting SVG string to binary image/svg+xml Blob (SEC-7 zero DOM injection) and inserting into board; built boardRegistry to track active imperative APIs; verified with 12 unit tests and Playwright split-view reload persistence test. |
 | 2026-10-19 | Task 39: Board to PDF (INT-3) exports image via Excalidraw exportToBlob and appends as page to target PDF via @cantoo/pdf-lib, emitting pdf:item-updated and pdf:navigate-page with new content-addressed SHA-256 hash; Selection to Note (INT-4) detects PDF text selection and inserts text note into target board linked by internal alpha://pdf/<itemId>#page=<n>; workspace intercepts alpha:// links to switch tabs and scroll to page while preserving standard https:// links; board elements with alpha:// survive .alpha export/import; PdfPane renders toast notifications across viewer remounts. Phase 8 completed. |
-| 2026-10-21 | Task 40: Deployed Stirling-PDF (pinned v0.44.0, ARM64/AMD64 compatible) on internal network with 0 published ports; built Hono API Gateway with remote JWKS verification, strict tool allow-list (ocr, compress, office-to-pdf), magic bytes check (%PDF, PK, OLE2), in-memory user limits (50MB, 1 concurrent, 10/min), streaming bodies, and Caddy reverse proxy on ports 80/443; wrote DEPLOY.md for Oracle Cloud Free Tier (VM.Standard.A1.Flex) |
-| 2026-10-21 | Task 41: Built Stirling-PDF client (stirling.ts), online tools dropdown in PdfToolbar (OCR, Compress, Office to PDF), one-time server notice modal (PDFX-5) with localStorage persistence, processing modal with progress & cancel, and SHA-256 putFile storage. |
+| 2026-10-21 | Task 40: Phase 9 online tool infrastructure — cancelled and dropped (2026-11-04) |
+| 2026-10-21 | Task 41: Phase 9 online PDF client — cancelled and dropped (2026-11-04) |
 | 2026-10-21 | Task 42: Built custom CircuitToolbar adhering to DESIGN.md tokens and 8-point grid with Run/Pause toggle, Reset, Speed presets (Slow 1µs, Normal 5µs, Fast 25µs), Component Palette mega-menu (13 components/tools via runCommand with GWT class mapping), and Advanced Menu toggle cycle (export -> hide custom toolbar -> reload iframe with native menu -> import, and reverse to restore custom toolbar) with state preservation (CIRC-5). |
 | 2026-10-21 | Task 43: Redesigned PDF toolbar into 3 cohesive control groups (Navigation & View, Annotation Tools & History, Document Actions & Popovers); unified all interface chrome (app shell, PDF, circuit toolbar, dialogs, banners) into DESIGN.md tokens; verified strict 8-point grid compliance across all modules. Phase 10 completed. |
 | 2026-11-04 | Permanently dropped Phase 9 (Stirling-PDF & Gateway); purged all Docker files, Caddy, and gateway code from repository to keep the app 100% client-side. |
 | 2026-11-05 | Verified remote Supabase database (`fmlpkcbpoziwkjuxuyaf`) schema via Supabase CLI (`supabase migration list`); confirmed `0001_init.sql` is applied remotely and in sync with local schema. |
+| 2026-11-06 | Fixed Circuit module logic gate mapping and forced ANSI symbols: passed `IECGates=false` in `circuit-url.ts` to ensure triangle+circle inverters and D-shape AND gates; mapped Inverter/NOT/AND/NAND/OR/NOR/XOR/XNOR to canonical GWT class names in `circuit-adapter.ts` and `circuit-toolbar.tsx` palette; added English and Arabic i18n keys; verified across themes and LTR/RTL. |
 
 ## Lessons and corrections
 

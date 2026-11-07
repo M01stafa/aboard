@@ -1,4 +1,4 @@
-# Aboard spec — Tool modules (board, circuit, PDF, Stirling) and cross-tool integration
+# Aboard spec — Tool modules (board, circuit, PDF) and cross-tool integration
 
 > Part of the Aboard technical specification v3.2 (Next.js 16.4 + React 19.3 + Supabase).
 > Section numbers (§N) are shared across all files in `docs/specs/`; the map is in `AGENTS.md` → "Spec map".
@@ -80,18 +80,6 @@ export interface CircuitJS1Api {
 - "Download annotated PDF": import annotations into the document and use the export plugin to produce a new file (or save it into the project as a new PDF item).
 - Page operations (rotate, reorder…) produce a **new PDF file** (new hash) and a new item version; annotations of the old version stay attached to it. Warn the user that annotations do not carry over to a restructured PDF in this version.
 - Precompute nothing: the PDFium `.wasm` is loaded on first PDF open.
-
-### 7.4 PDF — heavy operations via Stirling (online)
-Flow: `browser → https://api.aboard.example/pdf/<tool> (Authorization: Bearer <Supabase JWT>) → pdf-gateway → http://stirling:8080/api/v1/... (private network)`.
-
-pdf-gateway (Node 22 + Hono): verify Supabase JWT; allow-list of tools; max upload size; per-user rate and concurrency limits; stream bodies both ways; CORS only for the app origin. The result returns to the browser, which saves it into the project like any other PDF (so it lands in the user's Drive or browser, not on your server).
-
-Verified endpoints (confirm others in the deployed Swagger UI):
-| Tool | Endpoint |
-|---|---|
-| OCR | `POST /api/v1/misc/ocr-pdf` |
-| Compress | `POST /api/v1/misc/compress-pdf` |
-| Office/other → PDF | `POST /api/v1/convert/file/pdf` |
 
 ---
 

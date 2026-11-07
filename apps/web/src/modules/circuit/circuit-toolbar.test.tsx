@@ -174,6 +174,28 @@ describe("CircuitToolbar (Task 42 / CIRC-5)", () => {
       groundBtn.click();
     });
     expect(onSelectComponent).toHaveBeenCalledWith("GroundElm", "Ground");
+
+    // Select Inverter (NOT) gate
+    act(() => {
+      paletteBtn.click();
+    });
+    const inverterBtn = container.querySelector('[data-testid="circuit-comp-inverter-btn"]') as HTMLButtonElement;
+    expect(inverterBtn).not.toBeNull();
+    act(() => {
+      inverterBtn.click();
+    });
+    expect(onSelectComponent).toHaveBeenCalledWith("InverterElm", "Inverter (NOT)");
+
+    // Select AND gate
+    act(() => {
+      paletteBtn.click();
+    });
+    const andBtn = container.querySelector('[data-testid="circuit-comp-and-gate-btn"]') as HTMLButtonElement;
+    expect(andBtn).not.toBeNull();
+    act(() => {
+      andBtn.click();
+    });
+    expect(onSelectComponent).toHaveBeenCalledWith("AndGateElm", "AND Gate");
   });
 
   it("displays active tool badge when a component is selected", () => {

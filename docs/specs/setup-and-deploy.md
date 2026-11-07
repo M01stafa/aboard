@@ -16,12 +16,11 @@
 | Google Search Console | Verify domain ownership for the OAuth consent screen | Free |
 | Supabase project | Auth, index DB, Edge Functions | Free tier is enough at start; usage is tiny |
 | Vercel (recommended for Next.js) | Web app | Free tier to start; check current limits |
-| VPS (2 vCPU / 4 GB to start) | Stirling-PDF + gateway | Paid |
 | Public GitHub repo for the CircuitJS1 fork | GPL source obligation | Free |
 | Privacy policy and terms pages on your domain | Required by Google OAuth verification | — |
 
 ### 5.2 Developer tools
-Node.js 22 LTS, pnpm 9+, Supabase CLI, Docker + Docker Compose, Git; for the circuit build: Gradle **8.7** and OpenJDK 11 (confirmed in Spike S2 / V18; builds GWT 2.8.2 cleanly in 1m 10s without requiring JDK 17).
+Node.js 22 LTS, pnpm 9+, Supabase CLI, Git; for the circuit build: Gradle **8.7** and OpenJDK 11 (confirmed in Spike S2 / V18; builds GWT 2.8.2 cleanly in 1m 10s without requiring JDK 17).
 
 ### 5.3 Google Cloud setup (step by step)
 1. Create a project, e.g. `aboard-app`.
@@ -52,13 +51,11 @@ Node.js 22 LTS, pnpm 9+, Supabase CLI, Docker + Docker Compose, Git; for the cir
 | | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | OAuth client ID (Picker) |
 | | `NEXT_PUBLIC_GOOGLE_API_KEY` | Picker API key (referrer-restricted) |
 | | `NEXT_PUBLIC_GOOGLE_APP_ID` | Google Cloud project number |
-| | `NEXT_PUBLIC_PDF_API_URL` | `https://api.aboard.example/pdf` |
 | Edge Functions (secrets) | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | from 5.3 |
 | | `TOKEN_ENC_KEY` | 32 random bytes, base64 (`openssl rand -base64 32`) |
 | | `APP_URL` | `https://aboard.example` |
 | | `APP_ORIGINS` | `https://aboard.example,http://localhost:3000` |
 | | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | provided automatically by Supabase |
-| pdf-gateway | `SUPABASE_URL`, `STIRLING_URL`, `ALLOWED_ORIGINS`, `MAX_UPLOAD_MB` | see §13 |
 
 Never put `GOOGLE_CLIENT_SECRET`, `TOKEN_ENC_KEY` or the service role key in the web app.
 
@@ -103,43 +100,3 @@ Never put `GOOGLE_CLIENT_SECRET`, `TOKEN_ENC_KEY` or the service role key in the
 | Web app (Next.js) | Vercel; headers/CSP from `next.config.ts` (§14) |
 | Auth, index DB, Edge Functions | Supabase |
 | OAuth, Drive API, Picker | Google Cloud project |
-| `api.aboard.example` | VPS: Caddy (TLS) → pdf-gateway → Stirling-PDF |
-
-`services/deploy/docker-compose.yml`:
-```yaml
-services:
-  caddy:
-    image: caddy:2
-    ports: ["80:80", "443:443"]
-    volumes: ["./Caddyfile:/etc/caddy/Caddyfile", "caddy_data:/data"]
-    networks: [edge]
-  gateway:
-    build: ../gateway
-    environment:
-      STIRLING_URL: http://stirling:8080
-      SUPABASE_URL: https://<project-ref>.supabase.co     # JWT verification via the project's JWKS
-      ALLOWED_ORIGINS: https://aboard.example
-      MAX_UPLOAD_MB: "50"
-    networks: [edge, internal]
-  stirling:
-    image: docker.stirlingpdf.com/stirlingtools/stirling-pdf:latest   # full image: OCR + LibreOffice; pin a version tag after testing
-    environment:
-      SECURITY_ENABLELOGIN: "false"    # safe only because it is unreachable from outside
-      SYSTEM_MAXFILESIZE: "50"
-    volumes: ["./stirling/configs:/configs"]
-    deploy: { resources: { limits: { memory: 3G } } }
-    networks: [internal]               # no "ports:" on purpose
-networks:
-  edge: {}
-  internal: { internal: true }
-volumes: { caddy_data: {} }
-```
-`Caddyfile`:
-```
-api.aboard.example {
-  encode zstd gzip
-  request_body { max_size 55MB }
-  reverse_proxy /pdf/* gateway:8787
-}
-```
-Gateway JWT check: verify the Supabase access token with the project's JWKS (asymmetric signing keys) or the legacy JWT secret if the project still uses it (**VERIFY** in the Supabase dashboard). Also set Stirling's `corsAllowedOrigins` explicitly: an empty list allows every origin with credentials.

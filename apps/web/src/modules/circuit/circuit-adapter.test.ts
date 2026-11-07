@@ -170,6 +170,44 @@ describe("CircuitAdapter (Task 24 / CIRC-1, CIRC-4)", () => {
     adapter.runCommand("main", "AddCapacitor");
     expect(mockApi.runCommand).toHaveBeenCalledWith("main", "CapacitorElm");
 
+    // Test logic gate mapping & alias resolution
+    adapter.runCommand("main", "InverterElm");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "InverterElm");
+    adapter.runCommand("main", "NOT");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "InverterElm");
+    adapter.runCommand("main", "Inverter");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "InverterElm");
+
+    adapter.runCommand("main", "AndGateElm");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "AndGateElm");
+    adapter.runCommand("main", "AND");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "AndGateElm");
+
+    adapter.runCommand("main", "NandGateElm");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "NandGateElm");
+    adapter.runCommand("main", "NAND");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "NandGateElm");
+
+    adapter.runCommand("main", "OrGateElm");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "OrGateElm");
+    adapter.runCommand("main", "OR");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "OrGateElm");
+
+    adapter.runCommand("main", "NorGateElm");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "NorGateElm");
+    adapter.runCommand("main", "NOR");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "NorGateElm");
+
+    adapter.runCommand("main", "XorGateElm");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "XorGateElm");
+    adapter.runCommand("main", "XOR");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "XorGateElm");
+
+    adapter.runCommand("main", "XnorGateElm");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "XnorGateElm");
+    adapter.runCommand("main", "XNOR");
+    expect(mockApi.runCommand).toHaveBeenCalledWith("main", "XnorGateElm");
+
     expect(adapter.getCircuitAsPNG()).toBe("data:image/png;base64,mockpng");
   });
 

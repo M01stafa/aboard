@@ -507,78 +507,7 @@ export function CircuitPane({
         overflow: "hidden",
       }}
     >
-      {/* Top Chrome Strip (Tokens only, multiple of 8px) */}
-      <div
-        data-testid="circuit-pane-header"
-        style={{
-          blockSize: "var(--space-4)",
-          minBlockSize: "var(--space-4)",
-          paddingInline: "var(--space-2)",
-          backgroundColor: "var(--bg-subtle)",
-          borderBlockEnd: "1px solid var(--border-card)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          fontSize: "0.75rem",
-          fontFamily: "var(--font-sans)",
-          color: "var(--text-muted)",
-          boxSizing: "border-box",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-          <button
-            type="button"
-            data-testid="circuit-send-to-board-btn"
-            onClick={handleSendToBoard}
-            disabled={!isAttached || isExportingToBoard || !isBoardOpen}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              height: "var(--control-sm)",
-              paddingInline: "var(--space-2)",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--border-card)",
-              backgroundColor: "var(--bg-surface)",
-              color: (!isAttached || !isBoardOpen) ? "var(--text-muted)" : "var(--text-main)",
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              cursor: isExportingToBoard ? "wait" : (!isAttached || !isBoardOpen) ? "not-allowed" : "pointer",
-              opacity: (!isAttached || !isBoardOpen) ? 0.6 : 1,
-            }}
-            title={!isBoardOpen ? t("circuit.sendToBoardNoBoardOpen") : t("circuit.sendToBoard")}
-          >
-            <span>📋</span>
-            <span>{isExportingToBoard ? t("circuit.sendingToBoard") : t("circuit.sendToBoard")}</span>
-          </button>
-
-          <label
-            data-testid="pause-when-hidden-label"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              cursor: "pointer",
-              fontSize: "0.75rem",
-              userSelect: "none",
-            }}
-          >
-            <input
-              type="checkbox"
-              data-testid="pause-when-hidden-checkbox"
-              checked={pauseWhenHidden}
-              onChange={(e) => setPauseWhenHidden(e.target.checked)}
-              style={{
-                accentColor: "var(--brand-primary)",
-                cursor: "pointer",
-              }}
-            />
-            <span>{t("circuit.pauseWhenHidden")}</span>
-          </label>
-        </div>
-      </div>
-
-      {/* Custom React Toolbar (always visible at top of Circuit pane) */}
+      {/* Unified Single React Circuit Toolbar Header */}
       <CircuitToolbar
         adapter={adapter}
         isSimRunning={isSimRunning}
@@ -590,6 +519,11 @@ export function CircuitPane({
         onChangeSpeed={handleChangeSpeed}
         onToggleAdvancedMenu={handleToggleAdvancedMenu}
         isAdvancedMenu={isAdvancedMenu}
+        isBoardOpen={isBoardOpen}
+        isExportingToBoard={isExportingToBoard}
+        onSendToBoard={handleSendToBoard}
+        pauseWhenHidden={pauseWhenHidden}
+        onTogglePauseWhenHidden={setPauseWhenHidden}
       />
 
       {/* Same-origin Iframe (fills the pane) */}

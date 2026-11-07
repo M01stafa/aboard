@@ -1,12 +1,12 @@
 ---
 trigger: glob
-globs: "supabase/**, services/**, apps/web/src/core/drive/**, apps/web/src/core/storage/**, apps/web/src/core/alpha/**, apps/web/src/core/supabase.ts, apps/web/src/core/stirling.ts, .env.example"
-description: "Backend and data-layer rules for Aboard: Supabase schema and RLS, Edge Functions for Google Drive tokens, Drive API usage, ProjectService/SaveQueue/IndexedDB, .alpha format, Stirling gateway and deployment."
+globs: "supabase/**, apps/web/src/core/drive/**, apps/web/src/core/storage/**, apps/web/src/core/alpha/**, apps/web/src/core/supabase.ts, .env.example"
+description: "Backend and data-layer rules for Aboard: Supabase schema and RLS, Edge Functions for Google Drive tokens, Drive API usage, ProjectService/SaveQueue/IndexedDB, and .alpha format."
 ---
 
 # Backend and data-layer rules
 
-Specs: `docs/specs/database.md` (§9), `docs/specs/google-drive.md` (§10), `docs/specs/storage-layer.md` (§11), `docs/specs/alpha-format.md` (§12), `docs/specs/setup-and-deploy.md` (§5, §13), `docs/specs/security.md` (§14). Requirements: `AUTH-*`, `STORE-*`, `ALPHA-*`, `PDFX-*`, `SEC-*` in `docs/PRD.md`. Security rules in `.agents/rules/security.md` always apply.
+Specs: `docs/specs/database.md` (§9), `docs/specs/google-drive.md` (§10), `docs/specs/storage-layer.md` (§11), `docs/specs/alpha-format.md` (§12), `docs/specs/setup-and-deploy.md` (§5), `docs/specs/security.md` (§14). Requirements: `AUTH-*`, `STORE-*`, `ALPHA-*`, `SEC-*` in `docs/PRD.md`. Security rules in `.agents/rules/security.md` always apply.
 
 ## What lives where (do not change without the owner)
 | Data | Drive mode | Local mode | Supabase |
@@ -53,8 +53,3 @@ User content never goes to Supabase tables, Supabase Storage, Vercel functions o
 - `manifest.json` validated with `zod`; `formatVersion` integer; newer formats are rejected with an "update the app" message; changes need a migration function.
 - Import: verify `mimetype`, limits (≤ 5,000 entries, ≤ 10 GB), safe paths, SHA-256 of each file; existing project id → import as a copy with new ids.
 - Export streams to disk with `showSaveFilePicker` where available; otherwise in-memory with caps (1 GB desktop, 300 MB mobile). Download type `application/octet-stream`. No `accept` filter on iOS file inputs.
-
-## Stirling gateway and deploy (§7.4, §13)
-- `services/gateway` (Node 22 + Hono): verify Supabase JWT, allow-listed tools mapped to fixed Stirling endpoints (`/api/v1/misc/ocr-pdf`, `/api/v1/misc/compress-pdf`, `/api/v1/convert/file/pdf`; confirm others in Stirling's Swagger), per-user size/rate/concurrency limits, streaming.
-- Stirling: full image, `internal` Docker network only, no `ports:`, memory limit, pinned version tag after testing.
-- Caddy terminates TLS for `api.<domain>` and proxies `/pdf/*` to the gateway only.

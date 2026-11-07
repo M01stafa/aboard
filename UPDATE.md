@@ -3044,3 +3044,87 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Open:** none.
 
 
+
+## 2026-11-06 — Documentation Alignment and Complete Purge of Stirling/VPS References
+**Request:** Align `docs/PROGRESS.md` and `AGENTS.md` with current reality (active Circuit UI side campaign; Phase 9 permanently dropped; deployment target Vercel + Supabase only; app is 100% client-side); remove all references to Stirling, PDFX, gateway, Oracle, VPS, Docker, `NEXT_PUBLIC_PDF_API_URL`, and `services/` across all documentation and configuration files (`.md`, `.gitignore`); delete `docs/reference/stirling_pdf_architecture.md`; touch zero code files; do not commit, push, or run dev servers.
+**Changes:**
+- `docs/PROGRESS.md` (changed): aligned current state table with Circuit UI side campaign; updated Phase status table (Phases 2, 3, 6 marked Done; Phase 9 marked permanently dropped); updated Release mapping to R1 only; cleaned VERIFY items V13 and V16 and decisions log entries 78, 113, 134, and 135.
+- `AGENTS.md` (changed): removed Stirling, Docker, gateway, Oracle, VPS, `services/gateway`, and `NEXT_PUBLIC_PDF_API_URL`; updated dependency rule to permit installing dependencies without prior owner approval while recording additions in `docs/specs/setup-and-deploy.md` and `UPDATE.md`.
+- `docs/reference/stirling_pdf_architecture.md` (deleted): removed obsolete reference document.
+- `.gitignore` (changed): removed obsolete Stirling config ignore rules (`services/stirling/configs/*`).
+- `.agents/rules/backend.md` (changed): removed `services/**` glob, `stirling.ts` glob, Stirling gateway description, `PDFX-*` requirement references, and Section "Stirling gateway and deploy".
+- `.agents/rules/frontend.md` (changed): removed online Stirling tools and gateway reference.
+- `.agents/rules/security.md` (changed): removed `NEXT_PUBLIC_PDF_API_URL`, gateway references, Section 6 "Online PDF tools (SEC-8)", and renumbered sections.
+- `.agents/skills/security-review/SKILL.md` (changed): removed gateway route audits and Stirling VPS port scan checks.
+- `docs/specs/architecture.md` (changed): removed Stirling from stack table, feature policy, architecture diagram, license matrix, and repository tree; updated ADR-5 and ADR-6.
+- `docs/specs/google-drive.md` (changed): cleaned gateway reference in `verify_jwt` explanation.
+- `docs/specs/modules.md` (changed): removed Section 7.4 "PDF — heavy operations via Stirling (online)" and header reference.
+- `docs/specs/reference-errata.md` (changed): removed Section A.3 "stirling_pdf_architecture.md errata" and header reference.
+- `docs/specs/security.md` (changed): removed `NEXT_PUBLIC_PDF_API_URL`, gateway endpoints, Section 14.8 "Stirling and the gateway", VPS alerts, and Stirling launch checklist item.
+- `docs/specs/setup-and-deploy.md` (changed): removed VPS, Docker Compose, `NEXT_PUBLIC_PDF_API_URL`, gateway environment variables, and Section 13 Docker Compose / Caddyfile stack.
+- `docs/spikes/S4.md` (changed): updated Edge runtime source to Supabase CLI / Cloud.
+- `docs/TASKS.md` (changed): marked Phase 9 cancelled and dropped without prohibited terms; stripped `PDFX-*` citations; removed gateway and Stirling checks from Tasks 43, 44, 45, and 46.
+- `docs/PRD.md` (changed): removed Section A6.10 (`PDFX-1`..`5`), `SEC-8` from A6.12, R2 Stirling release row, Stirling risk and cost items, and updated Q5 default.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `git grep -I -i -w -E "stirling|pdfx|gateway|oracle|vps|docker|NEXT_PUBLIC_PDF_API_URL"`: 0 matches in code or documentation files (only allowed historical drop logs in `PROGRESS.md` and append-only `UPDATE.md`).
+- Code files touched: exactly 0 (verified via `git status`).
+**Open:** none.
+
+
+## 2026-11-06 — Fix Circuit Toolbar Logic Gate Mapping & Force ANSI Symbols
+**Request:** Correct the class-name mapping in the React toolbar and adapter so each logic gate icon creates the matching CircuitJS1 component (`InverterElm`, `AndGateElm`, `NandGateElm`, `OrGateElm`, `NorGateElm`, `XorGateElm`, `XnorGateElm`); ensure canvas shape matches ANSI standards (triangle inverter, D-shape AND, etc.); support Light/Dark themes and English/Arabic LTR/RTL; do not touch GWT Java sources.
+**Changes:**
+- `apps/web/src/modules/circuit/circuit-url.ts` (changed): added `IECGates=false` URL query parameter by default to disable European IEC symbol rendering and enforce standard ANSI logic gate symbols (triangle + circle inverter, D-shape AND gate, curved shield OR gate, etc.).
+- `apps/web/src/modules/circuit/types.ts` (changed): added `IECGates?: boolean` to `CircuitUrlOptions`.
+- `apps/web/src/modules/circuit/circuit-adapter.ts` (changed): expanded `aliasMap` in `runCommand` with canonical class names and aliases for all logic gates (`InverterElm`, `Inverter`, `NOT`, `AndGateElm`, `AND`, `NandGateElm`, `NAND`, `OrGateElm`, `OR`, `NorGateElm`, `NOR`, `XorGateElm`, `XOR`, `XnorGateElm`, `XNOR`).
+- `apps/web/src/modules/circuit/circuit-toolbar.tsx` (changed): expanded `ComponentItem` category union to include `"gates"`; added all 7 logic gates with ANSI vector icons to `CIRCUIT_COMPONENTS`; added "Logic Gates" category section in the Components mega-menu dropdown with responsive max-height and scrolling.
+- `apps/web/src/i18n/en.ts` (changed): added translation keys for `circuit.catGates`, `circuit.compInverter`, `circuit.compAndGate`, `circuit.compNandGate`, `circuit.compOrGate`, `circuit.compNorGate`, `circuit.compXorGate`, `circuit.compXnorGate`.
+- `apps/web/src/i18n/ar.ts` (changed): added Arabic translations for the logic gate category and all 7 logic gate components.
+- `apps/web/src/modules/circuit/circuit-adapter.test.ts` (changed): added unit tests for logic gate commands and alias resolution.
+- `apps/web/src/modules/circuit/circuit-toolbar.test.tsx` (changed): added unit tests for logic gate selection from the palette.
+- `apps/web/src/modules/circuit/circuit-pane.test.tsx` (changed): asserted `IECGates=false` in iframe URL.
+- `apps/web/e2e/circuit-toolbar.spec.ts` (changed): added e2e tests verifying logic gates in palette, active tool badges, and `IECGates=false` parameter.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test src/modules/circuit`: PASS (19/19 tests passed).
+- `pnpm test`: PASS (49/49 test files passed, 431/431 tests passed).
+- `pnpm test:e2e circuit-toolbar.spec.ts`: PASS (1/1 passed).
+- Playwright visual verification: verified all 7 gates in Light and Dark themes, English LTR, and Arabic RTL.
+**Related:** CIRC-1, CIRC-4, CIRC-5, DESIGN.md
+**Open:** none.
+
+
+## 2026-11-06 — Terminate Background Script & Clean Temp Files
+**Request:** Terminate the `node .gemini/test_export.mjs` background task; delete temporary file `.gemini/test_export.mjs` if present; keep `pnpm dev` running for owner review; do not commit or push.
+**Changes:**
+- Background tasks: killed `node .gemini/test_export.mjs` (task `task-2987`).
+- Files: verified `.gemini/test_export.mjs` removed.
+- Dev server: preserved `pnpm dev` (task `task-2584`) running at `http://localhost:3000` (HTTP 200).
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `manage_task(Action='list')`: only `task-2584` (`pnpm.cmd dev`) running.
+- `curl.exe http://localhost:3000`: HTTP 200 OK.
+**Related:** Dev environment cleanup
+**Open:** none.
+
+
+## 2026-11-07 — Circuit UI Polish, Docs Sync, and Push to GitHub
+**Request:** Align documentation (remove cancelled Stirling/Docker/VPS references, update PROGRESS.md to Phase 11 / Task 44), complete Circuit UI visual polish (dark mode grid and panel styling, removal of Falstad credits from About dialog, consolidated React toolbars, fix dropdown palette icon sizing and dark mode rendering), run local verification suite, commit remaining changes, push all commits to origin/main, and verify GitHub Actions CI.
+**Changes:**
+- `docs/PROGRESS.md`, `AGENTS.md`, `.agents/**`, `docs/specs/**`: cleaned up Stirling/VPS references, updated active phase and decisions log.
+- `apps/web/public/circuit/circuitjs.css` (changed): themed native GWT menubar, toolbar, and side panels for Dark mode; fixed variant palette container styling and decoupled 40px variant SVGs from 24px toolbar SVGs to prevent icon clipping; eliminated legacy credits; improved RTL layout.
+- `apps/web/public/circuit/circuitjs.html`, `apps/web/public/circuit/about.html` (changed): neutralized external attribution dialogs and aligned branding.
+- `apps/web/src/modules/circuit/circuit-toolbar.tsx`, `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): consolidated stacked React toolbars into a single cohesive row; disabled "Send to Board" when no Board pane is open.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (49/49 test files passed, 431/431 tests passed).
+- `pnpm ci:security`: PASS (Gitleaks, audit, and bundle secret scan passed).
+- `pnpm build`: PASS (Turbopack production build succeeded).
+**Related:** CIRC-1, CIRC-4, CIRC-5, DESIGN.md
+**Open:** none.
+

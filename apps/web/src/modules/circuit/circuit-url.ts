@@ -17,6 +17,7 @@ export function buildCircuitUrl(options: CircuitUrlOptions = {}): string {
   const hideInfoBox = options.hideInfoBox ?? false;
   const running = options.running ?? true;
   const editable = options.editable ?? true;
+  const iecGates = options.IECGates ?? false;
 
   const params = new URLSearchParams();
   params.set("hideMenu", String(hideMenu));
@@ -40,6 +41,7 @@ export function buildCircuitUrl(options: CircuitUrlOptions = {}): string {
   params.set("running", String(running));
   params.set("lang", lang);
   params.set("editable", String(editable));
+  params.set("IECGates", String(iecGates));
 
   return `/circuit/circuitjs.html?${params.toString()}`;
 }

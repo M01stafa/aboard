@@ -62,7 +62,7 @@ Notes:
 [functions.drive-callback]
 verify_jwt = false
 ```
-(The other functions keep the default. They also verify the user themselves via `requireUser`, so they stay safe even if the gateway setting changes — **VERIFY** current Supabase guidance for `verify_jwt` with asymmetric JWT keys.)
+(The other functions keep the default. They also verify the user themselves via `requireUser`, so they stay safe even if the config setting changes — **VERIFY** current Supabase guidance for `verify_jwt` with asymmetric JWT keys.)
 
 ### 10.3 Shared code (`supabase/functions/_shared/`)
 

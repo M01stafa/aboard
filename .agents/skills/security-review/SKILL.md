@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Runs Aboard's security checks (RLS and user isolation, secrets and API keys, endpoints and CORS, tokens in browser storage, headers, import safety) on a change or before launch, and reports findings. Use before merging changes to auth, database, Edge Functions, Drive, the gateway, headers or import/export, and for the launch checklist.
+description: Runs Aboard's security checks (RLS and user isolation, secrets and API keys, endpoints and CORS, tokens in browser storage, headers, import safety) on a change or before launch, and reports findings. Use before merging changes to auth, database, Edge Functions, Drive, headers or import/export, and for the launch checklist.
 ---
 
 # Security review (Aboard)
@@ -25,7 +25,7 @@ Full rules: `docs/specs/security.md` (§14). Always-on summary: `.agents/rules/s
 - `.env*` ignored by git; `.env.example` has placeholders only.
 
 ## 3. Endpoints and HTTP
-- Each Edge Function / gateway route: `requireUser` (except `drive-callback`), `rateLimit`, `zod` validation, body size limit, generic `{ code }` errors, no logging of tokens/bodies/file names.
+- Each Edge Function: `requireUser` (except `drive-callback`), `rateLimit`, `zod` validation, body size limit, generic `{ code }` errors, no logging of tokens/bodies/file names.
 - CORS: exact origins only. Test: request with `Origin: https://evil.example` → no `Access-Control-Allow-Origin` header.
 - Exceed a rate limit in a test → `429`.
 - Redirect targets validated (relative, no `//`, no backslash).
@@ -44,7 +44,6 @@ Full rules: `docs/specs/security.md` (§14). Always-on summary: `.agents/rules/s
 
 ## 6. Headers and infrastructure
 - Production response headers include CSP, HSTS, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP; `/circuit/` rule correct.
-- Stirling unreachable from the internet (external port scan of the VPS shows only 80/443); gateway rejects requests without a valid JWT.
 
 ## Report format
 For each section: `PASS` or `FAIL` with file/line and the fix proposed. Log the review date and result in `docs/PROGRESS.md`; any FAIL blocks the merge or launch until the owner decides.

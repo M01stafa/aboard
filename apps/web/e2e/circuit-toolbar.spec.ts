@@ -112,14 +112,44 @@ test.describe("Circuit Simulator Custom Toolbar (Task 42 / CIRC-5)", () => {
     const paletteDropdown = toolbar.locator('[data-testid="circuit-palette-dropdown"]');
     await expect(paletteDropdown).toBeVisible();
 
+    // Verify Logic Gates are present in palette
+    const inverterBtn = paletteDropdown.locator('[data-testid="circuit-comp-inverter-btn"]');
+    const andGateBtn = paletteDropdown.locator('[data-testid="circuit-comp-and-gate-btn"]');
+    const nandGateBtn = paletteDropdown.locator('[data-testid="circuit-comp-nand-gate-btn"]');
+    const orGateBtn = paletteDropdown.locator('[data-testid="circuit-comp-or-gate-btn"]');
+    const norGateBtn = paletteDropdown.locator('[data-testid="circuit-comp-nor-gate-btn"]');
+    const xorGateBtn = paletteDropdown.locator('[data-testid="circuit-comp-xor-gate-btn"]');
+    const xnorGateBtn = paletteDropdown.locator('[data-testid="circuit-comp-xnor-gate-btn"]');
+
+    await expect(inverterBtn).toBeVisible();
+    await expect(andGateBtn).toBeVisible();
+    await expect(nandGateBtn).toBeVisible();
+    await expect(orGateBtn).toBeVisible();
+    await expect(norGateBtn).toBeVisible();
+    await expect(xorGateBtn).toBeVisible();
+    await expect(xnorGateBtn).toBeVisible();
+
+    // Select Inverter (NOT) gate
+    await inverterBtn.click();
+    await expect(paletteDropdown).not.toBeVisible();
+    const activeToolBadge = toolbar.locator('[data-testid="circuit-active-tool-badge"]');
+    await expect(activeToolBadge).toBeVisible();
+    await expect(activeToolBadge).toContainText("Inverter (NOT)");
+
+    // Reopen palette and select AND Gate
+    await paletteBtn.click();
+    await andGateBtn.click();
+    await expect(paletteDropdown).not.toBeVisible();
+    await expect(activeToolBadge).toContainText("AND Gate");
+
     // Select Resistor
+    await paletteBtn.click();
     const resistorBtn = paletteDropdown.locator('[data-testid="circuit-comp-resistor-btn"]');
     await expect(resistorBtn).toBeVisible();
     await resistorBtn.click();
 
     // Verify dropdown closed and active tool badge appeared
     await expect(paletteDropdown).not.toBeVisible();
-    const activeToolBadge = toolbar.locator('[data-testid="circuit-active-tool-badge"]');
     await expect(activeToolBadge).toBeVisible();
     await expect(activeToolBadge).toContainText("Resistor");
 
@@ -130,9 +160,10 @@ test.describe("Circuit Simulator Custom Toolbar (Task 42 / CIRC-5)", () => {
     // Toolbar remains visible at all times (in both Simple and Advanced modes)
     await expect(toolbar).toBeVisible();
 
-    // Verify iframe reloads with hideMenu=false (native menu visible)
+    // Verify iframe reloads with hideMenu=false and IECGates=false
     const iframe = circuitPane.locator('iframe[data-testid="circuit-iframe"]');
     await expect(iframe).toHaveAttribute("src", /hideMenu=false/);
+    await expect(iframe).toHaveAttribute("src", /IECGates=false/);
 
     // Wait for iframe to reload with simulator attached
     await page.waitForFunction(() => {

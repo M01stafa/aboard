@@ -87,7 +87,11 @@
   --control-md: 36px;
 }
 
-:root[data-theme="dark"], body.dark-theme {
+:root[data-theme="dark"],
+html[data-theme="dark"],
+html.dark-theme,
+body.dark-theme,
+[data-theme="dark"] body {
   color-scheme: dark;
   --bg-body: var(--brand-night);
   --bg-surface: #0C162C;
@@ -161,6 +165,7 @@ body,
     linear-gradient(to right, color-mix(in srgb, var(--border-card) 55%, transparent) 1px, transparent 1px),
     linear-gradient(to bottom, color-mix(in srgb, var(--border-card) 55%, transparent) 1px, transparent 1px) !important;
   background-size: 20px 20px !important;
+  background-attachment: fixed !important;
   color: var(--text-main) !important;
   margin: 0 !important;
   padding: 0 !important;
@@ -172,19 +177,25 @@ body,
   inset: 0 !important;
 }
 
-:root[data-theme="dark"] html,
-:root[data-theme="dark"] body,
+:root[data-theme="dark"],
+html[data-theme="dark"],
+html.dark-theme,
 body.dark-theme,
-html.dark-theme {
+[data-theme="dark"] body,
+:root[data-theme="dark"] .gwt-SplitLayoutPanel,
+html[data-theme="dark"] .gwt-SplitLayoutPanel,
+html.dark-theme .gwt-SplitLayoutPanel,
+body.dark-theme .gwt-SplitLayoutPanel {
   background-color: var(--bg-body) !important;
   background-image: 
     linear-gradient(to right, color-mix(in srgb, var(--border-card) 60%, transparent) 1px, transparent 1px),
     linear-gradient(to bottom, color-mix(in srgb, var(--border-card) 60%, transparent) 1px, transparent 1px) !important;
   background-size: 20px 20px !important;
+  background-attachment: fixed !important;
 }
 
 /* Canvas Container: Keep GWT natural layout geometry and apply blueprint grid */
-div:has(> canvas[style*="position: absolute"]) {
+div:has(> canvas:not(.verticalPanel canvas):not(#painel canvas)) {
   overflow: hidden !important;
   z-index: 1 !important;
   background-color: transparent !important;
@@ -192,24 +203,30 @@ div:has(> canvas[style*="position: absolute"]) {
     linear-gradient(to right, color-mix(in srgb, var(--border-card) 55%, transparent) 1px, transparent 1px),
     linear-gradient(to bottom, color-mix(in srgb, var(--border-card) 55%, transparent) 1px, transparent 1px) !important;
   background-size: 20px 20px !important;
+  background-attachment: fixed !important;
 }
 
-:root[data-theme="dark"] div:has(> canvas[style*="position: absolute"]),
-body.dark-theme div:has(> canvas[style*="position: absolute"]) {
+:root[data-theme="dark"] div:has(> canvas:not(.verticalPanel canvas):not(#painel canvas)),
+html[data-theme="dark"] div:has(> canvas:not(.verticalPanel canvas):not(#painel canvas)),
+html.dark-theme div:has(> canvas:not(.verticalPanel canvas):not(#painel canvas)),
+body.dark-theme div:has(> canvas:not(.verticalPanel canvas):not(#painel canvas)) {
   background-color: transparent !important;
   background-image: 
     linear-gradient(to right, color-mix(in srgb, var(--border-card) 60%, transparent) 1px, transparent 1px),
     linear-gradient(to bottom, color-mix(in srgb, var(--border-card) 60%, transparent) 1px, transparent 1px) !important;
   background-size: 20px 20px !important;
+  background-attachment: fixed !important;
 }
 
-canvas {
+canvas:not(.verticalPanel canvas):not(#painel canvas) {
   background-color: var(--bg-subtle) !important;
   mix-blend-mode: multiply !important;
 }
 
-:root[data-theme="dark"] canvas:not(.verticalPanel canvas),
-body.dark-theme canvas:not(.verticalPanel canvas) {
+:root[data-theme="dark"] canvas:not(.verticalPanel canvas):not(#painel canvas),
+html[data-theme="dark"] canvas:not(.verticalPanel canvas):not(#painel canvas),
+html.dark-theme canvas:not(.verticalPanel canvas):not(#painel canvas),
+body.dark-theme canvas:not(.verticalPanel canvas):not(#painel canvas) {
   background-color: var(--bg-body) !important;
   mix-blend-mode: screen !important;
 }
@@ -492,6 +509,41 @@ div:has(> .gwt-MenuBar-horizontal) {
   color: var(--accent-text) !important;
 }
 
+/* Menu Separators: Flatten and align with design tokens */
+.gwt-MenuItemSeparator,
+.gwt-MenuItemSeparator .menuSeparatorInner {
+  height: 1px !important;
+  background-color: var(--border-card) !important;
+  margin: 4px 8px !important;
+  overflow: hidden !important;
+  border: none !important;
+}
+
+/* Completely remove About menu item, icon, and dialog popup */
+.gwt-MenuItem:has(.cirjsicon-info-circled),
+td.gwt-MenuItem:has(.cirjsicon-info-circled),
+tr:has(> td.gwt-MenuItem:has(.cirjsicon-info-circled)),
+.gwt-MenuItem[title*="About"],
+.gwt-MenuItem[aria-label*="About"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  overflow: hidden !important;
+}
+
+.gwt-PopupPanel:has(iframe[src*="about.html"]),
+div:has(> iframe[src*="about.html"]),
+.gwt-DialogBox:has(iframe[src*="about.html"]) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 /* GWT Toolbar Wrapper: Full width stretching across top */
 div:has(> div > .cirjsicon-reply) {
   right: 0px !important;
@@ -620,6 +672,10 @@ div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="#007bff"] {
 
 :root[data-theme="dark"] div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"],
 :root[data-theme="dark"] div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="rgb(0, 123, 255)"],
+html[data-theme="dark"] div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"],
+html[data-theme="dark"] div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="rgb(0, 123, 255)"],
+html.dark-theme div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"],
+html.dark-theme div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="rgb(0, 123, 255)"],
 body.dark-theme div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"],
 body.dark-theme div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="rgb(0, 123, 255)"] {
   background-color: var(--bg-subtle) !important;
@@ -629,16 +685,99 @@ body.dark-theme div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="rgb(0, 123
 /* SVG icons inside toolbar */
 div:has(> .cirjsicon-reply) > .gwt-Label svg,
 div:has(> [class*="cirjsicon-"]) > .gwt-Label svg {
-  width: 22px !important;
-  height: 22px !important;
+  width: 24px !important;
+  height: 24px !important;
   display: block !important;
+  color: var(--text-main) !important;
+  filter: none !important;
 }
 
-:root[data-theme="dark"] div:has(> .cirjsicon-reply) > .gwt-Label svg,
-:root[data-theme="dark"] div:has(> [class*="cirjsicon-"]) > .gwt-Label svg,
-body.dark-theme div:has(> .cirjsicon-reply) > .gwt-Label svg,
-body.dark-theme div:has(> [class*="cirjsicon-"]) > .gwt-Label svg {
-  filter: invert(1) hue-rotate(180deg);
+/* SVG icons inside variant component palette dropdowns (40px) */
+.palette-container > .gwt-Label svg {
+  width: 40px !important;
+  height: 40px !important;
+  display: block !important;
+  color: var(--text-main) !important;
+  filter: none !important;
+}
+
+div:has(> .cirjsicon-reply) > .gwt-Label svg,
+div:has(> [class*="cirjsicon-"]) > .gwt-Label svg,
+.palette-container > .gwt-Label svg {
+  color: var(--text-main) !important;
+}
+
+div:has(> .cirjsicon-reply) > .gwt-Label:hover svg,
+div:has(> [class*="cirjsicon-"]) > .gwt-Label:hover svg,
+.palette-container > .gwt-Label:hover svg {
+  color: var(--accent-text) !important;
+}
+
+div:has(> .cirjsicon-reply) > .gwt-Label svg path[stroke="currentColor"],
+div:has(> [class*="cirjsicon-"]) > .gwt-Label svg path[stroke="currentColor"],
+.palette-container > .gwt-Label svg path[stroke="currentColor"] {
+  stroke: var(--text-main) !important;
+}
+
+div:has(> .cirjsicon-reply) > .gwt-Label:hover svg path[stroke="currentColor"],
+div:has(> [class*="cirjsicon-"]) > .gwt-Label:hover svg path[stroke="currentColor"],
+.palette-container > .gwt-Label:hover svg path[stroke="currentColor"] {
+  stroke: var(--accent-text) !important;
+}
+
+div:has(> .cirjsicon-reply) > .gwt-Label svg circle[fill="currentColor"],
+div:has(> [class*="cirjsicon-"]) > .gwt-Label svg circle[fill="currentColor"],
+.palette-container > .gwt-Label svg circle[fill="currentColor"] {
+  fill: var(--text-main) !important;
+}
+
+div:has(> .cirjsicon-reply) > .gwt-Label:hover svg circle[fill="currentColor"],
+div:has(> [class*="cirjsicon-"]) > .gwt-Label:hover svg circle[fill="currentColor"],
+.palette-container > .gwt-Label:hover svg circle[fill="currentColor"] {
+  fill: var(--accent-text) !important;
+}
+
+div:has(> .cirjsicon-reply) > .gwt-Label svg path[fill="currentColor"],
+div:has(> [class*="cirjsicon-"]) > .gwt-Label svg path[fill="currentColor"],
+.palette-container > .gwt-Label svg path[fill="currentColor"] {
+  fill: var(--text-main) !important;
+}
+
+div:has(> .cirjsicon-reply) > .gwt-Label:hover svg path[fill="currentColor"],
+div:has(> [class*="cirjsicon-"]) > .gwt-Label:hover svg path[fill="currentColor"],
+.palette-container > .gwt-Label:hover svg path[fill="currentColor"] {
+  fill: var(--accent-text) !important;
+}
+
+/* Selected / Active state on SVG icons */
+div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"] svg,
+div:has(> .cirjsicon-reply) > .gwt-Label[style*="#007bff"] svg,
+div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="rgb(0, 123, 255)"] svg,
+div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="#007bff"] svg {
+  color: var(--brand-primary) !important;
+}
+
+div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"] svg path[stroke="currentColor"],
+div:has(> .cirjsicon-reply) > .gwt-Label[style*="#007bff"] svg path[stroke="currentColor"],
+div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="rgb(0, 123, 255)"] svg path[stroke="currentColor"],
+div:has(> [class*="cirjsicon-"]) > .gwt-Label[style*="#007bff"] svg path[stroke="currentColor"] {
+  stroke: var(--brand-primary) !important;
+}
+
+:root[data-theme="dark"] div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"] svg,
+:root[data-theme="dark"] div:has(> .cirjsicon-reply) > .gwt-Label[style*="#007bff"] svg,
+html[data-theme="dark"] div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"] svg,
+html.dark-theme div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"] svg,
+body.dark-theme div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"] svg {
+  color: var(--tech-300) !important;
+}
+
+:root[data-theme="dark"] div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"] svg path[stroke="currentColor"],
+:root[data-theme="dark"] div:has(> .cirjsicon-reply) > .gwt-Label[style*="#007bff"] svg path[stroke="currentColor"],
+html[data-theme="dark"] div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"] svg path[stroke="currentColor"],
+html.dark-theme div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"] svg path[stroke="currentColor"],
+body.dark-theme div:has(> .cirjsicon-reply) > .gwt-Label[style*="rgb(0, 123, 255)"] svg path[stroke="currentColor"] {
+  stroke: var(--tech-300) !important;
 }
 
 /* Toolbar Mode Label */
@@ -659,9 +798,11 @@ div:has(> [class*="cirjsicon-"]) > .gwt-Label:not([class*="cirjsicon-"]):not(:ha
   border: 1px solid var(--border-card) !important;
   border-radius: var(--radius-sm) !important;
   box-shadow: var(--shadow-3) !important;
-  padding: 6px !important;
-  display: flex;
+  padding: 4px 6px !important;
+  display: flex !important;
+  align-items: center !important;
   gap: 4px !important;
+  z-index: 1000 !important;
 }
 
 .palette-container[style*="display: none"],
@@ -673,16 +814,21 @@ div:has(> [class*="cirjsicon-"]) > .gwt-Label:not([class*="cirjsicon-"]):not(:ha
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  min-width: 36px !important;
-  min-height: 36px !important;
-  padding: 4px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  width: 44px !important;
+  height: 44px !important;
+  padding: 2px !important;
   border-radius: var(--radius-sm) !important;
   cursor: pointer !important;
-  transition: background-color 120ms ease;
+  color: var(--text-main) !important;
+  transition: background-color 120ms ease, color 120ms ease;
+  box-sizing: border-box !important;
 }
 
 .palette-container > .gwt-Label:hover {
-  background: var(--bg-subtle) !important;
+  background-color: var(--bg-subtle) !important;
+  color: var(--accent-text) !important;
 }
 
 /* Dialog Styling (GWT DialogBox & Backdrop Overlay) */
@@ -963,7 +1109,7 @@ body:has(.gwt-MenuBar) #painel,
 body:has(.gwt-MenuBar) .verticalPanel,
 body:has(.gwt-MenuBar-horizontal) #painel,
 body:has(.gwt-MenuBar-horizontal) .verticalPanel {
-  top: 56px !important;
+  top: 68px !important;
 }
 
 /* Hide offscreen file upload input and legacy empty branding iframe */
@@ -1011,7 +1157,54 @@ body:has(.gwt-MenuBar-horizontal) .verticalPanel {
 }
 
 :root[data-theme="dark"] .verticalPanel canvas,
-body.dark-theme .verticalPanel canvas {
+html[data-theme="dark"] .verticalPanel canvas,
+html.dark-theme .verticalPanel canvas,
+body.dark-theme .verticalPanel canvas,
+:root[data-theme="dark"] #painel canvas,
+html[data-theme="dark"] #painel canvas,
+html.dark-theme #painel canvas,
+body.dark-theme #painel canvas {
   filter: invert(0.92) hue-rotate(185deg) brightness(0.9) contrast(1.1) !important;
   clip-path: inset(0 15px 0 15px round 3px) !important;
+}
+
+/* RTL (Arabic) Chrome and Layout Adjustments */
+html[dir="rtl"] .verticalPanel,
+body[dir="rtl"] .verticalPanel,
+html[dir="rtl"] #painel,
+body[dir="rtl"] #painel {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+html[dir="rtl"] .verticalPanel canvas,
+body[dir="rtl"] .verticalPanel canvas,
+html[dir="rtl"] #painel canvas,
+body[dir="rtl"] #painel canvas {
+  direction: ltr !important;
+}
+
+html[dir="rtl"] .gwt-MenuBar-horizontal {
+  direction: rtl !important;
+}
+
+html[dir="rtl"] .gwt-MenuBar-vertical,
+html[dir="rtl"] .gwt-MenuBarPopup,
+html[dir="rtl"] .gwt-PopupPanel:not(.gwt-DialogBox) {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+html[dir="rtl"] .gwt-MenuItem {
+  flex-direction: row-reverse !important;
+  justify-content: space-between !important;
+}
+
+html[dir="rtl"] .gwt-MenuItem div[style*="position:absolute"],
+html[dir="rtl"] .gwt-MenuItem div[style*="position: absolute"] {
+  margin-inline-start: auto !important;
+  margin-right: auto !important;
+  margin-left: 0 !important;
+  padding-inline-start: 16px !important;
+  direction: ltr !important;
 }

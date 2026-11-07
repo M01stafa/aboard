@@ -83,6 +83,7 @@ describe("CircuitPane Component (Task 24 / CIRC-1, CIRC-2, CIRC-3, CIRC-4)", () 
     expect(src).toContain("selectColor=%234F9ED5"); // tech blue
     expect(src).toContain("running=true");
     expect(src).toContain("editable=true");
+    expect(src).toContain("IECGates=false");
 
     // Custom toolbar is rendered by default
     expect(container.querySelector('[data-testid="circuit-toolbar"]')).not.toBeNull();

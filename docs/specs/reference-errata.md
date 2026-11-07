@@ -6,7 +6,7 @@
 > Facts were checked against upstream sources, npm and official docs on 2026-10-07. Items marked **VERIFY** must be confirmed in source or docs before coding against them; record the result in `docs/PROGRESS.md` (VERIFY log), then update this file.
 > If the implementation must differ from this spec, change the spec in the same commit and log the decision in `docs/PROGRESS.md`.
 
-The owner's reference files (`docs/reference/circuitjs1_architecture.md`, `excalidraw_architecture.md`, `stirling_pdf_architecture.md`) contain errors. Apply this table before trusting them. When a reference file and the upstream source disagree, the source wins; add any new discrepancy here.
+The owner's reference files (`docs/reference/circuitjs1_architecture.md`, `excalidraw_architecture.md`) contain errors. Apply this table before trusting them. When a reference file and the upstream source disagree, the source wins; add any new discrepancy here.
 
 ## Errata for the reference files
 
@@ -30,13 +30,3 @@ The owner's reference files (`docs/reference/circuitjs1_architecture.md`, `excal
 | §3.3, §7 | Collaboration part of the package | Lives in the excalidraw.com app, not the npm package |
 | Missing | — | Fonts load from CDN unless `window.EXCALIDRAW_ASSET_PATH` + self-hosted fonts; 4 MB image limit |
 
-### A.3 `stirling_pdf_architecture.md`
-| Section | Reference says | Correct |
-|---|---|---|
-| §4 | `stirling/mail/` | `stirling/software/SPDF/` and `stirling/software/common/` |
-| §5 | `/api/v1/general/ocr-pdf` | `/api/v1/misc/ocr-pdf` |
-| §3.3 | PDF.js + pdf-lib, React 18 | EmbedPDF + `pdfjs-dist` + `@cantoo/pdf-lib`; React 19, Mantine 8, Tailwind 4, Vite 7; `package.json` at `frontend/`, app in `frontend/editor/` |
-| §1, §4 | Non-MIT: `proprietary`, `saas` | Also `engine/` and `frontend/editor/src/{proprietary,desktop,saas,cloud,prototypes,portal,portal-saas}/` |
-| §6 | `ultra-lite` ≈ 200 MB RAM | Official compose sets 1 GB; no OCR, no LibreOffice |
-| §6 | `stirling-pdf:latest` | `docker.stirlingpdf.com/stirlingtools/stirling-pdf:{latest,ultra-lite,fat}` |
-| Missing | — | `corsAllowedOrigins: []` allows all origins with credentials |
