@@ -235,33 +235,30 @@ describe("pdf-custom-ink-layer", () => {
       expect(Math.max(minX, Math.min(maxX, farPosX))).toBe(1200);
     });
 
-    it("maps 300% overflow SVG coordinates correctly via toPagePoint math", () => {
-      // SVG rect is 3x the page width and 3x the page height
+    it("maps horizontal overflow and vertical 1:1 coordinates correctly via toPagePoint math", () => {
       const rectLeft = 100;
       const rectTop = 50;
       const rectWidth = 1800; // 3 * 600
-      const rectHeight = 2400; // 3 * 800
+      const rectHeight = 800;
 
       const toPagePoint = (clientX: number, clientY: number) => ({
         x: -pageWidth + (clientX - rectLeft) * ((3 * pageWidth) / rectWidth),
-        y: -pageHeight + (clientY - rectTop) * ((3 * pageHeight) / rectHeight),
+        y: (clientY - rectTop) * (pageHeight / rectHeight),
       });
 
       // Left edge of SVG canvas (-pageWidth)
-      expect(toPagePoint(rectLeft, rectTop)).toEqual({ x: -600, y: -800 });
+      expect(toPagePoint(rectLeft, rectTop)).toEqual({ x: -600, y: 0 });
 
       // Left edge of the PDF page (x = 0, y = 0)
       const pageLeftClientX = rectLeft + rectWidth / 3;
-      const pageTopClientY = rectTop + rectHeight / 3;
-      expect(toPagePoint(pageLeftClientX, pageTopClientY)).toEqual({ x: 0, y: 0 });
+      expect(toPagePoint(pageLeftClientX, rectTop)).toEqual({ x: 0, y: 0 });
 
-      // Right edge of the PDF page (x = pageWidth, y = pageHeight)
+      // Bottom-right of the PDF page (x = pageWidth, y = pageHeight)
       const pageRightClientX = rectLeft + (2 * rectWidth) / 3;
-      const pageBottomClientY = rectTop + (2 * rectHeight) / 3;
-      expect(toPagePoint(pageRightClientX, pageBottomClientY)).toEqual({ x: 600, y: 800 });
+      expect(toPagePoint(pageRightClientX, rectTop + rectHeight)).toEqual({ x: 600, y: 800 });
 
       // Right edge of SVG canvas (2 * pageWidth)
-      expect(toPagePoint(rectLeft + rectWidth, rectTop + rectHeight)).toEqual({ x: 1200, y: 1600 });
+      expect(toPagePoint(rectLeft + rectWidth, rectTop + rectHeight)).toEqual({ x: 1200, y: 800 });
     });
   });
 

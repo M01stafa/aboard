@@ -246,14 +246,14 @@ test.describe("Project State Persistence & Tab Deduplication on Re-entry", () =>
     // 8. Assert: exactly ONE tab for each tool (Whiteboard + PDF = exactly 2 tabs, NO duplicate circuit tabs)
     await expect(page.locator(".ws-tab-btn")).toHaveCount(2);
     const tabTexts = await page.locator(".ws-tab-btn").allInnerTexts();
-    expect(tabTexts.some((t) => /Whiteboard/i.test(t))).toBe(true);
+    expect(tabTexts.some((t) => /Board|Whiteboard/i.test(t))).toBe(true);
     expect(tabTexts.some((t) => /persistence-test|PDF/i.test(t))).toBe(true);
     // Ensure no circuit tabs were accidentally spawned
     expect(tabTexts.some((t) => /Circuit/i.test(t))).toBe(false);
 
     // 9. Assert the whiteboard drawing exists on re-entry
     // Find the whiteboard tab button and click to activate if not primary
-    const boardTabBtn = page.locator(".ws-tab-btn").filter({ hasText: /Whiteboard/i });
+    const boardTabBtn = page.locator(".ws-tab-btn").filter({ hasText: /Board|Whiteboard/i });
     await boardTabBtn.click();
 
     // Wait for Excalidraw scene elements to contain the persistent rectangle

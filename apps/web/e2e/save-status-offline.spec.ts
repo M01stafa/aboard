@@ -240,7 +240,41 @@ test.describe("WS-3 / STORE-5: Save Status Reactivity & Offline Detection", () =
 
     // Verify only 1 tab remains
     await expect(page.locator(".ws-tab-btn")).toHaveCount(1);
-    await expect(page.locator(".ws-tab-btn")).toHaveText(/Whiteboard/i);
+    await expect(page.locator(".ws-tab-btn")).toHaveText(/Board/i);
+  });
+
+  test("persists closed tabs across reloads and redirects to launcher on last tab close", async ({ page }) => {
+    await mockSignIn(page, testUser);
+    const projectId = `proj-persist-${Date.now()}`;
+    await page.goto(`/workspace?p=${projectId}`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+
+    // 1. Add a second tab (PDF)
+    const addTabBtn = page.locator('[data-testid="add-tab-btn"]');
+    await addTabBtn.click();
+    await page.locator('[data-testid="add-tab-pdf"]').click();
+    await expect(page.locator(".ws-tab-btn")).toHaveCount(2);
+
+    // 2. Close PDF tab
+    const pdfCloseBtn = page.locator(".ws-tab-close-btn").nth(1);
+    await pdfCloseBtn.click();
+    await expect(page.locator(".ws-tab-btn")).toHaveCount(1);
+    await expect(page.locator(".ws-tab-btn")).toHaveText(/Board/i);
+
+    // 3. Reload/reopen project and verify only Whiteboard tab is restored
+    await page.goto(`/workspace?p=${projectId}`);
+    await expect(page.locator('[data-testid="workspace-host"]')).toBeVisible();
+    await expect(page.locator(".ws-tab-btn")).toHaveCount(1);
+    await expect(page.locator(".ws-tab-btn")).toHaveText(/Board/i);
+
+    // 4. Close the last remaining tab -> should redirect to launcher (/)
+    const lastCloseBtn = page.locator(".ws-tab-close-btn").first();
+    await expect(lastCloseBtn).toBeAttached();
+    await lastCloseBtn.click();
+
+    // Must redirect to launcher /
+    await page.waitForURL((url) => url.pathname === "/" || url.pathname === "");
+    expect(page.url()).not.toContain("/workspace");
   });
 });
 

@@ -94,6 +94,46 @@ describe("board-insertion", () => {
       // 4. View scrolled to content
       expect(mockScrollToContent).toHaveBeenCalledWith(el, { fitToContent: true });
     });
+
+    it("defaults to unlocked image element (locked: false) so user can move and resize freely", async () => {
+      const mockBlob = new Blob(["fake-image-bytes"], { type: "image/webp" });
+      const mockPutFile = vi.fn().mockResolvedValue({ key: "mock-sha256-key" });
+
+      const mockProjectService = {
+        putFile: mockPutFile,
+      } as unknown as ProjectService;
+
+      const mockAddFiles = vi.fn();
+      const mockUpdateScene = vi.fn();
+      const mockScrollToContent = vi.fn();
+
+      const mockApi: ExcalidrawImperativeAPI = {
+        addFiles: mockAddFiles,
+        getSceneElements: vi.fn().mockReturnValue([]),
+        updateScene: mockUpdateScene,
+        scrollToContent: mockScrollToContent,
+        getAppState: vi.fn(),
+        getFiles: vi.fn(),
+        refresh: vi.fn(),
+      } as unknown as ExcalidrawImperativeAPI;
+
+      await insertImageIntoBoard({
+        projectId: "proj-1",
+        tabId: "tab-board",
+        blob: mockBlob,
+        mimeType: "image/webp",
+        width: 800,
+        height: 600,
+        projectServiceOverride: mockProjectService,
+        apiOverride: mockApi,
+      });
+
+      expect(mockUpdateScene).toHaveBeenCalledTimes(1);
+      const scenePayload = mockUpdateScene.mock.calls[0][0];
+      expect(scenePayload.elements).toHaveLength(1);
+      const el = scenePayload.elements[0];
+      expect(el.locked).toBe(false);
+    });
   });
 
   describe("insertCircuitSvgIntoBoard", () => {

@@ -116,7 +116,7 @@ test.describe("Project Index & Recent Projects List (Task 22 / LAUNCH-2, LAUNCH-
 
     // Assert exactly 1 tab is opened (Multi-tab bug fix)
     await expect(page.locator(".ws-tab-btn")).toHaveCount(1);
-    await expect(page.locator(".ws-tab-btn")).toHaveText(/Whiteboard 1/i);
+    await expect(page.locator(".ws-tab-btn")).toHaveText(/Board 1|Whiteboard 1/i);
 
     // Assert '+' menu opens and disables open tools (Unique tool rule)
     const addTabBtn = page.locator('[data-testid="add-tab-btn"]');

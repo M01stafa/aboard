@@ -206,15 +206,25 @@ test.describe("Cross-Tool Integration: Board to PDF and Selection to Note (Task 
     await expect(pageDisplay).toContainText("2", { timeout: 10000 });
 
     // 11. Test "Board to PDF" (INT-3)
-    const sendToPdfBtn = secondaryPane.locator('[data-testid="board-send-to-pdf-btn"]');
-    await expect(sendToPdfBtn).toBeVisible();
+    const moreBtn = secondaryPane.locator('[data-testid="board-more-btn"]');
+    if (await moreBtn.isVisible()) {
+      await moreBtn.click();
+      const moreSendToPdf = secondaryPane.locator('[data-testid="more-send-to-pdf"]');
+      await expect(moreSendToPdf).toBeVisible();
+      await moreSendToPdf.click();
+      const appendBtn = secondaryPane.locator('[data-testid="more-send-to-pdf-append"], [data-testid="send-to-pdf-append"]');
+      await expect(appendBtn).toBeVisible();
+      await appendBtn.click();
+    } else {
+      const sendToPdfBtn = secondaryPane.locator('[data-testid="board-send-to-pdf-btn"]');
+      await expect(sendToPdfBtn).toBeVisible();
+      await sendToPdfBtn.click();
 
-    await sendToPdfBtn.click();
-
-    // Select "Add as New Page" from the Send to PDF dropdown menu
-    const appendBtn = secondaryPane.locator('[data-testid="send-to-pdf-append"]');
-    await expect(appendBtn).toBeVisible();
-    await appendBtn.click();
+      // Select "Add as New Page" from the Send to PDF dropdown menu
+      const appendBtn = secondaryPane.locator('[data-testid="send-to-pdf-append"]');
+      await expect(appendBtn).toBeVisible();
+      await appendBtn.click();
+    }
 
     // Verify success toast appears
     const toastNotice = secondaryPane.locator('[data-testid="board-toast-notice"]');

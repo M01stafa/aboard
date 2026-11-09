@@ -30,15 +30,16 @@ function isMobileEnvironment(): boolean {
   return isCoarse || isNarrow;
 }
 
-export function CircuitPane({
-  projectId,
-  tab,
-  visible,
-  hasBoardOpen,
-  hasBoardTab,
-  onMount,
-  pauseWhenHiddenDefault,
-}: CircuitPaneProps) {
+export const CircuitPane = React.memo(
+  function CircuitPane({
+    projectId,
+    tab,
+    visible,
+    hasBoardOpen,
+    hasBoardTab,
+    onMount,
+    pauseWhenHiddenDefault,
+  }: CircuitPaneProps) {
   const isBoardOpen = hasBoardOpen ?? hasBoardTab ?? false;
   const { t, resolvedTheme: i18nTheme, language } = useI18n();
 
@@ -81,9 +82,15 @@ export function CircuitPane({
   // Helper to trigger GWT resize calculations and canvas dimension updates
   const dispatchResize = useCallback(() => {
     try {
-      const cw = iframeRef.current?.contentWindow;
+      const iframe = iframeRef.current;
+      const cw = iframe?.contentWindow;
       if (cw) {
-        cw.dispatchEvent(new Event("resize"));
+        // Clamping check: ensure meaningful non-zero dimensions to avoid scope wave distortion
+        const winWidth = cw.innerWidth || iframe?.clientWidth || 0;
+        const winHeight = cw.innerHeight || iframe?.clientHeight || 0;
+        if (winWidth >= 200 && winHeight >= 150) {
+          cw.dispatchEvent(new Event("resize"));
+        }
       }
     } catch {
       // Non-fatal if cross-origin or in teardown
@@ -96,14 +103,28 @@ export function CircuitPane({
     if (!container || typeof ResizeObserver === "undefined") return;
 
     let rafId: number | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastDispatchTime = 0;
+    const THROTTLE_MS = 100;
+
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0) {
-          if (rafId) cancelAnimationFrame(rafId);
-          rafId = requestAnimationFrame(() => {
+        // Clamp to non-zero, meaningful dimensions
+        if (width >= 200 && height >= 150) {
+          const now = Date.now();
+          if (now - lastDispatchTime >= THROTTLE_MS) {
+            lastDispatchTime = now;
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+              dispatchResize();
+            });
+          }
+          // Debounced trailing dispatch so settled dimensions are accurately reflected
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
             dispatchResize();
-          });
+          }, 150);
         }
       }
     });
@@ -111,6 +132,7 @@ export function CircuitPane({
     observer.observe(container);
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
+      if (debounceTimer) clearTimeout(debounceTimer);
       observer.disconnect();
     };
   }, [dispatchResize]);
@@ -118,16 +140,19 @@ export function CircuitPane({
   // When pane becomes visible (tab switch or split view toggle), dispatch resize to update canvas dimensions
   useEffect(() => {
     if (visible) {
-      dispatchResize();
       const rafId = requestAnimationFrame(() => {
         dispatchResize();
       });
-      const timer = setTimeout(() => {
+      const timer50 = setTimeout(() => {
         dispatchResize();
       }, 50);
+      const timer150 = setTimeout(() => {
+        dispatchResize();
+      }, 150);
       return () => {
         cancelAnimationFrame(rafId);
-        clearTimeout(timer);
+        clearTimeout(timer50);
+        clearTimeout(timer150);
       };
     }
   }, [visible, dispatchResize]);
@@ -144,6 +169,9 @@ export function CircuitPane({
   const [isAttached, setIsAttached] = useState<boolean>(() => adapter.isAttached());
   const [isSimRunning, setIsSimRunning] = useState<boolean>(true);
   const [isExportingToBoard, setIsExportingToBoard] = useState<boolean>(false);
+  const [isCircuitEmpty, setIsCircuitEmpty] = useState<boolean>(() => {
+    return adapter.getElements().length === 0;
+  });
 
   // Circuit Toolbar state (Task 42)
   const [isAdvancedMenu, setIsAdvancedMenu] = useState<boolean>(false);
@@ -151,7 +179,7 @@ export function CircuitPane({
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
 
   const handleSendToBoard = useCallback(async () => {
-    if (!isBoardOpen || !isAttached || isExportingToBoard) return;
+    if (!isBoardOpen || !isAttached || isExportingToBoard || isCircuitEmpty) return;
     setIsExportingToBoard(true);
     try {
       const svg = await adapter.requestSVG();
@@ -161,11 +189,11 @@ export function CircuitPane({
         sourceTabId: tab.id,
       });
     } catch (err) {
-      console.error("[CircuitPane] Failed to send circuit to board:", err);
+      console.warn("[CircuitPane] Failed to send circuit to board:", err);
     } finally {
       setIsExportingToBoard(false);
     }
-  }, [isBoardOpen, isAttached, isExportingToBoard, adapter, tab.itemId, tab.id]);
+  }, [isBoardOpen, isAttached, isExportingToBoard, isCircuitEmpty, adapter, tab.itemId, tab.id]);
 
   // Preserve circuit text during theme reload or advanced menu toggle
   const preservedCircuitRef = useRef<string | null>(null);
@@ -234,6 +262,7 @@ export function CircuitPane({
     const unsubscribeReady = adapter.onReady((api) => {
       setIsAttached(true);
       setIsSimRunning(api.isRunning());
+      setIsCircuitEmpty((api.getElements?.()?.length ?? 0) === 0);
       requestAnimationFrame(() => {
         dispatchResize();
       });
@@ -251,6 +280,7 @@ export function CircuitPane({
     // 2. On analyze: handle initial import/restoration or auto-save through ProjectService
     const unsubscribeAnalyze = adapter.onAnalyze(async (sim) => {
       setIsSimRunning(sim.isRunning());
+      setIsCircuitEmpty((sim.getElements?.()?.length ?? 0) === 0);
 
       // On initial setup completion: restore preserved circuit from theme reload or load saved circuit
       if (!initialLoadDoneRef.current) {
@@ -521,6 +551,7 @@ export function CircuitPane({
         isAdvancedMenu={isAdvancedMenu}
         isBoardOpen={isBoardOpen}
         isExportingToBoard={isExportingToBoard}
+        isCircuitEmpty={isCircuitEmpty}
         onSendToBoard={handleSendToBoard}
         pauseWhenHidden={pauseWhenHidden}
         onTogglePauseWhenHidden={setPauseWhenHidden}
@@ -537,9 +568,13 @@ export function CircuitPane({
           inlineSize: "100%",
           blockSize: "100%",
           position: "relative",
-          minHeight: 0,
-          minBlockSize: 0,
+          zIndex: 1,
+          minHeight: "calc(var(--space-8) * 3)",
+          minWidth: "calc(var(--space-8) * 4)",
+          minBlockSize: "calc(var(--space-8) * 3)",
+          minInlineSize: "calc(var(--space-8) * 4)",
           overflow: "hidden",
+          contain: "strict",
         }}
       >
         <iframe
@@ -556,9 +591,24 @@ export function CircuitPane({
             border: "none",
             display: "block",
             backgroundColor: "var(--bg-surface)",
+            minWidth: "calc(var(--space-8) * 4)",
+            minHeight: "calc(var(--space-8) * 3)",
           }}
         />
       </div>
     </div>
   );
-}
+},
+(prev, next) => {
+  return (
+    prev.projectId === next.projectId &&
+    prev.tab.id === next.tab.id &&
+    prev.tab.itemId === next.tab.itemId &&
+    prev.tab.title === next.tab.title &&
+    prev.tab.kind === next.tab.kind &&
+    prev.visible === next.visible &&
+    prev.hasBoardOpen === next.hasBoardOpen &&
+    prev.hasBoardTab === next.hasBoardTab &&
+    prev.pauseWhenHiddenDefault === next.pauseWhenHiddenDefault
+  );
+});

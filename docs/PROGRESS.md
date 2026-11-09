@@ -12,8 +12,9 @@ This file is the project's memory between agent sessions.
 |---|---|
 | Active phase | Side campaign — Circuit UI visual polish (owner-driven, outside TASKS.md) |
 | Current task | Continue Circuit UI polish |
-| Last updated | 2026-11-06 |
+| Last updated | 2026-11-09 |
 | Next step | Finish Circuit UI fixes; then push all local commits and verify CI; then Phase 11 Task 44 |
+| Known issues | Split divider direction in LTR remains inverted. Deferred indefinitely by owner. |
 | Blockers | none |
 
 ## Phases
@@ -138,6 +139,12 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-11-04 | Permanently dropped Phase 9 (Stirling-PDF & Gateway); purged all Docker files, Caddy, and gateway code from repository to keep the app 100% client-side. |
 | 2026-11-05 | Verified remote Supabase database (`fmlpkcbpoziwkjuxuyaf`) schema via Supabase CLI (`supabase migration list`); confirmed `0001_init.sql` is applied remotely and in sync with local schema. |
 | 2026-11-06 | Fixed Circuit module logic gate mapping and forced ANSI symbols: passed `IECGates=false` in `circuit-url.ts` to ensure triangle+circle inverters and D-shape AND gates; mapped Inverter/NOT/AND/NAND/OR/NOR/XOR/XNOR to canonical GWT class names in `circuit-adapter.ts` and `circuit-toolbar.tsx` palette; added English and Arabic i18n keys; verified across themes and LTR/RTL. |
+| 2026-11-08 | Split divider drag direction in LTR is inverted. Deferred by owner. |
+| 2026-11-08 | Fixed PDF export missing ink & multi-page overlay bug: `PdfCustomInkLayer` vertical -100% top offset caused subsequent pages to overlap and intercept pointer events on preceding pages in multi-page continuous scroll; set `top: 0, height: 100%` and `viewBox={`-${pageWidth} 0 ${pageWidth * 3} ${pageHeight}`}`; updated `toPagePoint` y calculation to 1:1 page height mapping; proven with Playwright multi-page export test. |
+| 2026-11-09 | Split divider direction in LTR remains inverted. Deferred indefinitely by owner. |
+| 2026-11-09 | Fixed workspace tab persistence and launcher redirect: saved layout immediately on tab close; restored only saved tabs from manifest without resurrecting closed items; close button enabled for single remaining tab; closing last open tab redirects to launcher (/) without deleting project. |
+| 2026-11-09 | Fixed workspace layout logic: removed auto-split on cross-tool sends (silent background insertion); decoupled activeTabId from CSS grid slots so clicking split tabs never swaps left/right panes; tracked splitGroup so 3rd tabs open full-screen while preserving split view state upon returning. |
+| 2026-11-09 | Shortened UI strings (e.g. Save to Drive / حفظ في درايف, To Board / إلى السبورة) and enforced global button CSS white-space: nowrap with overflow ellipsis. |
 
 ## Lessons and corrections
 

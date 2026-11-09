@@ -25,7 +25,6 @@ export interface PdfToolbarProps {
   onUndo?: () => void;
   onRedo?: () => void;
   onAddStamp?: (file: File) => void;
-  onRotatePage?: () => void;
   onMovePageUp?: () => void;
   onMovePageDown?: () => void;
   onDeletePage?: () => void;
@@ -76,6 +75,10 @@ export function PdfToolbar({
         userSelect: "none",
         position: "relative",
         zIndex: 20,
+        overflowX: "auto",
+        overflowY: "hidden",
+        scrollbarWidth: "none",
+        whiteSpace: "nowrap",
       }}
     >
       {/* Start Group: Navigation & Document Metadata */}
@@ -84,7 +87,10 @@ export function PdfToolbar({
           display: "flex",
           alignItems: "center",
           gap: "var(--space-1)",
-          flexShrink: 0,
+          flex: "1 1 auto",
+          minWidth: 0,
+          overflow: "hidden",
+          whiteSpace: "nowrap",
         }}
       >
         {/* Toggle Thumbnails */}
@@ -106,6 +112,8 @@ export function PdfToolbar({
             color: showThumbnails ? "var(--accent-text-strong)" : "var(--text-main)",
             cursor: "pointer",
             transition: "background-color 150ms ease, border-color 150ms ease",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
           }}
           onMouseEnter={(e) => {
             if (!showThumbnails) {
@@ -132,6 +140,7 @@ export function PdfToolbar({
             alignItems: "center",
             gap: "var(--space-1)",
             direction: "ltr",
+            flexShrink: 0,
           }}
         >
           {/* Previous Page */}
@@ -154,6 +163,8 @@ export function PdfToolbar({
               color: currentPage <= 1 ? "var(--text-muted)" : "var(--text-main)",
               cursor: currentPage <= 1 ? "not-allowed" : "pointer",
               transition: "background-color 150ms ease",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
             onMouseEnter={(e) => {
               if (currentPage > 1) {
@@ -192,6 +203,8 @@ export function PdfToolbar({
               fontVariantNumeric: "tabular-nums",
               color: "var(--text-main)",
               fontFamily: "var(--font-sans)",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             {currentPage} / {totalPages || 1}
@@ -217,6 +230,8 @@ export function PdfToolbar({
               color: currentPage >= totalPages ? "var(--text-muted)" : "var(--text-main)",
               cursor: currentPage >= totalPages ? "not-allowed" : "pointer",
               transition: "background-color 150ms ease",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
             onMouseEnter={(e) => {
               if (currentPage < totalPages) {
@@ -252,6 +267,7 @@ export function PdfToolbar({
               height: "var(--space-3)",
               backgroundColor: "var(--border-card)",
               marginInline: "var(--space-1)",
+              flexShrink: 0,
             }}
           />
         )}
@@ -263,7 +279,8 @@ export function PdfToolbar({
             style={{
               fontSize: "13px",
               fontWeight: 500,
-              maxWidth: "calc(var(--space-8) * 3)",
+              flex: "1 1 auto",
+              minWidth: 0,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -313,6 +330,8 @@ export function PdfToolbar({
             gap: "var(--space-1)",
             fontFamily: "var(--font-sans)",
             transition: "background-color 150ms ease, opacity 150ms ease",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
           }}
           onMouseEnter={(e) => {
             if (hasBoardTab && !isSendingToBoard) {
@@ -330,7 +349,7 @@ export function PdfToolbar({
             <line x1="8" y1="12" x2="16" y2="12" />
             <line x1="12" y1="8" x2="12" y2="16" />
           </svg>
-          <span>{isSendingToBoard ? t("pdf.sendingToBoard") : t("pdf.sendToBoard")}</span>
+          <span style={{ whiteSpace: "nowrap" }}>{isSendingToBoard ? t("pdf.sendingToBoard") : t("pdf.sendToBoard")}</span>
         </button>
 
         {/* Download Annotated PDF (PDF-5) */}
@@ -357,6 +376,8 @@ export function PdfToolbar({
             gap: "var(--space-1)",
             fontFamily: "var(--font-sans)",
             transition: "background-color 150ms ease",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
           }}
           onMouseEnter={(e) => {
             if (!isDownloading) {
@@ -374,7 +395,7 @@ export function PdfToolbar({
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
-          <span>{isDownloading ? t("pdf.downloading") : t("pdf.downloadAnnotated")}</span>
+          <span style={{ whiteSpace: "nowrap" }}>{isDownloading ? t("pdf.downloading") : t("pdf.downloadAnnotated")}</span>
         </button>
       </div>
     </header>

@@ -12,6 +12,7 @@ import { PdfPane } from "@/modules/pdf";
 import { ExportDialog } from "@/core/alpha/export-dialog";
 import { ModeSwitchModal } from "@/components/mode-switch-modal";
 import { DriveStatusBanner } from "@/components/drive-status-banner";
+import { DiscardChangesDialog } from "./discard-changes-dialog";
 import { bus, type AppEvents } from "@/core/bus";
 import { selectTargetBoard } from "@/integration/target-board";
 import {
@@ -21,6 +22,7 @@ import {
 } from "@/integration/board-insertion";
 import { formatAlphaLink, parseAlphaLink } from "@/integration/alpha-link";
 import { appendBoardToPdf } from "@/integration/board-to-pdf";
+import { pdfRegistry } from "@/modules/pdf/pdf-registry";
 import { projectService as defaultProjectService, saveQueue, type AlphaManifest } from "@/core/storage";
 
 /*
@@ -144,8 +146,61 @@ export function WorkspaceHost({
   const [dragging, setDragging] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showModeSwitch, setShowModeSwitch] = useState(false);
+  const [pendingCloseTab, setPendingCloseTab] = useState<Tab | null>(null);
   const [projectInfo, setProjectInfo] = useState<{ title: string; storage: "local" | "drive" } | null>(null);
   const previousSplitRef = useRef<SplitMode>("none");
+  const tabDirtyMapRef = useRef<Map<string, boolean>>(new Map());
+
+  // Track the pair of tabs in split mode to preserve across tab navigation (Requirement 3)
+  const [splitGroup, setSplitGroup] = useState<{
+    primary: string;
+    secondary: string;
+    mode: SplitMode;
+  } | null>(() => {
+    if (
+      initialLayout &&
+      initialLayout.split &&
+      initialLayout.split !== "none" &&
+      initialLayout.primary &&
+      initialLayout.secondary
+    ) {
+      return {
+        primary: initialLayout.primary,
+        secondary: initialLayout.secondary,
+        mode: initialLayout.split,
+      };
+    }
+    return null;
+  });
+  const splitGroupRef = useRef(splitGroup);
+  useEffect(() => {
+    splitGroupRef.current = splitGroup;
+  }, [splitGroup]);
+
+  // Track active/focused tab independently from CSS grid pane assignments (Requirement 2)
+  const [activeTabId, setActiveTabId] = useState<string>(() => {
+    return initialLayout?.primary || "tab-1";
+  });
+  const activeTabIdRef = useRef<string>(activeTabId);
+  useEffect(() => {
+    activeTabIdRef.current = activeTabId;
+  }, [activeTabId]);
+
+  // Listen to immediate tab dirty states from Board / PDF modules
+  useEffect(() => {
+    const handleDirtyState = (data: { tabId?: string; itemId?: string; isDirty: boolean }) => {
+      if (data.tabId) {
+        tabDirtyMapRef.current.set(data.tabId, data.isDirty);
+      }
+      if (data.itemId) {
+        tabDirtyMapRef.current.set(data.itemId, data.isDirty);
+      }
+    };
+    bus.on("tab:dirty-state", handleDirtyState);
+    return () => {
+      bus.off("tab:dirty-state", handleDirtyState);
+    };
+  }, []);
 
   // Track layout in ref for event bus handlers and navigation flushes
   const layoutRef = useRef(layout);
@@ -168,14 +223,14 @@ export function WorkspaceHost({
 
   // Persist initial layout on mount so fresh tabs (e.g. from ?kind=pdf) are recorded in manifest
   useEffect(() => {
-    if (projectId && projectId !== "demo") {
+    if (projectId && projectId !== "demo" && !isRestoringLayout) {
       void defaultProjectService.saveLayout(projectId, {
         tabs: layout.tabs.map((t) => t.itemId),
         split: layout.split,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [projectId, isRestoringLayout]);
 
   // Flushes in-flight debounced saves across all tool panes and commits SaveQueue to IndexedDB
   const handleLeaveWorkspace = useCallback(async () => {
@@ -302,10 +357,11 @@ export function WorkspaceHost({
                   const seenKinds = new Set<ModuleKind>();
                   const restoredTabs: Tab[] = [];
 
-                  // If manifest.layout?.tabs exists, prioritize matching items in stored order
+                  // If manifest.layout?.tabs exists and has items, restore only those tabs in stored order
                   const preferredOrder: typeof validItems = [];
-                  if (manifest.layout?.tabs && Array.isArray(manifest.layout.tabs)) {
-                    for (const targetId of manifest.layout.tabs) {
+                  const savedTabIds = manifest.layout?.tabs;
+                  if (Array.isArray(savedTabIds) && savedTabIds.length > 0) {
+                    for (const targetId of savedTabIds) {
                       const found = validItems.find(
                         (i) => i.id === targetId || `tab-${i.id.replace(/^item-/, "")}` === targetId
                       );
@@ -315,10 +371,12 @@ export function WorkspaceHost({
                     }
                   }
 
-                  // Add any remaining items from manifest not yet in preferredOrder
-                  for (const it of validItems) {
-                    if (!preferredOrder.includes(it)) {
-                      preferredOrder.push(it);
+                  // Fallback: If no saved layout tabs matched, restore all validItems
+                  if (preferredOrder.length === 0) {
+                    for (const it of validItems) {
+                      if (!preferredOrder.includes(it)) {
+                        preferredOrder.push(it);
+                      }
                     }
                   }
 
@@ -353,6 +411,24 @@ export function WorkspaceHost({
                     let split = (manifest.layout?.split as SplitMode) || "none";
                     if (restoredTabs.length < 2 || split === "none") {
                       split = "none";
+                    }
+
+                    if (split !== "none" && primaryId && secondaryId) {
+                      const newGroup = {
+                        primary: primaryId,
+                        secondary: secondaryId,
+                        mode: split,
+                      };
+                      setSplitGroup(newGroup);
+                      splitGroupRef.current = newGroup;
+                    } else {
+                      setSplitGroup(null);
+                      splitGroupRef.current = null;
+                    }
+
+                    if (primaryId) {
+                      setActiveTabId(primaryId);
+                      activeTabIdRef.current = primaryId;
                     }
 
                     setLayout({
@@ -562,32 +638,12 @@ export function WorkspaceHost({
           title: t("workspace.boardTabTitle", { n: `${currentLayout.tabs.length + 1}` }),
         };
 
+        // Add new board tab silently in background without auto-splitting
         setLayout((prev) => {
-          const isMobileWidth = typeof window !== "undefined" && window.innerWidth < 768;
-          let nextSplit = prev.split;
-          let nextPrimary = prev.primary;
-          let nextSecondary = prev.secondary;
-
-          if (isMobileWidth) {
-            nextPrimary = newBoardId;
-          } else if (prev.split === "none") {
-            nextSplit = "vertical";
-            nextSecondary = newBoardId;
-          } else {
-            if (event.sourceTabId && prev.secondary === event.sourceTabId) {
-              nextPrimary = newBoardId;
-            } else {
-              nextSecondary = newBoardId;
-            }
-          }
-
           return {
             ...prev,
             tabs: [...prev.tabs, newTab],
             tabBarOrder: [...prev.tabBarOrder, newBoardId],
-            primary: nextPrimary,
-            secondary: nextSecondary,
-            split: nextSplit,
           };
         });
 
@@ -596,33 +652,6 @@ export function WorkspaceHost({
       } else {
         targetTabId = decision.tabId;
         mruBoardTabsRef.current = [targetTabId, ...mruBoardTabsRef.current.filter((id) => id !== targetTabId)];
-
-        setLayout((prev) => {
-          const isVisible =
-            prev.primary === targetTabId ||
-            (prev.split !== "none" && prev.secondary === targetTabId);
-
-          if (isVisible) return prev;
-
-          const isMobileWidth = typeof window !== "undefined" && window.innerWidth < 768;
-          if (isMobileWidth) {
-            return { ...prev, primary: targetTabId };
-          }
-
-          if (prev.split === "none") {
-            return {
-              ...prev,
-              split: "vertical",
-              secondary: targetTabId,
-            };
-          } else {
-            if (event.sourceTabId && prev.secondary === event.sourceTabId) {
-              return { ...prev, primary: targetTabId };
-            } else {
-              return { ...prev, secondary: targetTabId };
-            }
-          }
-        });
       }
 
       try {
@@ -661,32 +690,12 @@ export function WorkspaceHost({
           title: t("workspace.boardTabTitle", { n: `${currentLayout.tabs.length + 1}` }),
         };
 
+        // Add new board tab silently in background without auto-splitting
         setLayout((prev) => {
-          const isMobileWidth = typeof window !== "undefined" && window.innerWidth < 768;
-          let nextSplit = prev.split;
-          let nextPrimary = prev.primary;
-          let nextSecondary = prev.secondary;
-
-          if (isMobileWidth) {
-            nextPrimary = newBoardId;
-          } else if (prev.split === "none") {
-            nextSplit = "vertical";
-            nextSecondary = newBoardId;
-          } else {
-            if (event.sourceTabId && prev.secondary === event.sourceTabId) {
-              nextPrimary = newBoardId;
-            } else {
-              nextSecondary = newBoardId;
-            }
-          }
-
           return {
             ...prev,
             tabs: [...prev.tabs, newTab],
             tabBarOrder: [...prev.tabBarOrder, newBoardId],
-            primary: nextPrimary,
-            secondary: nextSecondary,
-            split: nextSplit,
           };
         });
 
@@ -695,33 +704,6 @@ export function WorkspaceHost({
       } else {
         targetTabId = decision.tabId;
         mruBoardTabsRef.current = [targetTabId, ...mruBoardTabsRef.current.filter((id) => id !== targetTabId)];
-
-        setLayout((prev) => {
-          const isVisible =
-            prev.primary === targetTabId ||
-            (prev.split !== "none" && prev.secondary === targetTabId);
-
-          if (isVisible) return prev;
-
-          const isMobileWidth = typeof window !== "undefined" && window.innerWidth < 768;
-          if (isMobileWidth) {
-            return { ...prev, primary: targetTabId };
-          }
-
-          if (prev.split === "none") {
-            return {
-              ...prev,
-              split: "vertical",
-              secondary: targetTabId,
-            };
-          } else {
-            if (event.sourceTabId && prev.secondary === event.sourceTabId) {
-              return { ...prev, primary: targetTabId };
-            } else {
-              return { ...prev, secondary: targetTabId };
-            }
-          }
-        });
       }
 
       try {
@@ -756,32 +738,12 @@ export function WorkspaceHost({
           title: t("workspace.boardTabTitle", { n: `${currentLayout.tabs.length + 1}` }),
         };
 
+        // Add new board tab silently in background without auto-splitting
         setLayout((prev) => {
-          const isMobileWidth = typeof window !== "undefined" && window.innerWidth < 768;
-          let nextSplit = prev.split;
-          let nextPrimary = prev.primary;
-          let nextSecondary = prev.secondary;
-
-          if (isMobileWidth) {
-            nextPrimary = newBoardId;
-          } else if (prev.split === "none") {
-            nextSplit = "vertical";
-            nextSecondary = newBoardId;
-          } else {
-            if (event.sourceTabId && prev.secondary === event.sourceTabId) {
-              nextPrimary = newBoardId;
-            } else {
-              nextSecondary = newBoardId;
-            }
-          }
-
           return {
             ...prev,
             tabs: [...prev.tabs, newTab],
             tabBarOrder: [...prev.tabBarOrder, newBoardId],
-            primary: nextPrimary,
-            secondary: nextSecondary,
-            split: nextSplit,
           };
         });
 
@@ -790,33 +752,6 @@ export function WorkspaceHost({
       } else {
         targetTabId = decision.tabId;
         mruBoardTabsRef.current = [targetTabId, ...mruBoardTabsRef.current.filter((id) => id !== targetTabId)];
-
-        setLayout((prev) => {
-          const isVisible =
-            prev.primary === targetTabId ||
-            (prev.split !== "none" && prev.secondary === targetTabId);
-
-          if (isVisible) return prev;
-
-          const isMobileWidth = typeof window !== "undefined" && window.innerWidth < 768;
-          if (isMobileWidth) {
-            return { ...prev, primary: targetTabId };
-          }
-
-          if (prev.split === "none") {
-            return {
-              ...prev,
-              split: "vertical",
-              secondary: targetTabId,
-            };
-          } else {
-            if (event.sourceTabId && prev.secondary === event.sourceTabId) {
-              return { ...prev, primary: targetTabId };
-            } else {
-              return { ...prev, secondary: targetTabId };
-            }
-          }
-        });
       }
 
       const link = formatAlphaLink({
@@ -840,6 +775,7 @@ export function WorkspaceHost({
     const handleBoardToPdf = async (event: AppEvents["board:to-pdf"]) => {
       const currentLayout = layoutRef.current;
       let targetPdfItemId = event.targetPdfItemId;
+      let targetTabId: string | null = null;
 
       if (!targetPdfItemId) {
         // Priority 1: The other visible pane if it is a PDF
@@ -853,12 +789,46 @@ export function WorkspaceHost({
 
         if (otherTab && otherTab.kind === "pdf") {
           targetPdfItemId = otherTab.itemId;
+          targetTabId = otherTab.id;
         } else {
           // Priority 2: Any open PDF tab in layout
           const openPdfTab = currentLayout.tabs.find((t) => t.kind === "pdf");
           if (openPdfTab) {
             targetPdfItemId = openPdfTab.itemId;
+            targetTabId = openPdfTab.id;
           }
+        }
+      } else {
+        const found = currentLayout.tabs.find(
+          (t) => t.itemId === targetPdfItemId || t.id === targetPdfItemId
+        );
+        if (found) targetTabId = found.id;
+      }
+
+      if (targetPdfItemId) {
+        // Send to PDF silently in background without auto-splitting
+      }
+
+      if (event.mode === "overlay") {
+        const lookupId = targetPdfItemId || targetTabId;
+        let pdfApi = lookupId ? pdfRegistry.get(lookupId) : undefined;
+        if (!pdfApi && targetTabId) {
+          pdfApi = pdfRegistry.get(targetTabId);
+        }
+        if (!pdfApi && lookupId) {
+          try {
+            pdfApi = await pdfRegistry.waitFor(lookupId, 2000);
+          } catch {
+            // fallback if not mounted
+          }
+        }
+
+        if (pdfApi) {
+          const file = new File([event.image], "board-overlay.png", {
+            type: event.image.type || "image/png",
+          });
+          await pdfApi.addStamp(file);
+          return;
         }
       }
 
@@ -899,14 +869,79 @@ export function WorkspaceHost({
       setLayout((prev) => {
         const exists = prev.tabs.some((t) => t.id === tab.id);
         if (exists) {
-          return { ...prev, primary: tab.id };
+          return prev;
         }
-        // Stable DOM order: append to tabs, append to tabBarOrder
-        const next = {
+        // When opening a 3rd/new tab while in split view, it becomes active and occupies
+        // main view full-screen, temporarily hiding the split view while preserving splitGroup (Requirement 3)
+        const next: LayoutState = {
           ...prev,
           tabs: [...prev.tabs, tab],
           tabBarOrder: [...prev.tabBarOrder, tab.id],
           primary: tab.id,
+          secondary: null,
+          split: "none",
+        };
+        persistLayout(next);
+        return next;
+      });
+      setActiveTabId(tab.id);
+    },
+    [persistLayout]
+  );
+
+  // Action: Activate tab without swapping pane positions (Requirement 2 & 3)
+  const activateTab = useCallback(
+    (tabId: string) => {
+      const tab = layoutRef.current.tabs.find((t) => t.id === tabId);
+      if (!tab) return;
+      if (tab.kind === "board") {
+        mruBoardTabsRef.current = [tabId, ...mruBoardTabsRef.current.filter((id) => id !== tabId)];
+      }
+
+      setActiveTabId(tabId);
+
+      const currentSplitGroup = splitGroupRef.current;
+
+      // 1. If tabId belongs to the tracked split group, return to split view showing
+      // those two tabs exactly where they were (left and right), never swapping them (Requirement 2 & 3)
+      if (
+        currentSplitGroup &&
+        (tabId === currentSplitGroup.primary || tabId === currentSplitGroup.secondary)
+      ) {
+        setLayout((prev) => {
+          if (
+            prev.split === currentSplitGroup.mode &&
+            prev.primary === currentSplitGroup.primary &&
+            prev.secondary === currentSplitGroup.secondary
+          ) {
+            // Already in split mode with identical slot assignments: do NOT swap
+            return prev;
+          }
+
+          const next: LayoutState = {
+            ...prev,
+            split: currentSplitGroup.mode,
+            primary: currentSplitGroup.primary,
+            secondary: currentSplitGroup.secondary,
+          };
+          persistLayout(next);
+          return next;
+        });
+        return;
+      }
+
+      // 2. Tab does not belong to splitGroup (or no splitGroup exists).
+      // Occupies main view full-screen without clearing splitGroup.
+      setLayout((prev) => {
+        if (prev.split === "none" && prev.primary === tabId) {
+          return prev;
+        }
+
+        const next: LayoutState = {
+          ...prev,
+          split: "none",
+          primary: tabId,
+          secondary: null,
         };
         persistLayout(next);
         return next;
@@ -915,30 +950,85 @@ export function WorkspaceHost({
     [persistLayout]
   );
 
-  // Action: Activate tab in primary slot
-  const activateTab = useCallback((tabId: string) => {
-    const tab = layoutRef.current.tabs.find((t) => t.id === tabId);
-    if (tab?.kind === "board") {
-      mruBoardTabsRef.current = [tabId, ...mruBoardTabsRef.current.filter((id) => id !== tabId)];
-    }
-    setLayout((prev) => {
-      if (prev.primary === tabId) return prev;
-      // If activating the tab currently in secondary slot, swap them
-      if (prev.split !== "none" && prev.secondary === tabId) {
-        return {
-          ...prev,
-          primary: tabId,
-          secondary: prev.primary,
-        };
-      }
-      return { ...prev, primary: tabId };
-    });
-  }, []);
-
-  // Action: Close tab
+  // Action: Close tab (with dirty check & confirmation dialog)
   const closeTab = useCallback(
-    (tabId: string) => {
+    (tabId: string, force = false) => {
+      const tab = layout.tabs.find((t) => t.id === tabId);
+      if (!tab) return;
+
+      if (!force) {
+        // 1. Circuit: ALWAYS show the confirmation dialog when closing
+        if (tab.kind === "circuit") {
+          setPendingCloseTab(tab);
+          return;
+        }
+
+        // 2. PDF / Board: If tab has unsaved changes (dirty state / pending in SaveQueue), show dialog
+        if (tab.kind === "board" || tab.kind === "pdf") {
+          const isImmediateDirty = Boolean(
+            tabDirtyMapRef.current.get(tab.id) ||
+            tabDirtyMapRef.current.get(tab.itemId)
+          );
+          const isPending = Boolean(
+            (projectId && saveQueue.hasPending(projectId, tab.itemId)) ||
+            (projectId && saveQueue.hasPending(projectId, tab.id)) ||
+            saveQueue.hasPending("", tab.itemId) ||
+            saveQueue.hasPending("", tab.id)
+          );
+
+          if (isImmediateDirty || isPending) {
+            setPendingCloseTab(tab);
+            return;
+          }
+        }
+      }
+
+      // Close tab: cancel pending in-memory write for this tab item and reset dirty tracking
+      tabDirtyMapRef.current.delete(tabId);
+      tabDirtyMapRef.current.delete(tab.itemId);
+      bus.emit("tab:dirty-state", { tabId: tab.id, itemId: tab.itemId, isDirty: false });
+      if (projectId) {
+        saveQueue.cancelPending(projectId, tab.itemId);
+      }
       mruBoardTabsRef.current = mruBoardTabsRef.current.filter((id) => id !== tabId);
+
+      // If closing one of the tabs in splitGroup, clear splitGroup
+      if (
+        splitGroupRef.current &&
+        (splitGroupRef.current.primary === tabId || splitGroupRef.current.secondary === tabId)
+      ) {
+        setSplitGroup(null);
+        splitGroupRef.current = null;
+      }
+
+      // Handle closing the last remaining tab -> redirect to launcher without deleting project
+      if (layout.tabs.length <= 1) {
+        const navigateAway = () => {
+          if (onNavigateHome) {
+            onNavigateHome();
+          } else {
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+            window.location.href = "/";
+          }
+        };
+
+        if (projectId && projectId !== "demo") {
+          void defaultProjectService
+            .saveLayout(projectId, {
+              tabs: [tab.itemId],
+              split: "none",
+            })
+            .then(() => defaultProjectService.flushNow())
+            .catch(() => {})
+            .finally(() => {
+              navigateAway();
+            });
+        } else {
+          navigateAway();
+        }
+        return;
+      }
+
       setLayout((prev) => {
         if (prev.tabs.length <= 1) return prev; // Keep at least one tab
 
@@ -962,6 +1052,18 @@ export function WorkspaceHost({
           nextSplit = "none";
         }
 
+        if (nextTabs.length < 2) {
+          nextSplit = "none";
+          nextSecondary = null;
+        }
+
+        if (activeTabIdRef.current === tabId) {
+          const nextActive = nextPrimary || nextTabBarOrder[0] || null;
+          if (nextActive) {
+            setActiveTabId(nextActive);
+          }
+        }
+
         const next = {
           ...prev,
           tabs: nextTabs,
@@ -971,34 +1073,74 @@ export function WorkspaceHost({
           split: nextSplit,
         };
         persistLayout(next);
+        if (projectId && projectId !== "demo") {
+          void defaultProjectService.flushNow();
+        }
         return next;
       });
     },
-    [persistLayout]
+    [layout.tabs, onNavigateHome, persistLayout, projectId]
   );
+
+  const handleConfirmDiscard = useCallback(() => {
+    if (pendingCloseTab) {
+      const tabIdToClose = pendingCloseTab.id;
+      setPendingCloseTab(null);
+      closeTab(tabIdToClose, true);
+    }
+  }, [pendingCloseTab, closeTab]);
+
+  const handleCancelDiscard = useCallback(() => {
+    setPendingCloseTab(null);
+  }, []);
 
   // Action: Toggle split mode
   const setSplit = useCallback(
     (mode: SplitMode) => {
       if (mode !== "none" && (isMobile || layout.tabs.length < 2)) return;
-      setLayout((prev) => {
-        if (mode === "none") {
-          const next = { ...prev, split: "none" as SplitMode };
+
+      if (mode === "none") {
+        setSplitGroup(null);
+        splitGroupRef.current = null;
+        setLayout((prev) => {
+          const currentActive = activeTabIdRef.current || prev.primary;
+          const next: LayoutState = {
+            ...prev,
+            split: "none",
+            secondary: null,
+            primary: currentActive,
+          };
           persistLayout(next);
           return next;
-        }
+        });
+        return;
+      }
+
+      setLayout((prev) => {
         if (prev.tabs.length < 2) {
           return prev;
         }
-        // If enabling split and secondary is not set or same as primary, pick another tab
+        const currentPrimary = activeTabIdRef.current || prev.primary || prev.tabs[0]?.id || null;
         let nextSecondary = prev.secondary;
-        if (!nextSecondary || nextSecondary === prev.primary) {
-          const alternate = prev.tabBarOrder.find((id) => id !== prev.primary);
+        if (!nextSecondary || nextSecondary === currentPrimary) {
+          const alternate = prev.tabBarOrder.find((id) => id !== currentPrimary);
           nextSecondary = alternate || null;
         }
-        const next = {
+
+        if (currentPrimary && nextSecondary) {
+          const newGroup = {
+            primary: currentPrimary,
+            secondary: nextSecondary,
+            mode,
+          };
+          setSplitGroup(newGroup);
+          splitGroupRef.current = newGroup;
+        }
+
+        const next: LayoutState = {
           ...prev,
           split: mode,
+          primary: currentPrimary,
           secondary: nextSecondary,
         };
         persistLayout(next);
@@ -1012,13 +1154,32 @@ export function WorkspaceHost({
   const swapPanes = useCallback(() => {
     setLayout((prev) => {
       if (prev.split === "none" || !prev.secondary || !prev.primary || prev.tabs.length < 2) return prev;
-      return {
+      const newPrimary = prev.secondary;
+      const newSecondary = prev.primary;
+
+      setSplitGroup((sg) =>
+        sg
+          ? {
+              ...sg,
+              primary: newPrimary,
+              secondary: newSecondary,
+            }
+          : {
+              primary: newPrimary,
+              secondary: newSecondary,
+              mode: prev.split,
+            }
+      );
+
+      const next = {
         ...prev,
-        primary: prev.secondary,
-        secondary: prev.primary,
+        primary: newPrimary,
+        secondary: newSecondary,
       };
+      persistLayout(next);
+      return next;
     });
-  }, []);
+  }, [persistLayout]);
 
   // Action: Set ratio with min width 320px constraint
   const updateRatio = useCallback((newRatio: number) => {
@@ -1125,22 +1286,38 @@ export function WorkspaceHost({
     if (!gridEl) return;
 
     const gridRect = gridEl.getBoundingClientRect();
+    const isRtl = dir === "rtl";
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startRatio = layout.ratio;
+    const startWidth = startRatio * gridRect.width;
 
-    const onPointerMove = (moveEv: PointerEvent) => {
+    const onPointerMove = (event: PointerEvent) => {
       if (isVertical) {
         const total = gridRect.width;
         if (total <= 0) return;
-        const offset =
-          dir === "rtl"
-            ? gridRect.right - moveEv.clientX
-            : moveEv.clientX - gridRect.left;
-        const newRatio = offset / total;
+
+        if (isRtl) {
+          // Keep current working RTL logic
+          const offset = gridRect.right - event.clientX;
+          const newRatio = offset / total;
+          updateRatio(newRatio);
+          return;
+        }
+
+        // English (LTR): exact required math
+        const deltaX = event.clientX - startX;
+        const newLeftPaneWidth = startWidth + deltaX;
+        console.log({ clientX: event.clientX, startX, deltaX, newLeftPaneWidth });
+        const newRatio = newLeftPaneWidth / total;
         updateRatio(newRatio);
       } else {
         const total = gridRect.height;
         if (total <= 0) return;
-        const offset = moveEv.clientY - gridRect.top;
-        const newRatio = offset / total;
+        const initialSize = startRatio * total;
+        const currentY = event.clientY;
+        const newSize = initialSize + (currentY - startY);
+        const newRatio = newSize / total;
         updateRatio(newRatio);
       }
     };
@@ -1166,14 +1343,15 @@ export function WorkspaceHost({
       totalDim = gridRect.width;
     }
     const stepRatio = totalDim > 0 ? 8 / totalDim : 0.02;
+    const isRtl = dir === "rtl";
 
     if (e.key === "ArrowLeft") {
       e.preventDefault();
-      const delta = dir === "rtl" ? stepRatio : -stepRatio;
+      const delta = isRtl ? stepRatio : -stepRatio;
       updateRatio(layout.ratio + delta);
     } else if (e.key === "ArrowRight") {
       e.preventDefault();
-      const delta = dir === "rtl" ? -stepRatio : stepRatio;
+      const delta = isRtl ? -stepRatio : stepRatio;
       updateRatio(layout.ratio + delta);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
@@ -1226,14 +1404,17 @@ export function WorkspaceHost({
           grid-template-rows: 1fr;
           grid-template-areas: "primary divider secondary";
         }
-        [dir="rtl"] .ws-grid[data-split="vertical"] {
-          grid-template-columns: calc((1 - var(--ratio)) * 100% - 4px) 8px calc(var(--ratio) * 100% - 4px);
-          grid-template-areas: "secondary divider primary";
-        }
         .ws-grid[data-split="horizontal"] {
           grid-template-columns: 1fr;
           grid-template-rows: calc(var(--ratio) * 100% - 4px) 8px calc((1 - var(--ratio)) * 100% - 4px);
           grid-template-areas: "primary" "divider" "secondary";
+        }
+        .pane header,
+        .pane [role="toolbar"],
+        .pane button,
+        .pane [role="toolbar"] button,
+        .pane [role="toolbar"] label {
+          white-space: nowrap;
         }
         .pane[data-slot="primary"] {
           grid-area: primary;
@@ -1244,6 +1425,10 @@ export function WorkspaceHost({
           z-index: 1;
           overflow: hidden;
           box-sizing: border-box;
+          min-inline-size: 0;
+          min-block-size: 0;
+          min-width: 0;
+          min-height: 0;
         }
         .pane[data-slot="secondary"] {
           grid-area: secondary;
@@ -1254,15 +1439,21 @@ export function WorkspaceHost({
           z-index: 1;
           overflow: hidden;
           box-sizing: border-box;
+          min-inline-size: 0;
+          min-block-size: 0;
+          min-width: 0;
+          min-height: 0;
         }
         .pane[data-slot="hidden"] {
           position: absolute;
           inset: 0;
           inline-size: 100%;
           block-size: 100%;
-          visibility: hidden;
-          pointer-events: none;
-          z-index: -1;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          z-index: -9999 !important;
+          transform: translate(-99999px, -99999px) !important;
           box-sizing: border-box;
         }
         .ws-divider {
@@ -1558,8 +1749,10 @@ export function WorkspaceHost({
               layout.tabBarOrder.map((tabId, idx) => {
               const tab = layout.tabs.find((t) => t.id === tabId);
               if (!tab) return null;
+              const isActive = activeTabId ? activeTabId === tabId : layout.primary === tabId;
               const isPrimary = layout.primary === tabId;
               const isSecondary = layout.split !== "none" && layout.secondary === tabId;
+              const isVisibleInSplit = layout.split !== "none" && (isPrimary || isSecondary);
 
               return (
                 <button
@@ -1572,48 +1765,46 @@ export function WorkspaceHost({
                   onClick={() => activateTab(tabId)}
                   onKeyDown={(e) => handleTabKeyDown(e, idx)}
                   className="ws-tab-btn"
-                  data-active={isPrimary}
-                  data-secondary={isSecondary}
+                  data-active={isActive}
+                  data-secondary={isVisibleInSplit && !isActive}
                   data-testid={`tab-btn-${tabId}`}
-                  aria-selected={isPrimary}
+                  aria-selected={isActive}
                 >
                   <span>{tab.title}</span>
 
-                  {layout.tabs.length > 1 && (
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      className="ws-tab-close-btn"
-                      aria-label={`${t("workspace.closeTab")} ${tab.title}`}
-                      data-testid={`tab-close-${tabId}`}
-                      onClick={(e) => {
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="ws-tab-close-btn"
+                    aria-label={`${t("workspace.closeTab")} ${tab.title}`}
+                    data-testid={`tab-close-${tabId}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeTab(tabId);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
                         e.stopPropagation();
+                        e.preventDefault();
                         closeTab(tabId);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          closeTab(tabId);
-                        }
-                      }}
+                      }
+                    }}
+                  >
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
                     >
-                      <svg
-                        width="10"
-                        height="10"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </span>
-                  )}
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </span>
                 </button>
               );
             })}
@@ -1910,6 +2101,11 @@ export function WorkspaceHost({
                 data-slot={slot}
                 data-tab-id={tab.id}
                 data-testid={`pane-slot-${tab.id}`}
+                onPointerDownCapture={() => {
+                  if (activeTabIdRef.current !== tab.id) {
+                    setActiveTabId(tab.id);
+                  }
+                }}
                 style={{
                   backgroundColor: "var(--bg-surface)",
                   boxSizing: "border-box",
@@ -1931,6 +2127,10 @@ export function WorkspaceHost({
                     visible={slot !== "hidden"}
                     hasPdfTab={hasPdf}
                     onMount={onPaneMount}
+                    onDirtyChange={(isDirty) => {
+                      tabDirtyMapRef.current.set(tab.id, isDirty);
+                      tabDirtyMapRef.current.set(tab.itemId, isDirty);
+                    }}
                   />
                 ) : tab.kind === "pdf" ? (
                   <PdfPane
@@ -1939,6 +2139,10 @@ export function WorkspaceHost({
                     visible={slot !== "hidden"}
                     hasBoardTab={hasBoard}
                     onMount={onPaneMount}
+                    onDirtyChange={(isDirty) => {
+                      tabDirtyMapRef.current.set(tab.id, isDirty);
+                      tabDirtyMapRef.current.set(tab.itemId, isDirty);
+                    }}
                   />
                 ) : (
                   <StaticPlaceholder
@@ -1997,6 +2201,14 @@ export function WorkspaceHost({
           }}
         />
       )}
+      {/* Unsaved Changes Confirmation Dialog on Tab Close */}
+      <DiscardChangesDialog
+        isOpen={Boolean(pendingCloseTab)}
+        tabTitle={pendingCloseTab?.title}
+        tabKind={pendingCloseTab?.kind}
+        onConfirm={handleConfirmDiscard}
+        onCancel={handleCancelDiscard}
+      />
     </div>
   );
 }

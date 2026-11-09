@@ -319,12 +319,13 @@ export interface CircuitToolbarProps {
   isAdvancedMenu?: boolean;
   isBoardOpen?: boolean;
   isExportingToBoard?: boolean;
+  isCircuitEmpty?: boolean;
   onSendToBoard?: () => void;
   pauseWhenHidden?: boolean;
   onTogglePauseWhenHidden?: (checked: boolean) => void;
 }
 
-export function CircuitToolbar({
+export const CircuitToolbar = React.memo(function CircuitToolbar({
   isSimRunning,
   onToggleRun,
   onReset,
@@ -336,6 +337,7 @@ export function CircuitToolbar({
   isAdvancedMenu = false,
   isBoardOpen = false,
   isExportingToBoard = false,
+  isCircuitEmpty = false,
   onSendToBoard,
   pauseWhenHidden,
   onTogglePauseWhenHidden,
@@ -401,16 +403,41 @@ export function CircuitToolbar({
         height: "var(--control-md)",
         minHeight: "var(--control-md)",
         position: "relative",
-        zIndex: 20,
+        zIndex: 50,
+        overflow: "visible",
+        whiteSpace: "nowrap",
+        flexWrap: "nowrap",
+        width: "100%",
+        minWidth: 0,
       }}
     >
+      {/* Click-outside backdrop when any dropdown is open */}
+      {(isPaletteOpen || isSpeedOpen) && (
+        <div
+          data-testid="circuit-dropdown-backdrop"
+          onClick={() => {
+            setIsPaletteOpen(false);
+            setIsSpeedOpen(false);
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 40,
+            backgroundColor: "transparent",
+            cursor: "default",
+          }}
+        />
+      )}
+
       {/* Primary Actions Group: Run/Pause, Reset, Speed, Component Palette */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: "var(--space-1)",
-          flexWrap: "wrap",
+          flexWrap: "nowrap",
+          flexShrink: 0,
+          minWidth: 0,
         }}
       >
         {/* Run / Pause Button */}
@@ -436,6 +463,8 @@ export function CircuitToolbar({
             fontWeight: 600,
             cursor: "pointer",
             transition: "all 150ms ease",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
           }}
         >
           {isSimRunning ? (
@@ -472,6 +501,8 @@ export function CircuitToolbar({
             fontWeight: 500,
             cursor: "pointer",
             transition: "background-color 150ms ease",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
           }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -482,7 +513,7 @@ export function CircuitToolbar({
         </button>
 
         {/* Time Step / Speed Dropdown */}
-        <div ref={speedRef} style={{ position: "relative" }}>
+        <div ref={speedRef} style={{ position: "relative", zIndex: isSpeedOpen ? 60 : 1, flexShrink: 0 }}>
           <button
             type="button"
             data-testid="circuit-speed-dropdown-btn"
@@ -506,6 +537,8 @@ export function CircuitToolbar({
               fontSize: "13px",
               fontWeight: 500,
               cursor: "pointer",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -569,7 +602,7 @@ export function CircuitToolbar({
         </div>
 
         {/* Component Palette Mega-Menu */}
-        <div ref={paletteRef} style={{ position: "relative" }}>
+        <div ref={paletteRef} style={{ position: "relative", zIndex: isPaletteOpen ? 60 : 1, flexShrink: 0 }}>
           <button
             type="button"
             data-testid="circuit-palette-btn"
@@ -594,6 +627,8 @@ export function CircuitToolbar({
               fontSize: "13px",
               fontWeight: 500,
               cursor: "pointer",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -943,25 +978,29 @@ export function CircuitToolbar({
               border: "1px solid var(--border-card)",
               fontSize: "12px",
               color: "var(--text-muted)",
+              whiteSpace: "nowrap",
+              flexShrink: 1,
+              minWidth: 0,
+              maxWidth: "calc(var(--space-8) * 3)",
+              overflow: "hidden",
             }}
           >
-            <span style={{ fontWeight: 600, color: "var(--text-main)" }}>
+            <span style={{ fontWeight: 600, color: "var(--text-main)", maxWidth: "calc(var(--space-8) * 2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {t("circuit.activeTool")}: {t(selectedItem.labelKey)}
             </span>
-            <span style={{ opacity: 0.8 }}>({t("circuit.activeToolHint")})</span>
           </div>
         )}
       </div>
 
       {/* Secondary / Integration & Advanced Toggle Group */}
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "nowrap", flexShrink: 0, minWidth: 0 }}>
         {/* Send to Board Button */}
         {onSendToBoard && (
           <button
             type="button"
             data-testid="circuit-send-to-board-btn"
             onClick={onSendToBoard}
-            disabled={isExportingToBoard || !isBoardOpen}
+            disabled={isExportingToBoard || !isBoardOpen || isCircuitEmpty}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -971,17 +1010,29 @@ export function CircuitToolbar({
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--border-card)",
               backgroundColor: "var(--bg-surface)",
-              color: !isBoardOpen ? "var(--text-muted)" : "var(--text-main)",
+              color: !isBoardOpen || isCircuitEmpty ? "var(--text-muted)" : "var(--text-main)",
               fontSize: "12px",
               fontWeight: 500,
-              cursor: isExportingToBoard ? "wait" : !isBoardOpen ? "not-allowed" : "pointer",
-              opacity: !isBoardOpen ? 0.6 : 1,
+              cursor: isExportingToBoard
+                ? "wait"
+                : !isBoardOpen || isCircuitEmpty
+                ? "not-allowed"
+                : "pointer",
+              opacity: !isBoardOpen || isCircuitEmpty ? 0.6 : 1,
               transition: "background-color 150ms ease, opacity 150ms ease",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
-            title={!isBoardOpen ? t("circuit.sendToBoardNoBoardOpen") : t("circuit.sendToBoard")}
+            title={
+              !isBoardOpen
+                ? t("circuit.sendToBoardNoBoardOpen")
+                : isCircuitEmpty
+                ? t("circuit.sendToBoardError") || "Circuit is empty"
+                : t("circuit.sendToBoard")
+            }
           >
             <span>📋</span>
-            <span>{isExportingToBoard ? t("circuit.sendingToBoard") : t("circuit.sendToBoard")}</span>
+            <span style={{ whiteSpace: "nowrap" }}>{isExportingToBoard ? t("circuit.sendingToBoard") : t("circuit.sendToBoard")}</span>
           </button>
         )}
 
@@ -997,6 +1048,8 @@ export function CircuitToolbar({
               fontSize: "12px",
               color: "var(--text-muted)",
               userSelect: "none",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             <input
@@ -1009,11 +1062,11 @@ export function CircuitToolbar({
                 cursor: "pointer",
               }}
             />
-            <span>{t("circuit.pauseWhenHidden")}</span>
+            <span style={{ whiteSpace: "nowrap" }}>{t("circuit.pauseWhenHidden")}</span>
           </label>
         )}
 
-        <div style={{ width: "1px", height: "18px", backgroundColor: "var(--border-card)" }} />
+        <div style={{ width: "1px", height: "18px", backgroundColor: "var(--border-card)", flexShrink: 0 }} />
 
         <button
           type="button"
@@ -1035,6 +1088,8 @@ export function CircuitToolbar({
             fontWeight: 500,
             cursor: "pointer",
             transition: "background-color 150ms ease, color 150ms ease, border-color 150ms ease",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
           }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1046,4 +1101,4 @@ export function CircuitToolbar({
       </div>
     </div>
   );
-}
+});

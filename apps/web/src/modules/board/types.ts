@@ -30,6 +30,7 @@ export interface BoardPaneProps {
   hasPdfTab?: boolean;
   onMount?: (tabId: string, token: string) => void;
   onApiReady?: (api: unknown) => void;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 /**

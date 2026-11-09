@@ -12,6 +12,7 @@ import {
 import { RenderPluginPackage } from "@embedpdf/plugin-render";
 import { RenderLayer, useRenderCapability } from "@embedpdf/plugin-render/react";
 import { bus, type AppEvents } from "@/core/bus";
+import { pdfRegistry, type PdfImperativeAPI } from "./pdf-registry";
 import { MAX_ALLOWED_FILE_BYTES, compressImageIfNeeded } from "@/modules/board/image-utils";
 import { getImageDimensions } from "@/integration/board-insertion";
 import { ScrollPluginPackage } from "@embedpdf/plugin-scroll";
@@ -34,11 +35,11 @@ import {
   AnnotationLayer,
   useRegisterRenderers,
 } from "@embedpdf/plugin-annotation/react";
-import { customStampRenderer } from "./custom-stamp-renderer";
+import { customStampRenderer, stampBlobUrlCache } from "./custom-stamp-renderer";
 import { PdfTextLayer } from "./pdf-text-layer";
 import { HistoryPluginPackage } from "@embedpdf/plugin-history";
 import { ExportPluginPackage, useExport } from "@embedpdf/plugin-export/react";
-import type { PdfDocumentObject } from "@embedpdf/models";
+import { PdfAnnotationSubtype, type PdfDocumentObject } from "@embedpdf/models";
 import { projectService as defaultProjectService, type ProjectService } from "@/core/storage";
 import { computeBlobSha256 } from "@/core/storage/sha256";
 import { useI18n } from "@/i18n/provider";
@@ -51,12 +52,12 @@ import {
   type CustomInkPoint,
 } from "./pdf-custom-ink-layer";
 import {
-  rotatePage,
   deletePage,
   reorderPages,
   insertImagePage,
   burnAnnotationsWithPdfLib,
   burnCustomInkOnPdfBytes,
+  type BurnStampItem,
 } from "./page-operations";
 
 export interface PdfViewerProps {
@@ -73,6 +74,7 @@ export interface PdfViewerProps {
   onSaveRestructuredPdf?: (newBlob: Blob, name?: string) => Promise<void>;
   onShowToast?: (message: string) => void;
   hasBoardTab?: boolean;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 const plugins = [
@@ -102,6 +104,7 @@ interface ViewerInnerProps {
   onSaveRestructuredPdf?: (newBlob: Blob, name?: string) => Promise<void>;
   onShowToast: (message: string) => void;
   hasBoardTab?: boolean;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 function ViewerInner({
@@ -118,6 +121,7 @@ function ViewerInner({
   onSaveRestructuredPdf,
   onShowToast,
   hasBoardTab = true,
+  onDirtyChange,
 }: ViewerInnerProps) {
   const { t } = useI18n();
   useRegisterRenderers(useMemo(() => [customStampRenderer], []));
@@ -264,14 +268,85 @@ function ViewerInner({
     handleMoveObject,
     handleResizeObject,
     annotationScope,
+    flushAnnotations,
+    getCurrentInkData,
   } = usePdfAnnotations({
     documentId,
     projectId,
     itemId,
+    tabId,
     pdfHash,
     currentPage: displayPage || scrollState.currentPage || 1,
     projectServiceOverride,
+    onDirtyChange,
   });
+
+  const latestPageRef = useRef(1);
+
+  useEffect(() => {
+    latestPageRef.current = displayPage || scrollState.currentPage || 1;
+  }, [displayPage, scrollState.currentPage]);
+
+  // Helper to collect live stamps from annotationScope and cache / storage
+  const collectLiveStamps = useCallback(async (): Promise<BurnStampItem[]> => {
+    const liveStamps: BurnStampItem[] = [];
+    if (!annotationScope) return liveStamps;
+    const allAnnos = annotationScope.getAnnotations() || [];
+    for (const a of allAnnos) {
+      if (a?.object?.type === PdfAnnotationSubtype.STAMP && a.object.rect) {
+        const stampId = a.object.id;
+        const blobUrl = stampBlobUrlCache.get(stampId);
+        const aAny = a as unknown as { ctx?: { data?: unknown; fileKey?: string; fileId?: string; mimeType?: string } };
+        const objAny = a.object as unknown as { fileKey?: string; fileId?: string; imageSrc?: string; mimeType?: string };
+        const rawData = aAny.ctx?.data;
+        const fileKey = aAny.ctx?.fileKey || aAny.ctx?.fileId || objAny.fileKey || objAny.fileId;
+        let imageBytes: ArrayBuffer | Uint8Array | undefined =
+          rawData instanceof Uint8Array || rawData instanceof ArrayBuffer ? rawData : undefined;
+
+        if (!imageBytes && !blobUrl && fileKey) {
+          try {
+            const b = await ps.getFile(projectId, fileKey);
+            imageBytes = await b.arrayBuffer();
+          } catch {}
+        }
+
+        liveStamps.push({
+          pageIndex: a.object.pageIndex ?? 0,
+          rect: a.object.rect,
+          imageBytes,
+          blobUrl,
+          mimeType: aAny.ctx?.mimeType || objAny.mimeType,
+        });
+      }
+    }
+    return liveStamps;
+  }, [annotationScope, ps, projectId]);
+
+  useEffect(() => {
+    const api: PdfImperativeAPI = {
+      addStamp: async (file, options) => {
+        const pageIdx =
+          typeof options?.pageIndex === "number"
+            ? options.pageIndex
+            : Math.max(0, latestPageRef.current - 1);
+        await handleAddStamp(file, { pageIndex: pageIdx, ...options });
+      },
+      getCurrentPage: () => latestPageRef.current,
+      getCurrentInkData,
+      getLiveStamps: collectLiveStamps,
+      flushAnnotations,
+    };
+
+    if (itemId) pdfRegistry.register(itemId, api);
+    if (tabId) pdfRegistry.register(tabId, api);
+    if (documentId) pdfRegistry.register(documentId, api);
+
+    return () => {
+      if (itemId) pdfRegistry.unregister(itemId);
+      if (tabId) pdfRegistry.unregister(tabId);
+      if (documentId) pdfRegistry.unregister(documentId);
+    };
+  }, [itemId, tabId, documentId, handleAddStamp, getCurrentInkData, collectLiveStamps, flushAnnotations]);
 
   const docState = useDocumentState(documentId);
   const stampFileInputRef = useRef<HTMLInputElement>(null);
@@ -626,20 +701,47 @@ function ViewerInner({
     if (isDownloading) return;
     setIsDownloading(true);
     try {
-      let pdfBytes: Uint8Array;
-      if (exportScope) {
-        // 1. Live PDFium Export with all active/imported annotations
-        const task = exportScope.saveAsCopy();
-        const arrayBuffer = await task.toPromise();
-        pdfBytes = new Uint8Array(arrayBuffer);
-        // Burn custom ink strokes and custom sticky notes onto the exported PDF
-        pdfBytes = await burnCustomInkOnPdfBytes(pdfBytes, customStrokes, customStickyNotes, customTextBoxes);
-      } else {
-        // 2. Standalone burning fallback using @cantoo/pdf-lib
-        const curBuffer = await blob.arrayBuffer();
-        const savedJson = (await ps.readAnnotations(projectId, pdfHash || documentId)) ?? "";
-        pdfBytes = await burnAnnotationsWithPdfLib(curBuffer, savedJson, projectId, ps);
+      // 0. Force any focused inputs/textareas to blur so their local text commits
+      if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
       }
+
+      // Force a tick to allow React to flush any pending DOM/state updates
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      // 1. Force flush pending annotations to ensure storage and export scopes are 100% synced
+      try {
+        await flushAnnotations();
+      } catch (flushErr) {
+        console.warn("[PdfViewer] flushAnnotations before download failed:", flushErr);
+      }
+
+      // 2. Collect live stamps from annotationScope and cache / storage
+      const liveStamps = await collectLiveStamps();
+
+      // Fetch absolute latest ink, sticky notes, and text data directly from refs
+      const inkData = getCurrentInkData();
+      // 3. Custom flattening export logic using @cantoo/pdf-lib (PDF-5)
+      // Burns highlights, stamps, freeText, sticky notes, custom text boxes, and custom ink strokes
+      const curBuffer = await blob.arrayBuffer();
+      const savedJson =
+        (await ps.readAnnotations(projectId, pdfHash || documentId).catch(() => "")) ||
+        (itemId ? await ps.readAnnotations(projectId, `anno-${itemId}`).catch(() => "") : "") ||
+        "";
+
+      const pdfBytes = await burnAnnotationsWithPdfLib(
+        curBuffer,
+        savedJson,
+        projectId,
+        ps,
+        {
+          customInkStrokes: inkData.customStrokes,
+          customStickyNotes: inkData.customStickyNotes,
+          customTextBoxes: inkData.customTextBoxes,
+          stamps: liveStamps,
+        }
+      );
 
       const annotatedBlob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       const hash = await computeBlobSha256(annotatedBlob);
@@ -680,9 +782,9 @@ function ViewerInner({
     try {
       const curBuffer = await blob.arrayBuffer();
       const newBytes = await op(curBuffer);
-      const newBlob = new Blob([newBytes.buffer as ArrayBuffer], { type: "application/pdf" });
+      const newBlob = new Blob([newBytes as unknown as BlobPart], { type: "application/pdf" });
 
-      await onSaveRestructuredPdf?.(newBlob);
+      await onSaveRestructuredPdf?.(newBlob, documentTitle);
       onShowToast(t("pdf.restructuredWarning"));
     } catch (err) {
       console.error("[PdfViewer] Page operation failed:", err);
@@ -690,12 +792,6 @@ function ViewerInner({
     } finally {
       setIsOperatingPage(false);
     }
-  };
-
-  const handleRotatePage = async () => {
-    const curPage = displayPage || scrollState.currentPage || 1;
-    const pageIdx = Math.max(0, curPage - 1);
-    await executePageOp((bytes) => rotatePage(bytes, pageIdx, 90));
   };
 
   const handleMovePageUp = async () => {
@@ -1027,7 +1123,6 @@ function ViewerInner({
             onResetZoom={handleResetZoom}
             currentPage={displayPage || scrollState.currentPage || 1}
             totalPages={scrollState.totalPages || 1}
-            onRotatePage={handleRotatePage}
             onMovePageUp={handleMovePageUp}
             onMovePageDown={handleMovePageDown}
             onDeletePage={handleDeletePage}
@@ -1064,6 +1159,7 @@ export function PdfViewer({
   onSaveRestructuredPdf,
   onShowToast,
   hasBoardTab = true,
+  onDirtyChange,
 }: PdfViewerProps) {
   const { t } = useI18n();
 
@@ -1143,10 +1239,8 @@ export function PdfViewer({
 
       doc = {
         ...doc,
-        normalizedRotation: true,
         pages: doc.pages.map((p) => ({
           ...p,
-          rotation: 0,
         })),
       };
 
@@ -1232,6 +1326,7 @@ export function PdfViewer({
             onSaveRestructuredPdf={onSaveRestructuredPdf}
             onShowToast={showToast}
             hasBoardTab={hasBoardTab}
+            onDirtyChange={onDirtyChange}
           />
         ) : (
           <div

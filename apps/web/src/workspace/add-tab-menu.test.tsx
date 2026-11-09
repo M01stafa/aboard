@@ -60,7 +60,7 @@ describe("Workspace '+' New Tab Menu & Unique Tool Rule", () => {
     const circuitOpt = container.querySelector('[data-testid="add-tab-circuit"]') as HTMLButtonElement;
 
     expect(boardOpt).toBeTruthy();
-    expect(boardOpt.textContent).toContain("Whiteboard");
+    expect(boardOpt.textContent).toMatch(/Board|Whiteboard/);
     // Board is already open -> disabled
     expect(boardOpt.disabled).toBe(true);
     expect(boardOpt.title).toBeTruthy();

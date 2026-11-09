@@ -5,6 +5,7 @@ import { bus } from "@/core/bus";
 import { useI18n } from "@/i18n/provider";
 import { exportAlpha, ExportCapExceededError, safeFileName } from "./export";
 import { projectService as defaultProjectService, type ProjectService } from "@/core/storage";
+import { pdfRegistry } from "@/modules/pdf/pdf-registry";
 
 export interface ProjectPdfInfo {
   id: string;
@@ -278,11 +279,38 @@ export function ExportDialog({
             "";
 
           const { burnAnnotationsWithPdfLib } = await import("@/modules/pdf/page-operations");
+
+          // If this PDF is currently active in the workspace, fetch live overrides from its imperative handle
+          const activeApi =
+            pdfRegistry.get(pdfDoc.id) ||
+            pdfRegistry.get(pdfDoc.fileKey) ||
+            (pdfDoc.fileKey ? pdfRegistry.get(`pdf-${pdfDoc.fileKey}`) : undefined);
+
+          let liveOverrides: Parameters<typeof burnAnnotationsWithPdfLib>[4] | undefined;
+          if (activeApi) {
+            try {
+              await activeApi.flushAnnotations?.();
+              const liveInk = activeApi.getCurrentInkData?.();
+              const liveStamps = await activeApi.getLiveStamps?.();
+              if (liveInk) {
+                liveOverrides = {
+                  customInkStrokes: liveInk.customStrokes,
+                  customStickyNotes: liveInk.customStickyNotes,
+                  customTextBoxes: liveInk.customTextBoxes,
+                  stamps: liveStamps,
+                };
+              }
+            } catch (err) {
+              console.warn("[ExportDialog] Failed to fetch live overrides from active PDF:", err);
+            }
+          }
+
           const burnedBytes = await burnAnnotationsWithPdfLib(
             pdfBuffer,
             annotationsJson,
             projectId,
-            ps
+            ps,
+            liveOverrides
           );
           const finalBlob = new Blob([burnedBytes.buffer as ArrayBuffer], { type: "application/pdf" });
           const fileName = `${safeFileName(baseName)}-flattened.pdf`;
@@ -318,6 +346,9 @@ export function ExportDialog({
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("quota") || msg.includes("storageQuotaExceeded")) {
         setError(t("driveErrors.quotaExceeded"));
+      } else if (msg.includes("non-2xx") || msg.includes("Edge Function")) {
+        setError(t("driveErrors.notConnected"));
+        setErrorHint(t("driveErrors.notConnectedHint"));
       } else {
         setError(msg);
       }

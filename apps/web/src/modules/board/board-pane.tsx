@@ -79,6 +79,7 @@ export function BoardPane({
   hasPdfTab = true,
   onMount,
   onApiReady,
+  onDirtyChange,
 }: BoardPaneProps) {
   const { t, resolvedTheme: i18nTheme, language } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -168,6 +169,39 @@ export function BoardPane({
   const [isPdfMenuOpen, setIsPdfMenuOpen] = useState(false);
   const pdfMenuRef = useRef<HTMLDivElement>(null);
 
+  // Responsive collapsed "More" menu and templates state
+  const [isNarrow, setIsNarrow] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [isMorePdfSubmenuOpen, setIsMorePdfSubmenuOpen] = useState(false);
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  const moreBtnRef = useRef<HTMLButtonElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close More menu on outside click or Escape key
+  useEffect(() => {
+    if (!isMoreOpen) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (moreMenuRef.current?.contains(target)) return;
+      if (moreBtnRef.current?.contains(target)) return;
+      setIsMoreOpen(false);
+      setIsMorePdfSubmenuOpen(false);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsMoreOpen(false);
+        setIsMorePdfSubmenuOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMoreOpen]);
+
   // Close PDF menu on outside click or Escape key
   useEffect(() => {
     if (!isPdfMenuOpen) return;
@@ -205,10 +239,21 @@ export function BoardPane({
     const container = containerRef.current;
     if (!container || typeof ResizeObserver === "undefined") return;
 
+    const checkWidth = () => {
+      const rect = container.getBoundingClientRect();
+      if (rect.width > 0) {
+        setIsNarrow(rect.width < 640);
+      }
+    };
+    checkWidth();
+
     let rafId: number | null = null;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
+        if (width > 0) {
+          setIsNarrow(width < 640);
+        }
         if (width > 0 && height > 0 && visibleRef.current && excalidrawApiRef.current) {
           if (rafId !== null) {
             cancelAnimationFrame(rafId);
@@ -374,16 +419,50 @@ export function BoardPane({
     [tab.itemId, tab.id, showToast, t]
   );
 
+  // Immediate local dirty tracking (before debounce) for unsaved changes confirmation
+  const isDirtyRef = useRef(false);
+  const lastElementsRef = useRef<readonly unknown[] | null>(null);
+
+  useEffect(() => {
+    if (initialData?.elements) {
+      lastElementsRef.current = initialData.elements;
+    }
+  }, [initialData]);
+
+  useEffect(() => {
+    const handleClean = (data: { tabId?: string; itemId?: string; isDirty: boolean }) => {
+      if ((data.tabId === tab.id || data.itemId === tab.itemId) && !data.isDirty) {
+        isDirtyRef.current = false;
+        onDirtyChange?.(false);
+      }
+    };
+    bus.on("tab:dirty-state", handleClean);
+    return () => {
+      bus.off("tab:dirty-state", handleClean);
+    };
+  }, [tab.id, tab.itemId, onDirtyChange]);
+
   // Black-box persistence: push changes to saveBoard without triggering React re-renders
   const handleChange = useCallback(
     (elements: readonly unknown[], appState: unknown, files?: unknown) => {
+      // Set isDirty = true immediately on user drawing/modification (before debounce)
+      if (lastElementsRef.current !== null && elements !== lastElementsRef.current) {
+        if (!isDirtyRef.current) {
+          isDirtyRef.current = true;
+          onDirtyChange?.(true);
+          bus.emit("tab:dirty-state", { tabId: tab.id, itemId: tab.itemId, isDirty: true });
+        }
+      } else if (lastElementsRef.current === null) {
+        lastElementsRef.current = elements;
+      }
+
       saveBoard(
         elements,
         appState as Record<string, unknown>,
         files as Record<string, unknown> | undefined
       );
     },
-    [saveBoard]
+    [saveBoard, onDirtyChange, tab.id, tab.itemId]
   );
 
   return (
@@ -473,6 +552,18 @@ export function BoardPane({
             [dir="rtl"] .aboard-board-pane .excalidraw .zoom-in-button {
               transform: none !important;
             }
+
+            /* Ensure Board React top toolbar stays above Excalidraw UI and vertical tools sit below it */
+            .aboard-board-pane .board-send-to-pdf-container,
+            .aboard-board-pane [data-testid="templates-panel-toggle"] {
+              z-index: 150 !important;
+            }
+            .aboard-board-pane .excalidraw .layer-ui__wrapper {
+              z-index: 20 !important;
+            }
+            .aboard-board-pane .excalidraw .layer-ui__wrapper__footer-right {
+              margin-top: var(--space-6) !important;
+            }
           `}</style>
           <ExcalidrawBoard
             excalidrawAPI={handleApi as unknown as (api: unknown) => void}
@@ -496,143 +587,429 @@ export function BoardPane({
             aiEnabled={false}
             validateEmbeddable={false}
           />
-          <div
-            ref={pdfMenuRef}
-            className="board-send-to-pdf-container"
-            style={{
-              position: "absolute",
-              insetBlockStart: "var(--space-2)",
-              insetInlineEnd: "calc(var(--space-2) + var(--space-16))",
-              zIndex: 10,
-            }}
-          >
-            <button
-              type="button"
-              data-testid="board-send-to-pdf-btn"
-              onClick={() => {
-                if (!hasPdfTab || isSendingToPdf) return;
-                setIsPdfMenuOpen((prev) => !prev);
-              }}
-              disabled={!hasPdfTab || isSendingToPdf}
-              aria-haspopup="menu"
-              aria-expanded={isPdfMenuOpen}
-              title={!hasPdfTab ? t("board.sendToPdfNoPdfOpen") : t("board.sendToPdf")}
+          {/* Wide layout: normal buttons */}
+          {!isNarrow && (
+            <div
+              ref={pdfMenuRef}
+              className="board-send-to-pdf-container"
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "var(--space-1)",
-                paddingBlock: "var(--space-1)",
-                paddingInline: "var(--space-2)",
-                backgroundColor: "var(--bg-surface)",
-                color: "var(--text-main)",
-                border: "1px solid var(--border-card)",
-                borderRadius: "var(--radius-md)",
-                boxShadow: "var(--shadow-1)",
-                fontSize: "0.875rem",
-                fontWeight: "var(--weight-medium)",
-                cursor: (!hasPdfTab || isSendingToPdf) ? (!hasPdfTab ? "not-allowed" : "wait") : "pointer",
-                opacity: !hasPdfTab ? 0.45 : 1,
-                transition:
-                  "background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), opacity var(--motion-fast) var(--ease-standard)",
+                position: "absolute",
+                insetBlockStart: "var(--space-2)",
+                insetInlineEnd: "calc(var(--space-2) + var(--space-16))",
+                zIndex: 150,
               }}
             >
-              <svg
-                width={16}
-                height={16}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <polyline points="10 9 9 9 8 9" />
-              </svg>
-              <span>
-                {isSendingToPdf ? t("board.sendingToPdf") : t("board.sendToPdf")}
-              </span>
-              <span style={{ fontSize: "0.75rem", marginInlineStart: "var(--space-1)" }}>▾</span>
-            </button>
-
-            {isPdfMenuOpen && (
-              <div
-                role="menu"
-                data-testid="send-to-pdf-menu"
+              <button
+                type="button"
+                data-testid="board-send-to-pdf-btn"
+                onClick={() => {
+                  if (!hasPdfTab || isSendingToPdf) return;
+                  setIsPdfMenuOpen((prev) => !prev);
+                }}
+                disabled={!hasPdfTab || isSendingToPdf}
+                aria-haspopup="menu"
+                aria-expanded={isPdfMenuOpen}
+                title={!hasPdfTab ? t("board.sendToPdfNoPdfOpen") : t("board.sendToPdf")}
                 style={{
-                  position: "absolute",
-                  insetBlockStart: "calc(100% + var(--space-1))",
-                  insetInlineEnd: 0,
-                  minWidth: "calc(var(--space-16) * 3)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "var(--space-1)",
+                  paddingBlock: "var(--space-1)",
+                  paddingInline: "var(--space-2)",
                   backgroundColor: "var(--bg-surface)",
+                  color: "var(--text-main)",
                   border: "1px solid var(--border-card)",
                   borderRadius: "var(--radius-md)",
-                  boxShadow: "var(--shadow-2)",
-                  paddingBlock: "var(--space-1)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 0,
-                  zIndex: 20,
+                  boxShadow: "var(--shadow-1)",
+                  fontSize: "0.875rem",
+                  fontWeight: "var(--weight-medium)",
+                  cursor: (!hasPdfTab || isSendingToPdf) ? (!hasPdfTab ? "not-allowed" : "wait") : "pointer",
+                  opacity: !hasPdfTab ? 0.45 : 1,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  transition:
+                    "background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), opacity var(--motion-fast) var(--ease-standard)",
                 }}
               >
-                <button
-                  type="button"
-                  role="menuitem"
-                  data-testid="send-to-pdf-append"
-                  className="send-to-pdf-item"
-                  onClick={() => handleSendToPdf("append")}
+                <svg
+                  width={16}
+                  height={16}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+                <span style={{ whiteSpace: "nowrap" }}>
+                  {isSendingToPdf ? t("board.sendingToPdf") : t("board.sendToPdf")}
+                </span>
+                <span style={{ fontSize: "0.75rem", marginInlineStart: "var(--space-1)" }}>▾</span>
+              </button>
+
+              {isPdfMenuOpen && (
+                <div
+                  role="menu"
+                  data-testid="send-to-pdf-menu"
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    width: "100%",
+                    position: "absolute",
+                    insetBlockStart: "calc(100% + var(--space-1))",
+                    insetInlineEnd: 0,
+                    minWidth: "calc(var(--space-16) * 3)",
+                    backgroundColor: "var(--bg-surface)",
+                    border: "1px solid var(--border-card)",
+                    borderRadius: "var(--radius-md)",
+                    boxShadow: "var(--shadow-2)",
                     paddingBlock: "var(--space-1)",
-                    paddingInline: "var(--space-2)",
-                    backgroundColor: "transparent",
-                    color: "var(--text-main)",
-                    border: "none",
-                    textAlign: "start",
-                    fontSize: "0.875rem",
-                    cursor: "pointer",
-                    boxSizing: "border-box",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 0,
+                    zIndex: 160,
                   }}
                 >
-                  <span>📄</span>
-                  <span>{t("board.sendAsNewPage")}</span>
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  data-testid="send-to-pdf-overlay"
-                  className="send-to-pdf-item"
-                  onClick={() => handleSendToPdf("overlay")}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-testid="send-to-pdf-append"
+                    className="send-to-pdf-item"
+                    onClick={() => handleSendToPdf("append")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-1)",
+                      width: "100%",
+                      paddingBlock: "var(--space-1)",
+                      paddingInline: "var(--space-2)",
+                      backgroundColor: "transparent",
+                      color: "var(--text-main)",
+                      border: "none",
+                      textAlign: "start",
+                      fontSize: "0.875rem",
+                      cursor: "pointer",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <span>📄</span>
+                    <span>{t("board.sendAsNewPage")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-testid="send-to-pdf-overlay"
+                    className="send-to-pdf-item"
+                    onClick={() => handleSendToPdf("overlay")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-1)",
+                      width: "100%",
+                      paddingBlock: "var(--space-1)",
+                      paddingInline: "var(--space-2)",
+                      backgroundColor: "transparent",
+                      color: "var(--text-main)",
+                      border: "none",
+                      textAlign: "start",
+                      fontSize: "0.875rem",
+                      cursor: "pointer",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <span>🖼</span>
+                    <span>{t("board.overlayOnCurrentPage")}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Narrow layout: single More (three dots) button */}
+          {isNarrow && (
+            <>
+              <button
+                ref={moreBtnRef}
+                type="button"
+                data-testid="board-more-btn"
+                aria-expanded={isMoreOpen}
+                aria-haspopup="menu"
+                aria-label={language === "ar" ? "خيارات إضافية" : "More options"}
+                onClick={() => {
+                  setIsMoreOpen((prev) => !prev);
+                  setIsMorePdfSubmenuOpen(false);
+                }}
+                style={{
+                  position: "absolute",
+                  insetBlockStart: "var(--space-2)",
+                  insetInlineEnd: "var(--space-2)",
+                  zIndex: 150,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "var(--control-sm)",
+                  height: "var(--control-sm)",
+                  backgroundColor: isMoreOpen ? "var(--btn-primary-bg)" : "var(--bg-surface)",
+                  color: isMoreOpen ? "var(--btn-primary-text)" : "var(--text-main)",
+                  border: "1px solid var(--border-card)",
+                  borderRadius: "var(--radius-md)",
+                  boxShadow: "var(--shadow-1)",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  transition:
+                    "background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard)",
+                }}
+              >
+                <svg
+                  width={16}
+                  height={16}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                  <circle cx="19" cy="12" r="1.5" fill="currentColor" />
+                  <circle cx="5" cy="12" r="1.5" fill="currentColor" />
+                </svg>
+              </button>
+
+              {isMoreOpen && (
+                <div
+                  ref={moreMenuRef}
+                  role="menu"
+                  data-testid="board-more-menu"
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    width: "100%",
+                    position: "absolute",
+                    insetBlockStart: "calc(var(--space-2) + var(--control-sm) + var(--space-1))",
+                    insetInlineEnd: "var(--space-2)",
+                    minWidth: "calc(var(--space-16) * 2)",
+                    backgroundColor: "var(--bg-surface)",
+                    border: "1px solid var(--border-card)",
+                    borderRadius: "var(--radius-md)",
+                    boxShadow: "var(--shadow-2)",
                     paddingBlock: "var(--space-1)",
-                    paddingInline: "var(--space-2)",
-                    backgroundColor: "transparent",
-                    color: "var(--text-main)",
-                    border: "none",
-                    textAlign: "start",
-                    fontSize: "0.875rem",
-                    cursor: "pointer",
-                    boxSizing: "border-box",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 0,
+                    zIndex: 160,
                   }}
                 >
-                  <span>🖼</span>
-                  <span>{t("board.overlayOnCurrentPage")}</span>
-                </button>
-              </div>
-            )}
-          </div>
-          <TemplatesPanel getApi={getApi} />
+                  {/* Send to PDF Option */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-testid="more-send-to-pdf"
+                    onClick={() => {
+                      if (!hasPdfTab || isSendingToPdf) return;
+                      setIsMorePdfSubmenuOpen((prev) => !prev);
+                    }}
+                    disabled={!hasPdfTab || isSendingToPdf}
+                    title={!hasPdfTab ? t("board.sendToPdfNoPdfOpen") : t("board.sendToPdf")}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "var(--space-1)",
+                      width: "100%",
+                      paddingBlock: "var(--space-1)",
+                      paddingInline: "var(--space-2)",
+                      backgroundColor: "transparent",
+                      color: "var(--text-main)",
+                      border: "none",
+                      textAlign: "start",
+                      fontSize: "0.875rem",
+                      cursor: (!hasPdfTab || isSendingToPdf) ? (!hasPdfTab ? "not-allowed" : "wait") : "pointer",
+                      opacity: !hasPdfTab ? 0.45 : 1,
+                      boxSizing: "border-box",
+                      transition: "background-color var(--motion-fast) var(--ease-standard)",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (hasPdfTab && !isSendingToPdf) {
+                        e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}>
+                      <svg
+                        width={16}
+                        height={16}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                      </svg>
+                      <span>{isSendingToPdf ? t("board.sendingToPdf") : t("board.sendToPdf")}</span>
+                    </span>
+                    <span style={{ fontSize: "0.75rem", marginInlineStart: "var(--space-1)" }}>
+                      {isMorePdfSubmenuOpen ? "▴" : "▾"}
+                    </span>
+                  </button>
+
+                  {/* Send to PDF Submenu */}
+                  {isMorePdfSubmenuOpen && hasPdfTab && (
+                    <div
+                      style={{
+                        backgroundColor: "var(--bg-subtle)",
+                        borderBlock: "1px solid var(--border-card)",
+                        paddingBlock: "var(--space-1)",
+                        display: "flex",
+                        flexDirection: "column",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        data-testid="more-send-to-pdf-append"
+                        onClick={() => {
+                          setIsMoreOpen(false);
+                          setIsMorePdfSubmenuOpen(false);
+                          handleSendToPdf("append");
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "var(--space-1)",
+                          width: "100%",
+                          paddingBlock: "var(--space-1)",
+                          paddingInlineStart: "var(--space-4)",
+                          paddingInlineEnd: "var(--space-2)",
+                          backgroundColor: "transparent",
+                          color: "var(--text-main)",
+                          border: "none",
+                          textAlign: "start",
+                          fontSize: "0.875rem",
+                          cursor: "pointer",
+                          boxSizing: "border-box",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--bg-surface)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                        }}
+                      >
+                        <span>📄</span>
+                        <span>{t("board.sendAsNewPage")}</span>
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        data-testid="more-send-to-pdf-overlay"
+                        onClick={() => {
+                          setIsMoreOpen(false);
+                          setIsMorePdfSubmenuOpen(false);
+                          handleSendToPdf("overlay");
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "var(--space-1)",
+                          width: "100%",
+                          paddingBlock: "var(--space-1)",
+                          paddingInlineStart: "var(--space-4)",
+                          paddingInlineEnd: "var(--space-2)",
+                          backgroundColor: "transparent",
+                          color: "var(--text-main)",
+                          border: "none",
+                          textAlign: "start",
+                          fontSize: "0.875rem",
+                          cursor: "pointer",
+                          boxSizing: "border-box",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "var(--bg-surface)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                        }}
+                      >
+                        <span>🖼</span>
+                        <span>{t("board.overlayOnCurrentPage")}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Templates Option */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-testid="more-templates-btn"
+                    onClick={() => {
+                      setIsMoreOpen(false);
+                      setIsMorePdfSubmenuOpen(false);
+                      setIsTemplatesOpen(true);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-1)",
+                      width: "100%",
+                      paddingBlock: "var(--space-1)",
+                      paddingInline: "var(--space-2)",
+                      backgroundColor: "transparent",
+                      color: "var(--text-main)",
+                      border: "none",
+                      textAlign: "start",
+                      fontSize: "0.875rem",
+                      cursor: "pointer",
+                      boxSizing: "border-box",
+                      transition: "background-color var(--motion-fast) var(--ease-standard)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    <svg
+                      width={16}
+                      height={16}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <line x1="3" y1="9" x2="21" y2="9" />
+                      <line x1="9" y1="21" x2="9" y2="9" />
+                    </svg>
+                    <span>{t("templates.toggleButton")}</span>
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          <TemplatesPanel
+            getApi={getApi}
+            isOpen={isTemplatesOpen}
+            onOpenChange={setIsTemplatesOpen}
+            hideToggleButton={isNarrow}
+          />
           {toastMessage && (
             <div
               role="status"

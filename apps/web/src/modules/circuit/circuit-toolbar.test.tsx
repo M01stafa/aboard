@@ -244,6 +244,88 @@ describe("CircuitToolbar (Task 42 / CIRC-5)", () => {
 
     const toggleBtn = container.querySelector('[data-testid="circuit-advanced-toggle-btn"]') as HTMLButtonElement;
     expect(toggleBtn).not.toBeNull();
-    expect(toggleBtn.textContent).toContain("Switch to Simple Toolbar");
+    expect(toggleBtn.textContent).toMatch(/Simple Toolbar/);
+  });
+
+  it("verifies Send to Board button is disabled when circuit is empty OR no board is open", () => {
+    const onSendToBoard = vi.fn();
+
+    // 1. Neither board open nor non-empty -> disabled
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <CircuitToolbar
+            {...createDefaultProps({
+              onSendToBoard,
+              isBoardOpen: false,
+              isCircuitEmpty: true,
+            })}
+          />
+        </I18nProvider>
+      );
+    });
+
+    let sendBtn = container.querySelector('[data-testid="circuit-send-to-board-btn"]') as HTMLButtonElement;
+    expect(sendBtn).not.toBeNull();
+    expect(sendBtn.disabled).toBe(true);
+
+    // 2. Board open, but circuit is empty -> disabled
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <CircuitToolbar
+            {...createDefaultProps({
+              onSendToBoard,
+              isBoardOpen: true,
+              isCircuitEmpty: true,
+            })}
+          />
+        </I18nProvider>
+      );
+    });
+
+    sendBtn = container.querySelector('[data-testid="circuit-send-to-board-btn"]') as HTMLButtonElement;
+    expect(sendBtn.disabled).toBe(true);
+
+    // 3. Circuit non-empty, but no board open -> disabled
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <CircuitToolbar
+            {...createDefaultProps({
+              onSendToBoard,
+              isBoardOpen: false,
+              isCircuitEmpty: false,
+            })}
+          />
+        </I18nProvider>
+      );
+    });
+
+    sendBtn = container.querySelector('[data-testid="circuit-send-to-board-btn"]') as HTMLButtonElement;
+    expect(sendBtn.disabled).toBe(true);
+
+    // 4. BOTH board open AND circuit non-empty -> enabled
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <CircuitToolbar
+            {...createDefaultProps({
+              onSendToBoard,
+              isBoardOpen: true,
+              isCircuitEmpty: false,
+            })}
+          />
+        </I18nProvider>
+      );
+    });
+
+    sendBtn = container.querySelector('[data-testid="circuit-send-to-board-btn"]') as HTMLButtonElement;
+    expect(sendBtn.disabled).toBe(false);
+
+    act(() => {
+      sendBtn.click();
+    });
+    expect(onSendToBoard).toHaveBeenCalledTimes(1);
   });
 });

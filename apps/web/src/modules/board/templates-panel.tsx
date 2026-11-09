@@ -1,23 +1,80 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import { useI18n } from "@/i18n/provider";
 import { STUDY_TEMPLATES, type TemplateDefinition } from "./templates";
 import { normalizeLinearElements } from "./use-board-persistence";
 
-interface TemplatesPanelProps {
+export interface TemplatesPanelProps {
   getApi: () => ExcalidrawImperativeAPI | null;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideToggleButton?: boolean;
 }
 
-export function TemplatesPanel({ getApi }: TemplatesPanelProps) {
+export function TemplatesPanel({
+  getApi,
+  isOpen: controlledIsOpen,
+  onOpenChange,
+  hideToggleButton = false,
+}: TemplatesPanelProps) {
   const { t, language } = useI18n();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+
+  const setIsOpen = useCallback(
+    (value: boolean | ((prev: boolean) => boolean)) => {
+      const next = typeof value === "function" ? value(isOpen) : value;
+      if (onOpenChange) {
+        onOpenChange(next);
+      } else {
+        setInternalIsOpen(next);
+      }
+    },
+    [isOpen, onOpenChange]
+  );
+
   const [justInsertedId, setJustInsertedId] = useState<string | null>(null);
+  const drawerRef = useRef<HTMLElement>(null);
+  const toggleBtnRef = useRef<HTMLButtonElement>(null);
 
   const handleToggle = useCallback(() => {
     setIsOpen((prev) => !prev);
-  }, []);
+  }, [setIsOpen]);
+
+  // Click outside and Escape key handling to close the templates drawer
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+
+      if (drawerRef.current && drawerRef.current.contains(target)) {
+        return;
+      }
+      if (toggleBtnRef.current && toggleBtnRef.current.contains(target)) {
+        return;
+      }
+
+      setIsOpen(false);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown, { capture: true });
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown, { capture: true });
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, setIsOpen]);
 
   const handleInsert = useCallback(
     async (template: TemplateDefinition) => {
@@ -97,55 +154,61 @@ export function TemplatesPanel({ getApi }: TemplatesPanelProps) {
   return (
     <>
       {/* Floating Toggle Button */}
-      <button
-        type="button"
-        data-testid="templates-panel-toggle"
-        aria-expanded={isOpen}
-        aria-controls="aboard-templates-drawer"
-        onClick={handleToggle}
-        style={{
-          position: "absolute",
-          insetBlockStart: "var(--space-2)",
-          insetInlineEnd: "var(--space-2)",
-          zIndex: 10,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "var(--space-1)",
-          paddingBlock: "var(--space-1)",
-          paddingInline: "var(--space-2)",
-          backgroundColor: isOpen ? "var(--btn-primary-bg)" : "var(--bg-surface)",
-          color: isOpen ? "var(--btn-primary-text)" : "var(--text-main)",
-          border: "1px solid var(--border-card)",
-          borderRadius: "var(--radius-md)",
-          boxShadow: "var(--shadow-1)",
-          fontSize: "0.875rem",
-          fontWeight: "var(--weight-medium)",
-          cursor: "pointer",
-          transition:
-            "background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard)",
-        }}
-      >
-        <svg
-          width={16}
-          height={16}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
+      {!hideToggleButton && (
+        <button
+          ref={toggleBtnRef}
+          type="button"
+          data-testid="templates-panel-toggle"
+          aria-expanded={isOpen}
+          aria-controls="aboard-templates-drawer"
+          onClick={handleToggle}
+          style={{
+            position: "absolute",
+            insetBlockStart: "var(--space-2)",
+            insetInlineEnd: "var(--space-2)",
+            zIndex: 150,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "var(--space-1)",
+            paddingBlock: "var(--space-1)",
+            paddingInline: "var(--space-2)",
+            backgroundColor: isOpen ? "var(--btn-primary-bg)" : "var(--bg-surface)",
+            color: isOpen ? "var(--btn-primary-text)" : "var(--text-main)",
+            border: "1px solid var(--border-card)",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--shadow-1)",
+            fontSize: "0.875rem",
+            fontWeight: "var(--weight-medium)",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+            transition:
+              "background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard)",
+          }}
         >
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <line x1="3" y1="9" x2="21" y2="9" />
-          <line x1="9" y1="21" x2="9" y2="9" />
-        </svg>
-        <span>{t("templates.toggleButton")}</span>
-      </button>
+          <svg
+            width={16}
+            height={16}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <line x1="3" y1="9" x2="21" y2="9" />
+            <line x1="9" y1="21" x2="9" y2="9" />
+          </svg>
+          <span style={{ whiteSpace: "nowrap" }}>{t("templates.toggleButton")}</span>
+        </button>
+      )}
 
       {/* Slide-in Unobtrusive Drawer */}
       {isOpen && (
         <aside
+          ref={drawerRef}
           id="aboard-templates-drawer"
           data-testid="aboard-templates-drawer"
           role="region"
@@ -156,7 +219,7 @@ export function TemplatesPanel({ getApi }: TemplatesPanelProps) {
             insetBlockEnd: 0,
             insetInlineEnd: 0,
             inlineSize: "320px",
-            zIndex: 20,
+            zIndex: 160,
             backgroundColor: "var(--bg-surface)",
             borderInlineStart: "1px solid var(--border-card)",
             boxShadow: "var(--shadow-3)",
@@ -170,21 +233,31 @@ export function TemplatesPanel({ getApi }: TemplatesPanelProps) {
           <header
             style={{
               paddingBlock: "var(--space-2)",
-              paddingInline: "var(--space-3)",
+              paddingInline: "var(--space-2)",
               borderBlockEnd: "1px solid var(--border-card)",
               display: "flex",
-              alignItems: "center",
+              alignItems: "flex-start",
               justifyContent: "space-between",
-              gap: "var(--space-2)",
+              gap: "var(--space-1)",
+              boxSizing: "border-box",
             }}
           >
-            <div>
+            <div
+              style={{
+                flex: 1,
+                minInlineSize: 0,
+                minWidth: 0,
+              }}
+            >
               <h2
                 style={{
                   margin: 0,
                   fontSize: "1rem",
                   fontWeight: "var(--weight-semibold)",
                   color: "var(--text-main)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {t("templates.panelTitle")}
@@ -194,6 +267,8 @@ export function TemplatesPanel({ getApi }: TemplatesPanelProps) {
                   margin: 0,
                   fontSize: "0.75rem",
                   color: "var(--text-muted)",
+                  lineHeight: 1.25,
+                  wordBreak: "break-word",
                 }}
               >
                 {t("templates.panelDescription")}
@@ -202,18 +277,31 @@ export function TemplatesPanel({ getApi }: TemplatesPanelProps) {
             <button
               type="button"
               data-testid="templates-panel-close"
-              aria-label={t("templates.close")}
-              onClick={handleToggle}
+              aria-label={t("templates.close") || "Close"}
+              onClick={() => setIsOpen(false)}
               style={{
+                flexShrink: 0,
+                inlineSize: "var(--control-sm)",
+                blockSize: "var(--control-sm)",
                 background: "transparent",
                 border: "none",
                 color: "var(--text-muted)",
                 cursor: "pointer",
-                padding: "var(--space-1)",
+                padding: 0,
                 borderRadius: "var(--radius-sm)",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
+                transition:
+                  "color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "var(--text-main)";
+                e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--text-muted)";
+                e.currentTarget.style.backgroundColor = "transparent";
               }}
             >
               <svg

@@ -20,6 +20,7 @@ export function PdfPane({
   hasBoardTab = true,
   onMount,
   projectServiceOverride,
+  onDirtyChange,
 }: PdfPaneProps) {
   const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -169,6 +170,7 @@ export function PdfPane({
           onSaveRestructuredPdf={addPdfFile}
           onShowToast={showToast}
           hasBoardTab={hasBoardTab}
+          onDirtyChange={onDirtyChange}
         />
 
         {/* Warning toast notification (PDF-6) */}

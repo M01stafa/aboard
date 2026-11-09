@@ -287,8 +287,14 @@ export class CircuitAdapter {
    * Wraps getCircuitAsSVG() + onsvgrendered (docs/specs/modules.md §8).
    */
   async requestSVG(timeoutMs = 10000): Promise<string> {
+    if (!this.api && this.targetWindow?.CircuitJS1) {
+      this.bindApi(this.targetWindow.CircuitJS1);
+    }
     if (!this.api) {
       throw new Error("Cannot request SVG: CircuitJS1 is not attached");
+    }
+    if (this.targetWindow?.CircuitJS1 && this.targetWindow.CircuitJS1 !== this.api) {
+      this.bindApi(this.targetWindow.CircuitJS1);
     }
 
     return new Promise<string>((resolve, reject) => {

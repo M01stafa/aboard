@@ -825,7 +825,7 @@ export function PdfCustomInkLayer({
       const p = propsRef.current;
       return {
         x: -p.pageWidth + (clientX - rect.left) * ((3 * p.pageWidth) / rect.width),
-        y: -p.pageHeight + (clientY - rect.top) * ((3 * p.pageHeight) / rect.height),
+        y: (clientY - rect.top) * (p.pageHeight / rect.height),
       };
     };
 
@@ -2096,7 +2096,8 @@ export function PdfCustomInkLayer({
                           const lines = (obj.text || "").split("\n");
                           const minHByLines = Math.round(lines.length * textFontSize * 1.4 + 18);
                           const autoH = measureTextHeight(obj.text || "", curW, textFontSize);
-                          const targetH = Math.max(36, el.scrollHeight || 0, minHByLines, autoH);
+                          const baseH = obj.height && obj.height > 0 ? obj.height : 100;
+                          const targetH = Math.max(baseH, el.scrollHeight || 0, minHByLines, autoH);
                           el.style.height = `${targetH}px`;
                           if (editingHeights[obj.id] !== targetH) {
                             setEditingHeights((prev) => ({ ...prev, [obj.id]: targetH }));
@@ -2131,7 +2132,8 @@ export function PdfCustomInkLayer({
                         const lines = nextValue.split("\n");
                         const minHByLines = Math.round(lines.length * textFontSize * 1.4 + 18);
                         const autoH = measureTextHeight(nextValue, curW, textFontSize);
-                        const targetH = Math.max(36, target.scrollHeight || 0, minHByLines, autoH);
+                        const baseH = obj.height && obj.height > 0 ? obj.height : 100;
+                        const targetH = Math.max(baseH, target.scrollHeight || 0, minHByLines, autoH);
                         target.style.height = `${targetH}px`;
                         setEditingHeights((prev) => ({ ...prev, [obj.id]: targetH }));
 
@@ -2152,7 +2154,8 @@ export function PdfCustomInkLayer({
                         const lines = val.split("\n");
                         const minHByLines = Math.round(lines.length * textFontSize * 1.4 + 18);
                         const autoH = measureTextHeight(val, curW, textFontSize);
-                        const targetH = Math.max(36, target.scrollHeight || 0, minHByLines, autoH);
+                        const baseH = obj.height && obj.height > 0 ? obj.height : 100;
+                        const targetH = Math.max(baseH, target.scrollHeight || 0, minHByLines, autoH);
                         target.style.height = `${targetH}px`;
                         setEditingHeights((prev) => ({ ...prev, [obj.id]: targetH }));
                         onUpdateText?.(pageIndex, obj.id, val);
@@ -2164,7 +2167,8 @@ export function PdfCustomInkLayer({
                         const lines = val.split("\n");
                         const minHByLines = Math.round(lines.length * textFontSize * 1.4 + 18);
                         const autoH = measureTextHeight(val, curW, textFontSize);
-                        const targetH = Math.max(36, target.scrollHeight || 0, minHByLines, autoH);
+                        const baseH = obj.height && obj.height > 0 ? obj.height : 100;
+                        const targetH = Math.max(baseH, target.scrollHeight || 0, minHByLines, autoH);
                         target.style.height = `${targetH}px`;
                         setEditingHeights((prev) => ({ ...prev, [obj.id]: targetH }));
                         onUpdateText?.(pageIndex, obj.id, val);
@@ -2273,47 +2277,6 @@ export function PdfCustomInkLayer({
                 }}
               />
             )}
-            {isSelected && obj.type !== "highlight" && editingTextId !== obj.id && (
-              <g data-testid={`pdf-${obj.type}-bbox`}>
-                <rect
-                  x={curX}
-                  y={curY}
-                  width={curW}
-                  height={curH}
-                  fill="rgba(26, 99, 160, 0.04)"
-                  stroke="var(--accent-text, #1A63A0)"
-                  strokeWidth={1}
-                  strokeOpacity={0.7}
-                  strokeDasharray="4 3"
-                  vectorEffect="non-scaling-stroke"
-                  style={{ pointerEvents: "none" }}
-                />
-                {handles.map(({ pos, hx, hy }) => (
-                  <rect
-                    key={pos}
-                    data-resize-handle={pos}
-                    data-object-id={obj.id}
-                    data-object-type={obj.type}
-                    data-testid={`pdf-${obj.type}-resize-handle-${pos}`}
-                    x={hx - handleSize / 2}
-                    y={hy - handleSize / 2}
-                    width={handleSize}
-                    height={handleSize}
-                    rx={1.5}
-                    ry={1.5}
-                    fill="var(--bg-surface, #ffffff)"
-                    stroke="var(--accent-text, #1A63A0)"
-                    strokeWidth={1}
-                    vectorEffect="non-scaling-stroke"
-                    style={{
-                      cursor: getHandleCursor(pos),
-                      pointerEvents: isSelectMode ? "all" : "none",
-                      touchAction: "none",
-                    }}
-                  />
-                ))}
-              </g>
-            )}
           </g>
         );
       }),
@@ -2338,17 +2301,111 @@ export function PdfCustomInkLayer({
     ]
   );
 
+  const renderedSelectionOverlays = useMemo(() => {
+    return pageObjects
+      .filter((obj) => selectedSet.has(obj.id) && obj.type !== "highlight" && editingTextId !== obj.id)
+      .map((obj) => {
+        const resizeRect = resizeRects[obj.id];
+        const offset = dragOffsets[obj.id] || { x: 0, y: 0 };
+        const curX = resizeRect ? resizeRect.x : obj.x;
+        const curY = resizeRect ? resizeRect.y : obj.y;
+        const preDragSize = dragTextSizes[obj.id];
+        const maxPageW = Math.max(120, (pageWidth || 612) - curX - 16);
+        const rawW = resizeRect
+          ? resizeRect.width
+          : obj.type === "text"
+          ? (preDragSize?.width ?? (obj.width && obj.width > 0 ? obj.width : DEFAULT_TEXT_BOX_WIDTH))
+          : obj.width;
+        const curW = obj.type === "text" ? Math.min(maxPageW, rawW) : rawW;
+        const textFontSize = liveTextFontSizes[obj.id] ?? obj.fontSize ?? 16;
+        const autoMeasuredH = Math.max(36, measureTextHeight(obj.text || "", curW, textFontSize));
+        const curH = resizeRect
+          ? resizeRect.height
+          : obj.type === "text"
+          ? (preDragSize?.height ?? (obj.height && obj.height > 0 ? obj.height : autoMeasuredH))
+          : obj.height;
+        const handleSize = 8;
+        const handles: Array<{ pos: ResizeHandlePosition; hx: number; hy: number }> = [
+          { pos: "nw", hx: curX, hy: curY },
+          { pos: "n", hx: curX + curW / 2, hy: curY },
+          { pos: "ne", hx: curX + curW, hy: curY },
+          { pos: "e", hx: curX + curW, hy: curY + curH / 2 },
+          { pos: "se", hx: curX + curW, hy: curY + curH },
+          { pos: "s", hx: curX + curW / 2, hy: curY + curH },
+          { pos: "sw", hx: curX, hy: curY + curH },
+          { pos: "w", hx: curX, hy: curY + curH / 2 },
+        ];
+
+        return (
+          <g
+            key={`bbox-overlay-${obj.id}`}
+            transform={offset.x !== 0 || offset.y !== 0 ? `translate(${offset.x}, ${offset.y})` : undefined}
+          >
+            <g data-testid={`pdf-${obj.type}-bbox`}>
+              <rect
+                x={curX}
+                y={curY}
+                width={curW}
+                height={curH}
+                fill="rgba(26, 99, 160, 0.04)"
+                stroke="var(--accent-text, #1A63A0)"
+                strokeWidth={1}
+                strokeOpacity={0.7}
+                strokeDasharray="4 3"
+                vectorEffect="non-scaling-stroke"
+                style={{ pointerEvents: "none" }}
+              />
+              {handles.map(({ pos, hx, hy }) => (
+                <rect
+                  key={pos}
+                  data-resize-handle={pos}
+                  data-object-id={obj.id}
+                  data-object-type={obj.type}
+                  data-testid={`pdf-${obj.type}-resize-handle-${pos}`}
+                  x={hx - handleSize / 2}
+                  y={hy - handleSize / 2}
+                  width={handleSize}
+                  height={handleSize}
+                  rx={1.5}
+                  ry={1.5}
+                  fill="var(--bg-surface, #ffffff)"
+                  stroke="var(--accent-text, #1A63A0)"
+                  strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                  style={{
+                    cursor: getHandleCursor(pos),
+                    pointerEvents: isSelectMode ? "all" : "none",
+                    touchAction: "none",
+                  }}
+                />
+              ))}
+            </g>
+          </g>
+        );
+      });
+  }, [
+    pageObjects,
+    selectedSet,
+    editingTextId,
+    resizeRects,
+    dragOffsets,
+    dragTextSizes,
+    pageWidth,
+    liveTextFontSizes,
+    isSelectMode,
+  ]);
+
   return (
     <svg
       ref={svgRef}
       data-testid={`pdf-custom-ink-layer-${pageIndex + 1}`}
-      viewBox={`-${pageWidth} -${pageHeight} ${pageWidth * 3} ${pageHeight * 3}`}
+      viewBox={`-${pageWidth} 0 ${pageWidth * 3} ${pageHeight}`}
       style={{
         position: "absolute",
         left: "-100%",
-        top: "-100%",
+        top: 0,
         width: "300%",
-        height: "300%",
+        height: "100%",
         pointerEvents: isActive || isSelectMode || isStampMode || isStickyMode || isTextMode ? "auto" : "none",
         cursor: isActive || isStampMode || isStickyMode || isTextMode ? "crosshair" : "default",
         zIndex: 15,
@@ -2361,6 +2418,7 @@ export function PdfCustomInkLayer({
     >
       {renderedStrokes}
       {renderedObjects}
+      {renderedSelectionOverlays}
       {currentStroke && (
         <path
           d={pointsToSvgPath(currentStroke.points)}

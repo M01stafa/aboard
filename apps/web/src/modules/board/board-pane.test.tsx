@@ -720,4 +720,181 @@ describe("BoardPane Component (Task 25 / BOARD-1, BOARD-2, BOARD-4)", () => {
       })
     );
   });
+
+  it("supports opening and closing Study Templates panel via close button, click outside, and Escape", async () => {
+    const tab = {
+      id: "tab-templates-test",
+      kind: "board" as const,
+      itemId: "item-templates",
+      title: "Board with Templates",
+    };
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <BoardPane projectId="proj-1" tab={tab} visible={true} />
+        </I18nProvider>
+      );
+      await Promise.resolve();
+    });
+
+    const toggleBtn = container.querySelector(
+      '[data-testid="templates-panel-toggle"]'
+    ) as HTMLButtonElement | null;
+    expect(toggleBtn).toBeTruthy();
+
+    // 1. Open drawer
+    await act(async () => {
+      toggleBtn?.click();
+      await Promise.resolve();
+    });
+
+    let drawer = container.querySelector('[data-testid="aboard-templates-drawer"]');
+    expect(drawer).toBeTruthy();
+
+    let closeBtn = container.querySelector(
+      '[data-testid="templates-panel-close"]'
+    ) as HTMLButtonElement | null;
+    expect(closeBtn).toBeTruthy();
+
+    // 2. Close via Close (X) button
+    await act(async () => {
+      closeBtn?.click();
+      await Promise.resolve();
+    });
+
+    drawer = container.querySelector('[data-testid="aboard-templates-drawer"]');
+    expect(drawer).toBeNull();
+
+    // 3. Re-open and close via click outside
+    await act(async () => {
+      toggleBtn?.click();
+      await Promise.resolve();
+    });
+    drawer = container.querySelector('[data-testid="aboard-templates-drawer"]');
+    expect(drawer).toBeTruthy();
+
+    await act(async () => {
+      window.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, cancelable: true })
+      );
+      await Promise.resolve();
+    });
+    drawer = container.querySelector('[data-testid="aboard-templates-drawer"]');
+    expect(drawer).toBeNull();
+
+    // 4. Re-open and close via Escape key
+    await act(async () => {
+      toggleBtn?.click();
+      await Promise.resolve();
+    });
+    drawer = container.querySelector('[data-testid="aboard-templates-drawer"]');
+    expect(drawer).toBeTruthy();
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      await Promise.resolve();
+    });
+    drawer = container.querySelector('[data-testid="aboard-templates-drawer"]');
+    expect(drawer).toBeNull();
+  });
+
+  it("collapses top toolbar into a More (three dots) menu when pane width is < 640px", async () => {
+    const tab = {
+      id: "tab-narrow-test",
+      kind: "board" as const,
+      itemId: "item-narrow",
+      title: "Narrow Board",
+    };
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <BoardPane projectId="proj-1" tab={tab} visible={true} />
+        </I18nProvider>
+      );
+      await Promise.resolve();
+    });
+
+    // Default wide layout: send to PDF button and templates toggle visible, more button hidden
+    expect(container.querySelector('[data-testid="board-send-to-pdf-btn"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="templates-panel-toggle"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="board-more-btn"]')).toBeNull();
+
+    // Trigger ResizeObserver with narrow width (< 640px)
+    await act(async () => {
+      resizeCallback?.([
+        {
+          contentRect: { width: 480, height: 600 },
+        } as unknown as ResizeObserverEntry,
+      ]);
+      await Promise.resolve();
+    });
+
+    // Narrow layout: send to PDF button and templates toggle hidden, more button visible
+    expect(container.querySelector('[data-testid="board-send-to-pdf-btn"]')).toBeNull();
+    expect(container.querySelector('[data-testid="templates-panel-toggle"]')).toBeNull();
+    const moreBtn = container.querySelector('[data-testid="board-more-btn"]') as HTMLButtonElement | null;
+    expect(moreBtn).toBeTruthy();
+
+    // Clicking More button opens More menu
+    await act(async () => {
+      moreBtn?.click();
+      await Promise.resolve();
+    });
+
+    const moreMenu = container.querySelector('[data-testid="board-more-menu"]');
+    expect(moreMenu).toBeTruthy();
+
+    const moreTemplatesBtn = container.querySelector(
+      '[data-testid="more-templates-btn"]'
+    ) as HTMLButtonElement | null;
+    expect(moreTemplatesBtn).toBeTruthy();
+
+    // Clicking Templates in More menu opens Templates drawer and closes More menu
+    await act(async () => {
+      moreTemplatesBtn?.click();
+      await Promise.resolve();
+    });
+
+    expect(container.querySelector('[data-testid="board-more-menu"]')).toBeNull();
+    expect(container.querySelector('[data-testid="aboard-templates-drawer"]')).toBeTruthy();
+
+    // Close templates drawer
+    const closeBtn = container.querySelector(
+      '[data-testid="templates-panel-close"]'
+    ) as HTMLButtonElement | null;
+    await act(async () => {
+      closeBtn?.click();
+      await Promise.resolve();
+    });
+    expect(container.querySelector('[data-testid="aboard-templates-drawer"]')).toBeNull();
+
+    // Re-open More menu and test Escape to close
+    await act(async () => {
+      moreBtn?.click();
+      await Promise.resolve();
+    });
+    expect(container.querySelector('[data-testid="board-more-menu"]')).toBeTruthy();
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await Promise.resolve();
+    });
+    expect(container.querySelector('[data-testid="board-more-menu"]')).toBeNull();
+
+    // Resize back to wide width (>= 640px)
+    await act(async () => {
+      resizeCallback?.([
+        {
+          contentRect: { width: 800, height: 600 },
+        } as unknown as ResizeObserverEntry,
+      ]);
+      await Promise.resolve();
+    });
+
+    expect(container.querySelector('[data-testid="board-more-btn"]')).toBeNull();
+    expect(container.querySelector('[data-testid="board-send-to-pdf-btn"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="templates-panel-toggle"]')).toBeTruthy();
+  });
 });

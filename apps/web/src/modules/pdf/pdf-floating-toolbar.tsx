@@ -19,7 +19,6 @@ export interface PdfFloatingToolbarProps {
   // Page Operations (PDF-6)
   currentPage?: number;
   totalPages?: number;
-  onRotatePage?: () => void;
   onMovePageUp?: () => void;
   onMovePageDown?: () => void;
   onDeletePage?: () => void;
@@ -41,7 +40,6 @@ export function PdfFloatingToolbar({
   onResetZoom,
   currentPage = 1,
   totalPages = 1,
-  onRotatePage,
   onMovePageUp,
   onMovePageDown,
   onDeletePage,
@@ -622,46 +620,6 @@ export function PdfFloatingToolbar({
               whiteSpace: "nowrap",
             }}
           >
-            {/* Rotate Page 90° */}
-            <button
-              type="button"
-              role="menuitem"
-              data-testid="pdf-rotate-page-btn"
-              onClick={() => {
-                setShowPageMenu(false);
-                onRotatePage?.();
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-1)",
-                height: "var(--control-sm)",
-                paddingInline: "var(--space-1)",
-                borderRadius: "var(--radius-sm)",
-                border: "none",
-                backgroundColor: "transparent",
-                color: "var(--text-main)",
-                cursor: "pointer",
-                fontSize: "13px",
-                fontWeight: 500,
-                textAlign: "start",
-                fontFamily: "var(--font-sans)",
-                transition: "background-color 150ms ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "var(--bg-subtle)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "transparent";
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-                <polyline points="21 3 21 8 16 8" />
-              </svg>
-              <span>{t("pdf.rotatePage")}</span>
-            </button>
-
             {/* Move Page Up */}
             <button
               type="button"

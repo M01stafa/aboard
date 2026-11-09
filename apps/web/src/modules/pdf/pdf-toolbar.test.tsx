@@ -35,7 +35,6 @@ describe("PdfToolbar Slim Header & Dropdowns (Task 29, 30, 41)", () => {
     onPrevPage: vi.fn(),
     onNextPage: vi.fn(),
     onDownloadAnnotated: vi.fn(),
-    onRotatePage: vi.fn(),
     onMovePageUp: vi.fn(),
     onMovePageDown: vi.fn(),
     onDeletePage: vi.fn(),
@@ -59,6 +58,19 @@ describe("PdfToolbar Slim Header & Dropdowns (Task 29, 30, 41)", () => {
     expect(container.querySelector('[data-testid="pdf-page-display"]')?.textContent).toContain("2 / 10");
     expect(container.querySelector('[data-testid="pdf-next-page"]')).not.toBeNull();
     expect(container.querySelector('[data-testid="pdf-document-title"]')?.textContent).toBe("Lecture 10 - Neurological Anatomy.pdf");
+    const titleEl = container.querySelector('[data-testid="pdf-document-title"]') as HTMLElement;
+    expect(titleEl.style.flex).toBe("1 1 auto");
+    expect(["0", "0px"]).toContain(titleEl.style.minWidth);
+    expect(titleEl.style.overflow).toBe("hidden");
+    expect(titleEl.style.textOverflow).toBe("ellipsis");
+    expect(titleEl.style.whiteSpace).toBe("nowrap");
+
+    const sendToBoardBtn = container.querySelector('[data-testid="pdf-send-to-board-btn"]') as HTMLElement;
+    expect(sendToBoardBtn.style.flexShrink).toBe("0");
+
+    const downloadBtnEl = container.querySelector('[data-testid="pdf-download-btn"]') as HTMLElement;
+    expect(downloadBtnEl.style.flexShrink).toBe("0");
+
     expect(container.querySelector('[data-testid="pdf-send-to-board-btn"]')).not.toBeNull();
     expect(container.querySelector('[data-testid="pdf-download-btn"]')).not.toBeNull();
     // Page Operations and Online Tools are not in the top header
@@ -357,7 +369,6 @@ describe("PdfFloatingToolbar (Floating Vertical Controls)", () => {
   });
 
   it("opens Page Operations menu in floating toolbar and triggers page operations", () => {
-    const onRotatePage = vi.fn();
     const onMovePageUp = vi.fn();
     const onMovePageDown = vi.fn();
     const onDeletePage = vi.fn();
@@ -369,7 +380,6 @@ describe("PdfFloatingToolbar (Floating Vertical Controls)", () => {
             {...defaultFloatingProps}
             currentPage={2}
             totalPages={5}
-            onRotatePage={onRotatePage}
             onMovePageUp={onMovePageUp}
             onMovePageDown={onMovePageDown}
             onDeletePage={onDeletePage}
@@ -388,18 +398,7 @@ describe("PdfFloatingToolbar (Floating Vertical Controls)", () => {
     });
     expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).not.toBeNull();
 
-    // Click Rotate
-    const rotateBtn = container.querySelector('[data-testid="pdf-rotate-page-btn"]') as HTMLButtonElement;
-    act(() => {
-      rotateBtn.click();
-    });
-    expect(onRotatePage).toHaveBeenCalledTimes(1);
-    expect(container.querySelector('[data-testid="pdf-page-operations-dropdown"]')).toBeNull();
-
-    // Reopen menu and click Move Page Up
-    act(() => {
-      menuBtn.click();
-    });
+    // Click Move Page Up
     const moveUpBtn = container.querySelector('[data-testid="pdf-move-page-up-btn"]') as HTMLButtonElement;
     act(() => {
       moveUpBtn.click();

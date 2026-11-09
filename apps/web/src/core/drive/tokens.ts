@@ -52,15 +52,34 @@ export class DriveTokenManager {
     });
 
     if (error) {
+      let message = error.message;
       const status =
         (error as { context?: Response })?.context?.status ||
         (error as any)?.status;
-      if (status === 409 || status === 404) {
-        bus.emit("drive:reconnect-required", {
-          reason: status === 409 ? "revoked" : "not_connected",
-        });
+      let code: string | undefined;
+
+      try {
+        const ctx = (error as { context?: Response })?.context;
+        if (ctx) {
+          const body = await ctx.clone().json().catch(() => ({}));
+          code = body?.code;
+        }
+      } catch {}
+
+      if (status === 401 || code === "missing_token" || code === "invalid_token") {
+        message = "You are not signed in. Please sign in to connect Google Drive, or export as an .alpha file.";
+      } else if (status === 404 || code === "not_connected") {
+        bus.emit("drive:reconnect-required", { reason: "not_connected" });
+        message = "Google Drive is not connected. Please connect Google Drive in Settings or export as an .alpha file.";
+      } else if (status === 409 || code === "reconnect_required" || code === "invalid_grant") {
+        bus.emit("drive:reconnect-required", { reason: "revoked" });
+        message = "Google Drive connection has expired. Please reconnect in Settings or export as an .alpha file.";
       }
-      throw error;
+
+      const enhancedErr = new Error(message);
+      (enhancedErr as any).status = status;
+      (enhancedErr as any).code = code;
+      throw enhancedErr;
     }
 
     if (!data?.access_token) {

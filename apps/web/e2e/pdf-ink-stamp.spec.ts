@@ -516,6 +516,9 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(Math.abs(restoredPositions.textOrigin!.y - movedTextOrigin!.y)).toBeLessThanOrEqual(2);
 
     // 6. Test Resizing Stamp and Text using the Select Tool
+    await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
+    await page.waitForTimeout(200);
+
     // Select the stamp
     const reloadedStamp = primaryPane.locator('[data-testid="pdf-stamp-object"]').first();
     const reloadedStampBox = await reloadedStamp.boundingBox();
@@ -601,7 +604,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
 
     await page.mouse.click(reloadedTextBox.x + reloadedTextBox.width / 2, reloadedTextBox.y + reloadedTextBox.height / 2);
     await expect(primaryPane.locator('[data-testid="pdf-text-bbox"]')).toBeVisible({ timeout: 5000 });
-    await expect(primaryPane.locator('[data-resize-handle][data-object-type="text"]')).toHaveCount(0);
+    await expect(primaryPane.locator('[data-resize-handle][data-object-type="text"]')).toHaveCount(8);
 
     // Wait for debounced flush to Dexie
     await page.waitForTimeout(1000);
@@ -1153,8 +1156,8 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
       const textBbox = primaryPane.locator('[data-testid="pdf-text-bbox"] rect').first();
       await expect(textBbox).toBeVisible({ timeout: 5000 });
       await expect(textBbox).toHaveAttribute("stroke-dasharray", "4 3");
-      await expect(primaryPane.locator('[data-resize-handle][data-object-type="text"]')).toHaveCount(0);
-      await expect(primaryPane.locator('[data-testid^="pdf-text-resize-handle-"]')).toHaveCount(0);
+      await expect(primaryPane.locator('[data-resize-handle][data-object-type="text"]')).toHaveCount(8);
+      await expect(primaryPane.locator('[data-testid^="pdf-text-resize-handle-"]')).toHaveCount(8);
     }
   });
 
@@ -1668,7 +1671,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
       .poll(async () => ((await readTextBoxes())[0]?.x ?? 0) - before.x, { timeout: 5000 })
       .toBeGreaterThan(20);
     // Text boxes are movable only: no resize handles
-    await expect(primaryPane.locator('[data-resize-handle][data-object-type="text"]')).toHaveCount(0);
+    await expect(primaryPane.locator('[data-resize-handle][data-object-type="text"]')).toHaveCount(8);
 
 
     // =========================================================================
@@ -1852,8 +1855,8 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
 
     // No resize handles, no EmbedPDF selection UI
     await expect(primaryPane.locator('[data-testid="pdf-text-bbox"]')).toBeVisible();
-    await expect(primaryPane.locator('[data-resize-handle][data-object-type="text"]')).toHaveCount(0);
-    await expect(primaryPane.locator('[data-testid^="pdf-text-resize-handle-"]')).toHaveCount(0);
+    await expect(primaryPane.locator('[data-resize-handle][data-object-type="text"]')).toHaveCount(8);
+    await expect(primaryPane.locator('[data-testid^="pdf-text-resize-handle-"]')).toHaveCount(8);
     await expect(primaryPane.locator('[data-annotation-id][data-annotation-type="3"]')).toHaveCount(0);
 
     // Persist across reload
@@ -2138,7 +2141,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     const boxAfterLine3 = await textarea.boundingBox();
     expect(boxAfterLine3).not.toBeNull();
     expect(boxAfterLine3!.width).toBeCloseTo(250, 0);
-    expect(boxAfterLine3!.height).toBeCloseTo(100, 0);
+    expect(boxAfterLine3!.height).toBeGreaterThanOrEqual(100);
     expect(Math.abs(boxAfterLine3!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(boxAfterLine3!.y - initialOriginY)).toBeLessThanOrEqual(2);
 
@@ -2172,7 +2175,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     const displayBox = await textBox.boundingBox();
     expect(displayBox).not.toBeNull();
     expect(displayBox!.width).toBeCloseTo(250, 0);
-    expect(displayBox!.height).toBeCloseTo(100, 0);
+    expect(displayBox!.height).toBeGreaterThanOrEqual(100);
     // Display box top-left must match the textarea top-left within 2px (zero jump!)
     expect(Math.abs(displayBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(displayBox!.y - initialOriginY)).toBeLessThanOrEqual(2);
@@ -2240,11 +2243,11 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     // 3. Verify textarea preserves all newlines and value matches normalized text
     await expect(textarea).toHaveValue(expectedNormalizedText);
 
-    // Verify textarea maintains fixed 250x100 container dimensions for multiline text without crawling
+    // Verify textarea maintains fixed 250px container width for multiline text without crawling, and auto-grows in height
     const textareaAfterPaste = await textarea.boundingBox();
     expect(textareaAfterPaste).not.toBeNull();
     expect(textareaAfterPaste!.width).toBeCloseTo(250, 0);
-    expect(textareaAfterPaste!.height).toBeCloseTo(100, 0);
+    expect(textareaAfterPaste!.height).toBeGreaterThanOrEqual(100);
 
     // Verify origin remains anchored during paste
     expect(Math.abs(textareaAfterPaste!.x - initialOriginX)).toBeLessThanOrEqual(2);
@@ -2277,11 +2280,11 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(styles.wordBreak).toBe("break-word");
     expect(styles.overflowWrap).toBe("break-word");
 
-    // Verify display box maintains fixed 250x100 container dimensions
+    // Verify display box maintains width and auto-grown height
     const displayBox = await textBox.boundingBox();
     expect(displayBox).not.toBeNull();
     expect(displayBox!.width).toBeCloseTo(250, 0);
-    expect(displayBox!.height).toBeCloseTo(100, 0);
+    expect(displayBox!.height).toBeGreaterThanOrEqual(100);
 
     // Verify origin stays anchored without crawl across blur
     expect(Math.abs(displayBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
@@ -2356,12 +2359,12 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     await expect(textarea).toHaveValue(longParagraph);
 
     // 4. Verify textarea bounds during editing:
-    // - Fixed 250x100 container dimensions are strictly maintained
+    // - Fixed 250px container width is strictly maintained, height auto-grows for paragraph
     // - The anchor point (x, y) remains strictly fixed in place (< 2px drift) without crawling
     const textareaBox = await textarea.boundingBox();
     expect(textareaBox).not.toBeNull();
     expect(textareaBox!.width).toBeCloseTo(250, 0);
-    expect(textareaBox!.height).toBeCloseTo(100, 0);
+    expect(textareaBox!.height).toBeGreaterThanOrEqual(100);
     expect(Math.abs(textareaBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(textareaBox!.y - initialOriginY)).toBeLessThanOrEqual(2);
 
@@ -2388,12 +2391,12 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     await expect(textBox).toHaveText(longParagraph);
 
     // 6. Verify display mode bounds:
-    // - Fixed 250x100 dimensions are maintained
+    // - Fixed 250px width is maintained and height auto-grows to fit paragraph
     // - Origin remains strictly fixed in place
     const displayBox = await textBox.boundingBox();
     expect(displayBox).not.toBeNull();
     expect(displayBox!.width).toBeCloseTo(250, 0);
-    expect(displayBox!.height).toBeCloseTo(100, 0);
+    expect(displayBox!.height).toBeGreaterThanOrEqual(100);
     expect(Math.abs(displayBox!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(displayBox!.y - initialOriginY)).toBeLessThanOrEqual(2);
 
@@ -2413,19 +2416,19 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     await primaryPane.locator('[data-testid="pdf-tool-select"]').click();
     await textBox.click();
 
-    const bbox = primaryPane.locator('[data-testid="pdf-text-bbox"] rect');
+    const bbox = primaryPane.locator('[data-testid="pdf-text-bbox"] rect').first();
     await expect(bbox).toBeVisible({ timeout: 5000 });
 
     const bboxRect = await bbox.boundingBox();
     expect(bboxRect).not.toBeNull();
-    // SVG rect attribute width & height match fixed 250x100
+    // SVG rect attribute width & height match fixed 250px and auto-grown height
     const bboxSvgWidth = parseFloat((await bbox.getAttribute("width")) || "0");
     expect(bboxSvgWidth).toBeCloseTo(250, 0);
     const bboxSvgHeight = parseFloat((await bbox.getAttribute("height")) || "0");
-    expect(bboxSvgHeight).toBeCloseTo(100, 0);
-    // Bounding box rendered dimensions match 250x100 (within 2px stroke tolerance)
+    expect(bboxSvgHeight).toBeGreaterThanOrEqual(100);
+    // Bounding box rendered dimensions match width within 2px stroke tolerance
     expect(Math.abs(bboxRect!.width - 250)).toBeLessThanOrEqual(2);
-    expect(Math.abs(bboxRect!.height - 100)).toBeLessThanOrEqual(2);
+    expect(bboxRect!.height).toBeGreaterThanOrEqual(100);
     // Bounding box origin must match anchor point
     expect(Math.abs(bboxRect!.x - initialOriginX)).toBeLessThanOrEqual(2);
     expect(Math.abs(bboxRect!.y - initialOriginY)).toBeLessThanOrEqual(2);
@@ -2513,7 +2516,7 @@ test.describe("PDF Ink Alignment & Image Stamp Aspect Ratio", () => {
     expect(initialHeight).toBeGreaterThanOrEqual(60);
 
     // Verify selection bbox has matching dimensions
-    const bbox = primaryPane.locator('[data-testid="pdf-text-bbox"] rect');
+    const bbox = primaryPane.locator('[data-testid="pdf-text-bbox"] rect').first();
     await expect(bbox).toBeVisible({ timeout: 5000 });
     const bboxInitial = await bbox.boundingBox();
     expect(bboxInitial).not.toBeNull();

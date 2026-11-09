@@ -118,6 +118,20 @@ body::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
 }
 
+/* ---------- button base: prevent text wrapping globally and handle overflow gracefully ---------- */
+button,
+[role="button"],
+.btn,
+.btn-gold,
+.btn-primary,
+.btn-tech,
+.btn-subtle,
+.btn-danger-outline {
+  white-space: nowrap !important;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
 /* Scoped lock for Workspace and Circuit modules */
 html:has(.workspace-container),
 body:has(.workspace-container),

@@ -43,9 +43,11 @@ export interface UsePdfAnnotationsOptions {
   documentId: string;
   projectId?: string;
   itemId?: string;
+  tabId?: string;
   pdfHash?: string;
   currentPage: number;
   projectServiceOverride?: ProjectService;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 export interface UsePdfAnnotationsResult {
@@ -57,7 +59,7 @@ export interface UsePdfAnnotationsResult {
   handleRedo: () => void;
   handleAddStamp: (
     file: File,
-    options?: { pageIndex?: number; x?: number; y?: number }
+    options?: { pageIndex?: number; x?: number; y?: number; width?: number; height?: number }
   ) => Promise<void>;
   customStickyNotes: Record<number, CustomStickyNote[]>;
   handleAddSticky: (
@@ -131,18 +133,40 @@ export interface UsePdfAnnotationsResult {
     options?: { fontSize?: number }
   ) => void;
   annotationScope: ReturnType<typeof useAnnotation>["provides"];
+  flushAnnotations: () => Promise<void>;
+  getCurrentInkData: () => {
+    customStrokes: Record<number, CustomInkStroke[]>;
+    customStickyNotes: Record<number, CustomStickyNote[]>;
+    customTextBoxes: Record<number, CustomTextBox[]>;
+  };
 }
 
 export function usePdfAnnotations({
   documentId,
   projectId = "default",
   itemId,
+  tabId,
   pdfHash,
   currentPage,
   projectServiceOverride,
+  onDirtyChange,
 }: UsePdfAnnotationsOptions): UsePdfAnnotationsResult {
   const ps = projectServiceOverride ?? defaultProjectService;
   const hashKey = pdfHash || documentId;
+  const isDirtyRef = useRef(false);
+
+  useEffect(() => {
+    const handleClean = (data: { tabId?: string; itemId?: string; isDirty: boolean }) => {
+      if ((data.tabId === tabId || data.itemId === itemId) && !data.isDirty) {
+        isDirtyRef.current = false;
+        onDirtyChange?.(false);
+      }
+    };
+    bus.on("tab:dirty-state", handleClean);
+    return () => {
+      bus.off("tab:dirty-state", handleClean);
+    };
+  }, [tabId, itemId, onDirtyChange]);
 
   const { provides: annotationScope } = useAnnotation(documentId);
   const { provides: historyCapability } = useHistoryCapability();
@@ -247,6 +271,15 @@ export function usePdfAnnotations({
   const triggerDebouncedSave = useCallback(() => {
     if (isRestoringRef.current || !annotationScope) return;
 
+    // Immediately mark tab dirty on any annotation change before debounce
+    if (!isDirtyRef.current) {
+      isDirtyRef.current = true;
+      onDirtyChange?.(true);
+      if (tabId || itemId) {
+        bus.emit("tab:dirty-state", { tabId, itemId, isDirty: true });
+      }
+    }
+
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
@@ -254,7 +287,7 @@ export function usePdfAnnotations({
     debounceTimerRef.current = setTimeout(() => {
       void flushAnnotations();
     }, 400);
-  }, [annotationScope, flushAnnotations]);
+  }, [annotationScope, flushAnnotations, onDirtyChange, tabId, itemId]);
 
   // Initial restoration on document load: loads clean JSON and restores stamps via getFile
   useEffect(() => {
@@ -421,17 +454,17 @@ export function usePdfAnnotations({
 
   const handleAddCustomStroke = useCallback(
     (pageIndex: number, stroke: CustomInkStroke) => {
-      setCustomStrokes((prev) => {
-        customUndoStackRef.current.push(prev);
-        customRedoStackRef.current = [];
-        const pageStrokes = prev[pageIndex] || [];
-        const next = {
-          ...prev,
-          [pageIndex]: [...pageStrokes, stroke],
-        };
-        customStrokesRef.current = next;
-        return next;
-      });
+      const cur = customStrokesRef.current;
+      const curPageStrokes = cur[pageIndex] || [];
+      const nextSync = {
+        ...cur,
+        [pageIndex]: [...curPageStrokes, stroke],
+      };
+      customUndoStackRef.current.push(cur);
+      customRedoStackRef.current = [];
+      customStrokesRef.current = nextSync;
+
+      setCustomStrokes(nextSync);
       setCanUndo(true);
       setCanRedo(false);
       triggerDebouncedSave();
@@ -885,10 +918,15 @@ export function usePdfAnnotations({
   }, [historyScope, triggerDebouncedSave]);
 
   const handleAddStamp = useCallback(
-    async (file: File, options?: { pageIndex?: number; x?: number; y?: number }) => {
+    async (
+      file: File,
+      options?: { pageIndex?: number; x?: number; y?: number; width?: number; height?: number }
+    ) => {
       if (!annotationScope) return;
       try {
-        const { buffer, width, height, mimeType } = await processStampImage(file);
+        const { buffer, width: defWidth, height: defHeight, mimeType } = await processStampImage(file);
+        const width = options?.width && options.width > 0 ? options.width : defWidth;
+        const height = options?.height && options.height > 0 ? options.height : defHeight;
         const pageIdx = typeof options?.pageIndex === "number" ? options.pageIndex : Math.max(0, currentPage - 1);
         const stampId =
           typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -1066,8 +1104,8 @@ export function usePdfAnnotations({
           coords.height && coords.height > 0
             ? coords.height
             : coords.text
-            ? Math.max(36, measureTextHeight(coords.text, coords.width || DEFAULT_TEXT_BOX_WIDTH, coords.fontSize || DEFAULT_TEXT_FONT_SIZE))
-            : 36,
+            ? Math.max(DEFAULT_TEXT_BOX_HEIGHT, measureTextHeight(coords.text, coords.width || DEFAULT_TEXT_BOX_WIDTH, coords.fontSize || DEFAULT_TEXT_FONT_SIZE))
+            : DEFAULT_TEXT_BOX_HEIGHT,
         text: coords.text ?? "",
         fontSize: coords.fontSize ?? DEFAULT_TEXT_FONT_SIZE,
         color: coords.color ?? DEFAULT_TEXT_COLOR,
@@ -1210,6 +1248,14 @@ export function usePdfAnnotations({
     flushAnnotations,
   ]);
 
+  const getCurrentInkData = useCallback(() => {
+    return {
+      customStrokes: customStrokesRef.current,
+      customStickyNotes: customStickyNotesRef.current,
+      customTextBoxes: customTextBoxesRef.current,
+    };
+  }, []);
+
   return {
     activeTool,
     canUndo,
@@ -1238,5 +1284,7 @@ export function usePdfAnnotations({
     handleMoveObject,
     handleResizeObject,
     annotationScope,
+    flushAnnotations,
+    getCurrentInkData,
   };
 }

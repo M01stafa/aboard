@@ -239,7 +239,7 @@ test.describe("Drive Mode Switching & Google Picker E2E (Task 37 / §11.6, §10.
     // 4. Ensure recent project card appears with mode switch button
     const modeSwitchBtn = page.locator(`[data-testid="mode-switch-btn-${projectId}"]`);
     await expect(modeSwitchBtn).toBeVisible();
-    await expect(modeSwitchBtn).toHaveText(/Save to Google Drive|حفظ في Google Drive/i);
+    await expect(modeSwitchBtn).toHaveText(/Save to (Google )?Drive|حفظ في (Google )?درايف/i);
 
     // 5. Click Save to Google Drive button -> opens ModeSwitchModal
     await modeSwitchBtn.click();

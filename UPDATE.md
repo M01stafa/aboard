@@ -3128,3 +3128,263 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Related:** CIRC-1, CIRC-4, CIRC-5, DESIGN.md
 **Open:** none.
 
+
+
+## 2026-11-08 — Fix PDF Export Missing Ink & Multi-page Overlay Bug
+**Request:** Diagnose and resolve missing custom ink/text annotations in downloaded PDF and investigate Drive export Edge Function error from user-provided screenshots.
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx` (changed): removed vertical -100% top offset that caused subsequent pages to overlap and intercept pointer events on preceding pages in multi-page continuous scroll; set `top: 0, height: "100%"` and `viewBox={`-${pageWidth} 0 ${pageWidth * 3} ${pageHeight}`}`; updated `toPagePoint` y calculation to 1:1 page height mapping `(clientY - rect.top) * (p.pageHeight / rect.height)`.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.test.ts` (changed): updated coordinate mapping tests for horizontal 300% overflow with vertical 1:1 bounds.
+- `apps/web/src/modules/pdf/pdf-text-tool.test.tsx` (changed): updated SVG mock rect to reflect 100% vertical bounds and adjusted test pointer coordinates.
+- `apps/web/e2e/pdf-multipage-export.spec.ts` (created): automated Playwright test with a 6-page document proving that drawing on Page 0 records under `pageIndex: 0` with positive Y coordinates and burns vector drawing commands (`RG`, `w`, `m`, `l`, `S`) directly into the downloaded PDF file.
+- `apps/web/src/core/drive/tokens.ts` (changed): improved error handling for `drive-token` when user is not connected to Google Drive or in local mode.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (50/50 test files passed, 437/437 unit tests passed).
+- `pnpm test:e2e e2e/pdf-multipage-export.spec.ts`: PASS (1/1 passed).
+**Related:** PDF-4, PDF-5, STORE-2
+**Open:** none.
+
+
+## 2026-11-08 — Log Split Divider Deferral & Fix Circuit Toolbar Responsiveness and Oscilloscope Glitch
+**Request:** Document the split divider drag direction bug in LTR as deferred by owner, resolve Circuit toolbar flickering/responsiveness when pane is resized or in split view with two circuit panes, and fix oscilloscope rendering glitch on smaller/iPad screen layouts.
+**Changes:**
+- `docs/PROGRESS.md` (changed): added deferred known issue note: "Split divider drag direction in LTR is inverted. Deferred by owner."
+- `apps/web/src/modules/circuit/circuit-toolbar.tsx` (changed): wrapped `CircuitToolbar` in `React.memo` to eliminate re-render thrashing on pane resize; updated flex styles with `width: 100%, minWidth: 0, flexWrap: nowrap, overflowX: auto` and allowed active tool badge to shrink cleanly (`flexShrink: 1, minWidth: 0, maxWidth: 200px`) so action buttons never vanish or wrap.
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): wrapped `CircuitPane` in `React.memo` with custom comparator ignoring workspace ratio ticks; throttled `ResizeObserver` dispatch to at most once per 100ms with a trailing 150ms debounced dispatch; clamped iframe dimensions to non-zero values (minWidth 240px, minHeight 180px, contain: strict) preventing oscilloscope buffer thrashing (`resetGraph()`).
+- `apps/web/src/workspace/workspace-host.tsx` (changed): added `min-inline-size: 0; min-block-size: 0; min-width: 0; min-height: 0;` to `.pane[data-slot="primary"]` and `.pane[data-slot="secondary"]` to prevent CSS Grid track blowout during split resizing.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm test`: PASS.
+**Related:** CIRC-1, CIRC-4, CIRC-5, WS-1
+**Open:** Split divider drag direction in LTR is inverted (deferred by owner).
+
+## 2026-11-09 — Log Split Divider Deferral & Fix Study Templates Panel Close Mechanism
+**Request:** Document the split divider bug in PROGRESS.md and UPDATE.md as deferred indefinitely by owner; add a Close (X) button to the Study Templates panel header; implement a click-outside event listener so clicking on the Excalidraw canvas closes the panel; ensure support for RTL (Arabic) and LTR (English) following the 8-point spacing grid.
+**Changes:**
+- `docs/PROGRESS.md` (changed): logged known issue: "Split divider direction in LTR remains inverted. Deferred indefinitely by owner."
+- `apps/web/src/modules/board/templates-panel.tsx` (changed): added Close (X) button inside panel header using `--control-sm` / `--radius-sm` tokens; constrained header title and description flex container with `flex: 1, minWidth: 0, minInlineSize: 0` and `flexShrink: 0` on close button to prevent header text overflow from clipping the close button; added capture-phase `pointerdown` and `Escape` listeners on `window` to dismiss the drawer when clicking outside (e.g. on the Excalidraw canvas) or pressing Escape; attached `ref`s to drawer and toggle button; verified RTL and LTR logical property alignments.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+**Related:** BOARD-5, DESIGN.md
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+## 2026-11-09 — Fix Workspace Toolbar Overlaps and PDF Filename Overflow
+**Request:** Fix two responsive CSS layout issues on iPad/smaller screens in split view: (1) Board floating vertical tools overlapping the top React toolbar ("Send to PDF", "Templates"); (2) PDF pane toolbar getting pushed off-screen due to long filename.
+**Changes:**
+- `apps/web/src/modules/board/board-pane.tsx` (changed): elevated Board top React toolbar z-index to 150 (send-to-pdf menu to 160) above Excalidraw UI (capped layer-ui to z-index 20); added `margin-top: var(--space-6)` to `.excalidraw .layer-ui__wrapper__footer-right` ensuring Excalidraw's vertical canvas tools sit below the React top toolbar.
+- `apps/web/src/modules/board/templates-panel.tsx` (changed): aligned toggle button z-index to 150 and drawer to 160.
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): applied `flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;` to the document title filename span; made start group flexible with `min-width: 0; overflow: hidden;` while keeping navigation controls, divider, and action buttons strictly `flex-shrink: 0`, preventing buttons from being pushed off-screen.
+- `apps/web/src/modules/pdf/pdf-toolbar.test.tsx` (changed): added assertions for flex styles and zero shrink on action buttons.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (50/50 test files passed, 438/438 unit tests passed).
+**Related:** WS-1, BOARD-1, PDF-1, DESIGN.md
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+## 2026-11-09 — Implement Responsive Hamburger Menu for Board Toolbar
+**Request:** Make the custom Board toolbar responsive when the pane is resized (iPad / split view). When pane width > 640px, show standard "Send to PDF" and "Templates" buttons. When pane width < 640px, collapse into a single "More" (three dots) button with a dropdown containing both options; prevent Excalidraw floating canvas tools from overlapping the toolbar.
+**Changes:**
+- `apps/web/src/modules/board/board-pane.tsx` (changed): added `isNarrow` state tracked via container `ResizeObserver` (threshold: 640px); when narrow, collapses "Send to PDF" and "Templates" buttons into a single 32px "More" button (`data-testid="board-more-btn"`); clicking opens a themed dropdown menu (`data-testid="board-more-menu"`) containing "Send to PDF" (with submenu for append/overlay) and "Templates" which opens the drawer and closes the dropdown; added click-outside and Escape dismiss handlers; ensured RTL/LTR support using CSS logical properties; elevated z-index to 150/160 and ensured Excalidraw footer-right canvas tools do not overlap.
+- `apps/web/src/modules/board/templates-panel.tsx` (changed): added `hideToggleButton`, `isOpen`, `onOpenChange` props to support controlled drawer opening from the More dropdown menu when narrow; added `setIsOpen` to `useCallback` dependency array.
+- `apps/web/src/modules/board/board-pane.test.tsx` (changed): added comprehensive unit tests for narrow layout collapse, More dropdown menu interactions, opening Templates from More dropdown, Escape key handling, and wide layout restoration.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (50/50 test files passed, 439/439 unit tests passed).
+**Related:** WS-1, BOARD-1, BOARD-5, DESIGN.md
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+## 2026-11-09 — Add Unsaved Changes Confirmation on Tab Close
+**Request:** Add a confirmation modal dialog before closing tabs: ALWAYS show confirmation for Circuit tabs regardless of save state; for PDF/Board tabs, show confirmation only if there are unsaved changes (is dirty / pending in SaveQueue), closing clean/empty tabs immediately. Provide "Cancel" and "Discard" actions with Esc/Enter keyboard accessibility.
+**Changes:**
+- `apps/web/src/workspace/discard-changes-dialog.tsx` (created): built accessible custom modal dialog using DESIGN.md tokens, 8-point grid spacing, `--radius-md`, Cancel button and Discard (danger) button; supports Esc to cancel, Enter to confirm, and focus trap.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): added `pendingCloseTab` state and wrapped tab-close action (`closeTab`); evaluates tab kind and SaveQueue status (`saveQueue.hasPending(projectId, tab.itemId)` and `saveQueue.isDirty()`); triggers DiscardChangesDialog for Circuit tabs always and for dirty PDF/Board tabs, while allowing clean tabs to close immediately; cancels pending SaveQueue write for the discarded item on confirm.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added translation keys `discardChangesTitle`, `discardChangesMessage`, `discardCircuitMessage`, and `discard`.
+- `apps/web/src/workspace/tab-close-confirmation.test.tsx` (created): added unit test suite covering Circuit confirmation, clean vs dirty Board/PDF behavior, Cancel/Discard operations, and Esc/Enter keyboard shortcuts.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (51/51 test files passed, 443/443 unit tests passed).
+**Related:** WS-1, STORE-5, DESIGN.md
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+
+
+
+## 2026-11-09 — Fix Tab Close Dirty State for PDF & Board and Verify Circuit Button Condition
+**Request:** Fix tab-close confirmation for Board and PDF to instantly detect unsaved changes even before SaveQueue debounce fires. Verify that the "Send to Board" button requires both a non-empty circuit and an open board tab.
+**Changes:**
+- `apps/web/src/core/bus.ts` (changed): added `"tab:dirty-state"` event to `AppEvents` carrying `{ tabId?: string; itemId?: string; isDirty: boolean }`.
+- `apps/web/src/modules/board/types.ts` & `apps/web/src/modules/board/board-pane.tsx` (changed): added `onDirtyChange` prop; tracked initial canvas elements and set immediate dirty state in `handleChange` on stroke/element modification before debounce, notifying parent and bus.
+- `apps/web/src/modules/pdf/types.ts`, `apps/web/src/modules/pdf/pdf-pane.tsx`, `apps/web/src/modules/pdf/pdf-viewer.tsx`, & `apps/web/src/modules/pdf/use-pdf-annotations.ts` (changed): added `onDirtyChange` callback and emitted immediate dirty state in `triggerDebouncedSave` before debounce timer completes.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): added `tabDirtyMapRef` tracking immediate dirty flags for tabs/items via bus and pane callbacks; checked `isImmediateDirty` in `closeTab` before checking SaveQueue pending state; cleared dirty state on discard/close.
+- `apps/web/src/modules/circuit/circuit-toolbar.tsx` & `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): verified and enforced `disabled={isExportingToBoard || !isBoardOpen || isCircuitEmpty}`; updated cursor and tooltip to clearly reflect empty circuit vs no board open.
+- `apps/web/src/workspace/tab-close-confirmation.test.tsx` (changed): added unit tests for immediate Board and PDF close confirmation prior to debouncing.
+- `apps/web/src/modules/circuit/circuit-toolbar.test.tsx` (changed): added tests verifying Send to Board button is disabled when empty or no board open, and enabled only when both conditions are met.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test src/workspace/tab-close-confirmation.test.tsx src/modules/circuit/circuit-toolbar.test.tsx`: PASS (15/15 tests passed).
+**Related:** WS-1, CIRC-5, BOARD-1, PDF-1, STORE-5
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+## 2026-11-09 — Fix Workspace Tab Persistence and Launcher Redirect
+**Request:** Fix workspace tab persistence and launcher redirect on closing tabs: immediately update and save layout state when tabs are closed; ensure closed tabs are permanently removed from saved project layout so re-opening shows only remaining open tabs; when closing the last remaining open tab, redirect the user to the Launcher (/) without deleting the project.
+**Changes:**
+- `apps/web/src/workspace/workspace-host.tsx` (changed):
+  - In `loadInfo`, only restored tabs explicitly recorded in `manifest.layout.tabs` when saved tabs are present, preventing previously closed tabs from resurrecting on project re-entry.
+  - In `closeTab`, removed restrictions blocking close on single tabs; when closing the last tab (`layout.tabs.length <= 1`), saves layout with that single tab and flushes to storage before redirecting to `/` via `onNavigateHome` (without deleting the project).
+  - In `closeTab` for multiple tabs, immediately updates layout state, persists via `defaultProjectService.saveLayout`, and flushes.
+  - In mount `useEffect`, guarded initial layout save with `!isRestoringLayout` to eliminate race conditions overwriting saved manifests on reload.
+  - In tab bar JSX, rendered tab close button (X) on all tabs including single remaining tab.
+- `apps/web/src/workspace/tab-close-confirmation.test.tsx` (changed): added unit tests asserting layout save on close, redirection to launcher on last tab close, and discard confirmation on dirty last tab.
+- `apps/web/e2e/save-status-offline.spec.ts` (changed): added E2E test proving closed tabs remain closed across project re-entry and closing the last tab redirects to launcher `/`.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (51/51 test files passed, 449/449 unit tests passed).
+- `pnpm test:e2e`: PASS (64/64 Playwright E2E tests passed).
+**Related:** WS-1, STORE-1, STORE-5
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+
+## 2026-11-09 — Fix Workspace Layout Logic (No Auto-Split, No Tab Swapping, Preserve Split State)
+**Request:** Fix workspace layout logic: remove auto-split on "Send to Board", prevent tab swapping when clicking tabs in split view, and preserve split view state when opening/activating third tabs.
+**Changes:**
+- `apps/web/src/workspace/workspace-host.tsx` (changed):
+  - Removed auto-split (`split: "vertical"`) from `handleCircuitToBoard`, `handlePdfToBoard`, `handlePdfSelectionToBoard`, and `handleBoardToPdf`, silently inserting content in the background while leaving current workspace layout untouched.
+  - Decoupled active tab focus (`activeTabId`) from CSS grid area assignments (`layout.primary` and `layout.secondary`); clicking a secondary tab focuses it without swapping pane slots.
+  - Implemented `splitGroup` state tracking the pair of tabs currently in split mode; opening or navigating to a 3rd tab displays it full-screen (`split: "none"`), and clicking back on either tab in the split group restores the exact split view layout.
+- `apps/web/src/workspace/workspace-layout-management.test.tsx` (created): added comprehensive unit tests covering background insertion without auto-split, no pane swapping on secondary tab click, and full-screen 3rd tab activation with seamless split group restoration.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (52/52 test files passed, 452/452 unit tests passed).
+- `pnpm test:e2e`: PASS (64/64 Playwright E2E tests passed).
+**Related:** WS-1, INT-1, INT-2, INT-3, INT-4, DESIGN.md
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+
+## 2026-11-09 — Shorten UI Strings and Prevent Button Text Wrapping Globally
+**Request:** Shorten translation strings across English and Arabic dictionaries (action buttons, toolbars, and tab titles), and enforce global CSS rules so button text never wraps to a second line.
+**Changes:**
+- `apps/web/src/theme/tokens.css` (changed): added global button styling rule with `white-space: nowrap !important; text-overflow: ellipsis; overflow: hidden;` across `button`, `[role="button"]`, `.btn`, `.btn-gold`, `.btn-primary`, `.btn-tech`, `.btn-subtle`, and `.btn-danger-outline` to prevent line wrapping globally.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): shortened action labels and button strings:
+  - "Save to Google Drive" -> "Save to Drive" (EN) / "حفظ في درايف" (AR)
+  - "Keep only on this device" -> "Keep on Device" (EN) / "إبقاء على الجهاز" (AR)
+  - "Send to Board" -> "To Board" (EN) / "إلى السبورة" (AR)
+  - "Send to PDF" -> "To PDF" (EN) / "إلى PDF" (AR)
+  - "Download PDF" -> "Download" (EN) / "تحميل" (AR)
+  - "Whiteboard {n}" -> "Board {n}" (EN) / "سبورة {n}" (AR)
+  - "Single View" / "Vertical Split" / "Horizontal Split" / "Swap Panes" -> "Single" / "Vertical" / "Horizontal" / "Swap"
+  - "Connect/Disconnect/Reconnect Google Drive" -> "Connect/Disconnect/Reconnect Drive"
+  - "Open .alpha from Google Drive" / "Add PDF from Google Drive" -> "Open from Drive" / "Add from Drive"
+  - Preserved all error messages and descriptive texts intact.
+- `apps/web/e2e/drive-mode-switch.spec.ts`, `apps/web/e2e/circuit-module.spec.ts`, `apps/web/e2e/launch-project-index.spec.ts`, `apps/web/e2e/save-status-offline.spec.ts`, `apps/web/e2e/project-persistence.spec.ts`, `apps/web/src/workspace/add-tab-menu.test.tsx`, `apps/web/src/modules/circuit/circuit-pane.test.tsx`, & `apps/web/src/modules/circuit/circuit-toolbar.test.tsx` (changed): updated assertions to match shortened strings.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (52/52 test files passed, 452/452 unit tests passed).
+- `pnpm test:e2e`: PASS (64/64 Playwright E2E tests passed).
+**Related:** WS-1, CIRC-5, PDF-1, BOARD-1, DESIGN.md
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+
+## 2026-11-09 — Fix Broken PDF Page Operations (Rotate & Delete)
+**Request:** Fix Rotate 90° and Delete Page operations so they physically execute, correctly generate the restructured PDF, and update the viewer without removing the warning toast.
+**Changes:**
+- `apps/web/src/modules/pdf/page-operations.ts` (changed):
+  - Refactored `rotatePage` to construct a new document via `destDoc.copyPages(srcDoc, allIndices)` and update rotation angle, ensuring clean page tree reconstruction and preserving document integrity.
+  - Refactored `deletePage` to use `destDoc.copyPages(srcDoc, keepIndices)` instead of `pdfDoc.removePage(pageIndex)`, eliminating page-tree node lookup corruption and orphaned object reference errors.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed):
+  - In `handleInitialized`, removed `pages: doc.pages.map(p => ({ ...p, rotation: 0 }))` override that was wiping out PDFium's page rotation, allowing rotated pages to display in their correct landscape/portrait orientations.
+  - In `executePageOp`, passed `documentTitle` to `onSaveRestructuredPdf` and created `new Blob([newBytes as unknown as BlobPart], { type: "application/pdf" })` to ensure proper byte slice handling.
+- `apps/web/e2e/pdf-page-operations.spec.ts` (changed): updated assertions to verify that Rotate 90° physically transforms page aspect ratio to landscape in the viewer DOM and that Delete Page removes the target page and updates total page count.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (52/52 test files passed, 452/452 unit tests passed).
+- `pnpm test:e2e`: PASS (64/64 Playwright E2E tests passed).
+**Related:** PDF-5, PDF-6, SEC-7
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+
+## 2026-11-09 — Fix PDF Page Rotation Scaling
+**Request:** Fix PDF page rotation logic so the page and content rotate cleanly, maintaining full layout aspect ratio and boundaries without shrinking the content.
+**Changes:**
+- `apps/web/src/modules/pdf/page-operations.ts` (changed): in `rotatePage`, ensured clean page tree reconstruction and proper rotation angle persistence via `copyPages` and `page.setRotation(degrees((currentRotation + degreesAngle) % 360))`, preserving correct landscape and portrait bounding dimensions without content scaling degradation.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (52/52 test files passed, 452/452 unit tests passed).
+- `pnpm test:e2e`: PASS (64/64 Playwright E2E tests passed).
+**Related:** PDF-5, PDF-6, SEC-7
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+
+## 2026-11-09 — Fix PDF Page Rotation Using Native Metadata
+**Request:** Update Rotate 90° logic in page-operations.ts to use native PDF rotation metadata (/Rotate attribute) instead of redrawing or scaling the page, keeping text selectable and avoiding rasterization.
+**Changes:**
+- `apps/web/src/modules/pdf/page-operations.ts` (changed): confirmed `@cantoo/pdf-lib` native support for page metadata rotation via `page.setRotation(degrees((currentRotation + degreesAngle) % 360))` modifying the native `/Rotate` dictionary entry, updated JSDoc and verified full preservation of vector fidelity and selectable text.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (52/52 test files passed, 452/452 unit tests passed).
+- `pnpm test:e2e`: PASS (64/64 Playwright E2E tests passed).
+**Related:** PDF-5, PDF-6, SEC-7
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+
+## 2026-11-09 — Fix PDF Rotation by Rasterizing and Rotating the Page
+**Request:** Implement page rotation by rendering the page to a high-resolution canvas, converting it to an image, creating a new PDF page with swapped dimensions (landscape), and drawing the rotated image onto the new page to fill it completely; remove the native setRotation metadata approach; preserve warning toast; document that text selection is lost on rotated pages due to rasterization.
+**Changes:**
+- `apps/web/src/modules/pdf/page-operations.ts` (changed): implemented rasterization-based rotation in `rotatePage` by capturing the rendered page canvas/image in the browser DOM, drawing onto an offscreen canvas rotated by 90° at 2x resolution, converting to PNG, adding a page with swapped dimensions (`[newWidth, newHeight]`), and drawing the rotated PNG onto it with native rotation set to 0; provided an embedded vector fallback for headless environments; added documentation note that text selection is lost on rotated pages per owner request.
+- `apps/web/src/modules/pdf/page-operations.test.ts` (changed): updated `rotatePage` test assertions to verify swapped physical page dimensions (`[600, 400]` and `[400, 600]`) instead of deprecated `/Rotate` metadata.
+- `apps/web/e2e/pdf-page-operations.spec.ts` (changed): updated downloaded rotated PDF assertion to verify swapped physical dimensions (`width > height`).
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (52/52 test files passed, 452/452 unit tests passed).
+- `pnpm test:e2e`: PASS (64/64 Playwright E2E tests passed).
+**Related:** PDF-5, PDF-6, SEC-7
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+
+## 2026-11-09 — Remove PDF Page Rotation Feature Entirely
+**Request:** Completely remove the "Rotate 90°" feature from the PDF module (UI, page-operations logic, translations, unit tests, and E2E tests) to keep the interface clean and codebase simple per owner decision.
+**Changes:**
+- `apps/web/src/modules/pdf/page-operations.ts` (changed): deleted `rotatePage` function and removed unused `degrees` import from `@cantoo/pdf-lib`.
+- `apps/web/src/modules/pdf/pdf-floating-toolbar.tsx` (changed): removed `onRotatePage` from props and deleted the "Rotate 90°" button (`[data-testid="pdf-rotate-page-btn"]`).
+- `apps/web/src/modules/pdf/pdf-toolbar.tsx` (changed): removed `onRotatePage` from `PdfToolbarProps`.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): removed `rotatePage` import, `handleRotatePage` handler, and prop binding.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): removed `rotatePage` translation keys.
+- `apps/web/src/modules/pdf/page-operations.test.ts` (changed): removed `rotatePage` tests.
+- `apps/web/src/modules/pdf/pdf-toolbar.test.tsx` (changed): removed rotate button interaction assertions.
+- `apps/web/e2e/pdf-page-operations.spec.ts` (changed): removed page rotation step; verified remaining insert image, delete page, restructure toast, and download tests pass.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (52/52 test files passed, 451/451 unit tests passed).
+- `pnpm test:e2e`: PASS (64/64 Playwright E2E tests passed).
+**Related:** PDF-6
+**Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.

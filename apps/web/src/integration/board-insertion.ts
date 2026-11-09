@@ -101,7 +101,7 @@ export async function getImageDimensions(blob: Blob): Promise<{ width: number; h
  * Satisfies INT-1, INT-2, and docs/specs/modules.md §8:
  * - Content-addressed binary storage via ProjectService.putFile.
  * - Added to Excalidraw binary files via addFiles.
- * - Created as a locked element so student can write over it without moving it.
+ * - Created as an unlocked element (locked: false) so user can freely move, resize and annotate.
  * - Automatically scrolls Excalidraw view to the newly inserted content.
  */
 export async function insertImageIntoBoard({
@@ -111,7 +111,7 @@ export async function insertImageIntoBoard({
   mimeType,
   width,
   height,
-  locked = true,
+  locked = false,
   projectServiceOverride,
   apiOverride,
 }: InsertImageOptions): Promise<string> {

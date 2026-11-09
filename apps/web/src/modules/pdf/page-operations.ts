@@ -1,5 +1,6 @@
-import { PDFDocument, degrees, rgb, StandardFonts, type PDFImage, type PDFFont } from "@cantoo/pdf-lib";
+import { PDFDocument, rgb, StandardFonts, LineCapStyle, type PDFImage, type PDFFont } from "@cantoo/pdf-lib";
 import { PdfAnnotationSubtype } from "@embedpdf/models";
+import type { AnnotationTransferItem } from "@embedpdf/plugin-annotation";
 import type { ProjectService } from "@/core/storage/project-service";
 import {
   deserializeAnnotations,
@@ -16,12 +17,25 @@ import { toVisual } from "./lib/bidiText";
 
 function parseStrokeColor(hex?: string): { r: number; g: number; b: number } {
   if (hex && hex.startsWith("#")) {
-    const h = hex.slice(1);
+    let h = hex.slice(1);
+    if (h.length === 3) {
+      h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    }
     if (h.length === 6) {
       return {
         r: parseInt(h.slice(0, 2), 16) / 255,
         g: parseInt(h.slice(2, 4), 16) / 255,
         b: parseInt(h.slice(4, 6), 16) / 255,
+      };
+    }
+  }
+  if (hex && hex.startsWith("rgb")) {
+    const match = hex.match(/\d+(\.\d+)?/g);
+    if (match && match.length >= 3) {
+      return {
+        r: Math.min(1, Math.max(0, parseFloat(match[0]) / 255)),
+        g: Math.min(1, Math.max(0, parseFloat(match[1]) / 255)),
+        b: Math.min(1, Math.max(0, parseFloat(match[2]) / 255)),
       };
     }
   }
@@ -58,10 +72,35 @@ export function drawCustomInkStrokesOnDoc(
     const pageHeight = page.getHeight();
 
     for (const stroke of strokes) {
-      if (!stroke.points || stroke.points.length < 2) continue;
+      if (!stroke || !stroke.points || stroke.points.length === 0) continue;
       const c = parseStrokeColor(stroke.color);
       const ox = stroke.transform?.x ?? 0;
       const oy = stroke.transform?.y ?? 0;
+      const thickness = stroke.width && stroke.width > 0 ? stroke.width : 2;
+      const opacity = stroke.opacity ?? 1;
+
+      // Handle single point (dot)
+      if (stroke.points.length === 1) {
+        const p = stroke.points[0];
+        const x = p.x + ox;
+        const y = p.y + oy;
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+        if (x < 0 || x > pageWidth || y < 0 || y > pageHeight) continue;
+        try {
+          page.drawLine({
+            start: { x, y: pageHeight - y },
+            end: { x: x + 0.1, y: pageHeight - y },
+            thickness,
+            color: rgb(c.r, c.g, c.b),
+            opacity,
+            lineCap: LineCapStyle.Round,
+          });
+        } catch (err) {
+          console.warn("[page-operations] Error drawing ink dot:", err);
+        }
+        continue;
+      }
+
       for (let i = 0; i < stroke.points.length - 1; i++) {
         const p1 = stroke.points[i];
         const p2 = stroke.points[i + 1];
@@ -93,9 +132,10 @@ export function drawCustomInkStrokesOnDoc(
           page.drawLine({
             start: { x: x1, y: pageHeight - y1 },
             end: { x: x2, y: pageHeight - y2 },
-            thickness: stroke.width || 2,
+            thickness,
             color: rgb(c.r, c.g, c.b),
-            opacity: stroke.opacity ?? 1,
+            opacity,
+            lineCap: LineCapStyle.Round,
           });
         } catch (err) {
           console.warn("[page-operations] Error drawing ink stroke segment:", err);
@@ -108,7 +148,8 @@ export function drawCustomInkStrokesOnDoc(
 export function drawCustomStickyNotesOnDoc(
   pdfDoc: PDFDocument,
   customStickyNotes: Record<number, CustomStickyNote[]>,
-  font?: PDFFont
+  latinFont?: PDFFont,
+  arabicFont?: PDFFont
 ): void {
   const pages = pdfDoc.getPages();
   for (const [pageIdxStr, stickies] of Object.entries(customStickyNotes)) {
@@ -157,13 +198,13 @@ export function drawCustomStickyNotesOnDoc(
           opacity: 1,
         });
 
-        if (font) {
-          // Draw "Note" header title
+        if (latinFont) {
+          // Draw "Note" header title (always Latin)
           page.drawText("Note", {
             x: x + 6,
             y: pdfY + height - headerHeight + (headerHeight - 8) / 2,
             size: 9,
-            font,
+            font: latinFont,
             color: rgb(0.47, 0.21, 0.06),
           });
 
@@ -175,8 +216,10 @@ export function drawCustomStickyNotesOnDoc(
             for (const line of lines) {
               if (lineY < pdfY + 6) break;
               try {
+                const lineHasArabic = hasArabicCharacters(line);
+                const font = lineHasArabic && arabicFont ? arabicFont : latinFont;
                 const dir: Dir = note.direction ?? detectDirection(line);
-                const visual = toVisual(line, dir);
+                const visual = lineHasArabic ? toVisual(line, dir) : line;
                 let textWidth = 0;
                 try {
                   textWidth = font.widthOfTextAtSize(visual, noteFontSize);
@@ -286,10 +329,15 @@ export function wrapLineForPdf(
   return resultLines.length > 0 ? resultLines : [line];
 }
 
+export function hasArabicCharacters(text: string): boolean {
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
+}
+
 export function drawCustomTextBoxesOnDoc(
   pdfDoc: PDFDocument,
   customTextBoxes: Record<number, CustomTextBox[]>,
-  font: PDFFont
+  latinFont: PDFFont,
+  arabicFont?: PDFFont
 ): void {
   const pages = pdfDoc.getPages();
   for (const [pageIdxStr, boxes] of Object.entries(customTextBoxes)) {
@@ -309,8 +357,11 @@ export function drawCustomTextBoxesOnDoc(
       const rawLines = box.text.split("\n");
       const wrappedLines: string[] = [];
 
+      const boxHasArabic = hasArabicCharacters(box.text);
+      const primaryFont = boxHasArabic && arabicFont ? arabicFont : latinFont;
+
       for (const rawLine of rawLines) {
-        const subLines = wrapLineForPdf(rawLine, font, fontSize, wrapW);
+        const subLines = wrapLineForPdf(rawLine, primaryFont, fontSize, wrapW);
         wrappedLines.push(...subLines);
       }
 
@@ -330,8 +381,10 @@ export function drawCustomTextBoxesOnDoc(
       wrappedLines.forEach((line, i) => {
         if (!line) return;
         try {
+          const lineHasArabic = hasArabicCharacters(line);
+          const font = lineHasArabic && arabicFont ? arabicFont : latinFont;
           const dir: Dir = box.direction ?? detectDirection(line);
-          const visual = toVisual(line, dir);
+          const visual = lineHasArabic ? toVisual(line, dir) : line;
           let textWidth = 0;
           try {
             textWidth = font.widthOfTextAtSize(visual, fontSize);
@@ -500,49 +553,35 @@ export async function embedImageSafely(
 }
 
 /**
- * Rotates a specified page by the given angle clockwise (default 90°).
- * Retains original PDF immutability by returning a newly serialized document byte array.
- */
-export async function rotatePage(
-  pdfBytes: Uint8Array | ArrayBuffer,
-  pageIndex: number,
-  degreesAngle: number = 90
-): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.load(pdfBytes);
-  const pages = pdfDoc.getPages();
-
-  if (pageIndex < 0 || pageIndex >= pages.length) {
-    throw new Error(`Invalid page index: ${pageIndex}. Document has ${pages.length} pages.`);
-  }
-
-  const page = pages[pageIndex];
-  const currentRotation = page.getRotation().angle;
-  page.setRotation(degrees((currentRotation + degreesAngle) % 360));
-
-  return await pdfDoc.save();
-}
-
-/**
  * Deletes a page from the document.
  * Requires at least 2 pages; throws an error if attempting to delete the only remaining page.
+ * Uses destDoc.copyPages to produce a pristine, rebuild page tree without orphaned references.
  */
 export async function deletePage(
   pdfBytes: Uint8Array | ArrayBuffer,
   pageIndex: number
 ): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.load(pdfBytes);
-  const pageCount = pdfDoc.getPageCount();
+  const srcDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+  const totalPages = srcDoc.getPageCount();
 
-  if (pageCount <= 1) {
+  if (totalPages <= 1) {
     throw new Error("Cannot delete the only page in the document.");
   }
 
-  if (pageIndex < 0 || pageIndex >= pageCount) {
-    throw new Error(`Invalid page index: ${pageIndex}. Document has ${pageCount} pages.`);
+  if (pageIndex < 0 || pageIndex >= totalPages) {
+    throw new Error(`Invalid page index: ${pageIndex}. Document has ${totalPages} pages.`);
   }
 
-  pdfDoc.removePage(pageIndex);
-  return await pdfDoc.save();
+  const keepIndices = Array.from({ length: totalPages }, (_, i) => i).filter(
+    (i) => i !== pageIndex
+  );
+  const destDoc = await PDFDocument.create();
+  const copiedPages = await destDoc.copyPages(srcDoc, keepIndices);
+  for (const page of copiedPages) {
+    destDoc.addPage(page);
+  }
+
+  return await destDoc.save();
 }
 
 /**
@@ -553,7 +592,7 @@ export async function reorderPages(
   pdfBytes: Uint8Array | ArrayBuffer,
   newOrder: number[]
 ): Promise<Uint8Array> {
-  const srcDoc = await PDFDocument.load(pdfBytes);
+  const srcDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
   const totalPages = srcDoc.getPageCount();
 
   if (newOrder.length !== totalPages) {
@@ -582,7 +621,7 @@ export async function insertImagePage(
   mimeType?: string,
   insertAtIndex?: number
 ): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.load(pdfBytes);
+  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
   const u8Image = imageBytes instanceof Uint8Array ? imageBytes : new Uint8Array(imageBytes);
 
   const embeddedImage = await embedImageSafely(pdfDoc, u8Image, mimeType);
@@ -608,6 +647,75 @@ export async function insertImagePage(
   return await pdfDoc.save();
 }
 
+export interface BurnStampItem {
+  pageIndex: number;
+  rect: { origin: { x: number; y: number }; size: { width: number; height: number } };
+  imageBytes?: Uint8Array | ArrayBuffer;
+  blobUrl?: string;
+  mimeType?: string;
+}
+
+/**
+ * Draws image stamps directly onto the PDF document pages.
+ */
+export async function drawCustomStampsOnDoc(
+  pdfDoc: PDFDocument,
+  stamps: BurnStampItem[]
+): Promise<void> {
+  const pages = pdfDoc.getPages();
+  for (const stamp of stamps) {
+    if (!stamp) continue;
+    const pageIdx = stamp.pageIndex ?? 0;
+    if (pageIdx < 0 || pageIdx >= pages.length) continue;
+    const page = pages[pageIdx];
+    const pageWidth = page.getWidth();
+    const pageHeight = page.getHeight();
+
+    let u8: Uint8Array | null = null;
+    if (stamp.imageBytes) {
+      u8 = stamp.imageBytes instanceof Uint8Array ? stamp.imageBytes : new Uint8Array(stamp.imageBytes);
+    } else if (stamp.blobUrl && typeof fetch === "function") {
+      try {
+        const res = await fetch(stamp.blobUrl);
+        if (res.ok) {
+          const ab = await res.arrayBuffer();
+          u8 = new Uint8Array(ab);
+        }
+      } catch (err) {
+        console.warn("[page-operations] Failed to fetch stamp blobUrl:", err);
+      }
+    }
+
+    if (!u8 || u8.byteLength === 0) continue;
+
+    try {
+      const rect = stamp.rect;
+      const x = rect?.origin?.x ?? 72;
+      const rectY = rect?.origin?.y ?? 72;
+      const w = rect?.size?.width ?? 144;
+      const h = rect?.size?.height ?? 96;
+
+      if (isRectCompletelyOutOfBounds(x, rectY, w, h, pageWidth, pageHeight)) {
+        continue;
+      }
+
+      const embeddedImg = await embedImageSafely(pdfDoc, u8, stamp.mimeType);
+      if (!embeddedImg) continue;
+
+      const y = pageHeight > rectY + h ? pageHeight - rectY - h : rectY;
+
+      page.drawImage(embeddedImg, {
+        x,
+        y,
+        width: w,
+        height: h,
+      });
+    } catch (err) {
+      console.error("[page-operations] Failed to embed stamp on doc:", err);
+    }
+  }
+}
+
 /**
  * Standalone annotation burning engine using @cantoo/pdf-lib.
  * Reads base PDF bytes, deserializes annotation JSON (re-injecting stamps via ProjectService.getFile),
@@ -619,21 +727,32 @@ export async function burnAnnotationsWithPdfLib(
   pdfBytes: Uint8Array | ArrayBuffer,
   annotationsJson: string,
   projectId: string,
-  projectService: ProjectService
+  projectService: ProjectService,
+  liveOverrides?: {
+    customInkStrokes?: Record<number, CustomInkStroke[]>;
+    customStickyNotes?: Record<number, CustomStickyNote[]>;
+    customTextBoxes?: Record<number, CustomTextBox[]>;
+    stamps?: BurnStampItem[];
+  }
 ): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.load(pdfBytes);
+  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
   const pages = pdfDoc.getPages();
 
-  if (!annotationsJson || annotationsJson.trim() === "" || annotationsJson === "[]") {
-    return await pdfDoc.save();
+  let items: AnnotationTransferItem[] = [];
+  if (annotationsJson && annotationsJson.trim() !== "" && annotationsJson !== "[]") {
+    try {
+      items = await deserializeAnnotations(projectId, annotationsJson, projectService);
+    } catch (err) {
+      console.warn("[page-operations] deserializeAnnotations warning:", err);
+    }
   }
 
-  const items = await deserializeAnnotations(projectId, annotationsJson, projectService);
-  let font: PDFFont;
+  const latinFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  let arabicFont: PDFFont | undefined;
   try {
-    font = await embedArabicFont(pdfDoc);
-  } catch {
-    font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    arabicFont = await embedArabicFont(pdfDoc);
+  } catch (err) {
+    console.warn("[page-operations] Arabic font embedding skipped or failed, using Helvetica:", err);
   }
 
   for (const item of items) {
@@ -685,7 +804,14 @@ export async function burnAnnotationsWithPdfLib(
     // 2. HIGHLIGHT: Draw translucent highlight rectangles
     if (annotation.type === PdfAnnotationSubtype.HIGHLIGHT) {
       try {
-        const rects = (annotation as unknown as { rects?: Array<{ origin: { x: number; y: number }; size: { width: number; height: number } }> }).rects ??
+        const anyHighlight = annotation as unknown as {
+          rects?: Array<{ origin: { x: number; y: number }; size: { width: number; height: number } }>;
+          segmentRects?: Array<{ origin: { x: number; y: number }; size: { width: number; height: number } }>;
+          color?: string;
+        };
+        const rects =
+          (anyHighlight.segmentRects && anyHighlight.segmentRects.length > 0 ? anyHighlight.segmentRects : undefined) ??
+          (anyHighlight.rects && anyHighlight.rects.length > 0 ? anyHighlight.rects : undefined) ??
           (annotation.rect ? [annotation.rect] : []);
 
         for (const r of rects) {
@@ -734,8 +860,11 @@ export async function burnAnnotationsWithPdfLib(
 
           const y = pageHeight > rectY + h ? pageHeight - rectY - h : rectY;
           const fontSize = anyAnno.fontSize ?? 12;
+          const lineHasArabic = hasArabicCharacters(text);
+          const font = lineHasArabic && arabicFont ? arabicFont : latinFont;
+          const visual = lineHasArabic ? toVisual(text, "rtl") : text;
 
-          page.drawText(text, {
+          page.drawText(visual, {
             x,
             y,
             size: fontSize,
@@ -749,24 +878,43 @@ export async function burnAnnotationsWithPdfLib(
     }
   }
 
+  // 1b. LIVE STAMPS OVERRIDE
+  if (liveOverrides?.stamps && liveOverrides.stamps.length > 0) {
+    try {
+      await drawCustomStampsOnDoc(pdfDoc, liveOverrides.stamps);
+    } catch (err) {
+      console.error("[page-operations] Failed to draw live stamps:", err);
+    }
+  }
+
   // 4. STICKY NOTES: Burn custom sticky notes into page content streams
   try {
-    const customStickyNotes = extractCustomStickyNotes(annotationsJson);
-    drawCustomStickyNotesOnDoc(pdfDoc, customStickyNotes, font);
+    const customStickyNotes =
+      liveOverrides?.customStickyNotes && Object.values(liveOverrides.customStickyNotes).some((arr) => arr && arr.length > 0)
+        ? liveOverrides.customStickyNotes
+        : extractCustomStickyNotes(annotationsJson);
+    drawCustomStickyNotesOnDoc(pdfDoc, customStickyNotes, latinFont, arabicFont);
   } catch (err) {
     console.error("[page-operations] Failed to draw sticky notes:", err);
   }
 
   // 4b. TEXT BOXES: Burn custom text boxes
   try {
-    drawCustomTextBoxesOnDoc(pdfDoc, extractCustomTextBoxes(annotationsJson), font);
+    const customTextBoxes =
+      liveOverrides?.customTextBoxes && Object.values(liveOverrides.customTextBoxes).some((arr) => arr && arr.length > 0)
+        ? liveOverrides.customTextBoxes
+        : extractCustomTextBoxes(annotationsJson);
+    drawCustomTextBoxesOnDoc(pdfDoc, customTextBoxes, latinFont, arabicFont);
   } catch (err) {
     console.error("[page-operations] Failed to draw text boxes:", err);
   }
 
   // 5. CUSTOM INK: Burn custom ink strokes into page content streams
   try {
-    const customInkStrokes = extractCustomInkStrokes(annotationsJson);
+    const customInkStrokes =
+      liveOverrides?.customInkStrokes && Object.values(liveOverrides.customInkStrokes).some((arr) => arr && arr.length > 0)
+        ? liveOverrides.customInkStrokes
+        : extractCustomInkStrokes(annotationsJson);
     drawCustomInkStrokesOnDoc(pdfDoc, customInkStrokes);
   } catch (err) {
     console.error("[page-operations] Failed to draw custom ink:", err);
@@ -776,14 +924,15 @@ export async function burnAnnotationsWithPdfLib(
 }
 
 /**
- * Burns custom ink strokes and custom sticky notes directly onto an existing PDF byte array.
- * Used after live exportScope.saveAsCopy() to merge custom strokes seamlessly.
+ * Burns custom ink strokes, text boxes, sticky notes, and stamps directly onto an existing PDF byte array.
+ * Used after live exportScope.saveAsCopy() to merge all custom annotations seamlessly.
  */
 export async function burnCustomInkOnPdfBytes(
-  pdfBytes: Uint8Array,
-  customInkStrokes: Record<number, CustomInkStroke[]>,
+  pdfBytes: Uint8Array | ArrayBuffer,
+  customInkStrokes?: Record<number, CustomInkStroke[]>,
   customStickyNotes?: Record<number, CustomStickyNote[]>,
-  customTextBoxes?: Record<number, CustomTextBox[]>
+  customTextBoxes?: Record<number, CustomTextBox[]>,
+  stamps?: BurnStampItem[]
 ): Promise<Uint8Array> {
   const hasStrokes = Object.values(customInkStrokes || {}).some((arr) => arr && arr.length > 0);
   const hasStickies =
@@ -792,31 +941,66 @@ export async function burnCustomInkOnPdfBytes(
   const hasTexts =
     customTextBoxes &&
     Object.values(customTextBoxes || {}).some((arr) => arr && arr.length > 0);
-  if (!hasStrokes && !hasStickies && !hasTexts) return pdfBytes;
+  const hasStamps = stamps && stamps.length > 0;
+
+  if (!hasStrokes && !hasStickies && !hasTexts && !hasStamps) {
+    return pdfBytes instanceof Uint8Array ? pdfBytes : new Uint8Array(pdfBytes);
+  }
 
   try {
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    if (hasStrokes) {
-      drawCustomInkStrokesOnDoc(pdfDoc, customInkStrokes);
+    const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+
+    // 1. Stamps
+    if (hasStamps && stamps) {
+      try {
+        await drawCustomStampsOnDoc(pdfDoc, stamps);
+      } catch (err) {
+        console.error("[page-operations] Error burning stamps:", err);
+      }
     }
-    let font: PDFFont;
-    try {
-      font = await embedArabicFont(pdfDoc);
-    } catch {
-      font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    // 2. Custom Ink
+    if (hasStrokes && customInkStrokes) {
+      try {
+        drawCustomInkStrokesOnDoc(pdfDoc, customInkStrokes);
+      } catch (err) {
+        console.error("[page-operations] Error burning custom ink:", err);
+      }
     }
-    if (hasStickies && customStickyNotes) {
-      drawCustomStickyNotesOnDoc(pdfDoc, customStickyNotes, font);
+
+    // 3. Text & Sticky Notes (require font)
+    if ((hasStickies && customStickyNotes) || (hasTexts && customTextBoxes)) {
+      const latinFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      let arabicFont: PDFFont | undefined;
+      try {
+        arabicFont = await embedArabicFont(pdfDoc);
+      } catch (err) {
+        console.warn("[page-operations] Arabic font embedding skipped or failed, using Helvetica:", err);
+      }
+
+      if (hasStickies && customStickyNotes) {
+        try {
+          drawCustomStickyNotesOnDoc(pdfDoc, customStickyNotes, latinFont, arabicFont);
+        } catch (err) {
+          console.error("[page-operations] Error burning sticky notes:", err);
+        }
+      }
+
+      if (hasTexts && customTextBoxes) {
+        try {
+          drawCustomTextBoxesOnDoc(pdfDoc, customTextBoxes, latinFont, arabicFont);
+        } catch (err) {
+          console.error("[page-operations] Error burning text boxes:", err);
+        }
+      }
     }
-    if (hasTexts && customTextBoxes) {
-      drawCustomTextBoxesOnDoc(pdfDoc, customTextBoxes, font);
-    }
+
     return await pdfDoc.save();
   } catch (err) {
     console.error(
       "[page-operations] burnCustomInkOnPdfBytes failed, returning original pdfBytes:",
       err
     );
-    return pdfBytes;
+    return pdfBytes instanceof Uint8Array ? pdfBytes : new Uint8Array(pdfBytes);
   }
 }

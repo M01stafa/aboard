@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import { PDFDocument, StandardFonts, rgb } from "@cantoo/pdf-lib";
 import { PdfAnnotationSubtype } from "@embedpdf/models";
 import {
-  rotatePage,
   deletePage,
   reorderPages,
   insertImagePage,
@@ -34,21 +33,6 @@ async function createTestPdf(pageCount: number = 2): Promise<Uint8Array> {
 }
 
 describe("page-operations (@cantoo/pdf-lib)", () => {
-  it("rotatePage rotates page by 90 degrees clockwise", async () => {
-    const originalPdf = await createTestPdf(2);
-    const rotatedBytes = await rotatePage(originalPdf, 0, 90);
-
-    const doc = await PDFDocument.load(rotatedBytes);
-    expect(doc.getPageCount()).toBe(2);
-    expect(doc.getPage(0).getRotation().angle).toBe(90);
-    expect(doc.getPage(1).getRotation().angle).toBe(0);
-
-    // Rotate again by 90 -> 180
-    const rotated180 = await rotatePage(rotatedBytes, 0, 90);
-    const doc180 = await PDFDocument.load(rotated180);
-    expect(doc180.getPage(0).getRotation().angle).toBe(180);
-  });
-
   it("deletePage removes a page from a multi-page PDF", async () => {
     const originalPdf = await createTestPdf(3);
     const deletedBytes = await deletePage(originalPdf, 1);
@@ -403,6 +387,148 @@ describe("page-operations (@cantoo/pdf-lib)", () => {
     };
 
     const burned = await burnCustomInkOnPdfBytes(originalPdf, {}, undefined, customTextBoxes);
+    expect(burned).toBeDefined();
+    expect(burned.byteLength).toBeGreaterThan(originalPdf.byteLength);
+
+    const doc = await PDFDocument.load(burned);
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  it("burnCustomInkOnPdfBytes burns custom ink strokes, text boxes, and stamps together", async () => {
+    const originalPdf = await createTestPdf(1);
+
+    // 1x1 transparent PNG
+    const testPngBytes = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+      0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+      0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+      0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+      0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+    ]);
+
+    const customStrokes = {
+      0: [
+        {
+          id: "stroke-dot",
+          points: [{ x: 100, y: 100 }],
+          color: "#E44234",
+          width: 4,
+          opacity: 1,
+        },
+        {
+          id: "stroke-line",
+          points: [
+            { x: 120, y: 120 },
+            { x: 200, y: 200 },
+          ],
+          color: "#0000FF",
+          width: 3,
+          opacity: 0.8,
+        },
+      ],
+    };
+
+    const customTextBoxes = {
+      0: [
+        {
+          id: "tb-1",
+          pageIndex: 0,
+          x: 50,
+          y: 50,
+          width: 200,
+          height: 30,
+          text: "Burned Annotation Text",
+          fontSize: 14,
+          color: "#E44234",
+        },
+      ],
+    };
+
+    const stamps = [
+      {
+        pageIndex: 0,
+        rect: { origin: { x: 50, y: 300 }, size: { width: 100, height: 100 } },
+        imageBytes: testPngBytes,
+        mimeType: "image/png",
+      },
+    ];
+
+    const burned = await burnCustomInkOnPdfBytes(
+      originalPdf,
+      customStrokes,
+      undefined,
+      customTextBoxes,
+      stamps
+    );
+
+    expect(burned).toBeDefined();
+    expect(burned.byteLength).toBeGreaterThan(originalPdf.byteLength);
+
+    const doc = await PDFDocument.load(burned);
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  it("burnAnnotationsWithPdfLib burns liveOverrides alongside serialized highlights", async () => {
+    const originalPdf = await createTestPdf(1);
+    const mockService = {
+      getFile: vi.fn(),
+      saveAnnotations: vi.fn(),
+      readAnnotations: vi.fn(),
+    } as unknown as ProjectService;
+
+    // Highlight in serialized JSON
+    const annotationsJson = JSON.stringify([
+      {
+        annotation: {
+          id: "highlight-1",
+          type: PdfAnnotationSubtype.HIGHLIGHT,
+          pageIndex: 0,
+          rect: { origin: { x: 100, y: 100 }, size: { width: 200, height: 20 } },
+        },
+      },
+    ]);
+
+    const liveOverrides = {
+      customInkStrokes: {
+        0: [
+          {
+            id: "stroke-live",
+            points: [
+              { x: 150, y: 150 },
+              { x: 250, y: 250 },
+            ],
+            color: "#E44234",
+            width: 2,
+            opacity: 1,
+          },
+        ],
+      },
+      customTextBoxes: {
+        0: [
+          {
+            id: "tb-live",
+            pageIndex: 0,
+            x: 50,
+            y: 80,
+            width: 150,
+            height: 25,
+            text: "Live Text",
+            fontSize: 12,
+            color: "#1A63A0",
+          },
+        ],
+      },
+    };
+
+    const burned = await burnAnnotationsWithPdfLib(
+      originalPdf,
+      annotationsJson,
+      "test-proj",
+      mockService,
+      liveOverrides
+    );
+
     expect(burned).toBeDefined();
     expect(burned.byteLength).toBeGreaterThan(originalPdf.byteLength);
 

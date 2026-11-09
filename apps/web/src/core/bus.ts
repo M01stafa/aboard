@@ -58,6 +58,11 @@ export type AppEvents = {
   "drive:quota-exceeded": { exceeded: boolean };
   "drive:open-export-dialog": Record<string, never>;
   "workspace:flush": Record<string, never>;
+  "tab:dirty-state": {
+    tabId?: string;
+    itemId?: string;
+    isDirty: boolean;
+  };
 };
 
 export const bus = mitt<AppEvents>();

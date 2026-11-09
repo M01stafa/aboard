@@ -123,9 +123,9 @@ describe("PDF Text Tool (custom text boxes)", () => {
       left: 0,
       top: 0,
       width: 612 * 3,
-      height: 792 * 3,
+      height: 792,
       right: 612 * 3,
-      bottom: 792 * 3,
+      bottom: 792,
       x: 0,
       y: 0,
       toJSON: () => {},
@@ -725,7 +725,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
     mockSvgRect(svg);
     act(() => {
       svg.dispatchEvent(
-        new PointerEvent("pointerdown", { clientX: 712, clientY: 942, button: 0, bubbles: true })
+        new PointerEvent("pointerdown", { clientX: 712, clientY: 150, button: 0, bubbles: true })
       );
     });
 
@@ -782,7 +782,7 @@ describe("PDF Text Tool (custom text boxes)", () => {
     mockSvgRect(svg);
     act(() => {
       svg.dispatchEvent(
-        new PointerEvent("pointerdown", { clientX: 712, clientY: 942, button: 0, bubbles: true })
+        new PointerEvent("pointerdown", { clientX: 712, clientY: 150, button: 0, bubbles: true })
       );
     });
 

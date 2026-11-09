@@ -203,6 +203,6 @@ test.describe("Circuit Simulator Module Integration (Task 24 / CIRC-1, CIRC-2, C
 
     // 5. In side-by-side view, verify Send to Board button is now enabled
     await expect(sendToBoardBtn).toBeEnabled({ timeout: 10000 });
-    await expect(sendToBoardBtn).toHaveAttribute("title", /Send to Board/i);
+    await expect(sendToBoardBtn).toHaveAttribute("title", /To Board|Send to Board/i);
   });
 });

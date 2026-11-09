@@ -24,8 +24,8 @@ export async function loadNotoArabicFontBytes(): Promise<ArrayBuffer> {
 
   // 2. Node / test environment fallback
   try {
-    const fs = await import("fs/promises");
-    const path = await import("path");
+    const fs = await import(/* webpackIgnore: true */ "fs/promises");
+    const path = await import(/* webpackIgnore: true */ "path");
     const candidates = [
       path.resolve(process.cwd(), "public/fonts/NotoNaskhArabic-Regular.ttf"),
       path.resolve(process.cwd(), "apps/web/public/fonts/NotoNaskhArabic-Regular.ttf"),

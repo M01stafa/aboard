@@ -13,7 +13,7 @@ test.describe("PDF Annotated Download & Page Operations (Task 30 / PDF-5, PDF-6)
     });
   });
 
-  test("performs rotate, insert image page, delete page, and downloads annotated PDF", async ({
+  test("performs insert image page, delete page, and downloads annotated PDF", async ({
     page,
   }) => {
     // 1. Generate a valid 2-page test PDF buffer using @cantoo/pdf-lib
@@ -59,28 +59,12 @@ test.describe("PDF Annotated Download & Page Operations (Task 30 / PDF-5, PDF-6)
     const pageDisplay = primaryPane.locator('[data-testid="pdf-page-display"]');
     await expect(pageDisplay).toContainText("1 / 2", { timeout: 10000 });
 
-    // 5. Test Page Operations Menu: Rotate Page 90°
+    // 5. Test Insert Image as Page
     const menuBtn = primaryPane.locator('[data-testid="pdf-page-operations-menu"]');
-    await expect(menuBtn).toBeVisible();
-    await menuBtn.click();
-
     const dropdown = primaryPane.locator('[data-testid="pdf-page-operations-dropdown"]');
-    await expect(dropdown).toBeVisible();
-
-    const rotateBtn = primaryPane.locator('[data-testid="pdf-rotate-page-btn"]');
-    await rotateBtn.click();
-
-    // Verify warning toast is shown (PDF-6)
     const toast = primaryPane.locator('[data-testid="pdf-restructure-toast"]');
-    await expect(toast).toBeVisible({ timeout: 10000 });
-    await expect(toast).toContainText("Annotations do not carry over");
-
-    // Dismiss toast
     const dismissBtn = primaryPane.locator('[data-testid="pdf-dismiss-toast"]');
-    await dismissBtn.click();
-    await expect(toast).not.toBeVisible();
 
-    // 6. Test Insert Image as Page
     const sampleImagePng = Buffer.from(
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
       "base64"
@@ -94,7 +78,7 @@ test.describe("PDF Annotated Download & Page Operations (Task 30 / PDF-5, PDF-6)
     });
 
     // Verify page display updates to "1 / 3" (since a new page was inserted)
-    await expect(pageDisplay).toContainText("3", { timeout: 15000 });
+    await expect(pageDisplay).toContainText("1 / 3", { timeout: 15000 });
 
     // Verify toast appeared again for restructure
     await expect(toast).toBeVisible({ timeout: 10000 });
@@ -108,7 +92,7 @@ test.describe("PDF Annotated Download & Page Operations (Task 30 / PDF-5, PDF-6)
     await deleteBtn.click();
 
     // Verify page display updates back down to 2 pages
-    await expect(pageDisplay).toContainText("2", { timeout: 15000 });
+    await expect(pageDisplay).toContainText("1 / 2", { timeout: 15000 });
 
     // 8. Test Download Annotated PDF (PDF-5)
     const downloadBtn = primaryPane.locator('[data-testid="pdf-download-btn"]');
@@ -132,6 +116,6 @@ test.describe("PDF Annotated Download & Page Operations (Task 30 / PDF-5, PDF-6)
     expect(downloadedBuffer.length).toBeGreaterThan(100);
 
     const parsedPdf = await PDFDocument.load(downloadedBuffer);
-    expect(parsedPdf.getPageCount()).toBeGreaterThanOrEqual(1);
+    expect(parsedPdf.getPageCount()).toBe(2);
   });
 });

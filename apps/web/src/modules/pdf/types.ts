@@ -20,4 +20,5 @@ export interface PdfPaneProps {
   hasBoardTab?: boolean;
   onMount?: (tabId: string, token: string) => void;
   projectServiceOverride?: ProjectService;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
