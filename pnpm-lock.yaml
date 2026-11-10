@@ -287,14 +287,14 @@ importers:
         specifier: 7.37.5
         version: 7.37.5(eslint@9.39.5(supports-color@7.2.0))
       happy-dom:
-        specifier: 21.0.1
-        version: 21.0.1
+        specifier: 21.0.4
+        version: 21.0.4
       typescript:
         specifier: 5.9.3
         version: 5.9.3
       vitest:
         specifier: 5.0.4
-        version: 5.0.4(@types/node@22.13.0)(happy-dom@21.0.1)(vite@8.3.4(@types/node@22.13.0))
+        version: 5.0.4(@types/node@22.13.0)(happy-dom@21.0.4)(vite@8.3.4(@types/node@22.13.0))
 
 packages:
 
@@ -2567,8 +2567,8 @@ packages:
   hachure-fill@0.5.2:
     resolution: {integrity: sha512-3GKBOn+m2LX9iq+JC1064cSFprJY4jL1jCXTcpnfER5HYE2l/4EfWSGzkPa/ZDBmYI0ZOEj5VHV/eKnPGkHuOg==}
 
-  happy-dom@21.0.1:
-    resolution: {integrity: sha512-pRBs/u9fhrncyByOl58DMex0R2uAj6ZPKWIjV5j5yNGZBqLw3P6BTRhlc0DD5b/Ht4/6JYTMuE2LJhUWRC6SGw==}
+  happy-dom@21.0.4:
+    resolution: {integrity: sha512-tFm+GaLBgo6o0awHnvHaNoraVo27qJ+2tZEtZ+cIa08hXbeitrxAJajLI05hsUy/2/YTKcUjQYzHe5mCcraLBw==}
     engines: {node: '>=20.0.0'}
 
   has-bigints@1.1.0:
@@ -6263,7 +6263,7 @@ snapshots:
 
   hachure-fill@0.5.2: {}
 
-  happy-dom@21.0.1:
+  happy-dom@21.0.4:
     dependencies:
       '@types/node': 22.13.0
       '@types/whatwg-mimetype': 3.0.2
@@ -7419,7 +7419,7 @@ snapshots:
       '@types/node': 22.13.0
       fsevents: 2.3.3
 
-  vitest@5.0.4(@types/node@22.13.0)(happy-dom@21.0.1)(vite@8.3.4(@types/node@22.13.0)):
+  vitest@5.0.4(@types/node@22.13.0)(happy-dom@21.0.4)(vite@8.3.4(@types/node@22.13.0)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.0.4(vite@8.3.4(@types/node@22.13.0))
@@ -7437,7 +7437,7 @@ snapshots:
       why-is-node-running: 3.2.1
     optionalDependencies:
       '@types/node': 22.13.0
-      happy-dom: 21.0.1
+      happy-dom: 21.0.4
     transitivePeerDependencies:
       - msw
 
