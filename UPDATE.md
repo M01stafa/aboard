@@ -3388,3 +3388,25 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (64/64 Playwright E2E tests passed).
 **Related:** PDF-6
 **Open:** Split divider direction in LTR remains inverted. Deferred indefinitely by owner.
+
+
+## 2026-11-10 — Task 44: Publish Legal Pages and Implement Account Deletion
+**Request:** Draft and publish Privacy Policy, Terms of Use, and Open-Source Licenses pages in Arabic and English; implement Account Deletion backend Edge Function `account-delete` (token revocation and cascade DB deletion) and frontend Danger Zone with confirmation modal dialog in `/settings` upon owner approval.
+**Changes:**
+- `apps/web/app/privacy/page.tsx` (changed): drafted comprehensive Privacy Policy in Arabic and English covering zero-server-storage, Google Drive integration, Google API Limited Use compliance, least-privilege `drive.file` scope, data retention, disconnection, account deletion, and security.
+- `apps/web/app/terms/page.tsx` (changed): drafted comprehensive Terms of Use in Arabic and English covering user IP ownership, Google Drive and local storage policies, educational disclaimers (circuit simulations and medical notes), termination, and liability limitations.
+- `apps/web/app/licenses/page.tsx` (changed): published third-party open-source notices in Arabic and English with prominent GPL-2.0-or-later notice and link to the CircuitJS1 fork source repository (`https://github.com/M01stafa/circuitjs1`), alongside Excalidraw, EmbedPDF/PDFium, @cantoo/pdf-lib, Dexie, zip.js, hash-wasm, Supabase, React, and Next.js notices.
+- `supabase/functions/account-delete/index.ts` (new): implemented authenticated Edge Function to revoke user's Google Drive refresh token at Google, cascade delete user records from `auth.users`, and return status.
+- `docs/specs/security.md` (changed): registered `account-delete` endpoint in §14.5 Endpoint Inventory table with exact-origin CORS and rate limits.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added translation strings for Danger Zone, delete modal confirmation, and warning explaining that Drive and local files are preserved.
+- `apps/web/app/settings/page.tsx` (changed): added Danger Zone section and confirmation modal requiring explicit "DELETE" confirmation before invoking `account-delete`, purging local Dexie user DB, and signing out.
+- `supabase/functions/edge-functions.test.ts` (changed): added unit tests for `account-delete` with and without connected Google Drive links.
+- `apps/web/src/test/settings-page.test.tsx` (new): added unit tests for the Settings account deletion flow, modal interactions, confirmation input check, and API invocation.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (53/53 test files passed, 456/456 unit tests passed).
+- `pnpm ci:security`: PASS (gitleaks clean, prod audit passed, bundle grep clean).
+**Related:** LEGAL-1, LEGAL-2, LEGAL-3, AUTH-4, SEC-1, SEC-2, SEC-6
+**Open:** None.

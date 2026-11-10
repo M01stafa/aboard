@@ -125,6 +125,7 @@ Controls:
 | `drive-link-token` | Supabase JWT | exact origin | 5 / 10 min / user | token string length-checked and proven valid by a refresh call |
 | `drive-token` | Supabase JWT | exact origin | 30 / min / user | none |
 | `drive-disconnect` | Supabase JWT | exact origin | 5 / 10 min / user | none |
+| `account-delete` | Supabase JWT | exact origin | 5 / 10 min / user | none (revokes Google token, cascades DB rows, deletes auth user) |
 | Google Drive API | user's access token in `Authorization` header | Google | exponential backoff | — |
 
 **Rules (all mandatory)**

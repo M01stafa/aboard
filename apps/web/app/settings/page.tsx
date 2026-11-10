@@ -2,14 +2,17 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { AuthGuard } from "../auth-guard";
 import { useI18n } from "@/i18n/provider";
 import type { Language, Theme } from "@/i18n/types";
 import { useDriveStore } from "@/core/drive";
+import { supabase } from "@/core/supabase";
+import { deleteUserDb } from "@/core/db";
 
 function SettingsContent() {
   const { language, setLanguage, theme, setTheme, t } = useI18n();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const driveParam = searchParams.get("drive");
   const reasonParam = searchParams.get("reason");
@@ -27,6 +30,9 @@ function SettingsContent() {
   } = useDriveStore();
 
   const [actionLoading, setActionLoading] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [localMessage, setLocalMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -98,6 +104,45 @@ function SettingsContent() {
       });
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== "DELETE") {
+      return;
+    }
+    setDeleting(true);
+    setLocalMessage(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+
+      const { error } = await supabase.functions.invoke("account-delete", {
+        method: "POST",
+      });
+      if (error) {
+        throw error;
+      }
+
+      if (userId) {
+        try {
+          await deleteUserDb(userId);
+        } catch {
+          // Non-fatal if DB was already closed or not opened
+        }
+      }
+
+      await supabase.auth.signOut();
+      router.push("/?account_deleted=1");
+    } catch (err: unknown) {
+      setDeleting(false);
+      setDeleteModalOpen(false);
+      setLocalMessage({
+        type: "error",
+        text: t("settings.deleteError", {
+          reason: err instanceof Error ? err.message : "Deletion failed",
+        }),
+      });
     }
   };
 
@@ -499,6 +544,231 @@ function SettingsContent() {
           })}
         </div>
       </section>
+
+      {/* Danger Zone: Account Deletion (LEGAL-3, AUTH-4) */}
+      <section
+        style={{
+          backgroundColor: "var(--bg-surface)",
+          border: "1px solid var(--border-error, #fca5a5)",
+          borderRadius: "var(--radius-md)",
+          padding: "var(--space-4)",
+          marginBlockEnd: "var(--space-4)",
+          boxShadow: "var(--shadow-1)",
+        }}
+      >
+        <h2
+          style={{
+            marginBlockStart: "0",
+            marginBlockEnd: "var(--space-1)",
+            fontSize: "1.125rem",
+            fontWeight: "var(--weight-semibold)",
+            color: "var(--color-danger, #ef4444)",
+          }}
+        >
+          {t("settings.dangerZoneTitle")}
+        </h2>
+        <p
+          style={{
+            marginBlockStart: "0",
+            marginBlockEnd: "var(--space-3)",
+            color: "var(--text-muted)",
+            fontSize: "0.875rem",
+          }}
+        >
+          {t("settings.dangerZoneDesc")}
+        </p>
+
+        <button
+          data-testid="delete-account-btn"
+          type="button"
+          onClick={() => {
+            setDeleteConfirmText("");
+            setDeleteModalOpen(true);
+          }}
+          style={{
+            height: "var(--control-md)",
+            paddingInline: "var(--space-3)",
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--border-error, #ef4444)",
+            backgroundColor: "transparent",
+            color: "var(--color-danger, #ef4444)",
+            fontWeight: "var(--weight-semibold)",
+            cursor: "pointer",
+            fontSize: "0.875rem",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {t("settings.deleteAccountBtn")}
+        </button>
+      </section>
+
+      {/* Account Deletion Confirmation Dialog */}
+      {deleteModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-dialog-title"
+          data-testid="delete-account-modal"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "var(--space-4)",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "var(--bg-surface)",
+              border: "1px solid var(--border-card)",
+              borderRadius: "var(--radius-md)",
+              padding: "var(--space-5)",
+              maxInlineSize: "48ch",
+              inlineSize: "100%",
+              boxShadow: "var(--shadow-2)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-3)",
+            }}
+          >
+            <h2
+              id="delete-dialog-title"
+              style={{
+                margin: 0,
+                fontSize: "1.25rem",
+                fontWeight: "var(--weight-bold)",
+                color: "var(--color-danger, #ef4444)",
+              }}
+            >
+              {t("settings.deleteModalTitle")}
+            </h2>
+
+            <div
+              style={{
+                padding: "var(--space-2)",
+                backgroundColor: "var(--bg-subtle)",
+                borderRadius: "var(--radius-sm)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-1)",
+              }}
+            >
+              <strong style={{ fontSize: "0.875rem", color: "var(--color-danger, #ef4444)" }}>
+                {t("settings.deleteModalNotice")}
+              </strong>
+              <p style={{ margin: 0, fontSize: "0.8125rem", color: "var(--text-main)", lineHeight: "1.4" }}>
+                {t("settings.deleteModalExplain")}
+              </p>
+            </div>
+
+            <p
+              style={{
+                margin: 0,
+                fontSize: "0.8125rem",
+                color: "var(--text-muted)",
+                lineHeight: "1.4",
+              }}
+            >
+              {t("settings.deleteModalFilesNotice")}
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+              <label
+                htmlFor="confirm-delete-input"
+                style={{
+                  fontSize: "0.8125rem",
+                  fontWeight: "var(--weight-medium)",
+                  color: "var(--text-main)",
+                }}
+              >
+                {t("settings.deleteModalTypeConfirm")}
+              </label>
+              <input
+                id="confirm-delete-input"
+                data-testid="delete-confirm-input"
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder={t("settings.deleteModalConfirmWord")}
+                disabled={deleting}
+                autoFocus
+                style={{
+                  height: "var(--control-md)",
+                  paddingInline: "var(--space-3)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--border-input)",
+                  backgroundColor: "var(--bg-surface)",
+                  color: "var(--text-main)",
+                  fontSize: "0.875rem",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "var(--space-2)",
+                marginBlockStart: "var(--space-2)",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                data-testid="delete-cancel-btn"
+                disabled={deleting}
+                onClick={() => setDeleteModalOpen(false)}
+                style={{
+                  height: "var(--control-md)",
+                  paddingInline: "var(--space-3)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--border-card)",
+                  backgroundColor: "var(--bg-subtle)",
+                  color: "var(--text-main)",
+                  fontSize: "0.875rem",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {t("settings.deleteModalCancelBtn")}
+              </button>
+              <button
+                type="button"
+                data-testid="delete-confirm-btn"
+                disabled={deleteConfirmText.trim().toUpperCase() !== "DELETE" || deleting}
+                onClick={handleDeleteAccount}
+                style={{
+                  height: "var(--control-md)",
+                  paddingInline: "var(--space-3)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "none",
+                  backgroundColor:
+                    deleteConfirmText.trim().toUpperCase() === "DELETE" && !deleting
+                      ? "var(--color-danger, #ef4444)"
+                      : "var(--bg-subtle)",
+                  color:
+                    deleteConfirmText.trim().toUpperCase() === "DELETE" && !deleting
+                      ? "#ffffff"
+                      : "var(--text-muted)",
+                  fontWeight: "var(--weight-semibold)",
+                  fontSize: "0.875rem",
+                  cursor:
+                    deleteConfirmText.trim().toUpperCase() === "DELETE" && !deleting
+                      ? "pointer"
+                      : "not-allowed",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {deleting ? t("settings.deletingAccount") : t("settings.deleteModalConfirmBtn")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer
         style={{

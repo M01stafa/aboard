@@ -20,6 +20,7 @@ import { handleDriveCallback } from "./drive-callback/index.ts";
 import { handleDriveLinkToken } from "./drive-link-token/index.ts";
 import { handleDriveToken } from "./drive-token/index.ts";
 import { handleDriveDisconnect } from "./drive-disconnect/index.ts";
+import { handleAccountDelete } from "./account-delete/index.ts";
 
 describe("Supabase Edge Functions & Shared Modules (Task 33 / AUTH-3, SEC-2, SEC-6)", () => {
   beforeEach(() => {
@@ -628,6 +629,95 @@ describe("Supabase Edge Functions & Shared Modules (Task 33 / AUTH-3, SEC-2, SEC
         "https://oauth2.googleapis.com/revoke",
         expect.any(Object)
       );
+    });
+  });
+
+  describe("10. Function: account-delete (Task 44 / LEGAL-3, AUTH-4, SEC-1)", () => {
+    it("revokes Google token if connected and deletes auth user cascading DB rows", async () => {
+      vi.spyOn(admin.auth, "getUser").mockResolvedValueOnce({
+        data: { user: { id: "user-456" } },
+        error: null,
+      } as any);
+      vi.spyOn(admin, "rpc").mockResolvedValueOnce({ data: true, error: null } as any);
+
+      const { ct, iv } = await encrypt("refresh-token-account-delete");
+      vi.spyOn(admin, "from").mockReturnValue({
+        select: () => ({
+          eq: () => ({
+            maybeSingle: () =>
+              Promise.resolve({
+                data: {
+                  user_id: "user-456",
+                  refresh_ct: ct,
+                  refresh_iv: iv,
+                },
+                error: null,
+              }),
+          }),
+        }),
+      } as any);
+
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(new Response("", { status: 200 }));
+
+      let deletedUserId = "";
+      (admin.auth as any).admin = {
+        deleteUser: vi.fn().mockImplementation((id: string) => {
+          deletedUserId = id;
+          return Promise.resolve({ data: { user: null }, error: null });
+        }),
+      };
+
+      const req = new Request("https://mock/functions/v1/account-delete", {
+        method: "POST",
+        headers: { Authorization: "Bearer valid-jwt" },
+      });
+
+      const res = await handleAccountDelete(req);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data).toEqual({ deleted: true });
+      expect(deletedUserId).toBe("user-456");
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "https://oauth2.googleapis.com/revoke",
+        expect.any(Object)
+      );
+    });
+
+    it("handles account deletion when no Google Drive link exists", async () => {
+      vi.spyOn(admin.auth, "getUser").mockResolvedValueOnce({
+        data: { user: { id: "user-789" } },
+        error: null,
+      } as any);
+      vi.spyOn(admin, "rpc").mockResolvedValueOnce({ data: true, error: null } as any);
+
+      vi.spyOn(admin, "from").mockReturnValue({
+        select: () => ({
+          eq: () => ({
+            maybeSingle: () => Promise.resolve({ data: null, error: null }),
+          }),
+        }),
+      } as any);
+
+      let deletedUserId = "";
+      (admin.auth as any).admin = {
+        deleteUser: vi.fn().mockImplementation((id: string) => {
+          deletedUserId = id;
+          return Promise.resolve({ data: { user: null }, error: null });
+        }),
+      };
+
+      const req = new Request("https://mock/functions/v1/account-delete", {
+        method: "POST",
+        headers: { Authorization: "Bearer valid-jwt" },
+      });
+
+      const res = await handleAccountDelete(req);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data).toEqual({ deleted: true });
+      expect(deletedUserId).toBe("user-789");
     });
   });
 });

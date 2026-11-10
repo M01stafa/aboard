@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | Side campaign — Circuit UI visual polish (owner-driven, outside TASKS.md) |
-| Current task | Continue Circuit UI polish |
-| Last updated | 2026-11-09 |
-| Next step | Finish Circuit UI fixes; then push all local commits and verify CI; then Phase 11 Task 44 |
+| Active phase | Phase 11 — Launch prep |
+| Current task | Task 44 — Legal Pages and Account Deletion completed |
+| Last updated | 2026-11-10 |
+| Next step | Task 45 — Run the Security Review and the Launch Checklist |
 | Known issues | Split divider direction in LTR remains inverted. Deferred indefinitely by owner. |
 | Blockers | none |
 
@@ -36,7 +36,7 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | **8. Integration** | Done (2026-10-19) | §8 actions | All four actions work across modes |
 | **9. Stirling** | Permanently dropped (owner, 2026-11-04) — Stirling, Gateway and Docker purged from the repo. | — | — |
 | **10. UI redesign** | Done (2026-10-21) | Circuit toolbar via `runCommand`, advanced menu toggle, PDF toolbars, unified styling | Every circuit action reachable |
-| **11. Launch prep** | Not started | **§14.12 security checklist signed off**, security headers/CSP, privacy policy, terms, third-party notices, fork source published, Google app published + brand verification, monitoring | Google verification approved; refresh tokens no longer expire after 7 days |
+| **11. Launch prep** | In progress | **§14.12 security checklist signed off**, security headers/CSP, privacy policy, terms, third-party notices, fork source published, Google app published + brand verification, monitoring | Google verification approved; refresh tokens no longer expire after 7 days |
 
 Release mapping (`docs/PRD.md` A5): R1 = phases 0–8, 10, 11 · R2/R3 removed (Phase 9 dropped, Phase 10 reclassified into R1).
 
@@ -145,6 +145,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-11-09 | Fixed workspace tab persistence and launcher redirect: saved layout immediately on tab close; restored only saved tabs from manifest without resurrecting closed items; close button enabled for single remaining tab; closing last open tab redirects to launcher (/) without deleting project. |
 | 2026-11-09 | Fixed workspace layout logic: removed auto-split on cross-tool sends (silent background insertion); decoupled activeTabId from CSS grid slots so clicking split tabs never swaps left/right panes; tracked splitGroup so 3rd tabs open full-screen while preserving split view state upon returning. |
 | 2026-11-09 | Shortened UI strings (e.g. Save to Drive / حفظ في درايف, To Board / إلى السبورة) and enforced global button CSS white-space: nowrap with overflow ellipsis. |
+| 2026-11-10 | Task 44: Published bilingual Privacy Policy (/privacy), Terms of Use (/terms), and Open-Source Licenses (/licenses) linking to CircuitJS1 fork (GPL); implemented Edge Function account-delete (token revocation at Google + cascade DB deletion) with Settings Danger Zone and confirmation modal (LEGAL-1..3, AUTH-4, SEC-1). |
 
 ## Lessons and corrections
 
