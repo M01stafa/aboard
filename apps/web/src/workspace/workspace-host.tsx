@@ -24,6 +24,7 @@ import { formatAlphaLink, parseAlphaLink } from "@/integration/alpha-link";
 import { appendBoardToPdf } from "@/integration/board-to-pdf";
 import { pdfRegistry } from "@/modules/pdf/pdf-registry";
 import { projectService as defaultProjectService, saveQueue, type AlphaManifest } from "@/core/storage";
+import { isGoogleDriveEnabled } from "@/core/feature-flags";
 
 /*
  * Tab Bar & Divider Keyboard Interaction Map
@@ -1639,7 +1640,9 @@ export function WorkspaceHost({
       `}</style>
 
       {/* Global Drive error / quota banner */}
-      <DriveStatusBanner onExportClick={() => setShowExportDialog(true)} />
+      {isGoogleDriveEnabled() && (
+        <DriveStatusBanner onExportClick={() => setShowExportDialog(true)} />
+      )}
 
       {/* Unified Workspace Top Bar (48px height per DESIGN.md §4.2) */}
       <header
@@ -1994,7 +1997,7 @@ export function WorkspaceHost({
             }}
           />
 
-          {projectId && (
+          {isGoogleDriveEnabled() && projectId && (
             <button
               type="button"
               onClick={() => setShowModeSwitch(true)}

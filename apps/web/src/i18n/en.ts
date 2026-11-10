@@ -13,6 +13,7 @@ export const en = {
     toggleTheme: "Toggle Theme",
     cancel: "Cancel",
     loading: "Loading…",
+    driveComingSoon: "Google Drive integration is coming soon. Please use local storage and .alpha exports.",
   },
   home: {
     title: "Aboard",
@@ -31,6 +32,7 @@ export const en = {
     backToHome: "Back to Home",
     driveTitle: "Google Drive Connection",
     driveDesc: "Store your projects directly in your personal Google Drive or keep them on this device.",
+    driveComingSoon: "Google Drive integration is coming soon. Please use local storage and .alpha exports.",
     driveStatus: "Connection Status",
     driveStatusConnected: "Connected",
     driveStatusDisconnected: "Not connected",

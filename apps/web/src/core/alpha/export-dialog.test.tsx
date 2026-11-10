@@ -6,6 +6,7 @@ import { ExportDialog } from "./export-dialog";
 import { I18nProvider } from "@/i18n/provider";
 import * as exportModule from "./export";
 import type { ProjectService } from "@/core/storage";
+import { featureFlags } from "@/core/feature-flags";
 
 // @ts-expect-error React testing flag
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -15,12 +16,14 @@ describe("ExportDialog UI (Task 31 / ALPHA-6)", () => {
   let root: Root;
 
   beforeEach(() => {
+    featureFlags.googleDrive = true;
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
   });
 
   afterEach(() => {
+    featureFlags.googleDrive = false;
     act(() => {
       root.unmount();
     });
@@ -38,6 +41,24 @@ describe("ExportDialog UI (Task 31 / ALPHA-6)", () => {
     });
 
     expect(container.querySelector('[data-testid="alpha-export-dialog"]')).toBeNull();
+  });
+
+  it("hides export-drive-btn and displays coming-soon notice when googleDrive feature flag is disabled", () => {
+    featureFlags.googleDrive = false;
+    act(() => {
+      root.render(
+        <I18nProvider>
+          <ExportDialog projectId="test-proj" isOpen={true} onClose={vi.fn()} />
+        </I18nProvider>
+      );
+    });
+
+    const driveBtn = container.querySelector('[data-testid="export-drive-btn"]');
+    expect(driveBtn).toBeNull();
+
+    const notice = container.querySelector('[data-testid="export-drive-coming-soon"]');
+    expect(notice).not.toBeNull();
+    expect(notice?.textContent).toContain("Google Drive integration is coming soon");
   });
 
   it("renders export dialog with options when isOpen is true", () => {

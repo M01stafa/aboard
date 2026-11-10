@@ -3508,3 +3508,36 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (53/53 test files passed, 460/460 unit tests passed).
 **Related:** STORE-2, SEC-2, SEC-6
 **Open:** None.
+
+
+## 2026-11-10 — Guidance for Magic Link Sign-In and Google OAuth 403 access_denied
+**Request:** Review owner's screenshots showing Supabase magic link email and Google OAuth 403 access_denied error for modtafabashar@gmail.com; provide exact instructions to complete sign-in and configure Google Cloud Console OAuth consent screen.
+**Changes:**
+- `UPDATE.md` (changed): appended this entry.
+**Checks:** none needed.
+**Related:** AUTH-1, AUTH-2, SEC-2
+**Open:** Owner to click "Sign in" in the magic link email or add modtafabashar@gmail.com as a test user in Google Cloud Console.
+
+
+## 2026-11-10 — Temporarily Hide Google OAuth and Drive UI for Public Beta
+**Request:** Temporarily hide Google OAuth login button and all Google Drive buttons/options across the UI (Login, Settings, Launcher, Export Dialog, PDF pane, and Workspace header) for public beta on *.vercel.app; add coming soon notice and bilingual translation strings (EN/AR); keep underlying Drive code intact behind feature flag.
+**Changes:**
+- `apps/web/src/core/feature-flags.ts` (created): added `featureFlags.googleDrive` flag and `isGoogleDriveEnabled()` helper.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added `common.driveComingSoon` and `settings.driveComingSoon` translations in English and Arabic.
+- `apps/web/app/login/page.tsx` (changed): conditionally rendered Google sign-in button and email divider behind `isGoogleDriveEnabled()`, showing only Email Magic Link.
+- `apps/web/app/settings/page.tsx` (changed): replaced Drive connect/disconnect buttons and status badge with graceful coming soon notice.
+- `apps/web/app/page.tsx` (changed): hid "Open from Drive" button, move-to-drive prompt, Drive project card badges, and Drive mode-switch buttons; displayed coming soon notice in action row.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): hid workspace header mode switch button and Drive status banner when Drive feature flag is disabled.
+- `apps/web/src/core/alpha/export-dialog.tsx` (changed): hid PDF-to-Drive export section and button; displayed coming soon notice.
+- `apps/web/src/modules/pdf/pdf-pane.tsx` (changed): conditionally hid "Add from Google Drive" button.
+- `apps/web/src/core/alpha/export-dialog.test.tsx` (changed): added unit test asserting hidden Drive button and coming soon notice when flag is disabled.
+- `apps/web/src/test/settings-page.test.tsx` (changed): added unit test asserting Drive connect button is hidden and coming soon notice is shown.
+- `apps/web/src/workspace/launcher.test.ts` (changed): asserted Drive open button is hidden and notice is present.
+- `apps/web/src/test/login-page.test.tsx` (created): added unit tests verifying Google button is hidden when feature flag is disabled and visible when enabled.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (54/54 test files passed, 464/464 unit tests passed).
+**Related:** AUTH-1, AUTH-2, STORE-2, SEC-2
+**Open:** None.

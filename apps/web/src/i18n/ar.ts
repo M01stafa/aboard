@@ -15,6 +15,7 @@ export const ar: TranslationDictionary = {
     toggleTheme: "تبديل المظهر",
     cancel: "إلغاء",
     loading: "جارٍ التحميل…",
+    driveComingSoon: "سيتوفر التكامل مع Google Drive قريبًا. يرجى استخدام التخزين المحلي وتصدير ملفات .alpha.",
   },
   home: {
     title: "أبورد",
@@ -33,6 +34,7 @@ export const ar: TranslationDictionary = {
     backToHome: "العودة للرئيسية",
     driveTitle: "الاتصال بـ Google Drive",
     driveDesc: "احفظ مشاريعك مباشرة في Google Drive الخاص بك أو احتفظ بها على هذا الجهاز.",
+    driveComingSoon: "سيتوفر التكامل مع Google Drive قريبًا. يرجى استخدام التخزين المحلي وتصدير ملفات .alpha.",
     driveStatus: "حالة الاتصال",
     driveStatusConnected: "متصل",
     driveStatusDisconnected: "غير متصل",

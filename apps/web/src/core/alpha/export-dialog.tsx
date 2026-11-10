@@ -6,6 +6,7 @@ import { useI18n } from "@/i18n/provider";
 import { exportAlpha, ExportCapExceededError, safeFileName } from "./export";
 import { projectService as defaultProjectService, type ProjectService } from "@/core/storage";
 import { pdfRegistry } from "@/modules/pdf/pdf-registry";
+import { isGoogleDriveEnabled } from "@/core/feature-flags";
 
 export interface ProjectPdfInfo {
   id: string;
@@ -424,8 +425,28 @@ export function ExportDialog({
         </div>
 
         {/* SECTION 1: PDF Export to Drive (PDF-Only) */}
-        <div
-          data-testid="export-pdf-section"
+        {!isGoogleDriveEnabled() ? (
+          <div
+            data-testid="export-drive-coming-soon"
+            style={{
+              padding: "var(--space-3)",
+              backgroundColor: "var(--bg-subtle)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-card)",
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-2)",
+              fontSize: "0.8125rem",
+              color: "var(--text-muted)",
+              lineHeight: 1.4,
+            }}
+          >
+            <span aria-hidden="true" style={{ fontSize: "1.125rem" }}>☁</span>
+            <span>{t("common.driveComingSoon")}</span>
+          </div>
+        ) : (
+          <div
+            data-testid="export-pdf-section"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -618,6 +639,7 @@ export function ExportDialog({
             </span>
           )}
         </div>
+        )}
 
         {/* SECTION 2: Project Backup (.alpha) */}
         <div
@@ -799,49 +821,51 @@ export function ExportDialog({
 
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexShrink: 0 }}>
             {/* Button 2: Export PDFs to Drive */}
-            <button
-              type="button"
-              data-testid="export-drive-btn"
-              disabled={isExporting || isExportingDrive || (projectPdfs !== null && projectPdfs.length === 0)}
-              onClick={handleExportToDrive}
-              title={
-                projectPdfs !== null && projectPdfs.length === 0
-                  ? t("export.pdfExportNoPdfs")
-                  : t("export.exportPdfsToDrive")
-              }
-              style={{
-                height: "var(--space-5)",
-                paddingInline: "var(--space-2)",
-                borderRadius: "var(--radius-sm)",
-                border: "1px solid var(--accent-text)",
-                backgroundColor: "var(--btn-outline-hover-bg)",
-                color: "var(--accent-text-strong)",
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                cursor:
-                  isExporting || isExportingDrive
-                    ? "wait"
-                    : projectPdfs !== null && projectPdfs.length === 0
-                    ? "not-allowed"
-                    : "pointer",
-                opacity: projectPdfs !== null && projectPdfs.length === 0 ? 0.5 : 1,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "var(--space-1)",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-                transition: "background-color 150ms ease, opacity 150ms ease",
-              }}
-            >
-              <span>☁</span>
-              <span>
-                {driveSuccess
-                  ? t("export.exportedPdfsToDrive")
-                  : isExportingDrive
-                  ? t("export.exportingPdfsToDrive")
-                  : t("export.exportPdfsToDrive")}
-              </span>
-            </button>
+            {isGoogleDriveEnabled() && (
+              <button
+                type="button"
+                data-testid="export-drive-btn"
+                disabled={isExporting || isExportingDrive || (projectPdfs !== null && projectPdfs.length === 0)}
+                onClick={handleExportToDrive}
+                title={
+                  projectPdfs !== null && projectPdfs.length === 0
+                    ? t("export.pdfExportNoPdfs")
+                    : t("export.exportPdfsToDrive")
+                }
+                style={{
+                  height: "var(--space-5)",
+                  paddingInline: "var(--space-2)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--accent-text)",
+                  backgroundColor: "var(--btn-outline-hover-bg)",
+                  color: "var(--accent-text-strong)",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  cursor:
+                    isExporting || isExportingDrive
+                      ? "wait"
+                      : projectPdfs !== null && projectPdfs.length === 0
+                      ? "not-allowed"
+                      : "pointer",
+                  opacity: projectPdfs !== null && projectPdfs.length === 0 ? 0.5 : 1,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "var(--space-1)",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  transition: "background-color 150ms ease, opacity 150ms ease",
+                }}
+              >
+                <span>☁</span>
+                <span>
+                  {driveSuccess
+                    ? t("export.exportedPdfsToDrive")
+                    : isExportingDrive
+                    ? t("export.exportingPdfsToDrive")
+                    : t("export.exportPdfsToDrive")}
+                </span>
+              </button>
+            )}
 
             {/* Button 1: Export .alpha */}
             <button

@@ -5,6 +5,7 @@ import { useI18n } from "@/i18n/provider";
 import type { PdfPaneProps } from "./types";
 import { usePdfPersistence } from "./use-pdf-persistence";
 import { PdfViewer } from "./pdf-viewer";
+import { isGoogleDriveEnabled } from "@/core/feature-flags";
 
 export function isMobileDevice(): boolean {
   if (typeof window === "undefined") return false;
@@ -339,9 +340,10 @@ export function PdfPane({
             {t("pdf.selectFile")}
           </button>
 
-          <button
-            type="button"
-            onClick={async (e) => {
+          {isGoogleDriveEnabled() && (
+            <button
+              type="button"
+              onClick={async (e) => {
               e.stopPropagation();
               try {
                 const { openGooglePicker } = await import("@/core/drive/picker");
@@ -455,6 +457,7 @@ export function PdfPane({
           >
             {t("picker.addPdfFromDrive")}
           </button>
+          )}
         </div>
 
         {/* Progress bar during streaming SHA-256 computation and loading */}

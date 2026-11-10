@@ -19,6 +19,7 @@ import { importAlpha, ImportError } from "@/core/alpha";
 import { getDeviceId } from "@/core/db/lifecycle";
 import { ModeSwitchModal } from "@/components/mode-switch-modal";
 import { useDriveStore } from "@/core/drive/drive-store";
+import { isGoogleDriveEnabled } from "@/core/feature-flags";
 import type { I18nKey } from "@/i18n/types";
 import type { User } from "@supabase/supabase-js";
 
@@ -58,6 +59,7 @@ export function LauncherContent({ user }: { user: User }) {
     typeof window !== "undefined" &&
     Boolean(localStorage.getItem(`aboard:prompted_move_local:${user.id}`));
   const showMovePrompt =
+    isGoogleDriveEnabled() &&
     !dismissedMovePrompt &&
     !alreadyPrompted &&
     isDriveConnected &&
@@ -498,7 +500,7 @@ export function LauncherContent({ user }: { user: User }) {
         inlineSize: "100%",
       }}
     >
-      <DriveStatusBanner />
+      {isGoogleDriveEnabled() && <DriveStatusBanner />}
       <input
         type="file"
         ref={fileInputRef}
@@ -955,28 +957,49 @@ export function LauncherContent({ user }: { user: User }) {
             <span>{isImporting ? t("import.importing") : t("launcher.openAlpha")}</span>
           </button>
 
-          <button
-            type="button"
-            onClick={handleOpenAlphaFromDrive}
-            disabled={isImporting || isImportingDrive}
-            className="btn-subtle"
-            data-testid="open-alpha-drive-btn"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+          {isGoogleDriveEnabled() ? (
+            <button
+              type="button"
+              onClick={handleOpenAlphaFromDrive}
+              disabled={isImporting || isImportingDrive}
+              className="btn-subtle"
+              data-testid="open-alpha-drive-btn"
             >
-              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
-            </svg>
-            <span>{isImportingDrive ? t("import.importing") : t("launcher.openAlphaDrive")}</span>
-          </button>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+              </svg>
+              <span>{isImportingDrive ? t("import.importing") : t("launcher.openAlphaDrive")}</span>
+            </button>
+          ) : (
+            <div
+              data-testid="launcher-drive-coming-soon"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "var(--space-2)",
+                paddingBlock: "var(--space-1)",
+                paddingInline: "var(--space-3)",
+                fontSize: "0.8125rem",
+                color: "var(--text-muted)",
+                backgroundColor: "var(--bg-subtle)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border-card)",
+              }}
+            >
+              <span aria-hidden="true">☁</span>
+              <span>{t("common.driveComingSoon")}</span>
+            </div>
+          )}
         </div>
 
         {/* Prompt to move local projects to Google Drive */}
@@ -1458,25 +1481,27 @@ export function LauncherContent({ user }: { user: User }) {
                         gap: "var(--space-1)",
                       }}
                     >
-                      <span
-                        data-testid={`badge-${project.id}`}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          paddingBlock: "var(--space-1)",
-                          paddingInline: "var(--space-2)",
-                          borderRadius: "var(--radius-full)",
-                          fontSize: "0.75rem",
-                          fontWeight: "var(--weight-medium)",
-                          lineHeight: "1rem",
-                          backgroundColor: `var(${badge.tokenPrefix}-bg)`,
-                          color: `var(${badge.tokenPrefix}-fg)`,
-                          border: `1px solid var(${badge.tokenPrefix}-bd)`,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {t(badge.labelKey)}
-                      </span>
+                      {(!isGoogleDriveEnabled() && badge.kind === "drive") ? null : (
+                        <span
+                          data-testid={`badge-${project.id}`}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            paddingBlock: "var(--space-1)",
+                            paddingInline: "var(--space-2)",
+                            borderRadius: "var(--radius-full)",
+                            fontSize: "0.75rem",
+                            fontWeight: "var(--weight-medium)",
+                            lineHeight: "1rem",
+                            backgroundColor: `var(${badge.tokenPrefix}-bg)`,
+                            color: `var(${badge.tokenPrefix}-fg)`,
+                            border: `1px solid var(${badge.tokenPrefix}-bd)`,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {t(badge.labelKey)}
+                        </span>
+                      )}
 
                       <time
                         dateTime={project.updated_at}
@@ -1616,7 +1641,7 @@ export function LauncherContent({ user }: { user: User }) {
                       }}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {badge.isInteractive && (
+                      {isGoogleDriveEnabled() && badge.isInteractive && (
                         <button
                           type="button"
                           onClick={(e) => {

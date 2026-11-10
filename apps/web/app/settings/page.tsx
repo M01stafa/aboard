@@ -9,6 +9,7 @@ import type { Language, Theme } from "@/i18n/types";
 import { useDriveStore } from "@/core/drive";
 import { supabase } from "@/core/supabase";
 import { deleteUserDb } from "@/core/db";
+import { isGoogleDriveEnabled } from "@/core/feature-flags";
 
 function SettingsContent() {
   const { language, setLanguage, theme, setTheme, t } = useI18n();
@@ -217,7 +218,7 @@ function SettingsContent() {
       </header>
 
       {/* Drive Status Banner / Messages */}
-      {displayMessage && (
+      {isGoogleDriveEnabled() && displayMessage && (
         <div
           data-testid="drive-status-banner"
           role="status"
@@ -274,41 +275,43 @@ function SettingsContent() {
           >
             {t("settings.driveTitle")}
           </h2>
-          <span
-            data-testid="drive-status-badge"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              paddingInline: "var(--space-2)",
-              paddingBlock: "var(--space-1)",
-              borderRadius: "var(--radius-sm)",
-              fontSize: "0.75rem",
-              fontWeight: "var(--weight-semibold)",
-              backgroundColor: reconnectRequired
-                ? "var(--surface-warning)"
-                : connected
-                ? "var(--surface-success)"
-                : "var(--surface-sunken)",
-              color: reconnectRequired
-                ? "var(--text-warning)"
-                : connected
-                ? "var(--text-success)"
-                : "var(--text-muted)",
-              border: `1px solid ${
-                reconnectRequired
-                  ? "var(--border-warning)"
+          {isGoogleDriveEnabled() && (
+            <span
+              data-testid="drive-status-badge"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                paddingInline: "var(--space-2)",
+                paddingBlock: "var(--space-1)",
+                borderRadius: "var(--radius-sm)",
+                fontSize: "0.75rem",
+                fontWeight: "var(--weight-semibold)",
+                backgroundColor: reconnectRequired
+                  ? "var(--surface-warning)"
                   : connected
-                  ? "var(--border-success)"
-                  : "var(--border-subtle)"
-              }`,
-            }}
-          >
-            {reconnectRequired
-              ? t("settings.driveStatusReconnectRequired")
-              : connected
-              ? t("settings.driveStatusConnected")
-              : t("settings.driveStatusDisconnected")}
-          </span>
+                  ? "var(--surface-success)"
+                  : "var(--surface-sunken)",
+                color: reconnectRequired
+                  ? "var(--text-warning)"
+                  : connected
+                  ? "var(--text-success)"
+                  : "var(--text-muted)",
+                border: `1px solid ${
+                  reconnectRequired
+                    ? "var(--border-warning)"
+                    : connected
+                    ? "var(--border-success)"
+                    : "var(--border-subtle)"
+                }`,
+              }}
+            >
+              {reconnectRequired
+                ? t("settings.driveStatusReconnectRequired")
+                : connected
+                ? t("settings.driveStatusConnected")
+                : t("settings.driveStatusDisconnected")}
+            </span>
+          )}
         </div>
 
         <p
@@ -322,95 +325,118 @@ function SettingsContent() {
           {t("settings.driveDesc")}
         </p>
 
-        {connected && googleEmail && (
+        {!isGoogleDriveEnabled() ? (
           <div
+            data-testid="drive-coming-soon-notice"
             style={{
-              marginBlockEnd: "var(--space-3)",
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-2)",
+              padding: "var(--space-3)",
+              backgroundColor: "var(--bg-subtle)",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--border-card)",
               fontSize: "0.875rem",
               color: "var(--text-muted)",
+              lineHeight: "1.5",
             }}
           >
-            <span style={{ fontWeight: "var(--weight-medium)", color: "var(--text-main)" }}>
-              {t("settings.driveEmailLabel")}:
-            </span>{" "}
-            {googleEmail}
+            <span aria-hidden="true" style={{ fontSize: "1.125rem" }}>☁</span>
+            <span>{t("settings.driveComingSoon")}</span>
           </div>
+        ) : (
+          <>
+            {connected && googleEmail && (
+              <div
+                style={{
+                  marginBlockEnd: "var(--space-3)",
+                  fontSize: "0.875rem",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <span style={{ fontWeight: "var(--weight-medium)", color: "var(--text-main)" }}>
+                  {t("settings.driveEmailLabel")}:
+                </span>{" "}
+                {googleEmail}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+              {reconnectRequired ? (
+                <button
+                  data-testid="drive-reconnect-btn"
+                  type="button"
+                  disabled={actionLoading || driveLoading}
+                  onClick={handleConnect}
+                  style={{
+                    height: "var(--control-md)",
+                    paddingInline: "var(--space-3)",
+                    borderRadius: "var(--radius-sm)",
+                    border: "none",
+                    backgroundColor: "var(--btn-warning-bg)",
+                    color: "var(--btn-warning-text)",
+                    fontWeight: "var(--weight-semibold)",
+                    cursor: "pointer",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {t("settings.driveReconnectBtn")}
+                </button>
+              ) : connected ? (
+                <button
+                  data-testid="drive-disconnect-btn"
+                  type="button"
+                  disabled={actionLoading || driveLoading}
+                  onClick={handleDisconnect}
+                  style={{
+                    height: "var(--control-md)",
+                    paddingInline: "var(--space-3)",
+                    borderRadius: "var(--radius-sm)",
+                    border: "1px solid var(--border-error)",
+                    backgroundColor: "var(--bg-surface)",
+                    color: "var(--text-error)",
+                    fontWeight: "var(--weight-semibold)",
+                    cursor: "pointer",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {t("settings.driveDisconnectBtn")}
+                </button>
+              ) : (
+                <button
+                  data-testid="drive-connect-btn"
+                  type="button"
+                  disabled={actionLoading || driveLoading}
+                  onClick={handleConnect}
+                  style={{
+                    height: "var(--control-md)",
+                    paddingInline: "var(--space-3)",
+                    borderRadius: "var(--radius-sm)",
+                    border: "none",
+                    backgroundColor: "var(--btn-primary-bg)",
+                    color: "var(--btn-primary-text)",
+                    fontWeight: "var(--weight-semibold)",
+                    cursor: "pointer",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {t("settings.driveConnectBtn")}
+                </button>
+              )}
+
+              {(actionLoading || driveLoading) && (
+                <span
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  ...
+                </span>
+              )}
+            </div>
+          </>
         )}
-
-        <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-          {reconnectRequired ? (
-            <button
-              data-testid="drive-reconnect-btn"
-              type="button"
-              disabled={actionLoading || driveLoading}
-              onClick={handleConnect}
-              style={{
-                height: "var(--control-md)",
-                paddingInline: "var(--space-3)",
-                borderRadius: "var(--radius-sm)",
-                border: "none",
-                backgroundColor: "var(--btn-warning-bg)",
-                color: "var(--btn-warning-text)",
-                fontWeight: "var(--weight-semibold)",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-              }}
-            >
-              {t("settings.driveReconnectBtn")}
-            </button>
-          ) : connected ? (
-            <button
-              data-testid="drive-disconnect-btn"
-              type="button"
-              disabled={actionLoading || driveLoading}
-              onClick={handleDisconnect}
-              style={{
-                height: "var(--control-md)",
-                paddingInline: "var(--space-3)",
-                borderRadius: "var(--radius-sm)",
-                border: "1px solid var(--border-error)",
-                backgroundColor: "var(--bg-surface)",
-                color: "var(--text-error)",
-                fontWeight: "var(--weight-semibold)",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-              }}
-            >
-              {t("settings.driveDisconnectBtn")}
-            </button>
-          ) : (
-            <button
-              data-testid="drive-connect-btn"
-              type="button"
-              disabled={actionLoading || driveLoading}
-              onClick={handleConnect}
-              style={{
-                height: "var(--control-md)",
-                paddingInline: "var(--space-3)",
-                borderRadius: "var(--radius-sm)",
-                border: "none",
-                backgroundColor: "var(--btn-primary-bg)",
-                color: "var(--btn-primary-text)",
-                fontWeight: "var(--weight-semibold)",
-                cursor: "pointer",
-                fontSize: "0.875rem",
-              }}
-            >
-              {t("settings.driveConnectBtn")}
-            </button>
-          )}
-
-          {(actionLoading || driveLoading) && (
-            <span
-              style={{
-                fontSize: "0.875rem",
-                color: "var(--text-muted)",
-              }}
-            >
-              ...
-            </span>
-          )}
-        </div>
       </section>
 
       {/* Language Section */}

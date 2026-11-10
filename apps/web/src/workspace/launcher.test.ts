@@ -97,5 +97,10 @@ describe("Launcher and Route Guard (Task 17)", () => {
     // Verify R7: exactly one gold CTA button on the screen
     const goldMatches = html.match(/class="[^"]*btn-gold[^"]*"/g) || [];
     expect(goldMatches.length).toBe(1);
+
+    // Verify Drive button is hidden and Coming Soon notice is shown
+    expect(html).not.toContain('data-testid="open-alpha-drive-btn"');
+    expect(html).toContain('data-testid="launcher-drive-coming-soon"');
+    expect(html).toContain("Google Drive integration is coming soon");
   });
 });

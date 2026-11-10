@@ -70,6 +70,23 @@ describe("SettingsPage — Account Deletion Flow (LEGAL-3, AUTH-4)", () => {
     expect(deleteBtn).toBeTruthy();
   });
 
+  it("hides Google Drive connect button and shows coming soon notice in public beta", async () => {
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <SettingsPage />
+        </I18nProvider>
+      );
+    });
+
+    const connectBtn = container.querySelector('[data-testid="drive-connect-btn"]');
+    expect(connectBtn).toBeNull();
+
+    const notice = container.querySelector('[data-testid="drive-coming-soon-notice"]');
+    expect(notice).not.toBeNull();
+    expect(notice?.textContent).toContain("Google Drive integration is coming soon");
+  });
+
   it("opens the confirmation modal when Delete Account is clicked and explains Drive/browser files are kept", async () => {
     await act(async () => {
       root.render(
