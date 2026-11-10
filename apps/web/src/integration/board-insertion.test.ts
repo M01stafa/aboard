@@ -30,7 +30,7 @@ describe("board-insertion", () => {
   });
 
   describe("insertImageIntoBoard", () => {
-    it("persists file via ProjectService.putFile and inserts locked image element into Excalidraw scene", async () => {
+    it("persists file via ProjectService.putFile and inserts unlocked movable image element into Excalidraw scene", async () => {
       const mockBlob = new Blob(["fake-image-bytes"], { type: "image/webp" });
       const mockPutFile = vi.fn().mockResolvedValue({ key: "mock-sha256-key" });
 
@@ -59,7 +59,6 @@ describe("board-insertion", () => {
         mimeType: "image/webp",
         width: 1000,
         height: 750,
-        locked: true,
         projectServiceOverride: mockProjectService,
         apiOverride: mockApi,
       });
@@ -80,14 +79,14 @@ describe("board-insertion", () => {
       expect(addedFiles[0].mimeType).toBe("image/webp");
       expect(addedFiles[0].dataURL).toContain("data:image/webp;base64,");
 
-      // 3. Scene updated with locked image element
+      // 3. Scene updated with unlocked image element
       expect(mockUpdateScene).toHaveBeenCalledTimes(1);
       const scenePayload = mockUpdateScene.mock.calls[0][0];
       expect(scenePayload.elements).toHaveLength(1);
       const el = scenePayload.elements[0];
       expect(el.type).toBe("image");
       expect(el.fileId).toBe(fileId);
-      expect(el.locked).toBe(true);
+      expect(el.locked).toBe(false);
       expect(el.width).toBe(1000);
       expect(el.height).toBe(750);
 

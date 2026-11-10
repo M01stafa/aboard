@@ -209,6 +209,18 @@ export function WorkspaceHost({
     layoutRef.current = layout;
   }, [layout]);
 
+  // Link isDirty tracking to SaveQueue status: reset dirty state when saved to device or Drive
+  useEffect(() => {
+    return saveQueue.subscribe((status) => {
+      if (status === "saved-local" || status === "saved-drive") {
+        tabDirtyMapRef.current.clear();
+        for (const tab of layoutRef.current.tabs) {
+          bus.emit("tab:dirty-state", { tabId: tab.id, itemId: tab.itemId, isDirty: false });
+        }
+      }
+    });
+  }, []);
+
   // Persists the current layout (active tab item IDs and split) to the project manifest
   const persistLayout = useCallback(
     (nextLayout: LayoutState) => {
@@ -262,15 +274,27 @@ export function WorkspaceHost({
     };
   }, [handleLeaveWorkspace]);
 
+  /**
+   * Returns true ONLY if there are pending uploads in the outbox or if the save debounce is currently active.
+   * If SaveQueue shows "Saved on this device" (or "Saved in Google Drive"), isDirty is false and no prompt appears.
+   */
+  const hasActualUnsavedChanges = useCallback(() => {
+    const status = saveQueue.getStatus();
+    const isSaved = status === "saved-local" || status === "saved-drive";
+    if (isSaved) {
+      return false;
+    }
+
+    const hasPendingOutbox = !saveQueue.isLocalMode() && saveQueue.hasUnsyncedDriveChangesSync();
+    const isDebounceActive = status === "saving" || saveQueue.isDirty();
+    const hasDirtyTabs = Array.from(tabDirtyMapRef.current.values()).some(Boolean);
+    return hasPendingOutbox || isDebounceActive || hasDirtyTabs;
+  }, []);
+
   // Intercept browser back/forward navigation if unsaved changes exist
   useEffect(() => {
     const handlePopState = () => {
-      const hasUnsaved =
-        saveQueue.isDirty() ||
-        saveQueue.getStatus() === "saving" ||
-        saveQueue.hasUnsyncedDriveChangesSync();
-
-      if (hasUnsaved) {
+      if (hasActualUnsavedChanges()) {
         const confirmMsg =
           t("workspace.unsavedChangesWarning") ||
           "You have unsaved changes. Are you sure you want to leave?";
@@ -282,7 +306,7 @@ export function WorkspaceHost({
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [t]);
+  }, [hasActualUnsavedChanges, t]);
 
   // Track tool presence and split eligibility
   const hasBoard = layout.tabs.some((t) => t.kind === "board");
@@ -663,7 +687,7 @@ export function WorkspaceHost({
           mimeType: event.image.type || "image/webp",
           ["width"]: event.width,
           ["height"]: event.height,
-          locked: true,
+          locked: false,
         });
       } catch (err) {
         console.error("[WorkspaceHost] Failed to insert PDF page into board:", err);
@@ -976,8 +1000,9 @@ export function WorkspaceHost({
             saveQueue.hasPending("", tab.itemId) ||
             saveQueue.hasPending("", tab.id)
           );
+          const hasPendingOutbox = !saveQueue.isLocalMode() && saveQueue.hasUnsyncedDriveChangesSync();
 
-          if (isImmediateDirty || isPending) {
+          if (isImmediateDirty || isPending || hasPendingOutbox) {
             setPendingCloseTab(tab);
             return;
           }
@@ -1666,12 +1691,7 @@ export function WorkspaceHost({
           <Link
             href="/"
             onClick={async (e) => {
-              const hasUnsaved =
-                saveQueue.isDirty() ||
-                saveQueue.getStatus() === "saving" ||
-                saveQueue.hasUnsyncedDriveChangesSync();
-
-              if (hasUnsaved) {
+              if (hasActualUnsavedChanges()) {
                 const confirmMsg =
                   t("workspace.unsavedChangesWarning") ||
                   "You have unsaved changes. Are you sure you want to leave?";

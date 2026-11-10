@@ -374,13 +374,37 @@ export class CircuitAdapter {
   }
 
   /**
+   * Forces the simulator to recalculate canvas dimensions and refresh internal state/scopes.
+   * Dispatches a resize event to the target iframe window and calls api.refresh() if available.
+   * Non-fatal if cross-origin or during teardown.
+   */
+  triggerResize(): void {
+    if (this.targetWindow && typeof this.targetWindow.dispatchEvent === "function") {
+      try {
+        this.targetWindow.dispatchEvent(new Event("resize"));
+      } catch {
+        // Non-fatal if cross-origin or in teardown
+      }
+    }
+    if (this.api && typeof this.api.refresh === "function") {
+      try {
+        this.api.refresh();
+      } catch {
+        // Non-fatal
+      }
+    }
+  }
+
+  /**
    * Imports circuit text into the simulator.
+   * Recalculates canvas dimensions and oscilloscope layout immediately after import.
    */
   importCircuit(text: string, subcircuitsOnly = false): void {
     if (!this.api) {
       throw new Error("Cannot import circuit: CircuitJS1 is not attached");
     }
     this.api.importCircuit(text, subcircuitsOnly);
+    this.triggerResize();
   }
 
   /**

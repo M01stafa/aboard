@@ -84,11 +84,13 @@ export const CircuitPane = React.memo(
     try {
       const iframe = iframeRef.current;
       const cw = iframe?.contentWindow;
-      if (cw) {
+      if (cw && typeof cw.dispatchEvent === "function") {
         // Clamping check: ensure meaningful non-zero dimensions to avoid scope wave distortion
         const winWidth = cw.innerWidth || iframe?.clientWidth || 0;
         const winHeight = cw.innerHeight || iframe?.clientHeight || 0;
         if (winWidth >= 200 && winHeight >= 150) {
+          cw.dispatchEvent(new Event("resize"));
+        } else if (winWidth > 0 && winHeight > 0) {
           cw.dispatchEvent(new Event("resize"));
         }
       }
@@ -251,6 +253,12 @@ export const CircuitPane = React.memo(
     requestAnimationFrame(() => {
       dispatchResize();
     });
+    setTimeout(() => {
+      dispatchResize();
+    }, 50);
+    setTimeout(() => {
+      dispatchResize();
+    }, 150);
   }, [adapter, dispatchResize]);
 
   // Track if initial circuit restoration is complete
@@ -266,6 +274,12 @@ export const CircuitPane = React.memo(
       requestAnimationFrame(() => {
         dispatchResize();
       });
+      setTimeout(() => {
+        dispatchResize();
+      }, 50);
+      setTimeout(() => {
+        dispatchResize();
+      }, 150);
 
       // If initially hidden and pause-when-hidden is enabled, pause simulation
       if (!visibleRef.current && pauseWhenHiddenRef.current) {
@@ -286,23 +300,56 @@ export const CircuitPane = React.memo(
       if (!initialLoadDoneRef.current) {
         initialLoadDoneRef.current = true;
 
+        const applyCircuitWithLayoutStabilization = (circuitText: string) => {
+          try {
+            // Recalculate dimensions before import to ensure proper canvas bounds
+            dispatchResize();
+            adapter.importCircuit(circuitText, false);
+
+            // Force immediate recalculation of canvas dimensions and internal state per Requirement 2
+            dispatchResize();
+            const maybeSim = sim as unknown as { refresh?: () => void };
+            if (typeof maybeSim.refresh === "function") {
+              try {
+                maybeSim.refresh();
+              } catch {
+                // Non-fatal
+              }
+            }
+
+            // Small delays (RAF and timers) after iframe load and circuit import per Requirement 3
+            if (typeof requestAnimationFrame === "function") {
+              requestAnimationFrame(() => {
+                dispatchResize();
+              });
+            }
+            setTimeout(() => {
+              dispatchResize();
+            }, 50);
+            setTimeout(() => {
+              dispatchResize();
+            }, 150);
+            setTimeout(() => {
+              dispatchResize();
+            }, 300);
+          } catch (err) {
+            console.error("Failed to import circuit:", err);
+          }
+        };
+
         // If we preserved circuit text during a theme reload, restore it
         if (preservedCircuitRef.current) {
           const circuitToRestore = preservedCircuitRef.current;
           preservedCircuitRef.current = null;
-          try {
-            adapter.importCircuit(circuitToRestore, false);
-            return;
-          } catch (err) {
-            console.error("Failed to restore circuit after theme change:", err);
-          }
+          applyCircuitWithLayoutStabilization(circuitToRestore);
+          return;
         }
 
         // Otherwise load from ProjectService storage
         try {
           const savedPayload = await projectService.readItem(projectId, tab.itemId);
           if (savedPayload && savedPayload.trim().length > 0) {
-            adapter.importCircuit(savedPayload, false);
+            applyCircuitWithLayoutStabilization(savedPayload);
             return;
           }
         } catch {

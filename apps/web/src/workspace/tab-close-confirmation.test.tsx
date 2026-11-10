@@ -472,5 +472,93 @@ describe("Tab Close Confirmation on Unsaved Changes", () => {
 
     expect(onNavigateHome).toHaveBeenCalledTimes(1);
   });
+
+  it("resets dirty state when SaveQueue publishes saved-local, allowing tab to close without prompt", async () => {
+    vi.spyOn(saveQueue, "hasPending").mockReturnValue(false);
+    vi.spyOn(saveQueue, "isDirty").mockReturnValue(false);
+    vi.spyOn(saveQueue, "getStatus").mockReturnValue("saved-local");
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <WorkspaceHost
+            projectId="test-proj"
+            initialLayout={{
+              tabs: [
+                { id: "tab-1", kind: "board", itemId: "item-1", title: "Board 1" },
+                { id: "tab-2", kind: "pdf", itemId: "item-2", title: "PDF 1" },
+              ],
+              tabBarOrder: ["tab-1", "tab-2"],
+              primary: "tab-1",
+            }}
+          />
+        </I18nProvider>
+      );
+    });
+
+    // Mark Board dirty
+    await act(async () => {
+      bus.emit("tab:dirty-state", { tabId: "tab-1", itemId: "item-1", isDirty: true });
+    });
+
+    // Simulate save completion (SaveQueue status updates to saved-local)
+    await act(async () => {
+      // @ts-expect-error test simulation
+      saveQueue.listeners?.forEach((fn: (s: string) => void) => fn("saved-local"));
+    });
+
+    const closeBtnBoard = container.querySelector(
+      '[data-testid="tab-close-tab-1"]'
+    ) as HTMLElement;
+    expect(closeBtnBoard).toBeTruthy();
+
+    await act(async () => {
+      closeBtnBoard.click();
+    });
+
+    // Dialog must NOT appear because isDirty was reset on save completion
+    expect(container.querySelector('[data-testid="discard-changes-dialog"]')).toBeNull();
+    const tabButtons = container.querySelectorAll(".ws-tab-btn");
+    expect(tabButtons.length).toBe(1);
+    expect(tabButtons[0]?.textContent).toContain("PDF 1");
+  });
+
+  it("does NOT show window.confirm prompt when clicking Logo if SaveQueue is saved", async () => {
+    vi.spyOn(saveQueue, "hasPending").mockReturnValue(false);
+    vi.spyOn(saveQueue, "isDirty").mockReturnValue(false);
+    vi.spyOn(saveQueue, "getStatus").mockReturnValue("saved-local");
+    window.confirm = vi.fn();
+    const confirmSpy = vi.spyOn(window, "confirm");
+    const onNavigateHome = vi.fn();
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <WorkspaceHost
+            projectId="test-proj"
+            onNavigateHome={onNavigateHome}
+            initialLayout={{
+              tabs: [
+                { id: "tab-1", kind: "board", itemId: "item-1", title: "Board 1" },
+              ],
+              tabBarOrder: ["tab-1"],
+              primary: "tab-1",
+            }}
+          />
+        </I18nProvider>
+      );
+    });
+
+    const logoLink = container.querySelector('a[href="/"]') as HTMLElement;
+    expect(logoLink).toBeTruthy();
+
+    await act(async () => {
+      logoLink.click();
+      await new Promise((r) => setTimeout(r, 100));
+    });
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(onNavigateHome).toHaveBeenCalledTimes(1);
+  });
 });
 

@@ -129,6 +129,9 @@ export class SaveQueue {
   }
 
   public isDirty(): boolean {
+    if (this.isLocalMode()) {
+      return this.pendingMap.size > 0;
+    }
     return this.pendingMap.size > 0 || this.hasUnsyncedDriveEntries;
   }
 

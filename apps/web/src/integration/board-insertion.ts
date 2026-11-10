@@ -170,7 +170,7 @@ export async function insertImageIntoBoard({
       y,
       width,
       height,
-      locked,
+      locked: false,
     },
   ]);
 

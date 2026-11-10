@@ -271,4 +271,68 @@ describe("CircuitPane Component (Task 24 / CIRC-1, CIRC-2, CIRC-3, CIRC-4)", () 
     expect(sendBtn?.style.opacity).toBe("1");
     expect(sendBtn?.getAttribute("title")).toMatch(/To Board|Send to Board/);
   });
+
+  it("stabilizes layout and forces resize recalculation when importing a saved circuit with an oscilloscope", async () => {
+    const savedScopeCircuit =
+      "$ 1 0.000005 10 50 5 0.5\nr 128 128 224 128 0 1000\no 0 64 0 4099 5 0.05 0 -1";
+    vi.spyOn(projectService, "readItem").mockResolvedValue(savedScopeCircuit);
+    vi.spyOn(projectService, "saveCircuit").mockImplementation(async () => {});
+
+    const mockSim = createMockSim();
+    mockSim.refresh = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(
+          I18nProvider,
+          null,
+          React.createElement(CircuitPane, {
+            projectId: "scope-proj",
+            tab: { id: "tab-scope-1", kind: "circuit", itemId: "item-scope-1", title: "Oscilloscope Circuit" },
+            visible: true,
+          })
+        )
+      );
+    });
+
+    const iframe = container.querySelector<HTMLIFrameElement>('iframe[data-testid="circuit-iframe"]');
+    expect(iframe).toBeTruthy();
+
+    const dispatchEventSpy = vi.fn();
+    const mockContentWindow = {
+      CircuitJS1: mockSim,
+      dispatchEvent: dispatchEventSpy,
+      innerWidth: 800,
+      innerHeight: 600,
+    } as unknown as Window;
+
+    Object.defineProperty(iframe, "contentWindow", {
+      value: mockContentWindow,
+      writable: true,
+    });
+
+    // Simulate iframe load
+    await act(async () => {
+      iframe?.dispatchEvent(new Event("load"));
+    });
+
+    // Fire initial onanalyze hook to trigger circuit restoration
+    expect(typeof mockSim.onanalyze).toBe("function");
+    await act(async () => {
+      mockSim.onanalyze!(mockSim);
+    });
+
+    // Verify circuit was imported into simulator
+    expect(mockSim.importCircuit).toHaveBeenCalledWith(savedScopeCircuit, false);
+
+    // Verify resize events were dispatched to recalculate oscilloscope layout
+    expect(dispatchEventSpy).toHaveBeenCalled();
+    const resizeCalls = dispatchEventSpy.mock.calls.filter(
+      (call) => (call[0] as Event)?.type === "resize"
+    );
+    expect(resizeCalls.length).toBeGreaterThanOrEqual(1);
+
+    // Verify refresh was called
+    expect(mockSim.refresh).toHaveBeenCalled();
+  });
 });

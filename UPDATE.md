@@ -3559,3 +3559,28 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm ci:security`: PASS (gitleaks clean, audit passed, bundle clean).
 **Related:** SEC-5, SEC-10, Task 46
 **Open:** Verify GitHub Actions CI run passes on GitHub.
+
+
+## 2026-11-10 — Resolve PDF Board Dragging, Unsaved Prompts, and Circuit Oscilloscope Import
+**Request:** Fix circuit oscilloscope corruption after alpha import, unlock inserted PDF pages on board so they are movable/resizable, and resolve false unsaved prompt on launcher navigation / tab close.
+**Changes:**
+- `apps/web/src/modules/circuit/circuit-adapter.ts`: Added canvas dimension recalculation (`triggerResize`, `dispatchResize`, `refresh`) and layout stabilization delays during `importCircuit` to prevent oscilloscope signal corruption.
+- `apps/web/src/modules/circuit/circuit-pane.tsx`: Added layout stabilization delays and forced resize dispatches on circuit import.
+- `apps/web/src/modules/circuit/types.ts`: Added `triggerResize` interface.
+- `apps/web/src/modules/circuit/circuit-adapter.test.ts`: Added tests for `triggerResize` and import resize triggers.
+- `apps/web/src/modules/circuit/circuit-pane.test.tsx`: Added tests for layout stabilization.
+- `apps/web/src/integration/board-insertion.ts`: Explicitly set `locked: false` for inserted image elements (PDF pages and circuit SVGs).
+- `apps/web/src/workspace/workspace-host.tsx`: Changed PDF to board insertion to `locked: false`. Subscribed to `SaveQueue` state and cleared tab dirty flags on `saved-local` and `saved-drive`. Added `hasActualUnsavedChanges` to prevent false unsaved prompts on logo navigation and tab close.
+- `apps/web/src/core/storage/save-queue.ts`: Updated `isDirty()` to avoid leaking remote unsynced flags in local mode.
+- `apps/web/src/integration/board-insertion.test.ts`: Updated test assertions to expect `locked === false`.
+- `apps/web/src/workspace/tab-close-confirmation.test.tsx`: Added tests verifying dirty state reset on save and clean navigation.
+- `apps/web/e2e/cross-tool-integration.spec.ts`: Added Playwright E2E assertion verifying inserted PDF image element is unlocked on board.
+- `UPDATE.md`: Appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (54/54 test files passed, 468/468 unit tests passed).
+- `pnpm ci:security`: PASS (gitleaks clean, audit passed, bundle clean).
+- `pnpm test:e2e cross-tool-integration`: PASS (1/1 passed).
+**Related:** INT-1, INT-2, BOARD-1, SIM-1, STORE-5
+**Open:** None.

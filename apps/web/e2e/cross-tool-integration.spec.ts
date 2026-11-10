@@ -13,7 +13,7 @@ test.describe("Cross-Tool Integration (Task 38 / INT-1, INT-2)", () => {
     });
   });
 
-  test("sends PDF page to board in split view, inserts locked image, and survives reload (INT-1)", async ({
+  test("sends PDF page to board in split view, inserts unlocked movable image, and survives reload (INT-1)", async ({
     page,
   }) => {
     // 1. Generate a test PDF with @cantoo/pdf-lib
@@ -132,7 +132,7 @@ test.describe("Cross-Tool Integration (Task 38 / INT-1, INT-2)", () => {
       const elements = win.__aboard_boardApi?.["tab-1"]?.getSceneElements() || [];
       return (
         elements.length > 0 &&
-        elements.some((el) => el.type === "image" && el.locked === true && !!el.fileId)
+        elements.some((el) => el.type === "image" && el.locked === false && !!el.fileId)
       );
     }, { timeout: 25000 });
 
@@ -157,7 +157,7 @@ test.describe("Cross-Tool Integration (Task 38 / INT-1, INT-2)", () => {
 
     expect(insertedImage).toBeDefined();
     expect(insertedImage?.type).toBe("image");
-    expect(insertedImage?.locked).toBe(true);
+    expect(insertedImage?.locked).toBe(false);
     expect(insertedImage?.fileId).toBeTruthy();
 
     // 8. Flush SaveQueue to ensure Dexie persistence is written
@@ -193,7 +193,7 @@ test.describe("Cross-Tool Integration (Task 38 / INT-1, INT-2)", () => {
       const elements = win.__aboard_boardApi?.["tab-1"]?.getSceneElements() || [];
       return (
         elements.length > 0 &&
-        elements.some((el) => el.type === "image" && el.locked === true)
+        elements.some((el) => el.type === "image" && el.locked === false)
       );
     }, { timeout: 30000 });
 
@@ -216,6 +216,6 @@ test.describe("Cross-Tool Integration (Task 38 / INT-1, INT-2)", () => {
 
     expect(restoredImage).toBeDefined();
     expect(restoredImage?.type).toBe("image");
-    expect(restoredImage?.locked).toBe(true);
+    expect(restoredImage?.locked).toBe(false);
   });
 });

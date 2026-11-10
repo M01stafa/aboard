@@ -230,4 +230,26 @@ describe("CircuitAdapter (Task 24 / CIRC-1, CIRC-4)", () => {
     expect(mockApi.exportCircuit).toHaveBeenCalled();
     expect(mockApi.importCircuit).toHaveBeenCalled();
   });
+
+  it("dispatches resize event on targetWindow and calls refresh when importCircuit is called", () => {
+    const adapter = new CircuitAdapter();
+    const mockApi = createMockCircuitApi();
+    mockApi.refresh = vi.fn();
+
+    const dispatchEvent = vi.fn();
+    const mockWindow = {
+      CircuitJS1: mockApi,
+      dispatchEvent,
+    } as unknown as Window;
+
+    adapter.attach(mockWindow);
+
+    adapter.importCircuit("$ 1 0.000005 10 50 5 0.5");
+
+    expect(mockApi.importCircuit).toHaveBeenCalledWith("$ 1 0.000005 10 50 5 0.5", false);
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    const event = dispatchEvent.mock.calls[0][0] as Event;
+    expect(event.type).toBe("resize");
+    expect(mockApi.refresh).toHaveBeenCalledTimes(1);
+  });
 });

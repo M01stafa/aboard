@@ -23,6 +23,7 @@ export interface CircuitJS1Api {
   onsvgrendered?: ((sim: CircuitJS1Api, svg: string) => void) | null;
   runCommand?(menu: string, item: string): void; // fork patch 3
   getCircuitAsPNG?(): string; // fork patch 3
+  refresh?(): void;
 }
 
 export interface CircuitWindow extends Window {
