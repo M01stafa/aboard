@@ -15,6 +15,7 @@ site_url = "https://alpha-board-app.vercel.app"
 [auth.captcha]
 enabled = true
 provider = "turnstile"
+secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET, 1x0000000000000000000000000000000AA)"
 
 [auth.email]
 enable_confirmations = true

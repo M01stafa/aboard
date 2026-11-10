@@ -3541,3 +3541,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (54/54 test files passed, 464/464 unit tests passed).
 **Related:** AUTH-1, AUTH-2, STORE-2, SEC-2
 **Open:** None.
+
+
+## 2026-11-10 — Fix Supabase auth.captcha.secret in Local Stack and GitHub Actions CI
+**Request:** Investigate failed GitHub Actions CI run (#118 on commit cd5a9c1), identify the root cause, fix the configuration locally, verify all CI checks pass, and push to GitHub.
+**Changes:**
+- `supabase/config.toml` (changed): provided `secret = "env(SUPABASE_AUTH_CAPTCHA_SECRET, 1x0000000000000000000000000000000AA)"` for `[auth.captcha]` to resolve `Missing required field in config: auth.captcha.secret` during `supabase start`.
+- `.github/workflows/ci.yml` (changed): added `SUPABASE_AUTH_CAPTCHA_SECRET: "1x0000000000000000000000000000000AA"` to workflow job environment.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `supabase start`: PASS (local stack started with zero errors).
+- `supabase test db supabase/tests/rls.test.sql`: PASS (17/17 tests passed).
+- `supabase db query --file supabase/tests/rls_guard.sql`: PASS (0 unshielded tables).
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (54/54 test files passed, 464/464 unit tests passed).
+- `pnpm ci:security`: PASS (gitleaks clean, audit passed, bundle clean).
+**Related:** SEC-5, SEC-10, Task 46
+**Open:** Verify GitHub Actions CI run passes on GitHub.

@@ -18,6 +18,7 @@ jobs:
       NEXT_PUBLIC_GOOGLE_API_KEY: "dummy-google-api-key"
       NEXT_PUBLIC_GOOGLE_APP_ID: "dummy-google-app-id"
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
+      SUPABASE_AUTH_CAPTCHA_SECRET: "1x0000000000000000000000000000000AA"
 
     steps:
       - name: Checkout code
