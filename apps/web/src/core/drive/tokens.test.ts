@@ -167,6 +167,39 @@ describe("DriveTokenManager & DriveStore (Task 34 / AUTH-1, AUTH-3, SEC-2)", () 
       const next = await manager.get();
       expect(next).toBe("re-fetched-token");
     });
+
+    it("isTokenValid() returns false when no token or expired, and true when valid", async () => {
+      expect(manager.isTokenValid()).toBe(false);
+
+      mockInvoke.mockResolvedValueOnce({
+        data: {
+          access_token: "valid-token-abc",
+          expires_at: Date.now() + 3600_000,
+        },
+        error: null,
+      });
+
+      await manager.get();
+      expect(manager.isTokenValid()).toBe(true);
+    });
+
+    it("ensureFreshToken() refreshes if expired and reuses if valid", async () => {
+      mockInvoke.mockResolvedValueOnce({
+        data: {
+          access_token: "fresh-token-xyz",
+          expires_at: Date.now() + 3600_000,
+        },
+        error: null,
+      });
+
+      const tok1 = await manager.ensureFreshToken();
+      expect(tok1).toBe("fresh-token-xyz");
+      expect(mockInvoke).toHaveBeenCalledTimes(1);
+
+      const tok2 = await manager.ensureFreshToken();
+      expect(tok2).toBe("fresh-token-xyz");
+      expect(mockInvoke).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("DriveStore Actions", () => {

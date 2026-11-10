@@ -392,4 +392,56 @@ describe("Google Picker Integration (picker.ts / §10.11, PDF-1, ALPHA-2)", () =
     expect(capturedMimes).toContain("application/pdf");
     expect(capturedMimes).toContain("application/vnd.google-apps.folder");
   });
+
+  it("checks and refreshes expired or null tokens directly via DriveTokenManager before opening Picker", async () => {
+    let capturedOAuthToken = "";
+    window.gapi = {
+      load: (_mod: string, callbacks: { callback: () => void }) => {
+        callbacks.callback();
+      },
+    };
+
+    window.google = {
+      picker: {
+        ViewId: { DOCS: "docs" },
+        Action: { CANCEL: "cancel" },
+        Response: { ACTION: "action" },
+        DocsView: class {
+          setIncludeFolders() { return this; }
+          setSelectFolderEnabled() { return this; }
+        },
+        PickerBuilder: class {
+          setAppId() { return this; }
+          setOAuthToken(token: string) {
+            capturedOAuthToken = token;
+            return this;
+          }
+          setDeveloperKey() { return this; }
+          setOrigin() { return this; }
+          addView() { return this; }
+          setLocale() { return this; }
+          setTitle() { return this; }
+          setCallback(cb: (data: Record<string, unknown>) => void) {
+            setTimeout(() => {
+              cb({ action: "cancel" });
+            }, 5);
+            return this;
+          }
+          build() {
+            return { setVisible: () => {} };
+          }
+        },
+      },
+    } as unknown as typeof window.google;
+
+    const freshTokenManager = new DriveTokenManager();
+    const getSpy = vi.spyOn(freshTokenManager, "get").mockResolvedValue("freshly-refreshed-picker-token");
+
+    await openGooglePicker({
+      tokenManager: freshTokenManager,
+    });
+
+    expect(getSpy).toHaveBeenCalledWith(true);
+    expect(capturedOAuthToken).toBe("freshly-refreshed-picker-token");
+  });
 });

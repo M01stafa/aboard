@@ -24,11 +24,28 @@ export class DriveTokenManager {
     }
     if (forceFresh) {
       this.token = undefined;
+      this.inflight = undefined;
     }
     this.inflight ??= this.fetchToken().finally(() => {
       this.inflight = undefined;
     });
     return this.inflight;
+  }
+
+  /**
+   * Checks whether the current access token is valid and unexpired (with 60s buffer).
+   */
+  isTokenValid(): boolean {
+    return Boolean(this.token?.value && Date.now() < this.token.exp - 60_000);
+  }
+
+  /**
+   * Explicitly ensures a valid, fresh access token is available.
+   * If expired or null, refreshes via the drive-token Edge Function.
+   */
+  async ensureFreshToken(): Promise<string> {
+    const isExpiredOrNull = !this.isTokenValid();
+    return this.get(isExpiredOrNull);
   }
 
   /**

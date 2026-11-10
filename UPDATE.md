@@ -3492,3 +3492,19 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm ci:security`: PASS (gitleaks clean, audit passed, bundle clean).
 **Related:** Task 46, SEC-5, SEC-10
 **Open:** None.
+
+
+## 2026-11-10 — Fix Google Picker Authentication and Token Refresh Logic
+**Request:** Fix Google Picker authentication loop ("Sign in to your Google Account" screen inside Picker iframe); ensure PickerBuilder receives valid, fresh access token directly from DriveTokenManager; verify token is not expired/null and refresh via drive-token Edge Function before opening Picker.
+**Changes:**
+- `apps/web/src/core/drive/tokens.ts` (changed): added `inflight = undefined` when `forceFresh: true` to prevent returning stale in-flight token promises; added `isTokenValid()` and `ensureFreshToken()` helper methods.
+- `apps/web/src/core/drive/tokens.test.ts` (changed): added unit tests for `isTokenValid()` and `ensureFreshToken()`.
+- `apps/web/src/core/drive/picker.ts` (changed): imported `env` from `@/core/env`; added check for expired or null token before opening Picker; ensured fresh access token retrieval directly from `DriveTokenManager`; passed `accessToken` into `builder.setOAuthToken(accessToken)`.
+- `apps/web/src/core/drive/picker.test.ts` (changed): added unit test asserting `openGooglePicker` checks and refreshes expired/null tokens via `DriveTokenManager` before opening.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (53/53 test files passed, 460/460 unit tests passed).
+**Related:** STORE-2, SEC-2, SEC-6
+**Open:** None.

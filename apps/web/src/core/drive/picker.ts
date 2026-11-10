@@ -1,6 +1,7 @@
 import { driveTokenManager, type DriveTokenManager } from "./tokens";
 import { downloadFileBlob } from "./api";
 import { bus } from "@/core/bus";
+import { env } from "@/core/env";
 
 /**
  * Google Picker API interfaces conforming to official gapi / Google Picker v1 API.
@@ -143,10 +144,23 @@ export async function openGooglePicker(
   await loadPickerApi();
 
   const tm = options.tokenManager ?? driveTokenManager;
-  let token: string;
+  let accessToken: string;
   try {
-    // Always obtain a fresh, valid OAuth access token before initializing the Picker
-    token = await tm.get(true);
+    // Check if token is expired or null, and refresh via drive-token Edge Function before opening Picker
+    const peeked = tm.peekToken();
+    const isExpiredOrNull =
+      !peeked?.value || Date.now() >= peeked.exp - 60_000;
+
+    // Retrieve fresh access token directly from DriveTokenManager right before opening Picker
+    accessToken = await tm.get(isExpiredOrNull || true);
+
+    if (!accessToken || typeof accessToken !== "string" || !accessToken.trim()) {
+      accessToken = await tm.get(true);
+    }
+
+    if (!accessToken || typeof accessToken !== "string" || !accessToken.trim()) {
+      throw new Error("Received empty or invalid access token from DriveTokenManager.");
+    }
   } catch (err: unknown) {
     bus.emit("drive:reconnect-required", { reason: "token_fetch_failed" });
     throw new Error(
@@ -154,8 +168,14 @@ export async function openGooglePicker(
     );
   }
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || "";
-  const appId = process.env.NEXT_PUBLIC_GOOGLE_APP_ID || "";
+  const apiKey =
+    process.env.NEXT_PUBLIC_GOOGLE_API_KEY ||
+    (typeof env !== "undefined" ? env.NEXT_PUBLIC_GOOGLE_API_KEY : "") ||
+    "";
+  const appId =
+    process.env.NEXT_PUBLIC_GOOGLE_APP_ID ||
+    (typeof env !== "undefined" ? env.NEXT_PUBLIC_GOOGLE_APP_ID : "") ||
+    "";
   const origin =
     typeof window !== "undefined" && window.location.origin
       ? window.location.origin
@@ -215,9 +235,12 @@ export async function openGooglePicker(
       }
 
       const builder = new picker.PickerBuilder()
-        .setAppId(appId)
-        .setOAuthToken(token)
+        .setOAuthToken(accessToken)
         .setDeveloperKey(apiKey);
+
+      if (appId) {
+        builder.setAppId(appId);
+      }
 
       if (typeof builder.setOrigin === "function") {
         builder.setOrigin(origin);
