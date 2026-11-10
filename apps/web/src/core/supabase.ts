@@ -15,6 +15,20 @@ export const supabase = createClient(
 );
 
 /**
+ * Resolves the default email or OAuth redirect URL.
+ * Uses window.location.origin in the browser, or NEXT_PUBLIC_SITE_URL, falling back to production.
+ */
+function getDefaultRedirectTo(): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}/auth/callback`;
+  }
+  if (env.NEXT_PUBLIC_SITE_URL) {
+    return `${env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
+  }
+  return "https://alpha-board-app.vercel.app/auth/callback";
+}
+
+/**
  * Initiates email sign-in using a one-time 6-digit code (OTP).
  * Creates a new account if the user does not exist yet.
  */
@@ -31,12 +45,27 @@ export async function signInWithEmailOtp(
     email,
     options: {
       shouldCreateUser: true,
-      emailRedirectTo:
-        opts?.redirectTo ??
-        (typeof window !== "undefined"
-          ? `${window.location.origin}/auth/callback`
-          : undefined),
+      emailRedirectTo: opts?.redirectTo ?? getDefaultRedirectTo(),
       captchaToken: opts?.captchaToken,
+    },
+  });
+}
+
+/**
+ * Signs up a user using email and password.
+ * Passes emailRedirectTo to ensure confirmation emails point to the production or dynamic origin.
+ */
+export async function signUp(
+  email: string,
+  password?: string,
+  options?: { emailRedirectTo?: string; captchaToken?: string }
+) {
+  return supabase.auth.signUp({
+    email,
+    password: password ?? "",
+    options: {
+      emailRedirectTo: options?.emailRedirectTo ?? getDefaultRedirectTo(),
+      captchaToken: options?.captchaToken,
     },
   });
 }
@@ -60,11 +89,7 @@ export async function signInWithGoogle(redirectTo?: string) {
   return supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo:
-        redirectTo ??
-        (typeof window !== "undefined"
-          ? `${window.location.origin}/auth/callback`
-          : undefined),
+      redirectTo: redirectTo ?? getDefaultRedirectTo(),
       scopes: "https://www.googleapis.com/auth/drive.file",
       queryParams: { access_type: "offline", include_granted_scopes: "true" },
     },

@@ -3428,3 +3428,38 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm ci:security`: PASS (185 commits scanned with 0 leaks, production audit passed, bundle grep clean).
 **Related:** SEC-1 to SEC-12, AUTH-4, LEGAL-1..3
 **Open:** None.
+
+
+## 2026-11-10 — Task 46: Deploy to Production (Vercel + Supabase)
+**Request:** Check CLI authentication for Vercel and Supabase; deploy migrations, Edge Functions (`account-delete`), and secrets to Supabase; link and configure Vercel production project with environment variables and deploy Next.js app; provide Google Cloud Console configuration steps and device testing checklist in `docs/DEPLOYMENT.md`.
+**Changes:**
+- `docs/DEPLOYMENT.md` (new): comprehensive production deployment guide with live endpoints, step-by-step Google Cloud Console OAuth setup, Supabase configuration, and real-device testing checklist across all flows.
+- `docs/PROGRESS.md` (changed): updated active task to Task 46 completed and recorded live production URL.
+- `UPDATE.md` (changed): appended this entry.
+**Deployments & Configurations:**
+- Supabase: Deployed `account-delete` function; verified all 6 edge functions active (`account-delete`, `drive-connect`, `drive-callback`, `drive-token`, `drive-link-token`, `drive-disconnect`); set `APP_URL` and `APP_ORIGINS` secrets to production domain.
+- Vercel: Created and configured project `aboard` (`rootDirectory: apps/web`, `framework: nextjs`, `nodeVersion: 22.x`); added all 6 public environment variables; deployed production build aliased to `https://aboard-eight.vercel.app`.
+- HTTP Verification: `https://aboard-eight.vercel.app` verified live (HTTP 200 OK, full CSP, COOP, HSTS, and nosniff headers active).
+**Related:** Task 46, SEC-1 to SEC-12, all R1 requirements.
+**Open:** Owner to complete Google Cloud Console OAuth verification and publish app from Testing to Production.
+
+
+## 2026-11-10 — Fix Supabase Auth Email Confirmation Redirect URL
+**Request:** Update Supabase Auth Site URL and Redirect URLs in config.toml and remote project to https://alpha-board-app.vercel.app; implement dynamic emailRedirectTo in app code with NEXT_PUBLIC_SITE_URL fallback; verify remote Supabase settings and Vercel deployment.
+**Changes:**
+- `supabase/config.toml` (changed): updated `site_url` to `https://alpha-board-app.vercel.app` and added production redirect allow-list URLs.
+- `apps/web/src/core/env.ts` (changed): added optional `NEXT_PUBLIC_SITE_URL` to public schema and process env mapper.
+- `apps/web/src/core/supabase.ts` (changed): added `signUp` helper with dynamic `getDefaultRedirectTo()` using `window.location.origin` and `NEXT_PUBLIC_SITE_URL`; updated `signInWithEmailOtp` and `signInWithGoogle` to use dynamic redirect.
+- `apps/web/src/core/alpha/export-dialog.test.tsx` (changed): added explicit timeout to long-running flattening test under load.
+- `apps/web/next.config.ts` (changed): added `https://challenges.cloudflare.com` to `connect-src` CSP.
+- `apps/web/public/.well-known/security.txt` (changed): updated canonical domain references to `alpha-board-app.vercel.app`.
+- `docs/DEPLOYMENT.md` (new): documented production URLs and verification steps for `alpha-board-app.vercel.app`.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (53/53 test files passed, 457/457 unit tests passed).
+- Supabase remote config: pushed and verified via `supabase config diff`.
+- Vercel production: deployed and aliased to `https://alpha-board-app.vercel.app`.
+**Related:** AUTH-1, AUTH-2, SEC-6
+**Open:** Owner to test email signup confirmation on production URL.

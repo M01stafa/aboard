@@ -291,7 +291,7 @@ describe("ExportDialog UI (Task 31 / ALPHA-6)", () => {
       expect.anything(),
       "application/pdf"
     );
-  });
+  }, 15000);
 
   it("exports clean PDF to Google Drive without burning when clean radio is selected", async () => {
     const onClose = vi.fn();

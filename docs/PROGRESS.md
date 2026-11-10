@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | Phase 11 — Launch prep |
-| Current task | Task 45 — Run the Security Review and the Launch Checklist completed |
+| Current task | Task 46 — Deploy to Production (Vercel + Supabase) completed |
 | Last updated | 2026-11-10 |
-| Next step | Task 46 — Deploy to Production and Verify on Real Devices |
+| Next step | Final Manual Testing & Real Device Verification (docs/DEPLOYMENT.md) |
 | Known issues | Split divider direction in LTR remains inverted. Deferred indefinitely by owner. |
 | Blockers | none |
 

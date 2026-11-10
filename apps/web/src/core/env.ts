@@ -21,6 +21,7 @@ export const publicEnvSchema = z.object({
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z
     .string({ required_error: "NEXT_PUBLIC_TURNSTILE_SITE_KEY is required" })
     .min(1, "NEXT_PUBLIC_TURNSTILE_SITE_KEY cannot be empty"),
+  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
@@ -33,6 +34,7 @@ export function getRawProcessEnv(): Record<string, string | undefined> {
     NEXT_PUBLIC_GOOGLE_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
     NEXT_PUBLIC_GOOGLE_APP_ID: process.env.NEXT_PUBLIC_GOOGLE_APP_ID,
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
   };
 }
 
