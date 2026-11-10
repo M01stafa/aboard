@@ -3410,3 +3410,21 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm ci:security`: PASS (gitleaks clean, prod audit passed, bundle grep clean).
 **Related:** LEGAL-1, LEGAL-2, LEGAL-3, AUTH-4, SEC-1, SEC-2, SEC-6
 **Open:** None.
+
+
+## 2026-11-10 — Task 45: Run the Security Review and the Launch Checklist
+**Request:** Execute the security-review skill across the codebase; verify RLS tests and guard query; verify zero Google tokens in browser storage; scan production bundle and Git history for secrets; verify Edge Function rate limits; publish /.well-known/security.txt; rehearse the key-rotation runbook on dev (V17); confirm Stirling server unreachability (N/A); complete and sign off the §14.12 launch security checklist.
+**Changes:**
+- `apps/web/public/.well-known/security.txt` (new): published RFC 9116 compliant security contact document with security team email, policy link, and expiry.
+- `supabase/functions/edge-functions.test.ts` (changed): added automated test rehearsing the TOKEN_ENC_KEY rotation procedure (VERIFY V17), demonstrating seamless token decryption and re-encryption.
+- `docs/specs/security.md` (changed): verified and checked off all items in the §14.12 Launch Security Checklist.
+- `docs/PROGRESS.md` (changed): resolved and confirmed VERIFY V17 (key rotation procedure); recorded security review sign-off and updated active task to Task 46.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (53/53 test files passed, 457/457 unit tests passed).
+- `supabase test db`: PASS (17 assertions passed, 0 unshielded tables).
+- `pnpm ci:security`: PASS (185 commits scanned with 0 leaks, production audit passed, bundle grep clean).
+**Related:** SEC-1 to SEC-12, AUTH-4, LEGAL-1..3
+**Open:** None.

@@ -36,3 +36,4 @@ export async function handleAccountDelete(req: Request): Promise<Response> {
 if (typeof Deno !== "undefined" && Deno.serve) {
   Deno.serve(handler(handleAccountDelete));
 }
+

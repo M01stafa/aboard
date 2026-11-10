@@ -59,6 +59,24 @@ describe("Supabase Edge Functions & Shared Modules (Task 33 / AUTH-3, SEC-2, SEC
       expect(res1.ct).not.toBe(res2.ct);
     });
 
+    it("rehearses TOKEN_ENC_KEY rotation runbook (VERIFY V17): re-encrypts tokens seamlessly", async () => {
+      const oldSecret = "old-encryption-key-secret-seed-11111";
+      const newSecret = "new-encryption-key-secret-seed-22222";
+      const token = "1//04google-refresh-token-academic-student";
+
+      // 1. Encrypt with old secret
+      const { ct: oldCt, iv: oldIv } = await encrypt(token, oldSecret);
+      expect(await decrypt(oldCt, oldIv, oldSecret)).toBe(token);
+
+      // 2. Re-encryption procedure: decrypt with old secret, re-encrypt with new secret
+      const decrypted = await decrypt(oldCt, oldIv, oldSecret);
+      const { ct: newCt, iv: newIv } = await encrypt(decrypted, newSecret);
+
+      // 3. Verify new ciphertext is decryptable with new secret and fails with old secret
+      expect(await decrypt(newCt, newIv, newSecret)).toBe(token);
+      await expect(decrypt(newCt, newIv, oldSecret)).rejects.toThrow();
+    });
+
     it("generates url-safe random tokens without +, /, or =", () => {
       const tok = randomToken(32);
       expect(tok.length).toBeGreaterThanOrEqual(32);

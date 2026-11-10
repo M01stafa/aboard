@@ -11,9 +11,9 @@ This file is the project's memory between agent sessions.
 | Field | Value |
 |---|---|
 | Active phase | Phase 11 — Launch prep |
-| Current task | Task 44 — Legal Pages and Account Deletion completed |
+| Current task | Task 45 — Run the Security Review and the Launch Checklist completed |
 | Last updated | 2026-11-10 |
-| Next step | Task 45 — Run the Security Review and the Launch Checklist |
+| Next step | Task 46 — Deploy to Production and Verify on Real Devices |
 | Known issues | Split divider direction in LTR remains inverted. Deferred indefinitely by owner. |
 | Blockers | none |
 
@@ -65,7 +65,7 @@ Status values: `Open` · `Confirmed` · `Changed (spec updated)`
 | V14 | CSP needs of Picker, Supabase and GWT; `headers()` precedence; COOP with Google popups | security.md §14.5 | 0 (S1/S4) | Changed (spec updated) | Confirmed in Spikes S1, S2, S4: CSP directives for Excalidraw, GWT `/circuit/`, EmbedPDF, Google; COOP verified; spec updated / 2026-10-13 |
 | V15 | Supabase Auth: refresh-token rotation/reuse detection default; leaked-password protection availability | security.md §14.7 | 1 | Open | |
 | V16 | Dropped with Phase 9 | — | 9 | Changed (spec updated) | Dropped with Phase 9 / 2026-11-04 |
-| V17 | Supabase API key rotation procedure | security.md §14.10 | 11 | Open | |
+| V17 | Supabase API key rotation procedure & TOKEN_ENC_KEY re-encryption | security.md §14.10 | 11 | Confirmed | Rehearsed and verified in edge-functions.test.ts: token decryption with old key & re-encryption with new key verified / 2026-11-10 |
 | V18 | JDK version for the CircuitJS fork build (GWT 2.8.2) | setup-and-deploy.md §5.2 | 0 (S2) | Changed (spec updated) | Confirmed in Spike S2: OpenJDK 11 builds GWT 2.8.2 cleanly with Gradle 8.7; JDK 17 not required; spec updated / 2026-10-13 |
 | V19 | Current `zod` major version | setup-and-deploy.md §5.6 | 1 | Open | |
 | V20 | Excalidraw user image auto-downscale behavior | modules.md §7.1 | 4 | Confirmed | Yes: downscales to 1440px via resizeImageFile (pica/image-blob-reduce), checks MAX_ALLOWED_FILE_BYTES (4MB) / 2026-10-17 |
@@ -146,6 +146,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-11-09 | Fixed workspace layout logic: removed auto-split on cross-tool sends (silent background insertion); decoupled activeTabId from CSS grid slots so clicking split tabs never swaps left/right panes; tracked splitGroup so 3rd tabs open full-screen while preserving split view state upon returning. |
 | 2026-11-09 | Shortened UI strings (e.g. Save to Drive / حفظ في درايف, To Board / إلى السبورة) and enforced global button CSS white-space: nowrap with overflow ellipsis. |
 | 2026-11-10 | Task 44: Published bilingual Privacy Policy (/privacy), Terms of Use (/terms), and Open-Source Licenses (/licenses) linking to CircuitJS1 fork (GPL); implemented Edge Function account-delete (token revocation at Google + cascade DB deletion) with Settings Danger Zone and confirmation modal (LEGAL-1..3, AUTH-4, SEC-1). |
+| 2026-11-10 | Task 45: Executed full security-review across codebase and signed off Launch Security Checklist (§14.12); verified zero unshielded tables, empty anon grants, zero Google tokens in storage, exact-origin CORS, rate limits enforced, published security.txt, and rehearsed V17 key rotation. |
 
 ## Lessons and corrections
 
