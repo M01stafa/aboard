@@ -19,7 +19,7 @@ provider = "turnstile"
 [auth.email]
 enable_confirmations = true
 max_frequency = "1m0s"
-otp_length = 8
+otp_length = 6
 
 [auth.external.google]
 client_id = "791651476865-vvdeqhfn5tn9vie6gif05di83etol9jr.apps.googleusercontent.com"

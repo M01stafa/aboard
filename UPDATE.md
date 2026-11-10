@@ -3463,3 +3463,18 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Vercel production: deployed and aliased to `https://alpha-board-app.vercel.app`.
 **Related:** AUTH-1, AUTH-2, SEC-6
 **Open:** Owner to test email signup confirmation on production URL.
+
+
+## 2026-11-10 — Switch Auth UI to Magic Link Flow
+**Request:** Transition authentication flow from 6-digit OTP code input to Supabase default Magic Link flow; remove OTP input field and handler from Login page; show "Check your inbox" confirmation screen upon email submission; add bilingual i18n keys for Magic Link; provide owner guidance for Google OAuth 403 access_denied resolution.
+**Changes:**
+- `apps/web/app/login/page.tsx` (changed): removed OTP input form, OTP state, and `handleVerifyOtp`; added `step: "email" | "sent"` state; upon submitting email via `signInWithEmailOtp` (which sends dynamic redirect to `/auth/callback`), displays "Check your inbox" screen with user's email, instructions, and "Send another link" button.
+- `apps/web/src/i18n/en.ts` & `apps/web/src/i18n/ar.ts` (changed): added bilingual keys for Magic Link button, status, and inbox confirmation view (`sendMagicLink`, `sendingMagicLink`, `checkInboxTitle`, `magicLinkSentNotice`, `checkInboxInstruction`, `sendAnotherLink`).
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 0 warnings, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (53/53 test files passed, 457/457 unit tests passed).
+- `pnpm test:e2e`: PASS (3/3 auth and storage tests passed).
+**Related:** AUTH-1, AUTH-2, SEC-2, SEC-4
+**Open:** Owner to add test user or publish Google OAuth app in Google Cloud Console.
