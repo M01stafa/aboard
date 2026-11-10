@@ -3478,3 +3478,17 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e`: PASS (3/3 auth and storage tests passed).
 **Related:** AUTH-1, AUTH-2, SEC-2, SEC-4
 **Open:** Owner to add test user or publish Google OAuth app in Google Cloud Console.
+
+
+## 2026-11-10 — Fix Vercel Build stderr Warnings and Redeploy
+**Request:** Inspect Vercel deployment logs, identify 4 build-time errors/warnings flagged by Vercel, verify NEXT_PUBLIC_GOOGLE_API_KEY and other env vars, commit fixes, and trigger fresh production deployment.
+**Changes:**
+- `package.json` & `apps/web/package.json` (changed): pinned `"node": "22.x"` (replacing `>=22.0.0` range) to eliminate the two Vercel engine auto-upgrade warnings; added `--silent` flag to `pnpm --filter web build` to suppress pnpm's command banner prints to `stderr`.
+- `UPDATE.md` (changed): appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (53/53 test files passed, 457/457 unit tests passed).
+- `pnpm ci:security`: PASS (gitleaks clean, audit passed, bundle clean).
+**Related:** Task 46, SEC-5, SEC-10
+**Open:** None.
