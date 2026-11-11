@@ -21,7 +21,7 @@
     "@embedpdf/engines": "2.15.1",
     "@embedpdf/models": "2.15.1",
     "@embedpdf/pdfium": "2.15.1",
-    "@embedpdf/plugin-annotation": "2.15.1",
+    "@embedpdf/plugin-annotation": "3.0.0",
     "@embedpdf/plugin-export": "2.15.1",
     "@embedpdf/plugin-history": "2.15.1",
     "@embedpdf/plugin-interaction-manager": "2.15.1",
