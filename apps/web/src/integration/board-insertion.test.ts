@@ -140,6 +140,48 @@ describe("board-insertion", () => {
       expect(el.locked).toBe(false);
       expect(el.status).toBe("saved");
     });
+
+    it("scales element dimensions by scaleFactor and centers in viewport", async () => {
+      const mockBlob = new Blob(["fake-image-bytes"], { type: "image/webp" });
+      const mockPutFile = vi.fn().mockResolvedValue({ key: "mock-sha256-key" });
+      const mockProjectService = { putFile: mockPutFile } as unknown as ProjectService;
+      const mockUpdateScene = vi.fn();
+      const mockApi = {
+        addFiles: vi.fn(),
+        getSceneElements: vi.fn().mockReturnValue([]),
+        updateScene: mockUpdateScene,
+        scrollToContent: vi.fn(),
+        getAppState: vi.fn().mockReturnValue({
+          width: 1000,
+          height: 800,
+          scrollX: 0,
+          scrollY: 0,
+          zoom: { value: 1 },
+        }),
+      } as unknown as ExcalidrawImperativeAPI;
+
+      await insertImageIntoBoard({
+        projectId: "proj-1",
+        tabId: "tab-board",
+        blob: mockBlob,
+        mimeType: "image/webp",
+        width: 1224,
+        height: 1584,
+        scaleFactor: 2,
+        projectServiceOverride: mockProjectService,
+        apiOverride: mockApi,
+      });
+
+      expect(mockUpdateScene).toHaveBeenCalledTimes(1);
+      const scenePayload = mockUpdateScene.mock.calls[0][0];
+      const el = scenePayload.elements[0];
+      expect(el.width).toBe(612);
+      expect(el.height).toBe(792);
+      // Center in viewport: sceneCenter = (500, 400). Top-left = (500 - 306, 400 - 396) = (194, 4)
+      expect(el.x).toBe(194);
+      expect(el.y).toBe(4);
+      expect(el.locked).toBe(false);
+    });
   });
 
   describe("insertCircuitSvgIntoBoard", () => {

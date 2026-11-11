@@ -15,6 +15,7 @@ export type AppEvents = {
     image: Blob;
     width: number;
     height: number;
+    scaleFactor?: number;
     targetBoardTabId?: string;
     sourceTabId?: string;
   };

@@ -3618,3 +3618,40 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test`: PASS (54/54 test files passed, 469/469 unit tests passed).
 **Related:** CIRC-1, CIRC-4, SIM-1, STORE-5
 **Open:** None.
+
+
+## 2026-11-11 — PDF to Board Dragging, Viewport Centering, Ink Scaling, and E2E Mouse Drag Tests
+**Request:** Fix PDF to Board dragging, element scaling, ink coordinate scaling, and update E2E tests with actual mouse drag simulation.
+**Changes:**
+- `apps/web/src/core/bus.ts` (changed): added `scaleFactor?: number` to `pdf:page-to-board` event definition.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx` (changed): updated `compositeCustomStrokesOnBlob` to accept and prioritize `scaleFactor?: number`, multiplying stroke coordinates and line width by the exact scale factor used for the WebP rendering.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): passed `scaleFactor` (2) into `compositeCustomStrokesOnBlob` and `bus.emit("pdf:page-to-board")`.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): forwarded `scaleFactor: event.scaleFactor || 2` into `insertImageIntoBoard`.
+- `apps/web/src/integration/board-insertion.ts` (changed): added `scaleFactor?: number` to `InsertImageOptions`, divided width and height by `scaleFactor` (e.g. 1224x1584 -> 612x792), calculated `x` and `y` to center element in the active Excalidraw viewport based on `appState` scroll and zoom.
+- `apps/web/src/integration/board-insertion.test.ts` (changed): added unit test verifying element dimensions scaled by `scaleFactor` and centered in viewport.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.test.ts` (changed): added unit test verifying explicit `scaleFactor` scaling on stroke points and line width.
+- `apps/web/e2e/cross-tool-integration.spec.ts` (changed): replaced static assertions with real mouse drag gesture simulation (`page.mouse.move`, `down`, `move`, `up`) and asserted element coordinates changed.
+- `UPDATE.md`: Appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (54/54 test files passed, 471/471 unit tests passed).
+- `pnpm test:e2e cross-tool-integration`: PASS (1/1 passed in 8.3s).
+- `pnpm ci:security`: PASS (gitleaks clean, audit passed, bundle clean).
+**Related:** INT-1, INT-2, BOARD-1, PDF-4
+**Open:** None.
+
+
+## 2026-11-11 — Circuit Oscilloscope Import Timing & Deferred Initialization on Zero-Dimension / Hidden Panes
+**Request:** Fix circuit oscilloscope corruption after .alpha import: gate `importCircuit` execution on visible and sized container (`offsetWidth > 0`), queue pending imports in `pendingImportRef` when pane is hidden, and execute import with 100ms delayed resize upon becoming visible and sized.
+**Changes:**
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): added `pendingImportRef` to store pending circuit text if import is requested while pane is hidden or has 0 offsetWidth; added `executeCircuitImport` callback executing pre-import resize, `adapter.importCircuit`, `refresh()`, and staggered stabilization resizes (100ms, 200ms, 300ms); hooked `ResizeObserver` and `useEffect([visible])` to flush `pendingImportRef` when container reaches valid dimensions (`offsetWidth > 0`).
+- `apps/web/src/modules/circuit/circuit-pane.test.tsx` (changed): added unit test verifying that circuit import is deferred when pane is mounted hidden/zero-dimensioned and executed with layout stabilization when switched to visible.
+- `UPDATE.md`: Appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (54/54 test files passed, 472/472 unit tests passed).
+- `pnpm ci:security`: PASS (gitleaks clean, audit passed, bundle clean).
+**Related:** CIRC-1, CIRC-4, SIM-1, STORE-5
+**Open:** None.

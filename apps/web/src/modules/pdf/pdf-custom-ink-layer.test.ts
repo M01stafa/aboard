@@ -466,7 +466,7 @@ describe("pdf-custom-ink-layer", () => {
       ];
 
       // PDF is 500x700 pt, Canvas is 1000x1400 px -> scale factor is exactly 2x
-      const resultBlob = await compositeCustomStrokesOnBlob(mockBlob, strokes, 1000, 1400, 500, 700);
+      const resultBlob = await compositeCustomStrokesOnBlob(mockBlob, strokes, 1000, 1400, 500, 700, 2);
 
       expect(resultBlob).toBeDefined();
       expect(mockCtx.drawImage).toHaveBeenCalledTimes(1);
@@ -474,6 +474,61 @@ describe("pdf-custom-ink-layer", () => {
       expect(mockCtx.lineWidth).toBe(6);
       // Verify first point scaled by 2x (100 * 2 = 200, 150 * 2 = 300)
       expect(drawCalls[0]).toEqual({ type: "moveTo", x: 200, y: 300 });
+
+      globalThis.Image = origImage;
+      vi.restoreAllMocks();
+    });
+
+    it("uses explicit scaleFactor regardless of UI zoom or container size", async () => {
+      const drawCalls: Array<{ type: string; x?: number; y?: number }> = [];
+      const mockCtx = {
+        drawImage: vi.fn(),
+        beginPath: vi.fn(),
+        moveTo: vi.fn((x: number, y: number) => drawCalls.push({ type: "moveTo", x, y })),
+        lineTo: vi.fn((x: number, y: number) => drawCalls.push({ type: "lineTo", x, y })),
+        quadraticCurveTo: vi.fn(),
+        stroke: vi.fn(),
+        strokeStyle: "",
+        lineWidth: 0,
+        lineCap: "",
+        lineJoin: "",
+        globalAlpha: 1,
+      };
+
+      vi.spyOn(document, "createElement").mockImplementation((tagName: string) => {
+        if (tagName.toLowerCase() === "canvas") {
+          return {
+            width: 0,
+            height: 0,
+            getContext: () => mockCtx,
+            toBlob: (cb: (b: Blob) => void) => cb(new Blob(["mock-composited"], { type: "image/webp" })),
+          } as unknown as HTMLCanvasElement;
+        }
+        return document.createElement(tagName);
+      });
+
+      const origImage = globalThis.Image;
+      globalThis.Image = class {
+        onload: () => void = () => {};
+        set src(_v: string) {
+          setTimeout(() => this.onload(), 0);
+        }
+      } as unknown as typeof Image;
+
+      const mockBlob = new Blob(["mock-webp-bytes"], { type: "image/webp" });
+      const strokes: CustomInkStroke[] = [
+        {
+          id: "stroke-scale-explicit",
+          points: [{ x: 50, y: 75 }],
+          color: "#00ff00",
+          width: 4,
+          opacity: 1,
+        },
+      ];
+
+      await compositeCustomStrokesOnBlob(mockBlob, strokes, 1224, 1584, 612, 792, 2);
+      expect(drawCalls[0]).toEqual({ type: "moveTo", x: 100, y: 150 });
+      expect(mockCtx.lineWidth).toBe(8);
 
       globalThis.Image = origImage;
       vi.restoreAllMocks();

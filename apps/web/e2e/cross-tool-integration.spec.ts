@@ -115,7 +115,7 @@ test.describe("Cross-Tool Integration (Task 38 / INT-1, INT-2)", () => {
     // 6. Click "Send to Board" in PDF toolbar
     await sendToBoardBtn.click();
 
-    // 7. Verify the image element is inserted into the board in secondary pane as a locked element
+    // 7. Verify the image element is inserted into the board in secondary pane as an unlocked movable element
     await page.waitForFunction(() => {
       const win = window as unknown as {
         __aboard_boardApi?: Record<
@@ -136,31 +136,88 @@ test.describe("Cross-Tool Integration (Task 38 / INT-1, INT-2)", () => {
       );
     }, { timeout: 25000 });
 
-    const insertedImage = await page.evaluate(() => {
+    const dragTarget = await page.evaluate(() => {
       const win = window as unknown as {
         __aboard_boardApi?: Record<
           string,
           {
             getSceneElements: () => Array<{
+              id: string;
               type?: string;
+              x: number;
+              y: number;
+              width: number;
+              height: number;
               locked?: boolean;
               status?: string;
               fileId?: string;
-              width?: number;
-              height?: number;
             }>;
+            getAppState: () => {
+              scrollX: number;
+              scrollY: number;
+              zoom: { value: number } | number;
+              offsetLeft?: number;
+              offsetTop?: number;
+            };
           }
         >;
       };
-      const elements = win.__aboard_boardApi?.["tab-1"]?.getSceneElements() || [];
-      return elements.find((el) => el.type === "image");
+      const api = win.__aboard_boardApi?.["tab-1"];
+      if (!api) return null;
+      const elements = api.getSceneElements();
+      const img = elements.find((el) => el.type === "image");
+      if (!img) return null;
+
+      const appState = api.getAppState();
+      const zoom = typeof appState.zoom === "object" ? appState.zoom.value : (appState.zoom || 1);
+      const pane = document.querySelector('.pane[data-slot="secondary"] [data-testid="pane-board-tab-1"]');
+      const rect = pane?.getBoundingClientRect();
+      const offsetLeft = rect?.left ?? appState.offsetLeft ?? 0;
+      const offsetTop = rect?.top ?? appState.offsetTop ?? 0;
+
+      const elemCenterX = img.x + img.width / 2;
+      const elemCenterY = img.y + img.height / 2;
+      const clientX = (elemCenterX + appState.scrollX) * zoom + offsetLeft;
+      const clientY = (elemCenterY + appState.scrollY) * zoom + offsetTop;
+
+      return {
+        id: img.id,
+        initialX: img.x,
+        initialY: img.y,
+        clientX: Math.round(clientX),
+        clientY: Math.round(clientY),
+      };
     });
 
-    expect(insertedImage).toBeDefined();
-    expect(insertedImage?.type).toBe("image");
-    expect(insertedImage?.locked).toBe(false);
-    expect(insertedImage?.status).toBe("saved");
-    expect(insertedImage?.fileId).toBeTruthy();
+    expect(dragTarget).toBeTruthy();
+    const { clientX, clientY, initialX, initialY } = dragTarget!;
+
+    // Perform actual mouse drag simulation to verify the image is unlocked and draggable
+    await page.mouse.move(clientX, clientY);
+    await page.mouse.down();
+    await page.mouse.move(clientX + 100, clientY + 100, { steps: 5 });
+    await page.mouse.up();
+
+    // Assert that the element's X/Y coordinates changed after the drag
+    await expect.poll(async () => {
+      return await page.evaluate(() => {
+        const win = window as unknown as {
+          __aboard_boardApi?: Record<
+            string,
+            {
+              getSceneElements: () => Array<{
+                type?: string;
+                x: number;
+                y: number;
+              }>;
+            }
+          >;
+        };
+        const elements = win.__aboard_boardApi?.["tab-1"]?.getSceneElements() || [];
+        const img = elements.find((el) => el.type === "image");
+        return img ? { x: img.x, y: img.y } : null;
+      });
+    }).not.toEqual({ x: initialX, y: initialY });
 
     // 8. Flush SaveQueue to ensure Dexie persistence is written
     await page.evaluate(async () => {

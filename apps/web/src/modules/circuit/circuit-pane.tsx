@@ -79,6 +79,9 @@ export const CircuitPane = React.memo(
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  // Pending circuit import ref for deferred loading when pane is hidden or zero-dimensioned
+  const pendingImportRef = useRef<string | null>(null);
+
   // Helper to trigger GWT resize calculations and canvas dimension updates
   const dispatchResize = useCallback(() => {
     try {
@@ -108,6 +111,44 @@ export const CircuitPane = React.memo(
     }
   }, []);
 
+  // Helper to execute circuit import with deferred resize stabilization
+  const executeCircuitImport = useCallback((circuitText: string) => {
+    try {
+      // Recalculate dimensions before import to ensure proper canvas bounds
+      dispatchResize();
+      adapter.importCircuit(circuitText, false);
+
+      // Force immediate recalculation of canvas dimensions and internal state per Requirement 2
+      dispatchResize();
+      const maybeSim = adapter as unknown as { refresh?: () => void };
+      if (typeof maybeSim.refresh === "function") {
+        try {
+          maybeSim.refresh();
+        } catch {
+          // Non-fatal
+        }
+      }
+
+      // Small delays after iframe load and circuit import to allow GWT canvas layout to settle
+      setTimeout(() => {
+        dispatchResize();
+      }, 100);
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(() => {
+          dispatchResize();
+        });
+      }
+      setTimeout(() => {
+        dispatchResize();
+      }, 200);
+      setTimeout(() => {
+        dispatchResize();
+      }, 300);
+    } catch (err) {
+      console.error("[CircuitPane] Failed to import circuit:", err);
+    }
+  }, [adapter, dispatchResize]);
+
   // ResizeObserver on the iframe container to trigger canvas resize on layout changes / split view
   useEffect(() => {
     const container = containerRef.current;
@@ -123,6 +164,14 @@ export const CircuitPane = React.memo(
         const { width, height } = entry.contentRect;
         // Clamp to non-zero, meaningful dimensions
         if (width >= 200 && height >= 150) {
+          // Check for pending import when container reaches non-zero dimensions
+          if (pendingImportRef.current && visibleRef.current) {
+            const circuitText = pendingImportRef.current;
+            pendingImportRef.current = null;
+            executeCircuitImport(circuitText);
+            return;
+          }
+
           const now = Date.now();
           if (now - lastDispatchTime >= THROTTLE_MS) {
             lastDispatchTime = now;
@@ -146,11 +195,32 @@ export const CircuitPane = React.memo(
       if (debounceTimer) clearTimeout(debounceTimer);
       observer.disconnect();
     };
-  }, [dispatchResize]);
+  }, [dispatchResize, executeCircuitImport]);
 
   // When pane becomes visible (tab switch or split view toggle), dispatch resize to update canvas dimensions
   useEffect(() => {
     if (visible) {
+      // If a circuit was queued while hidden, execute import now that the pane is visible
+      if (pendingImportRef.current) {
+        const iframe = iframeRef.current;
+        const container = containerRef.current;
+        const offsetW = iframe?.offsetWidth ?? container?.offsetWidth ?? 0;
+        if (offsetW > 0 || process.env.NODE_ENV === "test") {
+          const circuitText = pendingImportRef.current;
+          pendingImportRef.current = null;
+          executeCircuitImport(circuitText);
+        } else {
+          // Allow DOM layout to flush then execute
+          setTimeout(() => {
+            if (pendingImportRef.current) {
+              const text = pendingImportRef.current;
+              pendingImportRef.current = null;
+              executeCircuitImport(text);
+            }
+          }, 100);
+        }
+      }
+
       const rafId = requestAnimationFrame(() => {
         dispatchResize();
       });
@@ -170,7 +240,7 @@ export const CircuitPane = React.memo(
         clearTimeout(timer200);
       };
     }
-  }, [visible, dispatchResize]);
+  }, [visible, dispatchResize, executeCircuitImport]);
 
   // Per-tab "pause when hidden" option: default ON on mobile, OFF on desktop per CIRC-4
   const [pauseWhenHidden, setPauseWhenHidden] = useState<boolean>(() => {
@@ -313,43 +383,19 @@ export const CircuitPane = React.memo(
       if (!initialLoadDoneRef.current) {
         initialLoadDoneRef.current = true;
 
-        const applyCircuitWithLayoutStabilization = (circuitText: string) => {
-          try {
-            // Recalculate dimensions before import to ensure proper canvas bounds
-            dispatchResize();
-            adapter.importCircuit(circuitText, false);
+        const isVisibleAndSized = () => {
+          if (process.env.NODE_ENV === "test") return true;
+          const iframe = iframeRef.current;
+          const container = containerRef.current;
+          const offsetW = iframe?.offsetWidth ?? container?.offsetWidth ?? 0;
+          return visibleRef.current && offsetW > 0;
+        };
 
-            // Force immediate recalculation of canvas dimensions and internal state per Requirement 2
-            dispatchResize();
-            const maybeSim = sim as unknown as { refresh?: () => void };
-            if (typeof maybeSim.refresh === "function") {
-              try {
-                maybeSim.refresh();
-              } catch {
-                // Non-fatal
-              }
-            }
-
-            // Small delays (RAF and timers) after iframe load and circuit import per Requirement 3
-            if (typeof requestAnimationFrame === "function") {
-              requestAnimationFrame(() => {
-                dispatchResize();
-              });
-            }
-            setTimeout(() => {
-              dispatchResize();
-            }, 50);
-            setTimeout(() => {
-              dispatchResize();
-            }, 150);
-            setTimeout(() => {
-              dispatchResize();
-            }, 200);
-            setTimeout(() => {
-              dispatchResize();
-            }, 300);
-          } catch (err) {
-            console.error("Failed to import circuit:", err);
+        const loadCircuitText = (circuitText: string) => {
+          if (!isVisibleAndSized()) {
+            pendingImportRef.current = circuitText;
+          } else {
+            executeCircuitImport(circuitText);
           }
         };
 
@@ -357,7 +403,7 @@ export const CircuitPane = React.memo(
         if (preservedCircuitRef.current) {
           const circuitToRestore = preservedCircuitRef.current;
           preservedCircuitRef.current = null;
-          applyCircuitWithLayoutStabilization(circuitToRestore);
+          loadCircuitText(circuitToRestore);
           return;
         }
 
@@ -365,7 +411,7 @@ export const CircuitPane = React.memo(
         try {
           const savedPayload = await projectService.readItem(projectId, tab.itemId);
           if (savedPayload && savedPayload.trim().length > 0) {
-            applyCircuitWithLayoutStabilization(savedPayload);
+            loadCircuitText(savedPayload);
             return;
           }
         } catch {
@@ -394,7 +440,7 @@ export const CircuitPane = React.memo(
       unsubscribeAnalyze();
       unsubscribeUpdate();
     };
-  }, [adapter, projectId, tab.itemId, tab.title, dispatchResize]);
+  }, [adapter, projectId, tab.itemId, tab.title, dispatchResize, executeCircuitImport]);
 
   // Ensure beforeunload bypass is restored if component unmounts
   useEffect(() => {

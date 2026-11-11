@@ -2478,7 +2478,8 @@ export async function compositeCustomStrokesOnBlob(
   targetWidth: number,
   targetHeight: number,
   pageWidth?: number,
-  pageHeight?: number
+  pageHeight?: number,
+  scaleFactor?: number
 ): Promise<Blob> {
   if (typeof window === "undefined" || !strokes || strokes.length === 0) return blob;
   const pWidth = pageWidth && pageWidth > 0 ? pageWidth : (targetWidth > 1000 ? targetWidth / 2 : targetWidth);
@@ -2498,8 +2499,8 @@ export async function compositeCustomStrokesOnBlob(
         return;
       }
       ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-      const scaleX = targetWidth / pWidth;
-      const scaleY = targetHeight / pHeight;
+      const scaleX = scaleFactor && scaleFactor > 0 ? scaleFactor : targetWidth / pWidth;
+      const scaleY = scaleFactor && scaleFactor > 0 ? scaleFactor : targetHeight / pHeight;
 
       // Compute bounding boxes for debugging & manual verification (Requirement 3)
       let minX = Infinity;

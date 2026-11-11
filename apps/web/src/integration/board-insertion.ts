@@ -14,6 +14,7 @@ export interface InsertImageOptions {
   mimeType: string;
   width: number;
   height: number;
+  scaleFactor?: number;
   locked?: boolean;
   projectServiceOverride?: ProjectService;
   apiOverride?: ExcalidrawImperativeAPI;
@@ -112,6 +113,7 @@ export async function insertImageIntoBoard({
   mimeType,
   width,
   height,
+  scaleFactor,
   locked = false,
   projectServiceOverride,
   apiOverride,
@@ -140,23 +142,51 @@ export async function insertImageIntoBoard({
     ]);
   }
 
-  // 5. Position below existing content (or at (100, 100))
+  // 5. Calculate scaled element dimensions (divide by scaleFactor, e.g. 1224x1584 -> 612x792)
+  const sf = scaleFactor && scaleFactor > 0 ? scaleFactor : (width > 1000 ? 2 : 1);
+  const elementWidth = Math.round(width / sf);
+  const elementHeight = Math.round(height / sf);
+
+  // Calculate x and y to place element in the center of the current viewport
+  const appState = typeof api.getAppState === "function" ? api.getAppState() : null;
   const existing = typeof api.getSceneElements === "function" ? api.getSceneElements() : [];
   let x = 100;
   let y = 100;
 
-  if (existing.length > 0) {
-    let maxY = -Infinity;
-    let minX = Infinity;
-    for (const el of existing) {
-      if (!el.isDeleted) {
-        maxY = Math.max(maxY, el.y + (el.height || 0));
-        minX = Math.min(minX, el.x);
+  if (
+    appState &&
+    typeof appState.width === "number" &&
+    appState.width > 0 &&
+    typeof appState.height === "number" &&
+    appState.height > 0
+  ) {
+    const zoomVal =
+      typeof appState.zoom === "object" && appState.zoom !== null && "value" in appState.zoom
+        ? (appState.zoom as { value: number }).value
+        : typeof appState.zoom === "number"
+        ? appState.zoom
+        : 1;
+    const scrollX = appState.scrollX ?? 0;
+    const scrollY = appState.scrollY ?? 0;
+    const sceneCenterX = appState.width / 2 / zoomVal - scrollX;
+    const sceneCenterY = appState.height / 2 / zoomVal - scrollY;
+    x = Math.round(sceneCenterX - elementWidth / 2);
+    y = Math.round(sceneCenterY - elementHeight / 2);
+  } else {
+    // Fallback: position below existing content (or at (100, 100))
+    if (existing.length > 0) {
+      let maxY = -Infinity;
+      let minX = Infinity;
+      for (const el of existing) {
+        if (!el.isDeleted) {
+          maxY = Math.max(maxY, el.y + (el.height || 0));
+          minX = Math.min(minX, el.x);
+        }
       }
-    }
-    if (maxY !== -Infinity && isFinite(maxY)) {
-      y = maxY + 40;
-      x = isFinite(minX) ? minX : 100;
+      if (maxY !== -Infinity && isFinite(maxY)) {
+        y = maxY + 40;
+        x = isFinite(minX) ? minX : 100;
+      }
     }
   }
 
@@ -170,8 +200,8 @@ export async function insertImageIntoBoard({
       status: "saved",
       x,
       y,
-      width,
-      height,
+      width: elementWidth,
+      height: elementHeight,
       locked: false,
       scale: [1, 1],
     },

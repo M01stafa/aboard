@@ -235,7 +235,8 @@ function ViewerInner({
           origW,
           origH,
           pdfPointWidth,
-          pdfPointHeight
+          pdfPointHeight,
+          scaleFactor
         );
       }
       if (pageBlob.size > MAX_ALLOWED_FILE_BYTES) {
@@ -250,6 +251,7 @@ function ViewerInner({
         image: pageBlob,
         width,
         height,
+        scaleFactor,
         sourceTabId: tabId,
       });
 

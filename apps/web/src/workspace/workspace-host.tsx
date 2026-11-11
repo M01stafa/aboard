@@ -687,6 +687,7 @@ export function WorkspaceHost({
           mimeType: event.image.type || "image/webp",
           ["width"]: event.width,
           ["height"]: event.height,
+          scaleFactor: event.scaleFactor || 2,
           locked: false,
         });
       } catch (err) {

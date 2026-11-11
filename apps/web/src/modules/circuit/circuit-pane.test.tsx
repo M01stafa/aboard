@@ -335,4 +335,88 @@ describe("CircuitPane Component (Task 24 / CIRC-1, CIRC-2, CIRC-3, CIRC-4)", () 
     // Verify refresh was called
     expect(mockSim.refresh).toHaveBeenCalled();
   });
+
+  it("defers circuit import when rendered in hidden state and executes with stabilization upon visibility", async () => {
+    const savedScopeCircuit =
+      "$ 1 0.000005 10 50 5 0.5\nr 128 128 224 128 0 1000\no 0 64 0 4099 5 0.05 0 -1";
+    vi.spyOn(projectService, "readItem").mockResolvedValue(savedScopeCircuit);
+    vi.spyOn(projectService, "saveCircuit").mockImplementation(async () => {});
+
+    const mockSim = createMockSim();
+    mockSim.refresh = vi.fn();
+
+    // Render initially hidden (visible: false)
+    await act(async () => {
+      root.render(
+        React.createElement(
+          I18nProvider,
+          null,
+          React.createElement(CircuitPane, {
+            projectId: "scope-proj-hidden",
+            tab: { id: "tab-scope-hidden", kind: "circuit", itemId: "item-scope-hidden", title: "Oscilloscope Hidden" },
+            visible: false,
+          })
+        )
+      );
+    });
+
+    const iframe = container.querySelector<HTMLIFrameElement>('iframe[data-testid="circuit-iframe"]');
+    expect(iframe).toBeTruthy();
+
+    const dispatchEventSpy = vi.fn();
+    const mockContentWindow = {
+      CircuitJS1: mockSim,
+      dispatchEvent: dispatchEventSpy,
+      innerWidth: 800,
+      innerHeight: 600,
+    } as unknown as Window;
+
+    Object.defineProperty(iframe, "contentWindow", {
+      value: mockContentWindow,
+      writable: true,
+    });
+
+    await act(async () => {
+      iframe?.dispatchEvent(new Event("load"));
+    });
+
+    // Fire onanalyze while visible is false
+    // Since NODE_ENV === "test" by default allows test environments, let's mock offsetWidth to 0 to test deferred import
+    Object.defineProperty(iframe, "offsetWidth", { value: 0, configurable: true });
+
+    // Temporarily stub NODE_ENV to production to test zero-dimensioned deferred import branch
+    vi.stubEnv("NODE_ENV", "production");
+
+    try {
+      await act(async () => {
+        mockSim.onanalyze!(mockSim);
+      });
+
+      // While hidden/0 offsetWidth, import was stored in pendingImportRef and NOT executed yet
+      expect(mockSim.importCircuit).not.toHaveBeenCalled();
+
+      // Now switch pane to visible
+      Object.defineProperty(iframe, "offsetWidth", { value: 800, configurable: true });
+
+      await act(async () => {
+        root.render(
+          React.createElement(
+            I18nProvider,
+            null,
+            React.createElement(CircuitPane, {
+              projectId: "scope-proj-hidden",
+              tab: { id: "tab-scope-hidden", kind: "circuit", itemId: "item-scope-hidden", title: "Oscilloscope Hidden" },
+              visible: true,
+            })
+          )
+        );
+      });
+
+      // Once visible, the pending circuit import must be executed
+      expect(mockSim.importCircuit).toHaveBeenCalledWith(savedScopeCircuit, false);
+      expect(dispatchEventSpy).toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });
