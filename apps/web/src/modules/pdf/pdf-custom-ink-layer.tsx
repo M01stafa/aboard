@@ -22,6 +22,9 @@ export interface CustomInkStroke {
   opacity: number;
   /** Translation applied to the stroke in page units (set when the stroke is moved). */
   transform?: CustomInkTransform;
+  /** Page dimensions at the time the stroke was recorded (guarantees 1:1 proportional scaling). */
+  pageWidth?: number;
+  pageHeight?: number;
 }
 
 export function getStrokeOffset(stroke: CustomInkStroke): CustomInkTransform {
@@ -916,6 +919,8 @@ export function PdfCustomInkLayer({
           color: p.strokeColor,
           width: p.strokeWidth,
           opacity: p.strokeOpacity,
+          pageWidth: p.pageWidth,
+          pageHeight: p.pageHeight,
         };
         interactionRef.current = { kind: "draw", stroke };
         setCurrentStroke(stroke);
@@ -1389,7 +1394,12 @@ export function PdfCustomInkLayer({
 
       if (it.kind === "draw") {
         if (commit && it.stroke.points.length > 0) {
-          p.onAddStroke(p.pageIndex, it.stroke);
+          const finalStroke: CustomInkStroke = {
+            ...it.stroke,
+            pageWidth: it.stroke.pageWidth ?? p.pageWidth,
+            pageHeight: it.stroke.pageHeight ?? p.pageHeight,
+          };
+          p.onAddStroke(p.pageIndex, finalStroke);
         }
         setCurrentStroke(null);
       } else if (it.kind === "drag") {
@@ -2499,41 +2509,14 @@ export async function compositeCustomStrokesOnBlob(
         return;
       }
       ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-      const scaleX = scaleFactor && scaleFactor > 0 ? scaleFactor : targetWidth / pWidth;
-      const scaleY = scaleFactor && scaleFactor > 0 ? scaleFactor : targetHeight / pHeight;
-
-      // Compute bounding boxes for debugging & manual verification (Requirement 3)
-      let minX = Infinity;
-      let minY = Infinity;
-      let maxX = -Infinity;
-      let maxY = -Infinity;
-      for (const stroke of strokes) {
-        if (!stroke.points || stroke.points.length === 0) continue;
-        const off = getStrokeOffset(stroke);
-        for (const pt of stroke.points) {
-          const px = pt.x + off.x;
-          const py = pt.y + off.y;
-          if (px < minX) minX = px;
-          if (py < minY) minY = py;
-          if (px > maxX) maxX = px;
-          if (py > maxY) maxY = py;
-        }
-      }
-
-      console.log(
-        `[PdfToBoard] Image canvas: ${targetWidth}x${targetHeight} px | PDF page: ${pWidth}x${pHeight} pt | Proportional scale: (${scaleX.toFixed(3)}, ${scaleY.toFixed(3)})`
-      );
-      if (isFinite(minX)) {
-        console.log(
-          `[PdfToBoard] Ink bbox (PDF points): [x: ${minX.toFixed(1)}, y: ${minY.toFixed(1)}, w: ${(maxX - minX).toFixed(1)}, h: ${(maxY - minY).toFixed(1)}] pt`
-        );
-        console.log(
-          `[PdfToBoard] Ink bbox (canvas px): [x: ${(minX * scaleX).toFixed(1)}, y: ${(minY * scaleY).toFixed(1)}, w: ${((maxX - minX) * scaleX).toFixed(1)}, h: ${((maxY - minY) * scaleY).toFixed(1)}] px`
-        );
-      }
 
       for (const stroke of strokes) {
         if (!stroke.points || stroke.points.length === 0) continue;
+        const sWidth = stroke.pageWidth && stroke.pageWidth > 0 ? stroke.pageWidth : pWidth;
+        const sHeight = stroke.pageHeight && stroke.pageHeight > 0 ? stroke.pageHeight : pHeight;
+        const scaleX = targetWidth / sWidth;
+        const scaleY = targetHeight / sHeight;
+
         const off = getStrokeOffset(stroke);
         const pts = stroke.points.map((p) => ({ x: p.x + off.x, y: p.y + off.y }));
         ctx.beginPath();

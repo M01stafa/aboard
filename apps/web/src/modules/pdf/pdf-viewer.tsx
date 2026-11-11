@@ -213,15 +213,13 @@ function ViewerInner({
       let pageBlob = await task.toPromise();
       const { width: origW, height: origH } = await getImageDimensions(pageBlob);
 
-      const docPage = docState?.document?.pages?.[pageIndex];
-      const docRotation = ((docPage?.rotation ?? 0) + (docState?.rotation ?? 0)) % 4;
-      const isRotated90or270 = docRotation % 2 === 1;
-      const pdfPointWidth = docPage?.size
-        ? (isRotated90or270 ? docPage.size.height : docPage.size.width)
-        : origW / scaleFactor;
-      const pdfPointHeight = docPage?.size
-        ? (isRotated90or270 ? docPage.size.width : docPage.size.height)
-        : origH / scaleFactor;
+      const { width: pdfPointWidth, height: pdfPointHeight } = getPdfPageDimensions(
+        docState,
+        pageIndex,
+        origW / scaleFactor,
+        origH / scaleFactor,
+        1
+      );
 
       const pageStrokes = customStrokes[pageIndex] || [];
       console.log(
@@ -1030,16 +1028,13 @@ function ViewerInner({
             <Scroller
               documentId={documentId}
               renderPage={(page) => {
-                const docPage = docState?.document?.pages?.[page.pageIndex];
-                const docScale = docState?.scale ?? zoomState.currentZoomLevel ?? 1;
-                const docRotation = ((docPage?.rotation ?? 0) + (docState?.rotation ?? 0)) % 4;
-                const isRotated90or270 = docRotation % 2 === 1;
-                const unscaledWidth = docPage?.size
-                  ? (isRotated90or270 ? docPage.size.height : docPage.size.width)
-                  : (docScale > 0 ? page.rotatedWidth / docScale : (page.rotatedWidth || page.width));
-                const unscaledHeight = docPage?.size
-                  ? (isRotated90or270 ? docPage.size.width : docPage.size.height)
-                  : (docScale > 0 ? page.rotatedHeight / docScale : (page.rotatedHeight || page.height));
+                const { width: unscaledWidth, height: unscaledHeight } = getPdfPageDimensions(
+                  docState,
+                  page.pageIndex,
+                  page.rotatedWidth || page.width,
+                  page.rotatedHeight || page.height,
+                  zoomState.currentZoomLevel || docState?.scale || 1
+                );
 
                 return (
                   <PagePointerProvider
@@ -1169,6 +1164,31 @@ function ViewerInner({
       </div>
     </div>
   );
+}
+
+function getPdfPageDimensions(
+  docState: ReturnType<typeof useDocumentState>,
+  pageIndex: number,
+  fallbackWidth?: number,
+  fallbackHeight?: number,
+  zoomLevel?: number
+): { width: number; height: number } {
+  const doc = docState?.document;
+  const docPage = doc?.pages?.find((p) => p.index === pageIndex) ?? doc?.pages?.[pageIndex];
+  const docRotation = ((docPage?.rotation ?? 0) + (docState?.rotation ?? 0)) % 4;
+  const isRotated90or270 = docRotation % 2 === 1;
+
+  if (docPage?.size?.width && docPage?.size?.height) {
+    return {
+      width: isRotated90or270 ? docPage.size.height : docPage.size.width,
+      height: isRotated90or270 ? docPage.size.width : docPage.size.height,
+    };
+  }
+
+  const zoom = zoomLevel && zoomLevel > 0 ? zoomLevel : 1;
+  const w = fallbackWidth ? fallbackWidth / zoom : 600;
+  const h = fallbackHeight ? fallbackHeight / zoom : 800;
+  return { width: w, height: h };
 }
 
 export function PdfViewer({

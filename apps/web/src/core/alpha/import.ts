@@ -327,7 +327,11 @@ export async function importAlpha(
     };
   });
 
-  let finalLayout = manifest.layout;
+  let rawLayout = manifest.layout;
+  if (!rawLayout && manifest.workspaceLayout && "tabs" in manifest.workspaceLayout) {
+    rawLayout = manifest.workspaceLayout as typeof manifest.layout;
+  }
+  let finalLayout = rawLayout;
   if (finalLayout && isCollision) {
     finalLayout = {
       ...finalLayout,
@@ -345,6 +349,7 @@ export async function importAlpha(
     },
     items: finalItems,
     layout: finalLayout,
+    workspaceLayout: finalLayout,
   };
 
   // 4. Extraction with atomic rollback on ANY failure

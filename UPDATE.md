@@ -3655,3 +3655,27 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm ci:security`: PASS (gitleaks clean, audit passed, bundle clean).
 **Related:** CIRC-1, CIRC-4, SIM-1, STORE-5
 **Open:** None.
+
+
+## 2026-11-11 — PDF Ink Proportional Coordinate Scaling & Multi-Tab Alpha Archive Export/Import
+**Request:** Fix PDF to Board ink scaling magnification where annotations were doubled relative to the page, ensure Excalidraw element drag selection tool is activated, and fix multi-tab .alpha export/import to preserve and restore all open tabs (Board, PDF, Circuit).
+**Changes:**
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx` (changed): added `pageWidth` and `pageHeight` to `CustomInkStroke`; recorded exact page dimensions at stroke creation time; removed hardcoded `scaleFactor` override in `compositeCustomStrokesOnBlob` to strictly use `targetWidth / stroke.pageWidth` and `targetHeight / stroke.pageHeight` guaranteeing 1:1 proportional scaling regardless of viewport zoom or DPI.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): introduced canonical `getPdfPageDimensions` helper querying `doc.pages.find((p) => p.index === pageIndex)` and applying rotation / fallback zoom; unified page dimensions between `renderPage` and `handleSendToBoard`.
+- `apps/web/src/integration/board-insertion.ts` (changed): passed `activeTool: { type: "selection", customType: null, locked: false, lastActiveTool: null }` into `api.updateScene` appState to ensure newly inserted unlocked image is immediately draggable without user needing to toggle tools.
+- `apps/web/src/core/alpha/manifest.ts` (changed): added `workspaceLayout?: ManifestLayoutSchema` to `AlphaManifestSchema`.
+- `apps/web/src/core/storage/types.ts` (changed): added `workspaceLayout?: { tabs: string[]; split?: "none" | "vertical" | "horizontal" }` to `AlphaManifest`.
+- `apps/web/src/core/storage/project-service.ts` (changed): updated `collect` to include all tool items (`board`, `pdf`, `circuit`) in `manifest.layout.tabs` and write `workspaceLayout`.
+- `apps/web/src/core/alpha/import.ts` (changed): mapped `workspaceLayout` to `finalManifest.workspaceLayout` and `finalManifest.layout`.
+- `apps/web/src/workspace/workspace-host.tsx` (changed): updated `loadInfo` to read both `manifest.layout` and `workspaceLayout`, restoring all valid tool items from the manifest into workspace tabs.
+- `apps/web/src/core/alpha/export.test.ts` (changed): added test verifying full round-trip export and import of 3 open tabs (Board, PDF, Circuit).
+- `apps/web/e2e/cross-tool-integration.spec.ts` (changed): updated E2E test verifying ink drawing under zoom, sending to board, unlocked element insertion, and mouse drag simulation.
+- `UPDATE.md`: Appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (54/54 test files passed, 473/473 unit tests passed).
+- `pnpm test:e2e cross-tool-integration`: PASS (1/1 passed in 4.6s).
+- `pnpm ci:security`: PASS (gitleaks clean, audit passed, bundle clean).
+**Related:** INT-1, INT-2, ALPHA-1, ALPHA-5, ALPHA-6, STORE-5
+**Open:** None.

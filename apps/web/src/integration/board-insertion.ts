@@ -228,6 +228,12 @@ export async function insertImageIntoBoard({
       elements: [...existing, imgElement],
       appState: {
         selectedElementIds: { [imgElement.id]: true },
+        activeTool: {
+          type: "selection",
+          customType: null,
+          locked: false,
+          lastActiveTool: null,
+        },
       },
     });
   }

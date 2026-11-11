@@ -106,8 +106,51 @@ test.describe("Cross-Tool Integration (Task 38 / INT-1, INT-2)", () => {
     });
 
     // Wait for PDF viewer active state and toolbar
+    page.on("console", (msg) => {
+      console.log(`[BROWSER CONSOLE] ${msg.type()}: ${msg.text()}`);
+    });
+
     const activeViewer = primaryPane.locator('[data-testid="pdf-pane-active"]');
     await expect(activeViewer).toBeVisible({ timeout: 15000 });
+
+    // Zoom in twice before drawing
+    const zoomInBtn = primaryPane.locator('[data-testid="pdf-zoom-in"]');
+    await zoomInBtn.click();
+    await page.waitForTimeout(200);
+    await zoomInBtn.click();
+    await page.waitForTimeout(200);
+
+    // Select ink tool and draw a stroke
+    const inkBtn = primaryPane.locator('[data-testid="pdf-tool-ink"]');
+    await expect(inkBtn).toBeVisible({ timeout: 5000 });
+    await inkBtn.click();
+
+    const inkLayer = primaryPane.locator('[data-testid="pdf-custom-ink-layer-1"]');
+    await expect(inkLayer).toBeVisible({ timeout: 5000 });
+    const inkBox = await inkLayer.boundingBox();
+    console.log("InkLayer boundingBox:", inkBox);
+
+    if (inkBox) {
+      // In SVG: left is -100%, width is 300%. The middle third is the page itself!
+      // inkBox.x is left of SVG (-100% of page).
+      // The page starts at inkBox.x + inkBox.width / 3.
+      const pageLeft = inkBox.x + inkBox.width / 3;
+      const pageWidth = inkBox.width / 3;
+      const pageTop = inkBox.y;
+      const pageHeight = inkBox.height;
+      console.log("Calculated page rect:", { pageLeft, pageTop, pageWidth, pageHeight });
+
+      // Draw stroke from center-top to center-bottom
+      const startX = pageLeft + pageWidth * 0.3;
+      const startY = pageTop + pageHeight * 0.2;
+      const endX = pageLeft + pageWidth * 0.7;
+      const endY = pageTop + pageHeight * 0.4;
+
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(endX, endY, { steps: 10 });
+      await page.mouse.up();
+    }
 
     const sendToBoardBtn = primaryPane.locator('[data-testid="pdf-send-to-board-btn"]');
     await expect(sendToBoardBtn).toBeVisible({ timeout: 10000 });

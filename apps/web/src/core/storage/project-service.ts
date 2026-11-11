@@ -876,11 +876,12 @@ export class ProjectService {
       );
       if (toolItems.length > 0) {
         manifest.layout = {
-          tabs: [toolItems[0].id],
+          tabs: toolItems.map((i) => i.id),
           split: "none",
         };
       }
     }
+    manifest.workspaceLayout = manifest.layout;
 
     const files: ProjectBundle["files"] = [];
     const manifestFiles: AlphaManifest["files"] = [];
@@ -1009,6 +1010,8 @@ export class ProjectService {
       ...manifest,
       items: updatedItems,
       files: manifestFiles,
+      layout: manifest.layout,
+      workspaceLayout: manifest.layout,
     };
 
     try {

@@ -181,6 +181,76 @@ describe("Alpha Export Engine (Task 31 / ALPHA-1, ALPHA-5, ALPHA-6, ALPHA-8)", (
     await zipReader.close();
   });
 
+  it("exports and imports all open tabs in multi-tab projects (Board, PDF, Circuit)", async () => {
+    const { importAlpha } = await import("./import");
+    const { computeBlobSha256 } = await import("@/core/storage/sha256");
+
+    const multiTabProjId = "multi-tab-test-project";
+    await service.createProject("Multi Tab Project", "Engineering");
+    const manifest = await service.openProject(service.getActiveProjectId()!);
+    manifest.project.id = multiTabProjId;
+    manifest.project.title = "Multi Tab Project";
+    manifest.items = [];
+    manifest.files = [];
+    manifest.layout = { tabs: [], split: "none" };
+    await provider.saveManifest(manifest);
+
+    const pdfBlob = new Blob(["%PDF-1.4 mock content"], { type: "application/pdf" });
+    const realPdfHash = await computeBlobSha256(pdfBlob);
+
+    // Add board, pdf, and circuit items to project
+    await service.saveBoard(multiTabProjId, "item-board-1", JSON.stringify({ elements: [] }), "Main Whiteboard");
+    await service.saveCircuit(multiTabProjId, "item-circuit-1", "$ 1 0.000005 10.2 50 5 43\n", "RLC Circuit");
+    await service.savePdf(
+      multiTabProjId,
+      "item-pdf-1",
+      JSON.stringify({ fileKey: realPdfHash }),
+      "Manual.pdf"
+    );
+    await service.putFile(
+      multiTabProjId,
+      pdfBlob,
+      { name: "Manual.pdf", mime: "application/pdf" },
+      realPdfHash
+    );
+
+    // Set layout with 3 tabs and vertical split
+    await service.saveLayout(multiTabProjId, {
+      tabs: ["item-board-1", "item-circuit-1", "item-pdf-1"],
+      split: "vertical",
+    });
+
+    const exportRes = await exportAlpha(multiTabProjId, {
+      streamToDisk: false,
+      projectService: service,
+    });
+
+    expect(exportRes.blob).toBeDefined();
+    expect(exportRes.manifest.layout?.tabs).toEqual(["item-board-1", "item-circuit-1", "item-pdf-1"]);
+    expect(exportRes.manifest.workspaceLayout).toBeDefined();
+    expect((exportRes.manifest.workspaceLayout as any)?.tabs).toEqual(["item-board-1", "item-circuit-1", "item-pdf-1"]);
+
+    // Now import into a fresh provider and verify all 3 tabs are restored
+    const importProvider = new FakeStorageProvider();
+    const importService = new ProjectService(importProvider);
+
+    const importRes = await importAlpha(exportRes.blob!, {
+      projectService: importService,
+    });
+
+    expect(importRes.projectId).toBeDefined();
+    const importedManifest = await importProvider.loadManifest(importRes.projectId);
+
+    // Verify all 3 items exist in manifest
+    expect(importedManifest.items.some((i) => i.kind === "board")).toBe(true);
+    expect(importedManifest.items.some((i) => i.kind === "circuit")).toBe(true);
+    expect(importedManifest.items.some((i) => i.kind === "pdf")).toBe(true);
+
+    // Verify layout has all 3 tabs
+    expect(importedManifest.layout?.tabs.length).toBe(3);
+    expect(importedManifest.workspaceLayout).toBeDefined();
+  });
+
   it("excludes PDF files when includePdfs is set to false", async () => {
     const result = await exportAlpha(projectId, {
       includePdfs: false,

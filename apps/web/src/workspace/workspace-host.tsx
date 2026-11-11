@@ -384,7 +384,9 @@ export function WorkspaceHost({
 
                   // If manifest.layout?.tabs exists and has items, restore only those tabs in stored order
                   const preferredOrder: typeof validItems = [];
-                  const savedTabIds = manifest.layout?.tabs;
+                  const savedTabIds =
+                    manifest.layout?.tabs ||
+                    ((manifest as unknown as { workspaceLayout?: { tabs?: string[] } }).workspaceLayout?.tabs);
                   if (Array.isArray(savedTabIds) && savedTabIds.length > 0) {
                     for (const targetId of savedTabIds) {
                       const found = validItems.find(
@@ -396,12 +398,10 @@ export function WorkspaceHost({
                     }
                   }
 
-                  // Fallback: If no saved layout tabs matched, restore all validItems
-                  if (preferredOrder.length === 0) {
-                    for (const it of validItems) {
-                      if (!preferredOrder.includes(it)) {
-                        preferredOrder.push(it);
-                      }
+                  // Restore any remaining validItems (e.g. from multi-tool projects)
+                  for (const it of validItems) {
+                    if (!preferredOrder.includes(it)) {
+                      preferredOrder.push(it);
                     }
                   }
 

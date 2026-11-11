@@ -40,6 +40,7 @@ export interface AlphaManifest {
     sha256: string;
   }>;
   layout?: { tabs: string[]; split?: "none" | "vertical" | "horizontal" };
+  workspaceLayout?: { tabs: string[]; split?: "none" | "vertical" | "horizontal" };
 }
 
 export interface ProjectBundle {

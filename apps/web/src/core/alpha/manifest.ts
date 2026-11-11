@@ -87,6 +87,7 @@ export const AlphaManifestSchema = z.object({
   items: z.array(ManifestItemSchema),
   files: z.array(ManifestFileSchema),
   layout: ManifestLayoutSchema.optional(),
+  workspaceLayout: ManifestLayoutSchema.optional(),
 });
 
 export type AlphaManifest = z.infer<typeof AlphaManifestSchema>;
