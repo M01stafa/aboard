@@ -3693,3 +3693,22 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Vercel CLI build: completed successfully in 48s, ready state: `READY`.
 **Related:** Deployment, Sync
 **Open:** None.
+
+
+## 2026-11-11 — Fresh Vercel Project Recreation, GitHub Repository Link & Domain Configuration
+**Request:** Delete old Vercel project, re-import fresh from GitHub `M01stafa/aboard`, configure environment variables, assign domain `alpha-board-app.vercel.app`, and trigger initial production deployment directly from GitHub.
+**Changes:**
+- Deleted old Vercel project (`alpha-board`) and cleared local `.vercel` link.
+- Created brand-new Vercel project `alpha-board-app` connected directly to GitHub repository `M01stafa/aboard`.
+- Configured project framework to `nextjs`, `nodeVersion: 22.x`, and `rootDirectory: apps/web`.
+- Re-added all 7 client environment variables (`NEXT_PUBLIC_GOOGLE_API_KEY`, `NEXT_PUBLIC_GOOGLE_APP_ID`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`) for Production, Preview, and Development environments.
+- Assigned production domain `alpha-board-app.vercel.app`.
+- Triggered deployment directly from GitHub repository `M01stafa/aboard` branch `main` (`dpl_8xnsub9f7ZQBCPUKUyBFXepYQauH`), which built successfully and reached `READY`.
+- `UPDATE.md`: Appended this entry.
+**Checks:**
+- Old project deletion verified (`vercel project rm alpha-board`).
+- GitHub repository connection verified via Vercel API (`type: 'github', repo: 'aboard', org: 'M01stafa', productionBranch: 'main'`).
+- All 7 environment variables verified via `vercel env ls`.
+- Production deployment verified (`READY`, HTTP 200 on `https://alpha-board-app.vercel.app`).
+**Related:** Deployment, Infrastructure
+**Open:** None.
