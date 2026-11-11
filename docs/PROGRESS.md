@@ -10,10 +10,10 @@ This file is the project's memory between agent sessions.
 
 | Field | Value |
 |---|---|
-| Active phase | Phase 11 — Launch prep |
-| Current task | Task 46 — Deploy to Production (Vercel + Supabase) completed |
-| Last updated | 2026-11-10 |
-| Next step | Final Manual Testing & Real Device Verification (docs/DEPLOYMENT.md) |
+| Active phase | Phase 11 — Launch prep (Done) · Production Live |
+| Current task | Visual Polish Campaign officially closed & Production Live |
+| Last updated | 2026-11-11 |
+| Next step | Post-launch monitoring & maintenance (docs/DEPLOYMENT.md) |
 | Known issues | Split divider direction in LTR remains inverted. Deferred indefinitely by owner. |
 | Blockers | none |
 
@@ -36,7 +36,7 @@ Status values: `Not started` · `In progress` · `Blocked (<reason>)` · `Done (
 | **8. Integration** | Done (2026-10-19) | §8 actions | All four actions work across modes |
 | **9. Stirling** | Permanently dropped (owner, 2026-11-04) — Stirling, Gateway and Docker purged from the repo. | — | — |
 | **10. UI redesign** | Done (2026-10-21) | Circuit toolbar via `runCommand`, advanced menu toggle, PDF toolbars, unified styling | Every circuit action reachable |
-| **11. Launch prep** | In progress | **§14.12 security checklist signed off**, security headers/CSP, privacy policy, terms, third-party notices, fork source published, Google app published + brand verification, monitoring | Google verification approved; refresh tokens no longer expire after 7 days |
+| **11. Launch prep** | Done (2026-11-11) | **§14.12 security checklist signed off**, security headers/CSP, privacy policy, terms, third-party notices, fork source published, Google app published + brand verification, monitoring, clean production deployment to Vercel (https://alpha-board-app.vercel.app) linked to GitHub with full CI sync | Production deployment live; all critical integrations (PDF ink scaling, board dragging, multi-tab alpha, oscilloscope) verified |
 
 Release mapping (`docs/PRD.md` A5): R1 = phases 0–8, 10, 11 · R2/R3 removed (Phase 9 dropped, Phase 10 reclassified into R1).
 
@@ -147,6 +147,12 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-11-09 | Shortened UI strings (e.g. Save to Drive / حفظ في درايف, To Board / إلى السبورة) and enforced global button CSS white-space: nowrap with overflow ellipsis. |
 | 2026-11-10 | Task 44: Published bilingual Privacy Policy (/privacy), Terms of Use (/terms), and Open-Source Licenses (/licenses) linking to CircuitJS1 fork (GPL); implemented Edge Function account-delete (token revocation at Google + cascade DB deletion) with Settings Danger Zone and confirmation modal (LEGAL-1..3, AUTH-4, SEC-1). |
 | 2026-11-10 | Task 45: Executed full security-review across codebase and signed off Launch Security Checklist (§14.12); verified zero unshielded tables, empty anon grants, zero Google tokens in storage, exact-origin CORS, rate limits enforced, published security.txt, and rehearsed V17 key rotation. |
+| 2026-11-11 | Resolved PDF to Board 1:1 ink scaling by recording base page dimensions on strokes and scaling proportionally to canvas dimensions (targetHeight / stroke.pageHeight). |
+| 2026-11-11 | Fixed board image dragging by setting Excalidraw appState.activeTool to selection on insertion. |
+| 2026-11-11 | Fixed .alpha export/import to persist and restore all open workspace tabs (Board, PDF, Circuit) in manifest.workspaceLayout. |
+| 2026-11-11 | Fixed Circuit oscilloscope corruption on .alpha import by gating import on container visibility (offsetWidth > 0) with staggered stabilization resizes. |
+| 2026-11-11 | Nuked legacy Vercel project and re-created alpha-board-app linked directly to GitHub (M01stafa/aboard) with automatic deployments on main, root directory apps/web, and domain https://alpha-board-app.vercel.app. |
+| 2026-11-11 | Visual polish campaign officially closed. Application marked fully live in production. |
 
 ## Lessons and corrections
 
@@ -161,4 +167,6 @@ When the owner corrects the same thing twice, or a review finds something the ag
 | 2026-10-18 | Declaring an existing workspace peer dependency in package.json is still considered adding a dependency. If a peer plugin (e.g. @embedpdf/plugin-interaction-manager) is needed for batch registration, stop and ask the owner before editing package.json. | AGENTS.md |
 | 2026-10-18 | The spacing token suffix is an 8-point multiplier (--space-1 = 8px, --space-2 = 16px, --space-3 = 24px), not a pixel value. Writing --space-16 produces 128px (8rem), not 16px, pushing modal dialog elements outside the viewport. | .agents/rules/spacing.md |
 | 2026-10-19 | In Next.js App Router, importing from `@excalidraw/excalidraw` directly at the top level of shared modules causes `ReferenceError: window is not defined` during SSR module evaluation when routes load `ProjectService`. Always use dynamic `await import("@excalidraw/excalidraw")` inside client-only execution paths. | .agents/rules/frontend.md |
+| 2026-11-11 | When deploying monorepos to Vercel directly from Git, configure Root Directory (e.g. apps/web) so Vercel can detect the framework and dependencies instead of failing on the root workspace. | .agents/rules/frontend.md |
+| 2026-11-11 | Drawing coordinates on dynamic canvas layers must be stored with their base dimension context (pageWidth, pageHeight) to enable exact 1:1 proportional scaling regardless of viewport zoom or export resolution. | .agents/rules/frontend.md |
 

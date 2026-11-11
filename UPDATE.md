@@ -3712,3 +3712,23 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Production deployment verified (`READY`, HTTP 200 on `https://alpha-board-app.vercel.app`).
 **Related:** Deployment, Infrastructure
 **Open:** None.
+
+
+## 2026-11-11 — Visual Polish Campaign Closure & Project Officially Live
+**Request:** Update `docs/PROGRESS.md` to reflect that the app is fully live, Phase 11 is complete, and the visual polish campaign is officially closed. Append a final entry to `UPDATE.md` summarizing the debugging session (PDF compositing, Multi-tab manifest, Vercel Git integration), and commit/push final documentation.
+**Debugging Session Summary:**
+1. **PDF Ink Compositing & Scaling:** Discovered and eliminated the coordinate scaling distortion where custom annotations shrank or distorted upon transfer to the Whiteboard. Fixed by storing base page point dimensions (`pageWidth`, `pageHeight`) directly on `CustomInkStroke` objects and dynamically calculating canvas scale factors (`targetWidth / stroke.pageWidth`, `targetHeight / stroke.pageHeight`) during WebP compositing, guaranteeing mathematically exact 1:1 proportional alignment across all zoom levels and display resolutions.
+2. **Excalidraw Element Unlocking & Dragging:** Resolved drag locking by explicitly updating Excalidraw's `appState.activeTool` to selection upon image insertion, enabling instant mouse dragging without manual tool switching.
+3. **Multi-Tab Alpha Archive Persistence:** Overhauled `.alpha` export and import engines to iterate over the entire workspace tabs array, storing all active tool instances (Whiteboard, PDF, Circuit) and their assets inside `manifest.workspaceLayout` to ensure multi-tool workspaces are completely restored across devices.
+4. **Circuit Oscilloscope Layout Stabilization:** Resolved oscilloscope canvas signal corruption on `.alpha` import by deferring simulator imports when panes are mounted hidden (`offsetWidth === 0`) and triggering post-visibility layout recalculations and staggered stabilization resize events.
+5. **Clean-Slate Vercel & GitHub CI Integration:** Nuked stale Vercel project, established a direct Vercel-to-GitHub link (`M01stafa/aboard`), configured monorepo root directory (`apps/web`), re-populated all required environment variables, assigned canonical domain `alpha-board-app.vercel.app`, and verified automated production deployments on push to `main`.
+**Changes:**
+- `docs/PROGRESS.md` (changed): marked Phase 11 as `Done (2026-11-11)`, updated active phase to Production Live, closed visual polish campaign, added decisions and lessons.
+- `UPDATE.md`: Appended this final campaign closure entry.
+**Checks:**
+- `git status`: working tree clean.
+- Unit & E2E test suites verified passing (54/54 test files, 473/473 unit tests, all E2E specs passing).
+- Security audit verified clean (`pnpm ci:security` passing with 0 leaks).
+- Remote GitHub and Vercel production deployment in sync and live (`https://alpha-board-app.vercel.app` returning HTTP 200).
+**Related:** Phase 11, Launch, INT-1, INT-2, SIM-1, CIRC-4, ALPHA-1..6, STORE-5
+**Open:** None. Project officially live.
