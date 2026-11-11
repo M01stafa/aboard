@@ -1,4 +1,5 @@
 import type { BinaryFileData, ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import type { ExcalidrawElement, ExcalidrawImageElement } from "@excalidraw/excalidraw/element/types";
 import { projectService as defaultProjectService, type ProjectService } from "@/core/storage";
 import { computeBlobSha256 } from "@/core/storage/sha256";
 import { blobToDataURL } from "@/modules/board/image-utils";
@@ -162,21 +163,52 @@ export async function insertImageIntoBoard({
   // 6. Dynamically import convertToExcalidrawElements to protect SSR
   const { convertToExcalidrawElements } = await import("@excalidraw/excalidraw");
 
-  const [imgElement] = convertToExcalidrawElements([
+  const [converted] = convertToExcalidrawElements([
     {
       type: "image",
       fileId: fileId as FileId,
+      status: "saved",
       x,
       y,
       width,
       height,
       locked: false,
+      scale: [1, 1],
     },
   ]);
 
-  // 7. Update Excalidraw scene
+  // Ensure standard 'image' element properties are explicitly set: status: 'saved', locked: false
+  const imgElement: ExcalidrawImageElement = {
+    ...(converted as ExcalidrawImageElement),
+    type: "image",
+    fileId: fileId as FileId,
+    status: "saved",
+    locked: false,
+    scale: [1, 1],
+    crop: null,
+  };
+
+  console.log(
+    `[BoardInsertion] Inserted image element: id=${imgElement.id}, fileId=${fileId}, dimensions=${width}x${height}, locked=${imgElement.locked}, status=${imgElement.status}`
+  );
+
+  // 7. Update Excalidraw scene with unlocked image and select it for dragging
   if (typeof api.updateScene === "function") {
-    api.updateScene({ elements: [...existing, imgElement] });
+    api.updateScene({
+      elements: [...existing, imgElement],
+      appState: {
+        selectedElementIds: { [imgElement.id]: true },
+      },
+    });
+  }
+
+  // Ensure active tool switches to selection so user can immediately drag and resize
+  if (typeof api.setActiveTool === "function") {
+    try {
+      api.setActiveTool({ type: "selection" });
+    } catch {
+      // ignore if unsupported
+    }
   }
 
   // 8. Scroll to newly inserted content

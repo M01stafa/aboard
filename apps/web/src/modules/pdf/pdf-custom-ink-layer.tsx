@@ -2470,6 +2470,7 @@ export function PdfCustomInkLayer({
 
 /**
  * Composites custom ink strokes onto an existing rendered page Blob (e.g. for "Send to Whiteboard").
+ * Proportionally scales the PDF point coordinates to match the rendered canvas pixel dimensions (Requirement 2).
  */
 export async function compositeCustomStrokesOnBlob(
   blob: Blob,
@@ -2480,8 +2481,8 @@ export async function compositeCustomStrokesOnBlob(
   pageHeight?: number
 ): Promise<Blob> {
   if (typeof window === "undefined" || !strokes || strokes.length === 0) return blob;
-  const pWidth = pageWidth || targetWidth;
-  const pHeight = pageHeight || targetHeight;
+  const pWidth = pageWidth && pageWidth > 0 ? pageWidth : (targetWidth > 1000 ? targetWidth / 2 : targetWidth);
+  const pHeight = pageHeight && pageHeight > 0 ? pageHeight : (targetHeight > 1000 ? targetHeight / 2 : targetHeight);
 
   return new Promise((resolve) => {
     const img = new Image();
@@ -2499,6 +2500,36 @@ export async function compositeCustomStrokesOnBlob(
       ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
       const scaleX = targetWidth / pWidth;
       const scaleY = targetHeight / pHeight;
+
+      // Compute bounding boxes for debugging & manual verification (Requirement 3)
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (const stroke of strokes) {
+        if (!stroke.points || stroke.points.length === 0) continue;
+        const off = getStrokeOffset(stroke);
+        for (const pt of stroke.points) {
+          const px = pt.x + off.x;
+          const py = pt.y + off.y;
+          if (px < minX) minX = px;
+          if (py < minY) minY = py;
+          if (px > maxX) maxX = px;
+          if (py > maxY) maxY = py;
+        }
+      }
+
+      console.log(
+        `[PdfToBoard] Image canvas: ${targetWidth}x${targetHeight} px | PDF page: ${pWidth}x${pHeight} pt | Proportional scale: (${scaleX.toFixed(3)}, ${scaleY.toFixed(3)})`
+      );
+      if (isFinite(minX)) {
+        console.log(
+          `[PdfToBoard] Ink bbox (PDF points): [x: ${minX.toFixed(1)}, y: ${minY.toFixed(1)}, w: ${(maxX - minX).toFixed(1)}, h: ${(maxY - minY).toFixed(1)}] pt`
+        );
+        console.log(
+          `[PdfToBoard] Ink bbox (canvas px): [x: ${(minX * scaleX).toFixed(1)}, y: ${(minY * scaleY).toFixed(1)}, w: ${((maxX - minX) * scaleX).toFixed(1)}, h: ${((maxY - minY) * scaleY).toFixed(1)}] px`
+        );
+      }
 
       for (const stroke of strokes) {
         if (!stroke.points || stroke.points.length === 0) continue;

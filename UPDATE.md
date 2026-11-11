@@ -3584,3 +3584,37 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - `pnpm test:e2e cross-tool-integration`: PASS (1/1 passed).
 **Related:** INT-1, INT-2, BOARD-1, SIM-1, STORE-5
 **Open:** None.
+
+
+## 2026-11-10 — Fix PDF to Board Image Status (Movable/Draggable) and Proportional Ink Scaling
+**Request:** Fix PDF to board dragging and custom ink scaling after manual test failure: ensure Excalidraw image element has status: 'saved' and locked: false, scale ink coordinates proportionally from PDF points to WebP canvas pixels (e.g. 2x), and print dimensions and ink bounding boxes to console.
+**Changes:**
+- `apps/web/src/integration/board-insertion.ts` (changed): explicitly set `status: "saved"`, `locked: false`, `scale: [1, 1]`, and `crop: null` on `ExcalidrawImageElement`; passed `selectedElementIds: { [imgElement.id]: true }` to `api.updateScene`; invoked `api.setActiveTool({ type: "selection" })`; logged element properties and dimensions to console.
+- `apps/web/src/modules/pdf/pdf-viewer.tsx` (changed): measured rendered WebP canvas dimensions (`origW`, `origH`), extracted unscaled PDF page dimensions in points (`pdfPointWidth`, `pdfPointHeight`) from `docState` accounting for rotation or `scaleFactor`, passed page dimensions to `compositeCustomStrokesOnBlob`, and logged transfer dimensions to console.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.tsx` (changed): scaled stroke points and stroke width by `scaleX = targetWidth / pWidth` and `scaleY = targetHeight / pHeight`; logged canvas pixel and PDF point bounding boxes to console.
+- `apps/web/src/integration/board-insertion.test.ts` (changed): asserted `el.status === "saved"`, `el.locked === false`, and selection state in scene appState.
+- `apps/web/src/modules/pdf/pdf-custom-ink-layer.test.ts` (changed): added unit test verifying proportional 2x scaling from 500x700 pt to 1000x1400 px canvas with line width and coordinate assertions.
+- `apps/web/e2e/cross-tool-integration.spec.ts` (changed): added assertion verifying inserted image element on board has `status: "saved"` and `locked: false`.
+- `UPDATE.md`: Appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (54/54 test files passed, 469/469 unit tests passed).
+- `pnpm test:e2e cross-tool-integration`: PASS (1/1 passed in 7.6s).
+- `pnpm ci:security`: PASS (gitleaks clean, audit passed, bundle clean).
+**Related:** INT-1, INT-2, BOARD-1, PDF-4
+**Open:** None.
+
+
+## 2026-11-11 — Circuit Oscilloscope Layout Stabilization on Alpha Import and Visibility
+**Request:** Fix circuit oscilloscope corruption after .alpha import: gate resize calculations on non-zero iframe dimensions (`iframe.offsetWidth > 0`), invoke `CircuitJS1.setCanvasSize()` on resize, and add multi-stage post-import / tab-visibility stabilization delays (50ms, 150ms, 200ms, 300ms).
+**Changes:**
+- `apps/web/src/modules/circuit/circuit-pane.tsx` (changed): added `iframe.offsetWidth > 0 && iframe.offsetHeight > 0` validation to `dispatchResize()`, invoked `(cw as any).CircuitJS1?.setCanvasSize?.()` if available, added 200ms stabilization delay in `useEffect([visible])` and inside `applyCircuitWithLayoutStabilization`.
+- `apps/web/src/modules/circuit/circuit-adapter.ts` (changed): updated `triggerResize()` to invoke `CircuitJS1?.setCanvasSize?.()` when available.
+- `UPDATE.md`: Appended this entry.
+**Checks:**
+- `pnpm lint`: PASS (0 errors, 8-point spacing compliant).
+- `pnpm typecheck`: PASS (0 errors).
+- `pnpm test`: PASS (54/54 test files passed, 469/469 unit tests passed).
+**Related:** CIRC-1, CIRC-4, SIM-1, STORE-5
+**Open:** None.

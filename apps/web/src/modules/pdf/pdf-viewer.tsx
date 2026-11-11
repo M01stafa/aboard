@@ -131,6 +131,7 @@ function ViewerInner({
   const { provides: exportScope } = useExport(documentId);
   const { provides: renderCapability } = useRenderCapability();
   const { provides: selectionCapability } = useSelectionCapability();
+  const docState = useDocumentState(documentId);
   const selectionScope = useMemo(
     () => (selectionCapability ? selectionCapability.forDocument(documentId) : null),
     [selectionCapability, documentId]
@@ -198,10 +199,11 @@ function ViewerInner({
       const pageNum = displayPage || scrollState.currentPage || 1;
       const pageIndex = Math.max(0, pageNum - 1);
 
+      const scaleFactor = 2;
       const task = renderScope.renderPage({
         pageIndex,
         options: {
-          scaleFactor: 2,
+          scaleFactor,
           imageType: "image/webp",
           imageQuality: 0.85,
           withAnnotations: true,
@@ -209,9 +211,32 @@ function ViewerInner({
       });
 
       let pageBlob = await task.toPromise();
-      if (customStrokes[pageIndex] && customStrokes[pageIndex].length > 0) {
-        const { width: origW, height: origH } = await getImageDimensions(pageBlob);
-        pageBlob = await compositeCustomStrokesOnBlob(pageBlob, customStrokes[pageIndex], origW, origH);
+      const { width: origW, height: origH } = await getImageDimensions(pageBlob);
+
+      const docPage = docState?.document?.pages?.[pageIndex];
+      const docRotation = ((docPage?.rotation ?? 0) + (docState?.rotation ?? 0)) % 4;
+      const isRotated90or270 = docRotation % 2 === 1;
+      const pdfPointWidth = docPage?.size
+        ? (isRotated90or270 ? docPage.size.height : docPage.size.width)
+        : origW / scaleFactor;
+      const pdfPointHeight = docPage?.size
+        ? (isRotated90or270 ? docPage.size.width : docPage.size.height)
+        : origH / scaleFactor;
+
+      const pageStrokes = customStrokes[pageIndex] || [];
+      console.log(
+        `[PdfViewer] Transfer page ${pageNum} to board: canvas=${origW}x${origH}px, pdfPoints=${pdfPointWidth}x${pdfPointHeight}pt, scaleFactor=(${(origW / pdfPointWidth).toFixed(2)}, ${(origH / pdfPointHeight).toFixed(2)}), strokesCount=${pageStrokes.length}`
+      );
+
+      if (pageStrokes.length > 0) {
+        pageBlob = await compositeCustomStrokesOnBlob(
+          pageBlob,
+          pageStrokes,
+          origW,
+          origH,
+          pdfPointWidth,
+          pdfPointHeight
+        );
       }
       if (pageBlob.size > MAX_ALLOWED_FILE_BYTES) {
         pageBlob = await compressImageIfNeeded(pageBlob);
@@ -348,7 +373,6 @@ function ViewerInner({
     };
   }, [itemId, tabId, documentId, handleAddStamp, getCurrentInkData, collectLiveStamps, flushAnnotations]);
 
-  const docState = useDocumentState(documentId);
   const stampFileInputRef = useRef<HTMLInputElement>(null);
   const pendingStampRef = useRef<{ pageIndex: number; x: number; y: number } | null>(null);
 

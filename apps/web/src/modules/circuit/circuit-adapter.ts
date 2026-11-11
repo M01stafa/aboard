@@ -382,6 +382,14 @@ export class CircuitAdapter {
     if (this.targetWindow && typeof this.targetWindow.dispatchEvent === "function") {
       try {
         this.targetWindow.dispatchEvent(new Event("resize"));
+        const gwtObj = (this.targetWindow as unknown as { CircuitJS1?: { setCanvasSize?: () => void; refresh?: () => void } }).CircuitJS1;
+        if (typeof gwtObj?.setCanvasSize === "function") {
+          try {
+            gwtObj.setCanvasSize();
+          } catch {
+            // ignore
+          }
+        }
       } catch {
         // Non-fatal if cross-origin or in teardown
       }

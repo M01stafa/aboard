@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+// @vitest-environment happy-dom
+import { describe, it, expect, vi } from "vitest";
 import {
   computeResizedRect,
   getStrokeBounds,
@@ -7,6 +8,7 @@ import {
   rectsIntersect,
   pointsToSvgPath,
   scaleStrokePoints,
+  compositeCustomStrokesOnBlob,
   type CustomInkStroke,
 } from "./pdf-custom-ink-layer";
 
@@ -405,6 +407,76 @@ describe("pdf-custom-ink-layer", () => {
     it("returns empty array when points array is empty", () => {
       const res = scaleStrokePoints([], { x: 0, y: 0, width: 100, height: 100 }, { origin: { x: 0, y: 0 }, size: { width: 200, height: 200 } });
       expect(res).toEqual([]);
+    });
+  });
+
+  describe("compositeCustomStrokesOnBlob (Ink Scaling)", () => {
+    it("proportionally scales points from PDF points (500x700) to canvas pixels (1000x1400) by 2x", async () => {
+      const drawCalls: Array<{ type: string; x?: number; y?: number; cpx?: number; cpy?: number }> = [];
+      const mockCtx = {
+        drawImage: vi.fn(),
+        beginPath: vi.fn(),
+        moveTo: vi.fn((x: number, y: number) => drawCalls.push({ type: "moveTo", x, y })),
+        lineTo: vi.fn((x: number, y: number) => drawCalls.push({ type: "lineTo", x, y })),
+        quadraticCurveTo: vi.fn((cpx: number, cpy: number, x: number, y: number) =>
+          drawCalls.push({ type: "quadTo", cpx, cpy, x, y })
+        ),
+        stroke: vi.fn(),
+        strokeStyle: "",
+        lineWidth: 0,
+        lineCap: "",
+        lineJoin: "",
+        globalAlpha: 1,
+      };
+
+      const origCreateElement = document.createElement.bind(document);
+      vi.spyOn(document, "createElement").mockImplementation((tagName: string) => {
+        if (tagName.toLowerCase() === "canvas") {
+          return {
+            width: 0,
+            height: 0,
+            getContext: () => mockCtx,
+            toBlob: (cb: (b: Blob) => void) => cb(new Blob(["mock-composited"], { type: "image/webp" })),
+          } as unknown as HTMLCanvasElement;
+        }
+        return origCreateElement(tagName);
+      });
+
+      const origImage = globalThis.Image;
+      globalThis.Image = class {
+        onload: () => void = () => {};
+        set src(_v: string) {
+          setTimeout(() => this.onload(), 0);
+        }
+      } as unknown as typeof Image;
+
+      const mockBlob = new Blob(["mock-webp-bytes"], { type: "image/webp" });
+      const strokes: CustomInkStroke[] = [
+        {
+          id: "stroke-scale-1",
+          points: [
+            { x: 100, y: 150 },
+            { x: 200, y: 250 },
+            { x: 300, y: 350 },
+          ],
+          color: "#ff0000",
+          width: 3,
+          opacity: 1,
+        },
+      ];
+
+      // PDF is 500x700 pt, Canvas is 1000x1400 px -> scale factor is exactly 2x
+      const resultBlob = await compositeCustomStrokesOnBlob(mockBlob, strokes, 1000, 1400, 500, 700);
+
+      expect(resultBlob).toBeDefined();
+      expect(mockCtx.drawImage).toHaveBeenCalledTimes(1);
+      // Verify line width scaled by 2x (3 * 2 = 6)
+      expect(mockCtx.lineWidth).toBe(6);
+      // Verify first point scaled by 2x (100 * 2 = 200, 150 * 2 = 300)
+      expect(drawCalls[0]).toEqual({ type: "moveTo", x: 200, y: 300 });
+
+      globalThis.Image = origImage;
+      vi.restoreAllMocks();
     });
   });
 });

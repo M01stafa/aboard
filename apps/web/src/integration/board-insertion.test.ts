@@ -86,9 +86,15 @@ describe("board-insertion", () => {
       const el = scenePayload.elements[0];
       expect(el.type).toBe("image");
       expect(el.fileId).toBe(fileId);
+      expect(el.status).toBe("saved");
       expect(el.locked).toBe(false);
       expect(el.width).toBe(1000);
       expect(el.height).toBe(750);
+      expect(scenePayload.appState).toEqual(
+        expect.objectContaining({
+          selectedElementIds: { [el.id]: true },
+        })
+      );
 
       // 4. View scrolled to content
       expect(mockScrollToContent).toHaveBeenCalledWith(el, { fitToContent: true });
@@ -132,6 +138,7 @@ describe("board-insertion", () => {
       expect(scenePayload.elements).toHaveLength(1);
       const el = scenePayload.elements[0];
       expect(el.locked).toBe(false);
+      expect(el.status).toBe("saved");
     });
   });
 

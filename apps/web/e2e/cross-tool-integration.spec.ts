@@ -132,7 +132,7 @@ test.describe("Cross-Tool Integration (Task 38 / INT-1, INT-2)", () => {
       const elements = win.__aboard_boardApi?.["tab-1"]?.getSceneElements() || [];
       return (
         elements.length > 0 &&
-        elements.some((el) => el.type === "image" && el.locked === false && !!el.fileId)
+        elements.some((el) => el.type === "image" && el.locked === false && (el as any).status === "saved" && !!el.fileId)
       );
     }, { timeout: 25000 });
 
@@ -144,6 +144,7 @@ test.describe("Cross-Tool Integration (Task 38 / INT-1, INT-2)", () => {
             getSceneElements: () => Array<{
               type?: string;
               locked?: boolean;
+              status?: string;
               fileId?: string;
               width?: number;
               height?: number;
@@ -158,6 +159,7 @@ test.describe("Cross-Tool Integration (Task 38 / INT-1, INT-2)", () => {
     expect(insertedImage).toBeDefined();
     expect(insertedImage?.type).toBe("image");
     expect(insertedImage?.locked).toBe(false);
+    expect(insertedImage?.status).toBe("saved");
     expect(insertedImage?.fileId).toBeTruthy();
 
     // 8. Flush SaveQueue to ensure Dexie persistence is written

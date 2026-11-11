@@ -86,10 +86,19 @@ export const CircuitPane = React.memo(
       const cw = iframe?.contentWindow;
       if (cw && typeof cw.dispatchEvent === "function") {
         // Clamping check: ensure meaningful non-zero dimensions to avoid scope wave distortion
-        const winWidth = cw.innerWidth || iframe?.clientWidth || 0;
-        const winHeight = cw.innerHeight || iframe?.clientHeight || 0;
-        if (winWidth >= 200 && winHeight >= 150) {
+        const isVisibleInDom = !!iframe && iframe.offsetWidth > 0 && iframe.offsetHeight > 0;
+        const winWidth = iframe?.offsetWidth || cw.innerWidth || iframe?.clientWidth || 0;
+        const winHeight = iframe?.offsetHeight || cw.innerHeight || iframe?.clientHeight || 0;
+        if (isVisibleInDom && winWidth >= 200 && winHeight >= 150) {
           cw.dispatchEvent(new Event("resize"));
+          const gwtObj = (cw as unknown as { CircuitJS1?: { setCanvasSize?: () => void; refresh?: () => void } }).CircuitJS1;
+          if (typeof gwtObj?.setCanvasSize === "function") {
+            try {
+              gwtObj.setCanvasSize();
+            } catch {
+              // ignore
+            }
+          }
         } else if (winWidth > 0 && winHeight > 0) {
           cw.dispatchEvent(new Event("resize"));
         }
@@ -151,10 +160,14 @@ export const CircuitPane = React.memo(
       const timer150 = setTimeout(() => {
         dispatchResize();
       }, 150);
+      const timer200 = setTimeout(() => {
+        dispatchResize();
+      }, 200);
       return () => {
         cancelAnimationFrame(rafId);
         clearTimeout(timer50);
         clearTimeout(timer150);
+        clearTimeout(timer200);
       };
     }
   }, [visible, dispatchResize]);
@@ -329,6 +342,9 @@ export const CircuitPane = React.memo(
             setTimeout(() => {
               dispatchResize();
             }, 150);
+            setTimeout(() => {
+              dispatchResize();
+            }, 200);
             setTimeout(() => {
               dispatchResize();
             }, 300);
