@@ -7,6 +7,7 @@
 <a href="https://alpha-board-app.vercel.app"><img src="https://img.shields.io/badge/live-alpha--board--app.vercel.app-0E9F6E?style=for-the-badge&labelColor=050B17" alt="Live app" /></a>
 <a href="https://github.com/M01stafa/aboard/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/M01stafa/aboard/ci.yml?branch=main&style=for-the-badge&label=CI&labelColor=050B17" alt="CI status" /></a>
 <img src="https://img.shields.io/badge/release-R1-D4AF37?style=for-the-badge&labelColor=050B17" alt="Release R1" />
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm_Noncommercial_1.0.0-8C5835?style=for-the-badge&labelColor=050B17" alt="License: PolyForm Noncommercial 1.0.0" /></a>
 
 <img src="https://img.shields.io/badge/Next.js-16.4-050B17?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js 16.4" />
 <img src="https://img.shields.io/badge/React-19.3-050B17?style=flat-square&logo=react&logoColor=8BC4EC" alt="React 19.3" />
@@ -40,7 +41,7 @@
 9. [Repository structure](#9-repository-structure)
 10. [Running locally](#10-running-locally)
 11. [Limitations and future work](#11-limitations-and-future-work)
-12. [Third-party components and licences](#12-third-party-components-and-licences)
+12. [Licences](#12-third-party-components-and-licences)
 13. [Citation and author](#13-citation-and-author)
 
 ## 1. Problem and objectives
@@ -196,6 +197,8 @@ Checks: `pnpm lint && pnpm typecheck && pnpm test && supabase test db && pnpm ci
 - **Planned:** keyboard shortcuts for tabs and split view, project search and duplication, and Arabic strings inside the circuit engine's native menus (the custom circuit toolbar is already bilingual).
 
 ## 12. Third-party components and licences
+
+**Licence of this project.** Aboard's own source code is released under the [PolyForm Noncommercial License 1.0.0](LICENSE): anyone may use, study, copy, modify and share it free of charge for any noncommercial purpose, including personal study, research and hobby projects, and use by schools, universities, charities and public institutions. Selling it or using it for commercial advantage is not permitted. Because commercial use is excluded, this is a *source-available* licence rather than an OSI-approved open-source licence. The CircuitJS1 fork and the third-party components below keep their own licences; the CircuitJS1 fork remains GPL-2.0-or-later.
 
 | Component | Licence | Use |
 |:--|:--|:--|

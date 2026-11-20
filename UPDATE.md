@@ -3744,3 +3744,16 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 **Checks:** README facts checked against `docs/PRD.md`, `docs/PROGRESS.md`, `docs/specs/*` and the source tree (e.g. import limits from Task 32, six Edge Functions in `supabase/functions/`, 26 Playwright specs in `apps/web/e2e/`). No application code or dependencies changed; three.js is not a project dependency (used only to render images).
 **Related:** Documentation · no requirement IDs
 **Open:** The repository has no LICENSE file yet (PRD Q6); the owner needs to choose a licence for the application code.
+
+## 2026-11-20 — Project licence and README commit attribution
+**Request:** Add a licence that lets anyone modify the code but does not allow selling it; remove Claude from the repository contributors.
+**Changes:**
+- `LICENSE` (created): PolyForm Noncommercial License 1.0.0 (official text, unmodified) with a Required Notice line and a scope statement: the CircuitJS1 fork (`vendor/circuitjs1`, `apps/web/public/circuit/`) stays GPL-2.0-or-later and third-party assets keep their own licences.
+- `package.json` (changed): `"license": "PolyForm-Noncommercial-1.0.0"`.
+- `README.md` (changed): licence badge and a "Licence of this project" paragraph in section 12.
+- Git history: the README commit was rewritten without the co-author trailer and force-pushed (`77baa44` → `eb9c4fd`), so the repository credits only the owner.
+- `docs/PROGRESS.md` (changed): decisions log entry for the licence (PRD Q6).
+- `UPDATE.md`: appended this entry.
+**Checks:** `package.json` parses; no application code changed.
+**Related:** PRD Q6 · LEGAL-2
+**Open:** The in-app `/licenses` page does not yet mention the project's own licence. Whether a noncommercial licence on the shell is compatible with the GPL circuit fork (iframe boundary) is a legal grey area noted in architecture §16; a legal review is advised before relying on it.

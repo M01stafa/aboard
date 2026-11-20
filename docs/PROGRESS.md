@@ -147,6 +147,7 @@ Owner decisions already made. Do not re-open them without the owner.
 | 2026-11-09 | Shortened UI strings (e.g. Save to Drive / حفظ في درايف, To Board / إلى السبورة) and enforced global button CSS white-space: nowrap with overflow ellipsis. |
 | 2026-11-10 | Task 44: Published bilingual Privacy Policy (/privacy), Terms of Use (/terms), and Open-Source Licenses (/licenses) linking to CircuitJS1 fork (GPL); implemented Edge Function account-delete (token revocation at Google + cascade DB deletion) with Settings Danger Zone and confirmation modal (LEGAL-1..3, AUTH-4, SEC-1). |
 | 2026-11-10 | Task 45: Executed full security-review across codebase and signed off Launch Security Checklist (§14.12); verified zero unshielded tables, empty anon grants, zero Google tokens in storage, exact-origin CORS, rate limits enforced, published security.txt, and rehearsed V17 key rotation. |
+| 2026-11-20 | Licence (PRD Q6, owner decision): Aboard source code under PolyForm Noncommercial License 1.0.0 (free to use and modify, no commercial use); CircuitJS1 fork stays GPL-2.0-or-later; third-party assets keep their own licences |
 | 2026-11-11 | Resolved PDF to Board 1:1 ink scaling by recording base page dimensions on strokes and scaling proportionally to canvas dimensions (targetHeight / stroke.pageHeight). |
 | 2026-11-11 | Fixed board image dragging by setting Excalidraw appState.activeTool to selection on insertion. |
 | 2026-11-11 | Fixed .alpha export/import to persist and restore all open workspace tabs (Board, PDF, Circuit) in manifest.workspaceLayout. |
