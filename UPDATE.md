@@ -3732,3 +3732,15 @@ Cross-Origin-Opener-Policy: same-origin-allow-popups
 - Remote GitHub and Vercel production deployment in sync and live (`https://alpha-board-app.vercel.app` returning HTTP 200).
 **Related:** Phase 11, Launch, INT-1, INT-2, SIM-1, CIRC-4, ALPHA-1..6, STORE-5
 **Open:** None. Project officially live.
+
+## 2026-11-20 — Public README with figures
+**Request:** Write a proper README for the public repository that explains the application in a concise, academic style and is visually engaging, using three.js for 3D visuals where possible.
+**Changes:**
+- `README.md` (created): abstract, objectives, system overview, architecture and ADR summary, persistence and synchronisation, `.alpha` format, security model, verification, i18n/accessibility, repository layout, local setup, limitations, third-party licences, citation.
+- `docs/readme/hero.webp`, `docs/readme/alpha-file.webp` (created): three.js scenes rendered offline in headless Chrome as animated WebP (header and Figure 3).
+- `docs/readme/architecture{,-light}.svg`, `docs/readme/write-path{,-light}.svg` (created): Figures 1–2 with dark and light variants using `docs/DESIGN.md` tokens.
+- `docs/readme/source/` (created): three.js scene sources and render script for the figures.
+- `UPDATE.md`: appended this entry.
+**Checks:** README facts checked against `docs/PRD.md`, `docs/PROGRESS.md`, `docs/specs/*` and the source tree (e.g. import limits from Task 32, six Edge Functions in `supabase/functions/`, 26 Playwright specs in `apps/web/e2e/`). No application code or dependencies changed; three.js is not a project dependency (used only to render images).
+**Related:** Documentation · no requirement IDs
+**Open:** The repository has no LICENSE file yet (PRD Q6); the owner needs to choose a licence for the application code.

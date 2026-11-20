@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  @font-face { font-family: Geist; src: url(geist-latin-wght-normal.woff2) format("woff2"); font-weight: 100 900; }
+  html, body { margin: 0; background: #050B17; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script>
+</head>
+<body>
+<canvas id="out"></canvas>
+<script type="module">
+import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+
+const C = { night: "#050B17", surface: "#0C162C", ivory: "#EDEAE1", muted: "#8FA2C4", tech: "#4F9ED5", tech3: "#8BC4EC",
+  gold: "#D4AF37", gold3: "#E7CF7E", blue6: "#2558D0", blue3: "#8FB2FF", royal: "#002C8C", bronze: "#B88564", bronze2: "#D9A98A" };
+const W = 1200, H = 600, SS = 1.5;
+await document.fonts.load("700 22px Geist"); await document.fonts.load("400 16px Geist");
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(SS); renderer.setSize(W, H, false);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(C.night);
+const camera = new THREE.PerspectiveCamera(30, W / H, 0.1, 100);
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(4, 9, 6); scene.add(key);
+const rim = new THREE.PointLight(C.tech, 50, 30); rim.position.set(-6, 2, 4); scene.add(rim);
+
+{
+  const g = new THREE.GridHelper(40, 40, C.tech, C.tech); g.material.transparent = true; g.material.opacity = 0.1; g.position.y = -2.6; scene.add(g);
+}
+
+// layers of the container, bottom → top (spec §12.2)
+const layers = [
+  { name: "files/<sha256>.<ext>", note: "PDFs, images · content-addressed, stored", color: C.bronze, txt: C.bronze2 },
+  { name: "annotations/<id>.json", note: "EmbedPDF annotations, linked by PDF hash", color: C.gold, txt: C.gold3 },
+  { name: "pdfs/<id>.json", note: "fileKey + last page", color: C.gold, txt: C.gold3 },
+  { name: "circuits/<id>.txt", note: "CircuitJS1 netlist text", color: C.blue3, txt: C.blue3 },
+  { name: "boards/<id>.json", note: "Excalidraw elements + appState", color: C.tech, txt: C.tech3 },
+  { name: "manifest.json", note: "versioned schema · validated with zod", color: C.ivory, txt: C.ivory },
+  { name: "mimetype", note: "application/x-alpha-project · first, stored", color: C.gold, txt: C.gold3 },
+];
+const slabs = layers.map((l, i) => {
+  const m = new THREE.Mesh(new RoundedBoxGeometry(3.2, 0.16, 2.2, 4, 0.05),
+    new THREE.MeshStandardMaterial({ color: l.color, emissive: l.color, emissiveIntensity: 0.18, metalness: 0.3, roughness: 0.35, transparent: true, opacity: 0.8 }));
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(3.2, 0.16, 2.2)), new THREE.LineBasicMaterial({ color: l.color }));
+  const g = new THREE.Group(); g.add(m, e); scene.add(g); return g;
+});
+// ZIP shell (wireframe) around the closed stack
+const shell = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(3.5, 1.6, 2.5)), new THREE.LineBasicMaterial({ color: C.gold, transparent: true }));
+scene.add(shell);
+
+const out = document.getElementById("out"); out.width = W * SS; out.height = H * SS; const ox = out.getContext("2d");
+const v = new THREE.Vector3();
+window.renderFrame = (t) => {
+  const a = 2 * Math.PI * t;
+  // explode: closed → open → hold → closed
+  const ph = (Math.sin(a - Math.PI / 2) + 1) / 2;           // 0..1..0
+  const ex = Math.min(1, ph * 1.25);
+  const sm = ex * ex * (3 - 2 * ex);
+  slabs.forEach((s, i) => { s.position.set(0, -1.6 + i * (0.19 + sm * 0.36), 0); s.rotation.y = 0; });
+  shell.position.set(0, -1.6 + 3 * 0.19, 0); shell.material.opacity = 1 - sm;
+  camera.position.set(Math.sin(0.75 + Math.sin(a) * 0.12) * 13, 4.6, Math.cos(0.75 + Math.sin(a) * 0.12) * 13);
+  camera.lookAt(2.2, -0.1, -1.4);
+  renderer.render(scene, camera);
+  ox.drawImage(renderer.domElement, 0, 0);
+  ox.save(); ox.scale(SS, SS);
+  // labels with leader lines (projected), fade in as the stack opens
+  ox.globalAlpha = Math.max(0, (sm - 0.35) / 0.65);
+  layers.forEach((l, i) => {
+    v.set(1.6, slabs[i].position.y, -0.2).project(camera);
+    const x = (v.x + 1) / 2 * W, y = (1 - v.y) / 2 * H;
+    const lx = 700, ly = y;
+    ox.strokeStyle = l.color; ox.lineWidth = 1.2; ox.beginPath(); ox.moveTo(x + 4, y); ox.lineTo(lx - 10, ly); ox.stroke();
+    ox.fillStyle = l.color; ox.beginPath(); ox.arc(x + 4, y, 3, 0, 7); ox.fill();
+    ox.font = "700 19px Geist"; ox.fillStyle = l.txt; ox.fillText(l.name, lx, ly + 2);
+    ox.font = "400 14px Geist"; ox.fillStyle = C.muted; ox.fillText(l.note, lx, ly + 22);
+  });
+  ox.globalAlpha = 1;
+  ox.font = "700 15px Geist"; ox.fillStyle = C.muted; ox.fillText("FIGURE 3 · ANATOMY OF A .alpha PROJECT FILE (ZIP / ZIP64 CONTAINER)", 32, H - 28);
+  const gl = ox.createLinearGradient(0, 0, W, 0); gl.addColorStop(0, C.gold); gl.addColorStop(0.5, C.tech); gl.addColorStop(1, C.royal);
+  ox.fillStyle = gl; ox.fillRect(0, 0, W, 3);
+  ox.restore();
+  return out.toDataURL("image/png");
+};
+window.ready = true;
+</script>
+</body>
+</html>
