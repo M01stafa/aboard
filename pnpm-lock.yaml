@@ -235,8 +235,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
       dexie:
-        specifier: 4.4.1
-        version: 4.4.1
+        specifier: 4.4.7
+        version: 4.4.7
       hash-wasm:
         specifier: 4.12.0
         version: 4.12.0
@@ -2208,8 +2208,8 @@ packages:
   devalue@5.9.4:
     resolution: {integrity: sha512-sPAT4pztbu6586/hrhOnMKS17IJrvg12mXiSPSS3W5qDeN2RGgvZ0diZCm31dBbnevfVmujNO3IM2wrS4Y2Rhg==}
 
-  dexie@4.4.1:
-    resolution: {integrity: sha512-4Xec5+yrS+TgyFAnMrneFOt/QG8sD3FxlkUVpfypui3SriRN80UN0SZBWmkNAY7ulfKgk0ilvv7M6pBURprdgA==}
+  dexie@4.4.7:
+    resolution: {integrity: sha512-wemFiCl3DTCnfzyqepUTX1ugbYbkTrw3aEZOG7YjAOUoEQB5g5PrEywPzk5JpbX/SxqQ9IvjUpxCDIEjoOWEfA==}
 
   doctrine@2.1.0:
     resolution: {integrity: sha512-35mSku4ZXK0vfCuHEDAwt55dg2jNajHZ1odvF+8SSr82EsZY4QmXfuWso8oEd8zRhVObSN18aM0CjSdoBX7zIw==}
@@ -5765,7 +5765,7 @@ snapshots:
 
   devalue@5.9.4: {}
 
-  dexie@4.4.1: {}
+  dexie@4.4.7: {}
 
   doctrine@2.1.0:
     dependencies:
